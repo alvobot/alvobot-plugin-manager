@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name: AlvoBot Plugin
- * Plugin URI: https://alvobot.com/alvobot-plugin
+ * Plugin Name: AlvoBot Plugin Manager
+ * Plugin URI: https://github.com/alvobot/alvobot-plugin-manager
  * Description: Permite a gestão remota de plugins com a autorização dos clientes.
- * Version: 1.3
- * Author: Newar
- * Author URI: https://alvobot.com
- * Text Domain: alvobot-plugin
+ * Version: 1.3.1
+ * Author: Alvobot
+ * Author URI: https://github.com/alvobot
+ * Text Domain: alvobot-plugin-manager
  * Domain Path: /languages
  * License: GPL2
  */
@@ -246,10 +246,6 @@ function grp_add_action_links( $links ) {
     $site_code    = get_option( 'grp_site_code', 'N/A' );
     $code_display = '<span style="margin-left:10px; font-weight:bold;">Código: ' . esc_html( $site_code ) . '</span>';
     array_push( $links, $code_display );
-
-    // Botão de verificação de atualizações
-    $check_update_link = '<a href="' . esc_url(admin_url('plugins.php?action=grp_check_update&plugin=' . plugin_basename(__FILE__) . '&nonce=' . wp_create_nonce('grp_check_update_nonce'))) . '">Verificar Atualizações</a>';
-    array_push($links, $check_update_link);
 
     return $links;
 }
@@ -544,66 +540,36 @@ function grp_find_plugin_file_by_slug( $slug ) {
 }
 
 // Após as definições iniciais do plugin
-define('ALVOBOT_PLUGIN_VERSION', '1.3');
+define('ALVOBOT_PLUGIN_VERSION', '1.3.1');
 define('ALVOBOT_PLUGIN_MINIMUM_WP_VERSION', '5.8');
 define('ALVOBOT_PLUGIN_UPDATE_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/update_plugin');
 
-/**
- * Verifica atualizações do plugin
- */
-function grp_check_for_plugin_update($checked_data) {
-    if (empty($checked_data->checked)) {
-        return $checked_data;
-    }
+// Carrega a classe de atualização
+define('ALVOBOT_PLUGIN_MANAGER_FILE', __FILE__);
+require_once plugin_dir_path(__FILE__) . 'includes/plugin-update-checker/load-v5p5.php';
+require_once plugin_dir_path(__FILE__) . 'class-alvobot-plugin-manager-updater.php';
 
-    $plugin_slug = 'alvobot-plugin';  // Slug fixo do plugin
-    $plugin_file = plugin_basename(__FILE__);
-    $plugin_data = get_plugin_data(__FILE__);
+// Inicializa o sistema de atualização
+new Alvobot_Plugin_Manager_Updater(ALVOBOT_PLUGIN_MANAGER_FILE);
 
-    $args = array(
-        'body' => array(
-            'action'  => 'check_update',
-            'version' => $plugin_data['Version'],
-            'token'   => get_option('grp_site_token'),
-        ),
-        'timeout' => 15,
-    );
+// Remove as funções antigas de verificação de atualização
+remove_filter('pre_set_site_transient_update_plugins', 'grp_check_for_plugin_update');
+remove_action('admin_init', 'grp_handle_update_check');
+remove_filter('plugins_api', 'grp_plugin_info', 20);
 
-    $response = wp_remote_post(ALVOBOT_PLUGIN_UPDATE_URL, $args);
-
-    if (!is_wp_error($response)) {
-        $update_data = json_decode(wp_remote_retrieve_body($response));
-        
-        if (isset($update_data->new_version) && version_compare($plugin_data['Version'], $update_data->new_version, '<')) {
-            $checked_data->response[$plugin_file] = (object) array(
-                'id'          => $plugin_slug,
-                'slug'        => $plugin_slug,
-                'plugin'      => $plugin_file,
-                'new_version' => $update_data->new_version,
-                'url'         => isset($update_data->url) ? $update_data->url : '',
-                'package'     => isset($update_data->package) ? $update_data->package : '',
-                'icons'       => array(),
-                'banners'     => array(),
-                'banners_rtl' => array(),
-                'tested'      => '',
-                'requires_php'=> '',
-                'compatibility' => new stdClass(),
-                'sections'    => array(
-                    'description' => isset($update_data->sections->description) ? $update_data->sections->description : '',
-                    'changelog'   => isset($update_data->sections->changelog) ? $update_data->sections->changelog : '',
-                    'installation' => '', // Opcional
-                    'screenshots' => '', // Opcional
-                    'faq'        => '', // Opcional
-                    'reviews'    => '', // Opcional
-                    'other_notes'=> ''  // Opcional
-                )
-            );
-        }
-    }
-
-    return $checked_data;
+// Remove o botão de verificação de atualizações padrão
+function alvobot_remove_update_links($links) {
+    // Remove links de verificação de atualização padrão
+    unset($links['check_for_updates']);
+    return $links;
 }
-add_filter('pre_set_site_transient_update_plugins', 'grp_check_for_plugin_update');
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'alvobot_remove_update_links');
+
+// Limpa as funções de verificação de atualização existentes
+function grp_check_for_plugin_update() {}
+function grp_handle_update_check() {}
+function grp_plugin_info() {}
+function grp_update_check_notice() {}
 
 /**
  * Verifica requisitos mínimos do sistema
@@ -690,105 +656,6 @@ function grp_get_cached_update_check() {
 add_action('init', 'grp_load_textdomain');
 function grp_load_textdomain() {
     load_plugin_textdomain('alvobot-plugin', false, dirname(plugin_basename(__FILE__)) . '/languages');
-}
-
-// Trata a ação quando o botão "Verificar Atualizações" é clicado
-add_action('admin_init', 'grp_handle_update_check');
-
-function grp_handle_update_check() {
-    if (isset($_GET['action']) && $_GET['action'] === 'grp_check_update') {
-        if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'grp_check_update_nonce')) {
-            wp_die('Ação não autorizada.', 'Erro de Segurança', array('response' => 403));
-        }
-
-        if (!current_user_can('update_plugins')) {
-            wp_die('Você não tem permissão para realizar esta ação.', 'Permissão Negada', array('response' => 403));
-        }
-
-        // Força a verificação de atualizações
-        delete_site_transient('update_plugins');
-        wp_update_plugins();
-
-        // Redireciona de volta para a página de plugins com uma mensagem
-        wp_redirect(add_query_arg('grp_update_checked', '1', admin_url('plugins.php')));
-        exit;
-    }
-
-    // Exibe a mensagem após a verificação de atualizações
-    if (isset($_GET['grp_update_checked'])) {
-        add_action('admin_notices', 'grp_update_check_notice');
-    }
-}
-
-function grp_update_check_notice() {
-    ?>
-    <div class="notice notice-info is-dismissible">
-        <p><?php _e('Verificação de atualizações concluída para o AlvoBot Plugin.', 'alvobot-plugin'); ?></p>
-    </div>
-    <?php
-}
-
-// Adiciona informações do plugin para o modal de detalhes
-add_filter('plugins_api', 'grp_plugin_info', 20, 3);
-
-function grp_plugin_info($res, $action, $args) {
-    // Verifica se é uma solicitação de informações do nosso plugin
-    if ($action !== 'plugin_information' || !isset($args->slug) || $args->slug !== 'alvobot-plugin') {
-        return $res;
-    }
-
-    $plugin_data = get_plugin_data(__FILE__);
-    
-    // Faz a requisição para obter informações atualizadas
-    $args = array(
-        'body' => array(
-            'action'  => 'check_update',
-            'version' => $plugin_data['Version'],
-            'token'   => get_option('grp_site_token'),
-        ),
-        'timeout' => 15,
-    );
-
-    $response = wp_remote_post(ALVOBOT_PLUGIN_UPDATE_URL, $args);
-
-    if (is_wp_error($response)) {
-        return $res;
-    }
-
-    $update_data = json_decode(wp_remote_retrieve_body($response));
-
-    if (!$update_data) {
-        return $res;
-    }
-
-    return (object) array(
-        'name'              => 'AlvoBot Plugin',
-        'slug'              => 'alvobot-plugin',
-        'version'           => $update_data->new_version,
-        'author'            => 'Newar',
-        'author_profile'    => 'https://alvobot.com',
-        'last_updated'      => date('Y-m-d'),
-        'homepage'          => $update_data->url,
-        'sections'          => array(
-            'description'   => $update_data->sections->description,
-            'changelog'     => $update_data->sections->changelog,
-            'installation'  => '', // Opcional
-            'screenshots'   => '', // Opcional
-            'faq'          => '', // Opcional
-        ),
-        'download_link'     => $update_data->package,
-        'requires'          => '5.8',
-        'tested'           => '6.4',
-        'requires_php'     => '7.4',
-        'downloaded'       => 0,
-        'active_installs'  => 0,
-        'rating'           => 100,
-        'num_ratings'      => 0,
-        'support_threads'  => 0,
-        'support_threads_resolved' => 0,
-        'last_updated'     => date('Y-m-d'),
-        'added'            => date('Y-m-d'),
-    );
 }
 
 /**
