@@ -238,13 +238,13 @@ function grp_on_activation() {
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'grp_add_action_links' );
 
 function grp_add_action_links( $links ) {
-    // Link de atualização
-    $settings_link = '<a href="' . esc_url( admin_url( 'plugins.php?action=grp_update_site&plugin=' . plugin_basename( __FILE__ ) . '&nonce=' . wp_create_nonce( 'grp_update_site_nonce' ) ) ) . '">Atualizar</a>';
-    array_unshift( $links, $settings_link );
+    // Link de atualização (oculto, pode ser ativado no futuro)
+    //$settings_link = '<a href="' . esc_url( admin_url( 'plugins.php?action=grp_update_site&plugin=' . plugin_basename( __FILE__ ) . '&nonce=' . wp_create_nonce( 'grp_update_site_nonce' ) ) ) . '">Atualizar</a>';
+    //array_unshift( $links, $settings_link );
 
     // Código de verificação
     $site_code    = get_option( 'grp_site_code', 'N/A' );
-    $code_display = '<span style="margin-left:10px; font-weight:bold;">Código: ' . esc_html( $site_code ) . '</span>';
+    $code_display = '<span style="margin-left:3px; font-weight:bold;">Código: ' . esc_html( $site_code ) . '</span>';
     array_push( $links, $code_display );
 
     return $links;
@@ -347,164 +347,203 @@ add_action( 'rest_api_init', function () {
  * @return WP_REST_Response|WP_Error Resposta ou erro.
  */
 function grp_handle_command( WP_REST_Request $request ) {
+    // Add logging to a debug file
+    error_log( '[GRP Debug] Starting command execution at ' . date('Y-m-d H:i:s') );
+    
     $params = $request->get_json_params();
+    error_log( '[GRP Debug] Received parameters: ' . print_r($params, true) );
 
     // Verifica o token
     $token = isset( $params['token'] ) ? sanitize_text_field( $params['token'] ) : '';
-    if ( $token !== get_option( 'grp_site_token' ) ) {
-        error_log( "Token inválido: " . $token );
+    error_log( '[GRP Debug] Token verification status: ' . (!empty($token) ? 'Present' : 'Missing') );
+
+    if ( empty( $token ) || $token !== get_option( 'grp_site_token' ) ) {
+        error_log( '[GRP Debug] Error: Invalid or missing token' );
         return new WP_Error( 'unauthorized', 'Token inválido', array( 'status' => 401 ) );
     }
 
     $command     = isset( $params['command'] ) ? sanitize_text_field( $params['command'] ) : '';
-    $plugin_slug = isset( $params['plugin_slug'] ) ? sanitize_text_field( $params['plugin_slug'] ) : '';
-    $plugin_url  = isset( $params['plugin_url'] ) ? esc_url_raw( $params['plugin_url'] ) : '';
+    error_log( '[GRP Debug] Command received: ' . $command );
 
-    if ( $command === 'install_plugin' ) {
-        if ( ! empty( $plugin_slug ) ) {
-            // Instalação a partir do repositório WordPress
-            error_log( "Tentando instalar o plugin do repositório: " . $plugin_slug );
+    if ( empty( $command ) ) {
+        error_log( '[GRP Debug] Error: No command provided' );
+        return new WP_Error( 'missing_command', 'Comando não fornecido.' );
+    }
 
-            include_once ABSPATH . 'wp-admin/includes/plugin-install.php';
-            include_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-            include_once ABSPATH . 'wp-admin/includes/file.php';
+    // Processa o comando
+    switch ( $command ) {
+        case 'install_plugin':
+            $plugin_slug = isset( $params['plugin_slug'] ) ? sanitize_text_field( $params['plugin_slug'] ) : '';
+            $plugin_url  = isset( $params['plugin_url'] ) ? esc_url_raw( $params['plugin_url'] ) : '';
 
-            $api = plugins_api( 'plugin_information', array(
-                'slug'   => $plugin_slug,
-                'fields' => array(
-                    'sections' => false,
-                ),
-            ) );
+            error_log( '[GRP Debug] Install request - Slug: ' . $plugin_slug . ', URL: ' . $plugin_url );
 
-            if ( is_wp_error( $api ) ) {
-                error_log( "Plugin não encontrado durante instalação: " . $plugin_slug );
-                return new WP_Error( 'plugin_not_found', 'Plugin não encontrado no repositório oficial', array( 'status' => 404 ) );
+            // Carrega as funções necessárias
+            if ( ! function_exists( 'show_message' ) ) {
+                error_log( '[GRP Debug] Loading WordPress admin functions' );
+                require_once( ABSPATH . 'wp-admin/includes/admin.php' );
             }
 
-            $upgrader = new Plugin_Upgrader();
-            $installed = $upgrader->install( $api->download_link );
-
-            if ( is_wp_error( $installed ) ) {
-                error_log( "Falha na instalação do plugin: " . $installed->get_error_message() );
-                return new WP_Error( 'install_failed', 'Falha na instalação do plugin: ' . $installed->get_error_message(), array( 'status' => 500 ) );
+            if ( ! function_exists( 'plugins_api' ) ) {
+                error_log( '[GRP Debug] Loading plugins API' );
+                require_once( ABSPATH . 'wp-admin/includes/plugin-install.php' );
             }
 
-            // Encontra o arquivo principal do plugin instalado
-            $plugin_file = grp_find_plugin_file_by_slug( $plugin_slug );
-
-            if ( ! $plugin_file ) {
-                error_log( "Arquivo do plugin não encontrado após instalação: " . $plugin_slug );
-                return new WP_Error( 'plugin_not_found', 'Arquivo do plugin não encontrado após instalação', array( 'status' => 404 ) );
+            if ( ! class_exists( 'Plugin_Upgrader' ) ) {
+                error_log( '[GRP Debug] Loading upgrader classes' );
+                require_once( ABSPATH . 'wp-admin/includes/class-wp-upgrader.php' );
             }
 
-            // Ativa o plugin
-            $result = activate_plugin( $plugin_file );
-
-            if ( is_wp_error( $result ) ) {
-                error_log( "Falha na ativação do plugin após instalação: " . $result->get_error_message() );
-                return new WP_Error( 'activation_failed', 'Falha na ativação do plugin após instalação: ' . $result->get_error_message(), array( 'status' => 500 ) );
-            }
-
-            error_log( "Plugin instalado e ativado com sucesso: " . $plugin_file );
-            return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin instalado e ativado com sucesso do repositório' ) );
-
-        } elseif ( ! empty( $plugin_url ) ) {
-            // Instalação a partir de uma URL
-            error_log( "Tentando instalar o plugin a partir da URL: " . $plugin_url );
-
-            include_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-            include_once ABSPATH . 'wp-admin/includes/file.php';
-
-            // Valida a URL
-            if ( ! filter_var( $plugin_url, FILTER_VALIDATE_URL ) ) {
-                error_log( "URL inválida fornecida: " . $plugin_url );
-                return new WP_Error( 'invalid_url', 'URL inválida', array( 'status' => 400 ) );
-            }
-
-            // Captura a lista de plugins antes da instalação
             if ( ! function_exists( 'get_plugins' ) ) {
+                error_log( '[GRP Debug] Loading plugin functions' );
                 require_once ABSPATH . 'wp-admin/includes/plugin.php';
             }
-            $plugins_before = get_plugins();
 
-            // Baixa o arquivo temporariamente
-            $download_file = download_url( $plugin_url );
+            if ( ! empty( $plugin_slug ) ) {
+                // Instalação a partir do repositório WordPress
+                error_log( '[GRP Debug] Installing from WordPress repository: ' . $plugin_slug );
 
-            if ( is_wp_error( $download_file ) ) {
-                error_log( "Erro ao baixar o plugin da URL: " . $download_file->get_error_message() );
-                return new WP_Error( 'download_failed', 'Erro ao baixar o plugin da URL: ' . $download_file->get_error_message(), array( 'status' => 500 ) );
+                $api = plugins_api( 'plugin_information', array(
+                    'slug'   => $plugin_slug,
+                    'fields' => array(
+                        'short_description' => false,
+                        'sections'          => false,
+                        'requires'          => false,
+                        'rating'            => false,
+                        'ratings'           => false,
+                        'downloaded'        => false,
+                        'last_updated'      => false,
+                        'added'             => false,
+                        'tags'              => false,
+                        'compatibility'     => false,
+                        'homepage'          => false,
+                        'donate_link'       => false,
+                    ),
+                ) );
+
+                if ( is_wp_error( $api ) ) {
+                    error_log( '[GRP Debug] API Error: ' . $api->get_error_message() );
+                    return $api;
+                }
+
+                $upgrader = new Plugin_Upgrader();
+                $installed = $upgrader->install( $api->download_link );
+
+                if ( is_wp_error( $installed ) ) {
+                    error_log( '[GRP Debug] Installation Error: ' . $installed->get_error_message() );
+                    return $installed;
+                }
+
+                $plugin_file = $upgrader->plugin_info();
+                
+                if ( ! $plugin_file ) {
+                    error_log( '[GRP Debug] Error: Could not determine plugin file after installation' );
+                    return new WP_Error( 'plugin_error', 'Não foi possível determinar o arquivo do plugin após a instalação' );
+                }
+
+                // Ativa o plugin
+                $activate = activate_plugin( $plugin_file );
+                
+                if ( is_wp_error( $activate ) ) {
+                    error_log( '[GRP Debug] Activation Error: ' . $activate->get_error_message() );
+                    return $activate;
+                }
+
+                error_log( '[GRP Debug] Successfully installed and activated plugin: ' . $plugin_file );
+                return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin instalado e ativado com sucesso do repositório' ) );
+
+            } elseif ( ! empty( $plugin_url ) ) {
+                // Instalação a partir de uma URL
+                error_log( '[GRP Debug] Installing from URL: ' . $plugin_url );
+
+                // Valida a URL
+                if ( ! filter_var( $plugin_url, FILTER_VALIDATE_URL ) ) {
+                    error_log( '[GRP Debug] Invalid URL provided: ' . $plugin_url );
+                    return new WP_Error( 'invalid_url', 'URL inválida' );
+                }
+
+                // Captura a lista de plugins antes da instalação
+                $plugins_before = get_plugins();
+
+                // Baixa o arquivo temporariamente
+                error_log( '[GRP Debug] Downloading plugin from URL' );
+                $download_file = download_url( $plugin_url );
+
+                if ( is_wp_error( $download_file ) ) {
+                    error_log( '[GRP Debug] Download Error: ' . $download_file->get_error_message() );
+                    return new WP_Error( 'download_failed', 'Erro ao baixar o plugin: ' . $download_file->get_error_message() );
+                }
+
+                // Instala o plugin
+                error_log( '[GRP Debug] Installing downloaded plugin' );
+                $upgrader = new Plugin_Upgrader();
+                $installed = $upgrader->install( $download_file );
+
+                // Remove o arquivo temporário
+                @unlink( $download_file );
+
+                if ( is_wp_error( $installed ) ) {
+                    error_log( '[GRP Debug] Installation Error: ' . $installed->get_error_message() );
+                    return new WP_Error( 'install_failed', 'Falha na instalação do plugin: ' . $installed->get_error_message() );
+                }
+
+                // Captura a lista de plugins após a instalação
+                $plugins_after = get_plugins();
+                $new_plugins = array_diff_key( $plugins_after, $plugins_before );
+
+                if ( empty( $new_plugins ) ) {
+                    error_log( '[GRP Debug] No new plugins found after installation' );
+                    return new WP_Error( 'plugin_not_found', 'Nenhum novo plugin encontrado após instalação' );
+                }
+
+                // Obtém o primeiro plugin recém-instalado
+                $plugin_file = key( $new_plugins );
+                error_log( '[GRP Debug] New plugin detected: ' . $plugin_file );
+
+                // Ativa o plugin
+                $result = activate_plugin( $plugin_file );
+
+                if ( is_wp_error( $result ) ) {
+                    error_log( '[GRP Debug] Activation Error: ' . $result->get_error_message() );
+                    return new WP_Error( 'activation_failed', 'Falha na ativação do plugin: ' . $result->get_error_message() );
+                }
+
+                error_log( '[GRP Debug] Successfully installed and activated plugin from URL: ' . $plugin_file );
+                return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin instalado e ativado com sucesso a partir da URL' ) );
+
+            } else {
+                error_log( '[GRP Debug] Error: No plugin slug or URL provided' );
+                return new WP_Error( 'missing_parameters', 'Nenhum plugin_slug ou plugin_url fornecido' );
+            }
+        case 'activate_plugin':
+            if ( ! empty( $plugin_slug ) ) {
+                error_log( "Tentando ativar o plugin: " . $plugin_slug );
+
+                // Encontra o arquivo principal do plugin
+                $plugin_file = grp_find_plugin_file_by_slug( $plugin_slug );
+
+                if ( ! $plugin_file ) {
+                    error_log( "Plugin não encontrado para ativação: " . $plugin_slug );
+                    return new WP_Error( 'plugin_not_found', 'Plugin não encontrado', array( 'status' => 404 ) );
+                }
+
+                error_log( "Arquivo do plugin encontrado: " . $plugin_file );
+
+                // Ativa o plugin
+                $result = activate_plugin( $plugin_file );
+
+                if ( is_wp_error( $result ) ) {
+                    error_log( "Falha na ativação do plugin: " . $result->get_error_message() );
+                    return new WP_Error( 'activation_failed', 'Falha na ativação do plugin: ' . $result->get_error_message(), array( 'status' => 500 ) );
+                }
+
+                error_log( "Plugin ativado com sucesso: " . $plugin_file );
+                return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin ativado com sucesso' ) );
             }
 
-            // Instala o plugin
-            $upgrader = new Plugin_Upgrader();
-            $installed = $upgrader->install( $download_file );
-
-            // Remove o arquivo temporário
-            @unlink( $download_file );
-
-            if ( is_wp_error( $installed ) ) {
-                error_log( "Falha na instalação do plugin a partir da URL: " . $installed->get_error_message() );
-                return new WP_Error( 'install_failed', 'Falha na instalação do plugin: ' . $installed->get_error_message(), array( 'status' => 500 ) );
-            }
-
-            // Captura a lista de plugins após a instalação
-            $plugins_after = get_plugins();
-
-            // Encontra o plugin recém-instalado
-            $new_plugins = array_diff_key( $plugins_after, $plugins_before );
-
-            if ( empty( $new_plugins ) ) {
-                error_log( "Nenhum novo plugin encontrado após instalação a partir da URL." );
-                return new WP_Error( 'plugin_not_found', 'Nenhum novo plugin encontrado após instalação', array( 'status' => 404 ) );
-            }
-
-            // Obtém o primeiro plugin recém-instalado
-            $plugin_file = key( $new_plugins );
-
-            // Ativa o plugin
-            $result = activate_plugin( $plugin_file );
-
-            if ( is_wp_error( $result ) ) {
-                error_log( "Falha na ativação do plugin após instalação a partir da URL: " . $result->get_error_message() );
-                return new WP_Error( 'activation_failed', 'Falha na ativação do plugin após instalação: ' . $result->get_error_message(), array( 'status' => 500 ) );
-            }
-
-            error_log( "Plugin instalado e ativado com sucesso a partir da URL: " . $plugin_file );
-            return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin instalado e ativado com sucesso a partir da URL' ) );
-
-        } else {
-            error_log( "Nenhum plugin_slug ou plugin_url fornecido para instalação." );
-            return new WP_Error( 'missing_parameters', 'Nenhum plugin_slug ou plugin_url fornecido', array( 'status' => 400 ) );
-        }
+            error_log( "Comando inválido ou parâmetros insuficientes: " . $command );
+            return new WP_Error( 'invalid_command', 'Comando inválido ou parâmetros insuficientes', array( 'status' => 400 ) );
     }
-
-    if ( $command === 'activate_plugin' && ! empty( $plugin_slug ) ) {
-        error_log( "Tentando ativar o plugin: " . $plugin_slug );
-
-        // Encontra o arquivo principal do plugin
-        $plugin_file = grp_find_plugin_file_by_slug( $plugin_slug );
-
-        if ( ! $plugin_file ) {
-            error_log( "Plugin não encontrado para ativação: " . $plugin_slug );
-            return new WP_Error( 'plugin_not_found', 'Plugin não encontrado', array( 'status' => 404 ) );
-        }
-
-        error_log( "Arquivo do plugin encontrado: " . $plugin_file );
-
-        // Ativa o plugin
-        $result = activate_plugin( $plugin_file );
-
-        if ( is_wp_error( $result ) ) {
-            error_log( "Falha na ativação do plugin: " . $result->get_error_message() );
-            return new WP_Error( 'activation_failed', 'Falha na ativação do plugin: ' . $result->get_error_message(), array( 'status' => 500 ) );
-        }
-
-        error_log( "Plugin ativado com sucesso: " . $plugin_file );
-        return rest_ensure_response( array( 'status' => 'success', 'message' => 'Plugin ativado com sucesso' ) );
-    }
-
-    error_log( "Comando inválido ou parâmetros insuficientes: " . $command );
-    return new WP_Error( 'invalid_command', 'Comando inválido ou parâmetros insuficientes', array( 'status' => 400 ) );
 }
 
 /**
