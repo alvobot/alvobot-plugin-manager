@@ -3,7 +3,7 @@
  * Plugin Name: AlvoBot Plugin Manager
  * Plugin URI: https://github.com/alvobot/alvobot-plugin-manager
  * Description: Permite a gestão remota de plugins utilizando a plataforma AlvoBot.
- * Version: 1.3.3
+ * Version: 1.3.4
  * Author: Alvobot - Cris Franklin
  * Author URI: https://github.com/alvobot
  * Text Domain: alvobot-plugin-manager
@@ -579,7 +579,7 @@ function grp_find_plugin_file_by_slug( $slug ) {
 }
 
 // Após as definições iniciais do plugin
-define('ALVOBOT_PLUGIN_VERSION', '1.3.3');
+define('ALVOBOT_PLUGIN_VERSION', '1.3.4');
 define('ALVOBOT_PLUGIN_MINIMUM_WP_VERSION', '5.8');
 define('ALVOBOT_PLUGIN_UPDATE_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/update_plugin');
 
