@@ -3,7 +3,7 @@
  * Plugin Name: AlvoBot Plugin Manager
  * Plugin URI: https://github.com/alvobot/alvobot-plugin-manager
  * Description: Permite a gestão remota de plugins utilizando a plataforma AlvoBot.
- * Version: 1.3.4
+ * Version: 1.4.0
  * Author: Alvobot - Cris Franklin
  * Author URI: https://github.com/alvobot
  * Text Domain: alvobot-plugin-manager
@@ -34,15 +34,12 @@ if ( ! get_option( 'grp_site_token' ) ) {
  * @return bool Retorna true em sucesso ou false em falha.
  */
 function grp_register_site( $app_password = null ) {
-    $site_code = get_option( 'grp_site_code', '' );
-
     $data = array(
         'action'     => 'register_site',
         'site_url'   => get_site_url(),
         'token'      => get_option( 'grp_site_token' ),
         'wp_version' => get_bloginfo( 'version' ),
         'plugins'    => array_keys( get_plugins() ),
-        'site_code'  => $site_code,
     );
 
     if ( $app_password ) {
@@ -175,22 +172,6 @@ function grp_generate_alvobot_app_password( $user ) {
 }
 
 /**
- * Função para gerar o código de 6 caracteres
- *
- * @return void
- */
-function grp_generate_site_code() {
-    if ( ! get_option( 'grp_site_code' ) ) {
-        $code = strtoupper( substr( str_shuffle( 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' ), 0, 6 ) );
-        update_option( 'grp_site_code', $code );
-        error_log( "Código do site gerado: " . $code );
-    } else {
-        $existing_code = get_option( 'grp_site_code' );
-        error_log( "Código do site existente: " . $existing_code );
-    }
-}
-
-/**
  * Hook de ativação para registrar o site, criar o usuário 'alvobot', gerar a senha de aplicativo e o código
  *
  * @return void
@@ -216,9 +197,6 @@ function grp_on_activation() {
         return;
     }
 
-    // Gera o código do site
-    grp_generate_site_code();
-
     // Registra o site no servidor central com a senha de aplicativo
     $result = grp_register_site( $app_password );
 
@@ -227,27 +205,6 @@ function grp_on_activation() {
     } else {
         error_log( "Falha ao registrar o site durante a ativação." );
     }
-}
-
-/**
- * Adiciona o link "Atualizar" e o código de verificação na lista de plugins
- *
- * @param array $links Links de ação do plugin.
- * @return array Links de ação modificados.
- */
-add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'grp_add_action_links' );
-
-function grp_add_action_links( $links ) {
-    // Link de atualização (oculto, pode ser ativado no futuro)
-    //$settings_link = '<a href="' . esc_url( admin_url( 'plugins.php?action=grp_update_site&plugin=' . plugin_basename( __FILE__ ) . '&nonce=' . wp_create_nonce( 'grp_update_site_nonce' ) ) ) . '">Atualizar</a>';
-    //array_unshift( $links, $settings_link );
-
-    // Código de verificação
-    $site_code    = get_option( 'grp_site_code', 'N/A' );
-    $code_display = '<span style="margin-left:3px; font-weight:bold;">Código: ' . esc_html( $site_code ) . '</span>';
-    array_push( $links, $code_display );
-
-    return $links;
 }
 
 /**
@@ -266,9 +223,6 @@ function grp_handle_update_action() {
         if ( ! current_user_can( 'activate_plugins' ) ) {
             wp_die( 'Você não tem permissão para realizar esta ação.', 'Permissão Negada', array( 'response' => 403 ) );
         }
-
-        // Gera o código do site se ainda não existir
-        grp_generate_site_code();
 
         // Registra o site no servidor central sem a senha de aplicativo
         $result = grp_register_site();
@@ -579,7 +533,7 @@ function grp_find_plugin_file_by_slug( $slug ) {
 }
 
 // Após as definições iniciais do plugin
-define('ALVOBOT_PLUGIN_VERSION', '1.3.4');
+define('ALVOBOT_PLUGIN_VERSION', '1.4.0');
 define('ALVOBOT_PLUGIN_MINIMUM_WP_VERSION', '5.8');
 define('ALVOBOT_PLUGIN_UPDATE_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/update_plugin');
 
@@ -646,9 +600,10 @@ register_uninstall_hook(__FILE__, 'grp_plugin_uninstall');
 function grp_plugin_uninstall() {
     // Remove todas as opções do plugin
     delete_option('grp_site_token');
-    delete_option('grp_site_code');
+    delete_option('grp_update_check_cache');
+    delete_option('grp_last_update_check');
     
-    // Remove o usuário alvobot se necessário
+    // Remove o usuário alvobot se existir
     $user = get_user_by('login', 'alvobot');
     if ($user) {
         require_once(ABSPATH . 'wp-admin/includes/user.php');
@@ -719,17 +674,15 @@ add_action('rest_api_init', function () {
 function grp_handle_reset(WP_REST_Request $request) {
     $params = $request->get_json_params();
 
-    // Valida os parâmetros recebidos
+    // Valida o token recebido
     $current_token = isset($params['token']) ? sanitize_text_field($params['token']) : '';
-    $current_code = isset($params['code']) ? sanitize_text_field($params['code']) : '';
 
-    // Verifica se o token e código atuais são válidos
-    if ($current_token !== get_option('grp_site_token') || 
-        $current_code !== get_option('grp_site_code')) {
-        error_log("Tentativa de reset com credenciais inválidas. Token ou código incorretos.");
+    // Verifica se o token atual é válido
+    if ($current_token !== get_option('grp_site_token')) {
+        error_log("Tentativa de reset com token inválido.");
         return new WP_Error(
             'invalid_credentials',
-            'Token ou código inválidos',
+            'Token inválido',
             array('status' => 401)
         );
     }
@@ -739,30 +692,26 @@ function grp_handle_reset(WP_REST_Request $request) {
         $new_token = wp_generate_password(32, false);
         update_option('grp_site_token', $new_token);
 
-        // 2. Gera novo código
-        $new_code = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6));
-        update_option('grp_site_code', $new_code);
-
-        // 3. Remove usuário alvobot existente
+        // 2. Remove usuário alvobot existente
         $existing_user = get_user_by('login', 'alvobot');
         if ($existing_user) {
             require_once(ABSPATH . 'wp-admin/includes/user.php');
             wp_delete_user($existing_user->ID);
         }
 
-        // 4. Cria novo usuário alvobot
+        // 3. Cria novo usuário alvobot
         $new_user = grp_create_alvobot_user();
         if (!$new_user) {
             throw new Exception('Falha ao criar novo usuário alvobot');
         }
 
-        // 5. Gera nova senha de aplicativo
+        // 4. Gera nova senha de aplicativo
         $new_app_password = grp_generate_alvobot_app_password($new_user);
         if (!$new_app_password) {
             throw new Exception('Falha ao gerar nova senha de aplicativo');
         }
 
-        // 6. Obtém a lista de plugins
+        // 5. Obtém a lista de plugins
         if (!function_exists('get_plugins')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
@@ -779,17 +728,16 @@ function grp_handle_reset(WP_REST_Request $request) {
             );
         }
 
-        // 7. Obtém o idioma padrão
+        // 6. Obtém o idioma padrão
         $locale = get_locale();
         $language_slug = substr($locale, 0, 2);
 
-        // 8. Prepara resposta
+        // 7. Prepara resposta
         $response_data = array(
             'status' => 'success',
             'message' => 'Reset realizado com sucesso',
             'data' => array(
                 'token' => $new_token,
-                'code' => $new_code,
                 'username' => 'alvobot',
                 'app_password' => $new_app_password,
                 'wp_version' => get_bloginfo('version'),

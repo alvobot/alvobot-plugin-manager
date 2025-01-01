@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0] - 2025-01-01
+### Removed
+- Removido sistema de código do site (site_code)
+- Removido botão de atualização manual da listagem de plugins
+- Removidas referências ao código do site em toda a aplicação
+
+### Changed
+- Simplificado o processo de autenticação para usar apenas o token
+- Atualizada a documentação para refletir as mudanças
+- Melhorada a segurança do sistema de autenticação
+
+### Security
+- Fortalecido o sistema de autenticação com foco no token único
+
 ## [1.3.0] - 2024-02-04
 ### Added
 - Integrated GitHub-based update system using Plugin Update Checker

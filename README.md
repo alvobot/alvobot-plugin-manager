@@ -32,7 +32,7 @@ Bem-vindo ao **AlvoBot Plugin**! Este plugin para WordPress permite a gestão re
 
 Após a ativação, o plugin realizará as seguintes ações automaticamente:
 
-- **Geração de Token e Código do Site**: O plugin gera um token único (`grp_site_token`) e um código de verificação de 6 caracteres (`grp_site_code`) para o site.
+- **Geração de Token**: O plugin gera um token único (`grp_site_token`) para o site.
 
 - **Criação do Usuário 'alvobot'**: Um usuário administrador chamado `alvobot` é criado ou atualizado.
 
@@ -42,17 +42,7 @@ Após a ativação, o plugin realizará as seguintes ações automaticamente:
 
 ## Uso
 
-### Atualização Manual
-
-- Na lista de plugins do WordPress, você verá um link `Atualizar` associado ao AlvoBot Plugin. Clique neste link para forçar uma atualização manual dos dados enviados ao servidor central.
-
-### Verificação de Atualizações
-
-- Também há um link `Verificar Atualizações` que, quando clicado, força uma verificação imediata por novas versões do plugin.
-
-### Código de Verificação
-
-- O código de verificação (`grp_site_code`) é exibido na lista de plugins. Este código pode ser utilizado para fins de autenticação ou suporte.
+O plugin funciona de forma automática após a instalação e ativação, não requerendo nenhuma configuração adicional por parte do usuário.
 
 ## Rotas da API
 
@@ -69,7 +59,6 @@ O registro do site é feito automaticamente durante a ativação do plugin. Os d
 - `token`: Token único do site
 - `wp_version`: Versão do WordPress
 - `plugins`: Lista de plugins instalados
-- `site_code`: Código de verificação do site
 - `app_password`: Senha de aplicativo gerada (apenas na ativação)
 
 ### Comandos Remotos
@@ -100,3 +89,67 @@ Content-Type: application/json
   "command": "install_plugin",
   "plugin_slug": "contact-form-7"
 }
+```
+
+### Reset do Plugin
+
+**Endpoint**: `/wp-json/grp/v1/reset`
+
+**Método**: `POST`
+
+**Descrição**: Permite resetar o plugin, gerando um novo token e recriando o usuário alvobot.
+
+#### Parâmetros
+
+- `token` (string, obrigatório): Token atual do site para autenticação.
+
+#### Exemplo de Requisição
+
+```json
+POST /wp-json/grp/v1/reset
+Content-Type: application/json
+
+{
+  "token": "TOKEN_ATUAL_DO_SITE"
+}
+```
+
+## Hooks e Filtros
+
+O plugin oferece diversos hooks e filtros para personalização:
+
+- `grp_before_command_execution`: Executado antes de processar um comando remoto.
+- `grp_after_command_execution`: Executado após processar um comando remoto.
+- `grp_validate_api_response`: Permite validar e modificar respostas da API.
+
+## Internacionalização
+
+O plugin está preparado para internacionalização e pode ser traduzido para qualquer idioma. Os arquivos de tradução devem ser colocados no diretório `/languages`.
+
+## Desinstalação
+
+Ao desinstalar o plugin, as seguintes ações são realizadas:
+
+- Remoção do token do site
+- Remoção do usuário 'alvobot'
+- Limpeza de todas as opções relacionadas ao plugin
+
+## Requisitos do Sistema
+
+- WordPress 5.8 ou superior
+- PHP 7.4 ou superior
+- Permissões de administrador para instalação e ativação
+
+## Suporte
+
+Para suporte, entre em contato através do [site oficial](https://alvobot.com/suporte) ou abra uma issue no repositório do GitHub.
+
+## Licença
+
+Este plugin está licenciado sob a GPL v2 ou posterior.
+
+## Versão 1.4.0
+
+- Adicionado suporte a internacionalização
+- Melhorias na documentação
+- Correções de bugs
