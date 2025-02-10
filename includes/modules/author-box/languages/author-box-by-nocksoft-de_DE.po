@@ -1,0 +1,191 @@
+#. Description of the plugin/theme
+msgid "Adds a modern customizable author info box at the end of your posts and pages with some information about the author."
+msgstr "F&uuml;gt eine moderne anpassbare Autoren Info Box am Ende deines Beitrages oder Seite mit einigen Informationen &uuml;ber den Autor ein."
+
+#: author-box-by-nocksoft.php:22
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: authorbox.php:55
+msgid "View Archive"
+msgstr "Archiv anzeigen"
+
+#: authorbox.php:61
+msgid "View Archive"
+msgstr "Archiv anzeigen"
+
+#: settings-defaults.php:16
+msgid "A Post by"
+msgstr "Ein Beitrag von"
+
+#: settings-global.php:65
+msgid "User-specific settings are made in your user profile in WordPress (Users -> Your Profile -> Edit). General settings can be made here."
+msgstr "Benutzerspezifische Einstellungen werden in deinem Benutzerprofil get&auml;tigt (Benutzer -> Dein Profil -> Bearbeiten). Allgemeine Einstellungen k&ouml;nnen hier vorgenommen werden."
+
+#: settings-global.php:68
+msgid "General"
+msgstr "Allgemein"
+
+#: settings-global.php:69
+msgid "Layout"
+msgstr "Aussehen"
+
+#: settings-global.php:88
+msgid "Author Box display options"
+msgstr "Author Box Anzeigeeinstellungen"
+
+#: settings-global.php:91
+msgid "Display Author Box at the end of each post automatically"
+msgstr "F&uuml;ge die Author Box am Ende von Beitr&auml;gen automatisch hinzu"
+
+#: settings-global.php:94
+msgid "Display Author Box at the end of each page automatically (not on front page, blog homepage and privacy policy)"
+msgstr "F&uuml;ge die Author Box am Ende von Seiten automatisch hinzu (nicht auf Startseite, Beitragsseite und Datenschutzerkl&auml;rung)"
+
+#: settings-global.php:99
+msgid "Other options"
+msgstr "Weitere Einstellungen"
+
+#: settings-global.php:102
+msgid "Hide the author box of default WordPress theme (tested from Twenty Nineteen up to Twenty Twenty-One)"
+msgstr "Verstecke die Autor-Biografie (Author Box) vom WordPress Standard-Theme (Getestet von Twenty Nineteen bis Twenty Twenty-One)"
+
+#: settings-global.php:103
+msgid "If your theme offers you an option to hide the author box of your theme, you should use your theme's setting for this."
+msgstr "Wenn dein Theme dir eine Option anbietet, die Autor-Biografie (Author Box) deines Themes auszublenden, solltest du die Einstellung deines Themes dafür verwenden."
+
+#: settings-global.php:113
+msgid "Basic"
+msgstr "Grundlegend"
+
+#: settings-global.php:116
+msgid "Arial"
+msgstr "Arial"
+
+#: settings-global.php:117
+msgid "Inherit from website"
+msgstr "Von Webseite erben"
+
+#: settings-global.php:119
+msgid "Font of Author Box"
+msgstr "Schriftart der Author Box"
+
+#: settings-global.php:120
+msgid "Inherit from website means that the fonts of the WordPress theme are used."
+msgstr "Von Webseite erben bedeutet, dass die Schriftart des WordPress Themes verwendet wird."
+
+#: settings-global.php:123
+msgid "Show Shadow of Author Box"
+msgstr "Stelle einen Schatten um die Author Box dar"
+
+#: settings-global.php:129
+msgid "Border"
+msgstr "Rahmen"
+
+#: settings-global.php:132
+msgid "Show Border of Author Box"
+msgstr "Stelle den Rahmen der Author Box dar"
+
+#: settings-global.php:135
+msgid "Color of border"
+msgstr "Farbe des Rahmens"
+
+#: settings-global.php:138
+msgid "Size of border"
+msgstr "Breite des Rahmens"
+
+#: settings-global.php:143
+msgid "Avatar"
+msgstr "Avatar"
+
+#: settings-global.php:146
+msgid "Size of Avatar (Pixel)"
+msgstr "Gr&ouml;&szlig;e Avatar (Pixel)"
+
+#: settings-global.php:149
+msgid "Use a circle avatar instead of a square"
+msgstr "Verwende ein rundes statt ein eckiges Profilbild"
+
+#: settings-global.php:155
+msgid "Header"
+msgstr "Header"
+
+#: settings-global.php:157
+msgid "e.g. A Post by"
+msgstr "z.B. Ein Beitrag von"
+
+#: settings-global.php:158
+msgid "Headline"
+msgstr "Text der &Uuml;berschrift"
+
+#: settings-global.php:161
+msgid "Fontsize of Headline (em)"
+msgstr "Schriftgr&ouml;&szlig;e der &Uuml;berschrift (em)"
+
+#: settings-global.php:165
+msgid "Fontsize of author's Position (em)"
+msgstr "Schriftgr&ouml;&szlig;e der Position des Autors (em)"
+
+#: settings-global.php:171
+msgid "Biography"
+msgstr "Biografie"
+
+#: settings-global.php:174
+msgid "Fontsize of Biography (em)"
+msgstr "Schriftgr&ouml;&szlig;e der Biografie (em)"
+
+#: settings-global.php:179
+msgid "Footer"
+msgstr "Footer"
+
+#: settings-global.php:182
+msgid "Fontsize of Links (em)"
+msgstr "Schriftgr&ouml;&szlig;e der Links (em)"
+
+#: settings-global.php:185
+msgid "Display a link to the author's archive"
+msgstr "Zeige einen Link zum Archiv des Autors an"
+
+#: settings-global.php:196
+msgid "Save Settings"
+msgstr "Einstellungen speichern"
+
+#: settings-user.php:11
+msgid "Here you can make further settings for your avatar or other personal settings. The WordPress administrator can adjust global settings under Settings -> Author Box."
+msgstr "Hier kannst du weitere Einstellungen in Bezug auf deinen Avatar oder weitere pers&ouml;nliche Einstellungen vornehmen. Globale Einstellungen kann der WordPress-Administrator unter Einstellungen -> Author Box vornehmen."
+
+#: settings-user.php:15
+msgid "Local Avatar"
+msgstr "Lokaler Avatar"
+
+#: settings-user.php:16
+msgid "The local avatars feature was moved to a separate plugin. Please install <a href='https://wordpress.org/plugins/local-avatars-by-nocksoft/' target='_blank'>Local Avatars by Nocksoft</a>."
+msgstr "Die Funktion f&uuml;r lokale Avatare wurde in ein separates Plugin ausgelagert. Bitte installiere <a href='https://wordpress.org/plugins/local-avatars-by-nocksoft/' target='_blank'>Local Avatars by Nocksoft</a>."
+
+#: settings-user.php:20
+msgid "Your Position"
+msgstr "Deine Position"
+
+#: settings-user.php:23
+msgid "Position (e.g. Founder or Author of YourSite)"
+msgstr "Position (z.B. Gr&uuml;nder oder Autor von DeineSeite)"
+
+#: settings-user.php:24
+msgid "Here you can enter your position. The position is shown below your name in the Author Box."
+msgstr "Hier kannst du deine Position angeben. Die Position wird unterhalb deines Namens in der Author Box angezeigt."
+
+#: settings-user.php:29
+msgid "Homepage / About Me Page"
+msgstr "Homepage / &Uuml;ber Mich Seite"
+
+#: settings-user.php:33
+msgid "Link Text (e.g. Homepage or About Me)"
+msgstr "Link Text (z.B. Homepage oder &Uuml;ber mich)"
+
+#: settings-user.php:34
+msgid "Link URL (e.g. https://yoursite.com)"
+msgstr "Link URL (z.B. https://deineseite.de)"
+
+#: settings-user.php:35
+msgid "This URL will be displayed below your biography in the Author Box."
+msgstr "Diese URL wird unterhalb deiner Biografie in der Author Box angezeigt."

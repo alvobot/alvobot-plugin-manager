@@ -1,0 +1,4 @@
+div.author-bio,
+div.author-description {
+    display: none !important;
+}
