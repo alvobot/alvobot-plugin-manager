@@ -1,22 +1,27 @@
-# AlvoBot Plugin
+# AlvoBot Plugin Manager
 
-Bem-vindo ao **AlvoBot Plugin**! Este plugin para WordPress permite a gestão remota de plugins com a autorização dos clientes. Abaixo você encontrará uma documentação completa sobre como instalar, configurar e utilizar o plugin, incluindo detalhes sobre as rotas da API disponíveis.
+Plugin WordPress para gerenciamento de plugins e funcionalidades do AlvoBot Pro. Este plugin permite a gestão remota de plugins e recursos com a autorização dos clientes.
 
 ## Índice
 
 - [Instalação](#instalação)
 - [Configuração](#configuração)
-- [Uso](#uso)
-- [Rotas da API](#rotas-da-api)
-  - [Registrar Site](#registrar-site)
-  - [Comandos Remotos](#comandos-remotos)
-  - [Reset do Plugin](#reset-do-plugin)
-- [Hooks e Filtros](#hooks-e-filtros)
-- [Internacionalização](#internacionalização)
-- [Desinstalação](#desinstalação)
 - [Requisitos do Sistema](#requisitos-do-sistema)
+- [Módulos](#módulos)
+  - [Plugin Manager](#1-plugin-manager)
+  - [Author Box](#2-author-box)
+  - [Logo Generator](#3-logo-generator)
+  - [Pre-Article](#4-pre-article)
+- [Desinstalação](#desinstalação)
 - [Suporte](#suporte)
 - [Licença](#licença)
+
+## Requisitos do Sistema
+
+- WordPress 5.8 ou superior
+- PHP 7.4 ou superior
+- Permissões de administrador para instalação e ativação
+- Conexão com internet para comunicação com o servidor central
 
 ## Instalação
 
@@ -33,123 +38,165 @@ Bem-vindo ao **AlvoBot Plugin**! Este plugin para WordPress permite a gestão re
 Após a ativação, o plugin realizará as seguintes ações automaticamente:
 
 - **Geração de Token**: O plugin gera um token único (`grp_site_token`) para o site.
-
 - **Criação do Usuário 'alvobot'**: Um usuário administrador chamado `alvobot` é criado ou atualizado.
-
 - **Geração de Senha de Aplicativo**: Uma senha de aplicativo é gerada para o usuário `alvobot` com o nome `AlvoBot App Integration`.
+- **Registro no Servidor Central**: O site é registrado no servidor central da AlvoBot.
 
-- **Registro no Servidor Central**: O site é registrado no servidor central da AlvoBot, enviando informações como URL, versão do WordPress, plugins instalados e outros dados relevantes.
+### Dados de Registro
 
-## Uso
+Durante o registro, o plugin envia:
+- URL do site
+- Token único
+- Versão do WordPress
+- Lista de plugins instalados
+- Senha de aplicativo (apenas na ativação inicial)
 
-O plugin funciona de forma automática após a instalação e ativação, não requerendo nenhuma configuração adicional por parte do usuário.
+## Módulos
 
-## Rotas da API
+### 1. Plugin Manager
 
-O AlvoBot Plugin expõe algumas rotas REST API para permitir a comunicação com o servidor central.
+Módulo central responsável pelo gerenciamento remoto de plugins.
 
-### Registrar Site
+#### API Endpoints
 
-**Endpoint**: Automático na ativação do plugin.
+**Comando Remoto**
+- `POST /wp-json/grp/v1/command`
+  - Gerencia plugins remotamente
+  - Requer autenticação via token
+  - Comandos suportados:
+    - `install_plugin`: Instala e ativa um plugin
+    - `activate_plugin`: Ativa um plugin existente
+    - `deactivate_plugin`: Desativa um plugin
+    - `update_plugin`: Atualiza um plugin existente
+    - `reset`: Reseta o plugin para estado inicial
 
-O registro do site é feito automaticamente durante a ativação do plugin. Os dados enviados incluem:
-
-- `action`: 'register_site'
-- `site_url`: URL do site
-- `token`: Token único do site
-- `wp_version`: Versão do WordPress
-- `plugins`: Lista de plugins instalados
-- `app_password`: Senha de aplicativo gerada (apenas na ativação)
-
-### Comandos Remotos
-
-**Endpoint**: `/wp-json/grp/v1/command`
-
-**Método**: `POST`
-
-**Descrição**: Recebe comandos do servidor central para gerenciar plugins remotamente.
-
-#### Parâmetros
-
-- `token` (string, obrigatório): Token único do site para autenticação.
-- `command` (string, obrigatório): Comando a ser executado. Valores possíveis:
-  - `install_plugin`: Instala e ativa um plugin.
-  - `activate_plugin`: Ativa um plugin existente.
-- `plugin_slug` (string, opcional): Slug do plugin no repositório do WordPress.
-- `plugin_url` (string, opcional): URL para download do plugin (em formato .zip).
-
-#### Exemplo de Requisição
-
+**Exemplo de Requisição para Instalação de Plugin:**
 ```json
 POST /wp-json/grp/v1/command
-Content-Type: application/json
-
 {
-  "token": "SEU_TOKEN_UNICO",
-  "command": "install_plugin",
-  "plugin_slug": "contact-form-7"
+    "token": "seu-token-aqui",
+    "command": "install_plugin",
+    "plugin_slug": "contact-form-7",
+    "plugin_url": "https://downloads.wordpress.org/plugin/contact-form-7.latest-stable.zip"
 }
 ```
 
-### Reset do Plugin
-
-**Endpoint**: `/wp-json/grp/v1/reset`
-
-**Método**: `POST`
-
-**Descrição**: Permite resetar o plugin, gerando um novo token e recriando o usuário alvobot.
-
-#### Parâmetros
-
-- `token` (string, obrigatório): Token atual do site para autenticação.
-
-#### Exemplo de Requisição
-
+**Exemplo de Resposta:**
 ```json
-POST /wp-json/grp/v1/reset
-Content-Type: application/json
-
 {
-  "token": "TOKEN_ATUAL_DO_SITE"
+    "success": true,
+    "message": "Plugin instalado com sucesso",
+    "data": {
+        "plugin": "contact-form-7/wp-contact-form-7.php",
+        "status": "active"
+    }
+}
+```
+
+### 2. Author Box
+
+Módulo para gerenciamento de informações dos autores do blog.
+
+#### API Endpoints
+
+- `PUT /wp-json/alvobot-pro/v1/authors/{username}`
+  - Atualiza informações do autor
+  - Requer autenticação via token
+  - Parâmetros:
+    - `token` (string, obrigatório)
+    - `username` (string, obrigatório)
+    - `display_name` (string, opcional)
+    - `description` (string, opcional)
+    - `author_image` (string, opcional)
+
+**Exemplo de Atualização de Autor:**
+```json
+PUT /wp-json/alvobot-pro/v1/authors/autor123
+{
+    "token": "seu-token-aqui",
+    "display_name": "Nome do Autor",
+    "description": "Biografia do autor",
+    "author_image": "https://exemplo.com/imagem.jpg"
+}
+```
+
+### 3. Logo Generator
+
+Módulo para geração automática de logos para o site.
+
+#### API Endpoints
+
+- `POST /wp-json/alvobot-pro/v1/logos`
+  - Gera um novo logo
+  - Requer autenticação via token
+  - Suporta personalização de cores e fontes
+
+**Exemplo de Geração de Logo:**
+```json
+POST /wp-json/alvobot-pro/v1/logos
+{
+    "token": "seu-token-aqui",
+    "blog_name": "Nome do Site",
+    "font_color": "#000000",
+    "background_color": "#ffffff",
+    "font_choice": "Roboto"
+}
+```
+
+### 4. Pre-Article
+
+Módulo para gerenciamento de pré-artigos e CTAs.
+
+#### API Endpoints
+
+- `GET /wp-json/alvobot-pre-article/v1/pre-articles`
+  - Lista todas as URLs dos pré-artigos
+  - Requer autenticação
+  - Retorna schema com lista de URLs
+
+- `GET /wp-json/alvobot-pre-article/v1/posts/{post_id}/ctas`
+  - Obtém CTAs de um post específico
+  - Requer autenticação
+  - Parâmetros:
+    - `post_id` (integer, obrigatório): ID do post
+
+**Exemplo de Requisição de CTAs:**
+```json
+GET /wp-json/alvobot-pre-article/v1/posts/123/ctas
+Headers: {
+    "Authorization": "Bearer seu-token-aqui"
 }
 ```
 
 ## Hooks e Filtros
 
-O plugin oferece diversos hooks e filtros para personalização:
+O plugin oferece hooks e filtros para personalização:
 
-- `grp_before_command_execution`: Executado antes de processar um comando remoto.
-- `grp_after_command_execution`: Executado após processar um comando remoto.
-- `grp_validate_api_response`: Permite validar e modificar respostas da API.
-
-## Internacionalização
-
-O plugin está preparado para internacionalização e pode ser traduzido para qualquer idioma. Os arquivos de tradução devem ser colocados no diretório `/languages`.
+- `grp_before_command_execution`: Antes de processar comando remoto
+- `grp_after_command_execution`: Após processar comando remoto
+- `grp_validate_api_response`: Validação de respostas da API
 
 ## Desinstalação
 
-Ao desinstalar o plugin, as seguintes ações são realizadas:
-
-- Remoção do token do site
-- Remoção do usuário 'alvobot'
-- Limpeza de todas as opções relacionadas ao plugin
-
-## Requisitos do Sistema
-
-- WordPress 5.8 ou superior
-- PHP 7.4 ou superior
-- Permissões de administrador para instalação e ativação
+Ao desinstalar, o plugin:
+- Remove o token do site
+- Remove o usuário 'alvobot'
+- Limpa todas as opções relacionadas
 
 ## Suporte
 
-Para suporte, entre em contato através do [site oficial](https://alvobot.com/suporte) ou abra uma issue no repositório do GitHub.
+Para suporte:
+- Site oficial: [AlvoBot](https://alvobot.ai)
+- Email: suporte@alvobot.ai
+- Documentação: [Docs](https://docs.alvobot.ai)
 
 ## Licença
 
-Este plugin está licenciado sob a GPL v2 ou posterior.
+Este software é proprietário e seu uso é restrito aos termos de licença do AlvoBot Pro.
 
-## Versão 1.4.0
+## Changelog
 
+### Versão 1.4.0
 - Adicionado suporte a internacionalização
 - Melhorias na documentação
 - Correções de bugs
