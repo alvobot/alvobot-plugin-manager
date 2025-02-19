@@ -97,7 +97,7 @@ class AlvoBotPro_LogoGenerator_API {
                 $blog_name,
                 $font_color,
                 $background_color,
-                $selected_icon,
+                $this->logo_generator->get_icons_dir() . $selected_icon, // Usando o método getter
                 $font_choice
             );
             
@@ -134,8 +134,11 @@ class AlvoBotPro_LogoGenerator_API {
             // Se solicitado, gerar e aplicar o favicon
             if ($generate_favicon) {
                 try {
+                    // Remove a extensão .svg se existir
+                    $icon_name = str_replace('.svg', '', basename($selected_icon));
+                    
                     $favicon_result = $this->logo_generator->generate_and_save_favicon(
-                        $selected_icon,
+                        $icon_name,
                         $font_color,
                         $background_color
                     );

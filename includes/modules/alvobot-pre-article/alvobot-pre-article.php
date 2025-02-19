@@ -25,23 +25,12 @@ define('ALVOBOT_PRE_ARTICLE_PATH', plugin_dir_path(__FILE__));
 define('ALVOBOT_PRE_ARTICLE_URL', plugin_dir_url(__FILE__));
 define('ALVOBOT_PRE_ARTICLE_BASENAME', plugin_basename(__FILE__));
 
-// Carrega as classes do plugin
-require_once ALVOBOT_PRE_ARTICLE_PATH . 'includes/class-alvobot-pre-article.php';
-require_once ALVOBOT_PRE_ARTICLE_PATH . 'class-pre-article.php';
+// Carrega a classe principal
+require_once plugin_dir_path(__FILE__) . 'includes/class-alvobot-pre-article.php';
 
-/**
- * Inicializa o plugin
- */
-function run_alvobot_pre_artigo(): void {
-    // Inicializa a classe principal
-    $plugin = new Alvobot_Pre_Article();
-    $plugin->run();
-}
-
-// Inicia o plugin quando o WordPress carregar
-if (!defined('ALVOBOT_PRO_VERSION')) {
-    add_action('plugins_loaded', 'run_alvobot_pre_artigo');
-}
+// Instancia a classe
+$alvobot_pre_article = new Alvobot_Pre_Article();
+$alvobot_pre_article->run();
 
 /**
  * Função para logging (apenas quando WP_DEBUG está ativo)

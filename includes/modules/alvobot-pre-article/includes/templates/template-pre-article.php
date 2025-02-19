@@ -140,7 +140,110 @@ $second_part = wpautop($second_part);
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php wp_title('|', true, 'right'); ?></title>
+    <link rel="canonical" href="<?php echo esc_url(get_permalink()); ?>" />
     <?php wp_head(); ?>
+    <style>
+        @keyframes ctaGrow {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .cta-button {
+            transition: transform 0.3s ease;
+        }
+        
+        .cta-button.animate {
+            animation: ctaGrow 2s ease;
+        }
+
+        /* Estilos do rodapé */
+        .pre-article-footer {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-section {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 10px;
+        }
+
+        .footer-link {
+            color: #2271b1;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .footer-link:hover {
+            color: #135e96;
+            text-decoration: underline;
+        }
+
+        .legal-disclaimer {
+            text-align: center;
+            line-height: 1.5;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Responsividade */
+        @media screen and (max-width: 782px) {
+            .footer-links {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctaButtons = document.querySelectorAll('.cta-button');
+            let lastAnimationTime = {};
+            
+            // Função para animar um botão específico
+            function animateButton(button) {
+                if (Date.now() - (lastAnimationTime[button.textContent] || 0) < 7000) {
+                    return; // Evita animar se passou menos de 7 segundos
+                }
+                
+                button.classList.add('animate');
+                lastAnimationTime[button.textContent] = Date.now();
+                
+                setTimeout(() => {
+                    button.classList.remove('animate');
+                }, 2000);
+            }
+            
+            // Inicializa tempos aleatórios para cada botão
+            ctaButtons.forEach((button, index) => {
+                const initialDelay = Math.random() * (30000 - 15000) + 15000; // Entre 15 e 30 segundos
+                setTimeout(() => {
+                    animateButton(button);
+                    
+                    // Configura o intervalo de 40 segundos após a primeira animação
+                    setInterval(() => {
+                        animateButton(button);
+                    }, 40000);
+                }, initialDelay);
+            });
+        });
+    </script>
 </head>
 <body <?php body_class('pre-article-page'); ?>>
     <?php wp_body_open(); ?>
@@ -188,6 +291,16 @@ $second_part = wpautop($second_part);
                     ?>
                 </div>
 
+                <!-- Bloco de Anúncio -->
+                <div class="adsense-block">
+                    <?php 
+                    $adsense_content = get_query_var('alvobot_adsense_content');
+                    if (!empty($adsense_content)) {
+                        echo wp_kses_post($adsense_content);
+                    }
+                    ?>
+                </div>
+
                 <!-- Segunda parte do conteúdo -->
                 <div class="excerpt-continuation">
                     <?php 
@@ -218,6 +331,48 @@ $second_part = wpautop($second_part);
 
             <footer class="pre-article-footer">
                 <div class="footer-content">
+                <div class="footer-section links-section">
+                        <nav class="footer-links">
+                            <?php
+                            // Obtém as páginas essenciais
+                            $contact_page = get_page_by_path('contato');
+                            $privacy_page = get_page_by_path('politica-de-privacidade');
+                            $terms_page = get_page_by_path('termos-de-uso');
+
+                            // Array com as páginas e seus títulos
+                            $footer_pages = array(
+                                'contato' => array(
+                                    'title' => 'Contato',
+                                    'page' => $contact_page
+                                ),
+                                'politica-de-privacidade' => array(
+                                    'title' => 'Política de Privacidade',
+                                    'page' => $privacy_page
+                                ),
+                                'termos-de-uso' => array(
+                                    'title' => 'Termos de Uso',
+                                    'page' => $terms_page
+                                )
+                            );
+
+                            // Cria os links
+                            foreach ($footer_pages as $slug => $data) {
+                                if ($data['page']) {
+                                    $page_url = get_permalink($data['page']);
+                                    // Adiciona UTM
+                                    $page_url = add_query_arg(array(
+                                        'utm_content' => 'footer_' . $slug
+                                    ), $page_url);
+                                    ?>
+                                    <a href="<?php echo esc_url($page_url); ?>" class="footer-link">
+                                        <?php echo esc_html($data['title']); ?>
+                                    </a>
+                                    <?php
+                                }
+                            }
+                            ?>
+                        </nav>
+                    </div>
                     <div class="footer-section disclaimer-section">
                         <div class="legal-disclaimer">
                             <?php
@@ -229,21 +384,10 @@ $second_part = wpautop($second_part);
                             // Substitui o nome do site
                             $footer_text = str_replace('{NOME DO SITE}', get_bloginfo('name'), $footer_text);
                             
-                            // Substitui "Política de Privacidade" por um link
-                            $privacy_url = get_privacy_policy_url();
-                            if ($privacy_url) {
-                                $footer_text = str_replace(
-                                    'Política de Privacidade',
-                                    '<a href="' . esc_url($privacy_url) . '" class="footer-link">Política de Privacidade</a>',
-                                    $footer_text
-                                );
-                            }
-                            
                             echo wp_kses_post($footer_text);
                             ?>
                         </div>
                     </div>
-
                     <div class="footer-section copyright-section">
                         <div class="footer-links">
                             <?php

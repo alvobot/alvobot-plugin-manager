@@ -21,13 +21,11 @@ class AlvoBotPro_LogoGenerator {
         // Hooks
         add_action('admin_init', array($this, 'init'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('admin_head', array($this, 'add_preview_styles'));
         add_action('wp_ajax_generate_logo', array($this, 'ajax_generate_logo'));
         add_action('wp_ajax_save_logo', array($this, 'ajax_save_logo'));
         add_action('wp_ajax_generate_favicon', array($this, 'ajax_generate_favicon'));
         add_action('wp_ajax_save_favicon', array($this, 'ajax_save_favicon'));
-        add_action('wp_ajax_preview_logo', array($this, 'ajax_generate_logo')); // Adicionado o método para preview em tempo real
+        add_action('wp_ajax_preview_logo', array($this, 'ajax_generate_logo')); // Preview em tempo real
         
         // Filtros para SVG
         add_filter('upload_mimes', array($this, 'allow_svg_upload'));
@@ -51,25 +49,42 @@ class AlvoBotPro_LogoGenerator {
     }
 
     public function enqueue_admin_scripts($hook) {
-        if ($hook != 'alvobot-pro_page_alvobot-pro-logo') {
-            return;
-        }
-        wp_enqueue_script('wp-color-picker');
-        wp_enqueue_style('wp-color-picker');
-    }
-
-    public function enqueue_scripts($hook) {
         if (strpos($hook, 'alvobot-pro-logo') === false) {
             return;
         }
         
-        wp_enqueue_script('alvobot-pro-logo-generator', $this->plugin_url . 'includes/modules/logo-generator/js/logo-generator.js', array('jquery', 'wp-color-picker'), ALVOBOT_PRO_VERSION, true);
+        // Enqueue WordPress color picker
+        wp_enqueue_style('wp-color-picker');
+        wp_enqueue_script('wp-color-picker');
+        
+        // Enqueue main stylesheet
+        wp_enqueue_style(
+            'alvobot-pro-logo-generator',
+            $this->plugin_url . 'includes/modules/logo-generator/assets/css/logo-generator.css',
+            array(),
+            ALVOBOT_PRO_VERSION
+        );
+        
+        // Enqueue JavaScript
+        wp_enqueue_script(
+            'alvobot-pro-logo-generator', 
+            $this->plugin_url . 'includes/modules/logo-generator/assets/js/logo-generator.js', 
+            array('jquery', 'wp-color-picker'), 
+            ALVOBOT_PRO_VERSION, 
+            true
+        );
+        
         wp_localize_script('alvobot-pro-logo-generator', 'logoGeneratorParams', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('logo_generator_nonce')
+            'nonce'   => wp_create_nonce('logo_generator_nonce')
         ));
         
         $this->enqueue_google_fonts();
+    }
+
+    public function enqueue_scripts($hook) {
+        // Removido pois o CSS já é carregado em enqueue_admin_scripts
+        return;
     }
 
     public function enqueue_google_fonts() {
@@ -88,12 +103,12 @@ class AlvoBotPro_LogoGenerator {
             );
             
             $query_args = array(
-                'family' => implode('|', $fonts),
+                'family'  => implode('|', $fonts),
                 'display' => 'swap',
             );
             wp_enqueue_style('blg-google-fonts', add_query_arg($query_args, "https://fonts.googleapis.com/css"), array(), null);
             
-            // Add CSS for font preview
+            // Adiciona CSS para preview da fonte
             wp_add_inline_style('blg-google-fonts', '
                 .font-preview-select {
                     max-width: 400px;
@@ -167,45 +182,139 @@ class AlvoBotPro_LogoGenerator {
                 margin-top: 20px;
                 padding: 0;
             }
-            
-            .icon-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-                gap: 15px;
-                margin-top: 10px;
+
+            /* Icon Search */
+            .icon-search {
+                margin-bottom: 15px;
+            }
+
+            .icon-search input {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            /* Icon Categories */
+            .icon-categories {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 10px;
+                background: #f0f0f1;
+                border-radius: 4px;
+            }
+
+            .icon-category {
+                padding: 6px 12px;
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s ease;
+            }
+
+            .icon-category:hover {
+                border-color: #2271b1;
+                color: #2271b1;
+            }
+
+            .icon-category.active {
+                background: #2271b1;
+                border-color: #2271b1;
+                color: #fff;
+            }
+
+            .icon-category .count {
+                opacity: 0.7;
+                font-size: 12px;
+                margin-left: 4px;
             }
             
-            .icon-grid label {
-                display: block;
+            /* Icon Grid */
+            .icon-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 15px;
+                margin-top: 10px;
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 10px;
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+            
+            .icon-option {
+                position: relative;
+                transition: all 0.2s ease;
+            }
+            
+            .icon-option label {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
                 cursor: pointer;
                 padding: 10px;
                 border: 1px solid #ddd;
                 border-radius: 4px;
-                text-align: center;
+                transition: all 0.2s ease;
             }
             
-            .icon-grid label:hover {
+            .icon-option:hover label {
                 border-color: #2271b1;
+                background: #f6f7f7;
+                transform: translateY(-2px);
             }
             
-            .icon-grid input[type="radio"] {
+            .icon-option input[type="radio"] {
                 display: none;
             }
             
-            .icon-grid input[type="radio"]:checked + .icon-preview {
+            .icon-option input[type="radio"]:checked + label {
                 background: #f0f6fc;
                 border-color: #2271b1;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             
             .icon-preview {
-                padding: 10px;
-                border: 1px solid transparent;
-                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                margin-bottom: 8px;
             }
             
-            .icon-preview svg {
+            .icon-preview img {
                 width: 32px;
                 height: 32px;
+                object-fit: contain;
+            }
+            
+            .icon-name {
+                font-size: 11px;
+                text-align: center;
+                color: #50575e;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                width: 100%;
+            }
+
+            .no-icons-found {
+                text-align: center;
+                padding: 20px;
+                background: #f0f6fc;
+                border-radius: 4px;
+                color: #50575e;
+            }
+
+            /* Hide icons that don't match search or category */
+            .icon-option.hidden {
+                display: none;
             }
             
             .notice {
@@ -219,528 +328,346 @@ class AlvoBotPro_LogoGenerator {
         error_log('[Logo Generator] Getting available fonts');
         return array(
             'montserrat' => array(
-                'name' => 'Montserrat',
-                'family' => "'Montserrat', sans-serif",
+                'name'        => 'Montserrat',
+                'family'      => "'Montserrat', sans-serif",
                 'description' => 'Moderna e limpa'
             ),
             'playfair' => array(
-                'name' => 'Playfair Display',
-                'family' => "'Playfair Display', serif",
+                'name'        => 'Playfair Display',
+                'family'      => "'Playfair Display', serif",
                 'description' => 'Elegante e clássica'
             ),
             'raleway' => array(
-                'name' => 'Raleway',
-                'family' => "'Raleway', sans-serif",
+                'name'        => 'Raleway',
+                'family'      => "'Raleway', sans-serif",
                 'description' => 'Minimalista e contemporânea'
             ),
             'abril' => array(
-                'name' => 'Abril Fatface',
-                'family' => "'Abril Fatface', cursive",
+                'name'        => 'Abril Fatface',
+                'family'      => "'Abril Fatface', cursive",
                 'description' => 'Ousada e decorativa'
             ),
             'roboto' => array(
-                'name' => 'Roboto',
-                'family' => "'Roboto', sans-serif",
+                'name'        => 'Roboto',
+                'family'      => "'Roboto', sans-serif",
                 'description' => 'Versátil e profissional'
             ),
             'lora' => array(
-                'name' => 'Lora',
-                'family' => "'Lora', serif",
+                'name'        => 'Lora',
+                'family'      => "'Lora', serif",
                 'description' => 'Elegante e legível'
             ),
             'oswald' => array(
-                'name' => 'Oswald',
-                'family' => "'Oswald', sans-serif",
+                'name'        => 'Oswald',
+                'family'      => "'Oswald', sans-serif",
                 'description' => 'Forte e condensada'
             ),
             'pacifico' => array(
-                'name' => 'Pacifico',
-                'family' => "'Pacifico', cursive",
+                'name'        => 'Pacifico',
+                'family'      => "'Pacifico', cursive",
                 'description' => 'Manuscrita moderna'
             ),
             'quicksand' => array(
-                'name' => 'Quicksand',
-                'family' => "'Quicksand', sans-serif",
+                'name'        => 'Quicksand',
+                'family'      => "'Quicksand', sans-serif",
                 'description' => 'Geométrica e amigável'
             ),
             'cinzel' => array(
-                'name' => 'Cinzel',
-                'family' => "'Cinzel', serif",
+                'name'        => 'Cinzel',
+                'family'      => "'Cinzel', serif",
                 'description' => 'Clássica e luxuosa'
             )
         );
     }
 
     public function get_available_icons() {
-        error_log('[Logo Generator] Getting available icons from: ' . $this->icons_dir);
         $icons = array();
+        $icon_metadata = array();
         
-        if (!is_dir($this->icons_dir)) {
-            error_log('[Logo Generator] Error: Icons directory does not exist: ' . $this->icons_dir);
-            return $icons;
-        }
-
+        // Obtém todos os arquivos do diretório de ícones
         $files = scandir($this->icons_dir);
-        error_log('[Logo Generator] Found files in icons directory: ' . print_r($files, true));
-        
         if ($files === false) {
-            error_log('[Logo Generator] Error: Failed to scan icons directory');
-            return $icons;
+            return array();
         }
-
+        
+        // Primeiro: coleta metadados dos arquivos JSON
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..') continue;
+            
+            if (pathinfo($file, PATHINFO_EXTENSION) === 'json') {
+                $name = pathinfo($file, PATHINFO_FILENAME);
+                $json_content = file_get_contents($this->icons_dir . $file);
+                if ($json_content !== false) {
+                    $metadata = json_decode($json_content, true);
+                    if ($metadata) {
+                        $icon_metadata[$name] = $metadata;
+                    }
+                }
+            }
+        }
+        
+        // Segundo: coleta os arquivos SVG e mescla com os metadados
         foreach ($files as $file) {
             if ($file === '.' || $file === '..') continue;
             
             if (pathinfo($file, PATHINFO_EXTENSION) === 'svg') {
                 $name = pathinfo($file, PATHINFO_FILENAME);
+                $metadata = isset($icon_metadata[$name]) ? $icon_metadata[$name] : array();
+                
+                $category = $this->get_icon_category($name, $metadata);
+                $keywords = $this->get_icon_keywords($name, $metadata);
+                
                 $icons[] = array(
-                    'name' => $name,
-                    'path' => $file,
-                    'url' => $this->plugin_url . 'includes/modules/logo-generator/assets/icons/' . $file
+                    'name'     => $name,
+                    'path'     => $file,
+                    'url'      => $this->plugin_url . 'includes/modules/logo-generator/assets/icons/' . $file,
+                    'category' => $category,
+                    'keywords' => $keywords
                 );
             }
         }
-
-        error_log('[Logo Generator] Available icons: ' . print_r($icons, true));
+        
+        // Ordena os ícones por categoria e nome
+        usort($icons, function($a, $b) {
+            $cat_compare = strcmp($a['category'], $b['category']);
+            if ($cat_compare === 0) {
+                return strcmp($a['name'], $b['name']);
+            }
+            return $cat_compare;
+        });
+        
         return $icons;
     }
 
-    public function generate_logo($blog_name, $font_color, $background_color, $icon_file, $font_choice) {
-        error_log('[Logo Generator] Starting logo generation with:');
-        error_log('[Logo Generator] - blog_name: ' . $blog_name);
-        error_log('[Logo Generator] - font_color: ' . $font_color);
-        error_log('[Logo Generator] - background_color: ' . $background_color);
-        error_log('[Logo Generator] - icon_file: ' . $icon_file);
-        error_log('[Logo Generator] - font_choice: ' . $font_choice);
-        error_log('[Logo Generator] - icons_dir: ' . $this->icons_dir);
-
-        if (empty($blog_name) || empty($icon_file)) {
-            error_log('[Logo Generator] Error: Blog name or icon file is empty');
-            return false;
+    private function get_icon_category($name, $metadata) {
+        // Se os metadados tiverem categoria, usa-a
+        if (!empty($metadata['category'])) {
+            return $metadata['category'];
         }
 
-        // Dimensões finais do SVG
-        $width  = 500;  // Largura total
-        $height = 100;  // Altura total do SVG
-        
-        // Configurações de texto
-        $text_size = 42;   // Tamanho da fonte
-        $padding   = 20;   // Espaço entre o ícone e o texto
-        
-        // Altura máxima que o ícone pode ter dentro do nosso SVG de 100px
-        $max_icon_height = 60; // Pode ajustar conforme a necessidade
-        
-        // Carrega o arquivo SVG do ícone
-        $icon_path = $this->icons_dir . $icon_file;
-        error_log('[Logo Generator] Attempting to load SVG from: ' . $icon_path);
-        
-        if (!file_exists($icon_path)) {
-            error_log('[Logo Generator] Error: Icon file does not exist at ' . $icon_path);
-            return false;
-        }
-        
-        $svg_content = @file_get_contents($icon_path);
-        
-        if (!$svg_content) {
-            error_log('[Logo Generator] Error: Failed to load SVG file: ' . $icon_path);
-            return false;
-        }
-        
-        error_log('[Logo Generator] Successfully loaded SVG icon');
-        
-        // Remove declarações XML e DOCTYPE
-        $svg_content_clean = (string)preg_replace('/<\?xml.*?\?>/', '', $svg_content);
-        $svg_content_clean = (string)preg_replace('/<!DOCTYPE.*?\?>/', '', $svg_content_clean);
-        
-        // Extrai a viewBox do SVG (ex: viewBox="0 0 256 512")
-        preg_match('/viewBox=["\']([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)["\']/', $svg_content_clean, $vb_matches);
-        
-        if (count($vb_matches) === 5) {
-            // minX, minY, vbWidth, vbHeight
-            $minX     = floatval($vb_matches[1]);
-            $minY     = floatval($vb_matches[2]);
-            $vbWidth  = floatval($vb_matches[3]);
-            $vbHeight = floatval($vb_matches[4]);
-            error_log('[Logo Generator] Extracted viewBox: ' . implode(', ', [$minX, $minY, $vbWidth, $vbHeight]));
-        } else {
-            // Se não houver viewBox, assumimos algo padrão
-            $minX = 0; 
-            $minY = 0;
-            $vbWidth = 100;
-            $vbHeight = 100;
-            error_log('[Logo Generator] No viewBox found, using defaults');
-        }
-        
-        // Calcula a escala para que a altura final do ícone seja $max_icon_height
-        // Se $vbHeight for 0, evitamos divisão por zero
-        $icon_scale = ($vbHeight > 0) ? ($max_icon_height / $vbHeight) : 1.0;
-        
-        // Largura do ícone após aplicar a escala
-        $drawn_icon_width = $vbWidth * $icon_scale;
-        
-        // Remover tags <svg> de abertura e </svg> de fechamento
-        $svg_content_clean = preg_replace('/<svg[^>]*>/', '', $svg_content_clean);
-        $svg_content_clean = preg_replace('/<\/svg>/', '', $svg_content_clean);
-        
-        // Ajusta fills e strokes para a cor da fonte
-        $svg_content_clean = preg_replace('/fill="[^"]*"/', 'fill="' . $font_color . '"', $svg_content_clean);
-        $svg_content_clean = preg_replace('/stroke="[^"]*"/', 'stroke="' . $font_color . '"', $svg_content_clean);
-        
-        // Calcula largura aproximada do texto
-        $text_width = strlen($blog_name) * ($text_size * 0.6);
-        
-        // Largura total ocupada (ícone escalado + padding + texto)
-        $total_content_width = $drawn_icon_width + $padding + $text_width;
-        
-        // Posição inicial com padding à esquerda (em vez de centralizar)
-        $start_x = 0; // Padding fixo de 20px à esquerda
-        
-        // Posição do ícone
-        $icon_x = $start_x;
-        // Centralização vertical do ícone em 100px de altura
-        $icon_y = ($height - $max_icon_height) / 2;
-        
-        // Posição do texto (lado a lado)
-        $text_start_x = $icon_x + $drawn_icon_width + $padding;
-        // Centralizado verticalmente
-        $text_y = $height / 2;
-        
-        // Monta o SVG final
-        $fonts = $this->get_available_fonts();
-        $font_family = isset($fonts[$font_choice]) ? $fonts[$font_choice]['family'] : "'Montserrat', sans-serif";
-        
-        $svg = <<<SVG
-        <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-        <svg xmlns="http://www.w3.org/2000/svg"
-             width="{$width}"
-             height="{$height}"
-             viewBox="0 0 {$width} {$height}"
-             style="background-color: {$background_color};">
-             
-            <!-- Ícone importado e escalado dinamicamente -->
-            <g transform="translate({$icon_x}, {$icon_y}) 
-                         scale({$icon_scale}) 
-                         translate(-{$minX}, -{$minY})"
-               fill="{$font_color}">
-                {$svg_content_clean}
-            </g>
-            
-            <!-- Texto -->
-            <text x="{$text_start_x}"
-                  y="{$text_y}"
-                  font-family="{$font_family}"
-                  font-size="{$text_size}px"
-                  font-weight="bold"
-                  dominant-baseline="middle"
-                  fill="{$font_color}">
-                {$blog_name}
-            </text>
-        </svg>
-        SVG;
-        
-        return $svg;
-    }
+        // Caso contrário, tenta determinar a categoria pelo nome
+        $categories = array(
+            'interface'     => array('arrow', 'button', 'menu', 'cursor', 'zoom'),
+            'business'      => array('chart', 'graph', 'office', 'money', 'coin'),
+            'communication' => array('mail', 'chat', 'message', 'phone'),
+            'media'         => array('play', 'pause', 'video', 'audio', 'music'),
+            'social'        => array('share', 'like', 'heart', 'user'),
+            'weather'       => array('sun', 'cloud', 'rain', 'snow'),
+            'technology'    => array('device', 'computer', 'phone', 'tablet'),
+            'tools'         => array('settings', 'tool', 'wrench', 'gear'),
+        );
 
-    public function ajax_generate_logo() {
-        check_ajax_referer('logo_generator_nonce', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-
-        $blog_name = isset($_POST['blog_name']) ? sanitize_text_field($_POST['blog_name']) : '';
-        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
-        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
-        $selected_icon = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
-        $font_choice = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
-
-        // Validate icon exists
-        $available_icons = $this->get_available_icons();
-        $icon_found = false;
-        
-        foreach ($available_icons as $icon) {
-            if ($icon['path'] === $selected_icon) {
-                $icon_to_use = $selected_icon;
-                $icon_found = true;
-                break;
+        foreach ($categories as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (stripos($name, $keyword) !== false) {
+                    return $category;
+                }
             }
         }
-        
-        if (!$icon_found) {
-            $random_icon = $available_icons[array_rand($available_icons)];
-            $icon_to_use = $random_icon['path'];
+
+        return 'other';
+    }
+
+    private function get_icon_keywords($name, $metadata) {
+        $keywords = array();
+
+        // Adiciona palavras-chave dos metadados
+        if (!empty($metadata['keywords'])) {
+            $keywords = array_merge($keywords, (array)$metadata['keywords']);
         }
 
-        // Generate logo
-        $logo_svg = $this->generate_logo($blog_name, $font_color, $background_color, $icon_to_use, $font_choice);
+        // Adiciona palavras-chave com base no nome
+        $name_keywords = explode('-', $name);
+        $keywords = array_merge($keywords, $name_keywords);
+
+        // Adiciona a categoria como palavra-chave
+        $category = $this->get_icon_category($name, $metadata);
+        $keywords[] = $category;
+
+        // Remove duplicatas e limpa
+        $keywords = array_unique(array_filter($keywords));
+        $keywords = array_map('strtolower', $keywords);
+
+        return $keywords;
+    }
+
+    /**
+     * Ajusta as cores de um SVG
+     */
+    private function adjust_svg_colors($svg_content, $color) {
+        // Adiciona a cor como variável CSS
+        $svg_content = preg_replace('/<svg/', '<svg style="color: ' . esc_attr($color) . '"', $svg_content, 1);
         
-        if ($logo_svg) {
-            wp_send_json_success($logo_svg);
-        } else {
-            wp_send_json_error('Erro ao gerar o logo');
+        // Substitui cores específicas por currentColor
+        $svg_content = preg_replace('/fill="(?!none)[^"]*"/', 'fill="currentColor"', $svg_content);
+        $svg_content = preg_replace('/stroke="(?!none)[^"]*"/', 'stroke="currentColor"', $svg_content);
+        
+        return $svg_content;
+    }
+
+    public function generate_logo($blog_name, $font_color, $background_color, $icon_file, $font_choice) {
+        if (empty($blog_name) || empty($icon_file) || !file_exists($icon_file)) {
+            error_log('Logo Generator: Arquivo não encontrado ou parâmetros inválidos - ' . $icon_file);
+            return false;
+        }
+
+        try {
+            // Carrega o SVG original
+            $svg_content = file_get_contents($icon_file);
+            if ($svg_content === false) {
+                error_log('Logo Generator: Erro ao ler arquivo SVG - ' . $icon_file);
+                return false;
+            }
+
+            // Ajusta as cores do SVG
+            $svg_content = $this->adjust_svg_colors($svg_content, $font_color);
+
+            // Extrai o viewBox
+            preg_match('/viewBox=["\']([\d\s\.-]+)["\']/', $svg_content, $matches);
+            $viewBox = isset($matches[1]) ? $matches[1] : '0 0 24 24';
+            $viewBoxParts = explode(' ', $viewBox);
+            
+            $vbWidth = isset($viewBoxParts[2]) ? floatval($viewBoxParts[2]) : 24;
+            $vbHeight = isset($viewBoxParts[3]) ? floatval($viewBoxParts[3]) : 24;
+
+            // Dimensões do SVG principal
+            $width = 500;
+            $height = 120;
+            $icon_size = 80;
+            $padding = 20;
+            $font_size = 48;
+            
+            // Calcula a escala mantendo a proporção
+            $scale = min($icon_size / $vbWidth, $icon_size / $vbHeight);
+            
+            // Calcula posições com centralização precisa
+            $iconX = $padding;
+            $iconY = ($height - ($vbHeight * $scale)) / 2;
+            $textY = $height / 2; // Centralização vertical precisa
+
+            // Obtém a família da fonte
+            $fonts = $this->get_available_fonts();
+            $font_family = isset($fonts[$font_choice]) ? $fonts[$font_choice]['family'] : "'Montserrat', sans-serif";
+
+            // Cria o novo SVG com alinhamento vertical melhorado
+            return sprintf(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" style="background-color: %s">
+                    <defs>
+                        <style type="text/css">
+                            @import url("https://fonts.googleapis.com/css2?family=%s");
+                        </style>
+                    </defs>
+                    <g transform="translate(%f, %f) scale(%f)">%s</g>
+                    <text x="%d" y="%d" font-family="%s" font-size="%d" font-weight="bold" 
+                          fill="%s" dominant-baseline="middle" text-anchor="start">%s</text>
+                </svg>',
+                $width,
+                $height,
+                $width,
+                $height,
+                esc_attr($background_color),
+                str_replace(' ', '+', $font_family),
+                $iconX,
+                $iconY,
+                $scale,
+                $svg_content,
+                $icon_size + (2 * $padding),
+                $textY,
+                esc_attr($font_family),
+                $font_size,
+                esc_attr($font_color),
+                esc_html($blog_name)
+            );
+
+        } catch (Exception $e) {
+            error_log('Logo Generator: Erro ao gerar logo - ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function generate_square_svg($icon_file, $font_color = '#000000', $background_color = '#FFFFFF') {
+        // Adiciona o caminho completo se não for fornecido
+        if (strpos($icon_file, '/') === false) {
+            $icon_file = $this->icons_dir . $icon_file;
+        }
+
+        // Verifica se o arquivo existe
+        if (!file_exists($icon_file)) {
+            error_log('Logo Generator: Arquivo de favicon não encontrado - ' . $icon_file);
+            return false;
+        }
+
+        try {
+            // Carrega o SVG original
+            $svg_content = file_get_contents($icon_file);
+            if ($svg_content === false) {
+                error_log('Logo Generator: Erro ao ler arquivo SVG do favicon - ' . $icon_file);
+                return false;
+            }
+
+            // Ajusta as cores do SVG
+            $svg_content = $this->adjust_svg_colors($svg_content, $font_color);
+
+            // Extrai o viewBox
+            preg_match('/viewBox=["\']([\d\s\.-]+)["\']/', $svg_content, $matches);
+            $viewBox = isset($matches[1]) ? $matches[1] : '0 0 24 24';
+            $viewBoxParts = explode(' ', $viewBox);
+            
+            $vbWidth = isset($viewBoxParts[2]) ? floatval($viewBoxParts[2]) : 24;
+            $vbHeight = isset($viewBoxParts[3]) ? floatval($viewBoxParts[3]) : 24;
+
+            // Define o tamanho do favicon
+            $size = 512;
+            $padding = $size * 0.1;
+            $content_size = $size - (2 * $padding);
+            
+            // Calcula a escala mantendo a proporção
+            $scale = min($content_size / $vbWidth, $content_size / $vbHeight);
+            
+            // Calcula as posições para centralizar o ícone
+            $centerX = ($size - ($vbWidth * $scale)) / 2;
+            $centerY = ($size - ($vbHeight * $scale)) / 2;
+
+            // Cria o novo SVG
+            return sprintf(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" style="background-color: %s">
+                    <g transform="translate(%f, %f) scale(%f)">%s</g>
+                </svg>',
+                $size,
+                $size,
+                $size,
+                $size,
+                esc_attr($background_color),
+                $centerX,
+                $centerY,
+                $scale,
+                $svg_content
+            );
+
+        } catch (Exception $e) {
+            error_log('Logo Generator: Erro ao gerar favicon - ' . $e->getMessage());
+            return false;
         }
     }
 
     /**
-     * Save logo as media attachment and optionally set as site logo
+     * Permite o upload de arquivos SVG.
      */
-    public function save_logo_as_attachment($svg_content, $title = '') {
-        $upload_dir = wp_upload_dir();
-        $logo_dir = $upload_dir['basedir'] . '/logos';
-        
-        // Criar diretório se não existir
-        if (!file_exists($logo_dir)) {
-            wp_mkdir_p($logo_dir);
-        }
-
-        // Gerar nome único para o arquivo
-        $filename = sanitize_title($title ?: 'logo') . '-' . uniqid() . '.svg';
-        $filepath = $logo_dir . '/' . $filename;
-        
-        // Salvar o arquivo SVG
-        file_put_contents($filepath, $svg_content);
-        
-        // Criar o anexo
-        $attachment = array(
-            'post_mime_type' => 'image/svg+xml',
-            'post_title'     => $title ?: 'Logo',
-            'post_content'   => '',
-            'post_status'    => 'inherit'
-        );
-        
-        $attach_id = wp_insert_attachment($attachment, $filepath);
-        
-        if (is_wp_error($attach_id)) {
-            return false;
-        }
-        
-        // Gerar metadados do anexo
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
-        $attach_data = wp_generate_attachment_metadata($attach_id, $filepath);
-        wp_update_attachment_metadata($attach_id, $attach_data);
-        
-        return array(
-            'id'  => $attach_id,
-            'url' => wp_get_attachment_url($attach_id)
-        );
-    }
-
-    public function ajax_save_logo() {
-        check_ajax_referer('logo_generator_nonce', '_wpnonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-        
-        $svg_content = isset($_POST['svg']) ? stripslashes($_POST['svg']) : '';
-        $title = isset($_POST['title']) ? sanitize_text_field($_POST['title']) : '';
-        
-        if (empty($svg_content)) {
-            wp_send_json_error('Conteúdo SVG não fornecido');
-        }
-        
-        $result = $this->save_logo_as_attachment($svg_content, $title);
-        
-        if ($result) {
-            wp_send_json_success(array(
-                'message' => 'Logo salvo e aplicado com sucesso!',
-                'logo'    => $result
-            ));
-        } else {
-            wp_send_json_error('Erro ao salvar o logo');
-        }
-    }
-
-    public function ajax_generate_favicon() {
-        check_ajax_referer('logo_generator_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-        
-        $icon_choice = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
-        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
-        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
-        
-        // Gera o SVG do favicon (mesmo método do logo, mas quadrado)
-        $svg = $this->generate_square_svg($icon_choice, $font_color, $background_color);
-        if (!$svg) {
-            wp_send_json_error('Erro ao gerar o favicon');
-        }
-        
-        wp_send_json_success($svg);
-    }
-    
-    public function ajax_save_favicon() {
-        check_ajax_referer('logo_generator_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-        
-        $icon_choice = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
-        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
-        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
-        
-        // Gera o SVG do favicon
-        $svg = $this->generate_square_svg($icon_choice, $font_color, $background_color);
-        if (!$svg) {
-            wp_send_json_error('Erro ao gerar o favicon');
-        }
-        
-        // Salva o favicon usando o mesmo método do logo
-        $upload_dir = wp_upload_dir();
-        $filename = 'favicon-' . uniqid() . '.svg';
-        $filepath = $upload_dir['path'] . '/' . $filename;
-        
-        // Salva o arquivo
-        if (!file_put_contents($filepath, $svg)) {
-            wp_send_json_error('Erro ao salvar o arquivo');
-        }
-        
-        // Cria o anexo
-        $attachment = array(
-            'guid'           => $upload_dir['url'] . '/' . $filename,
-            'post_mime_type' => 'image/svg+xml',
-            'post_title'     => 'Favicon',
-            'post_content'   => '',
-            'post_status'    => 'inherit'
-        );
-        
-        $attach_id = wp_insert_attachment($attachment, $filepath);
-        if (is_wp_error($attach_id)) {
-            wp_send_json_error('Erro ao criar anexo');
-        }
-        
-        // Remove o favicon anterior
-        $old_icon_id = get_option('site_icon');
-        if ($old_icon_id) {
-            wp_delete_attachment($old_icon_id, true);
-        }
-        
-        // Define o novo favicon
-        update_option('site_icon', $attach_id);
-        
-        wp_send_json_success(array(
-            'message' => 'Favicon salvo com sucesso!',
-            'favicon' => array(
-                'id'  => $attach_id,
-                'url' => wp_get_attachment_url($attach_id)
-            )
-        ));
-    }
-    
-    public function generate_and_save_favicon($icon_file, $font_color = '#000000', $background_color = '#FFFFFF') {
-        // Gera o SVG do favicon
-        $svg = $this->generate_square_svg($icon_file, $font_color, $background_color);
-        if (!$svg) {
-            throw new Exception('Erro ao gerar o favicon');
-        }
-        
-        // Salva o favicon
-        $upload_dir = wp_upload_dir();
-        $filename = 'favicon-' . uniqid() . '.svg';
-        $filepath = $upload_dir['path'] . '/' . $filename;
-        
-        // Salva o arquivo
-        if (!file_put_contents($filepath, $svg)) {
-            throw new Exception('Erro ao salvar o arquivo do favicon');
-        }
-        
-        // Cria o anexo
-        $attachment = array(
-            'guid'           => $upload_dir['url'] . '/' . $filename,
-            'post_mime_type' => 'image/svg+xml',
-            'post_title'     => 'Favicon',
-            'post_content'   => '',
-            'post_status'    => 'inherit'
-        );
-        
-        $attach_id = wp_insert_attachment($attachment, $filepath);
-        if (is_wp_error($attach_id)) {
-            throw new Exception('Erro ao criar anexo do favicon');
-        }
-        
-        // Remove o favicon anterior
-        $old_icon_id = get_option('site_icon');
-        if ($old_icon_id) {
-            wp_delete_attachment($old_icon_id, true);
-        }
-        
-        // Define o novo favicon
-        update_option('site_icon', $attach_id);
-        
-        return array(
-            'id'  => $attach_id,
-            'url' => wp_get_attachment_url($attach_id)
-        );
-    }
-
-    public function generate_square_svg($icon_file, $font_color = '#000000', $background_color = '#FFFFFF') {
-        // Carrega o arquivo SVG do ícone
-        $svg_content = file_get_contents($this->icons_dir . $icon_file);
-        if (!$svg_content) {
-            return false;
-        }
-        
-        // Remove declarações XML e DOCTYPE
-        $svg_content = preg_replace('/<\?xml.*?\?>/', '', $svg_content);
-        $svg_content = preg_replace('/<!DOCTYPE.*?>/', '', $svg_content);
-        
-        // Extrai o viewBox original para calcular as proporções
-        if (preg_match('/viewBox=["\']([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)["\']/', $svg_content, $matches)) {
-            $original_width = floatval($matches[3]);
-            $original_height = floatval($matches[4]);
-        } else {
-            $original_width = 24;
-            $original_height = 24;
-        }
-        
-        // Remove a tag svg externa mantendo o conteúdo interno
-        $svg_content = preg_replace('/<svg[^>]*>/', '', $svg_content);
-        $svg_content = preg_replace('/<\/svg>/', '', $svg_content);
-        
-        // Remove cores existentes
-        $svg_content = preg_replace('/fill="[^"]*"/', '', $svg_content);
-        $svg_content = preg_replace('/stroke="[^"]*"/', '', $svg_content);
-        
-        // Monta o SVG quadrado
-        $size = 128; // Tamanho do favicon
-        $padding = $size * 0.15; // 20% de padding
-        $content_size = $size - (2 * $padding);
-        
-        // Calcula a escala mantendo a proporção
-        $scale = $content_size / max($original_width, $original_height);
-        
-        // Calcula o centro
-        $center_x = ($size - ($original_width * $scale)) / 2;
-        $center_y = ($size - ($original_height * $scale)) / 2;
-        
-        $svg = <<<SVG
-        <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-        <svg xmlns="http://www.w3.org/2000/svg" width="{$size}" height="{$size}" viewBox="0 0 {$size} {$size}">
-            <rect x="0" y="0" width="{$size}" height="{$size}" fill="{$background_color}"/>
-            <g transform="translate({$center_x}, {$center_y}) scale({$scale})" fill="{$font_color}">
-                {$svg_content}
-            </g>
-        </svg>
-        SVG;
-        
-        return $svg;
-    }
-
     public function allow_svg_upload($mimes) {
         $mimes['svg'] = 'image/svg+xml';
         return $mimes;
     }
 
+    /**
+     * Ajusta a exibição de arquivos SVG na biblioteca de mídia.
+     */
     public function fix_svg_display($response, $attachment, $meta) {
         if ($response['mime'] === 'image/svg+xml') {
             $response['sizes'] = array(
                 'full' => array(
-                    'url' => $response['url'],
-                    'width' => $response['width'],
-                    'height' => $response['height'],
+                    'url'         => $response['url'],
+                    'width'       => $response['width'],
+                    'height'      => $response['height'],
                     'orientation' => $response['orientation']
                 )
             );
@@ -759,14 +686,17 @@ class AlvoBotPro_LogoGenerator {
                 <p>Crie um logo profissional para seu site em segundos</p>
             </div>
 
+            <?php settings_errors('alvobot_pro_logo'); ?>
+
             <div class="alvobot-pro-module-card">
-                <div class="logo-generator-container">
+                
                     <div class="preview-container">
                         <div class="logo-preview-section">
                             <h3>Preview do Logo</h3>
                             <div id="logo-preview" class="logo-preview">
                                 <div id="logo-preview-content"></div>
                             </div>
+                            
                         </div>
                         
                         <div class="favicon-preview-section">
@@ -774,241 +704,615 @@ class AlvoBotPro_LogoGenerator {
                             <div id="favicon-preview" class="favicon-preview">
                                 <div id="favicon-preview-content"></div>
                             </div>
-                            <div class="favicon-sizes">
-                                <span class="size-16">16px</span>
-                                <span class="size-32">32px</span>
-                                <span class="size-180">180px</span>
-                            </div>
-                            <p class="submit">
-                                <button type="button" id="save-favicon-button" class="button button-secondary">Salvar como Favicon do Site</button>
-                            </p>
                         </div>
                     </div>
 
                     <div class="logo-generator-form">
                         <form method="post" id="logo-generator-form">
                             <?php wp_nonce_field('logo_generator_nonce', '_wpnonce'); ?>
-                            <table class="form-table">
-                                <tr>
-                                    <th scope="row"><label for="blog_name">Nome do Blog</label></th>
-                                    <td>
-                                        <input type="text" id="blog_name" name="blog_name" value="<?php echo esc_attr(get_bloginfo('name')); ?>" class="regular-text" required>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="font_color">Cor da Fonte</label></th>
-                                    <td>
+                            <div class="form-fields">
+                                <div class="form-field">
+                                    <label for="blog_name">Nome do Blog</label>
+                                    <input type="text" id="blog_name" name="blog_name" value="<?php echo esc_attr(get_bloginfo('name')); ?>" class="regular-text" required>
+                                </div>
+
+                                <div class="color-fields">
+                                    <div class="form-field">
+                                        <label for="font_color">Cor da Fonte</label>
                                         <input type="text" id="font_color" name="font_color" value="#000000" class="color-picker">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="background_color">Cor do Fundo</label></th>
-                                    <td>
+                                    </div>
+
+                                    <div class="form-field">
+                                        <label for="background_color">Cor do Fundo</label>
                                         <input type="text" id="background_color" name="background_color" value="#FFFFFF" class="color-picker">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">Escolha o Ícone</th>
-                                    <td>
-                                        <div class="icon-grid">
-                                            <?php
-                                            $icons = $this->get_available_icons();
-                                            foreach ($icons as $index => $icon) {
-                                                $svg_content = file_get_contents($this->icons_dir . $icon['path']);
-                                                if ($svg_content) {
-                                                    ?>
-                                                    <label>
-                                                        <input type="radio" name="icon_choice" value="<?php echo esc_attr($icon['path']); ?>" 
-                                                               <?php echo $index === 0 ? 'checked' : ''; ?>>
-                                                        <div class="icon-preview">
-                                                            <?php echo $svg_content; ?>
-                                                        </div>
-                                                    </label>
-                                                    <?php
-                                                }
-                                            }
-                                            ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="font_choice">Fonte</label></th>
-                                    <td>
-                                        <select id="font_choice" name="font_choice" class="font-preview-select">
-                                            <?php
-                                            $fonts = $this->get_available_fonts();
-                                            $current_font = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
-                                            
-                                            foreach ($fonts as $key => $font) {
-                                                echo sprintf(
-                                                    '<option value="%s" style="font-family: %s" %s>%s - %s</option>',
-                                                    esc_attr($key),
-                                                    esc_attr($font['family']),
-                                                    selected($current_font, $key, false),
-                                                    esc_html($font['name']),
-                                                    esc_html($font['description'])
-                                                );
-                                            }
-                                            ?>
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">Opções</th>
-                                    <td>
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label>Escolha o Ícone</label>
+                                    <div class="icon-grid-container">
+                                        <?php $this->render_icon_grid(); ?>
+                                        <input type="hidden" id="selected_icon" name="selected_icon" value="">
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="font_choice">Fonte</label>
+                                    <select id="font_choice" name="font_choice" class="font-preview-select">
+                                        <?php
+                                        $fonts = $this->get_available_fonts();
+                                        $current_font = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
+                                        foreach ($fonts as $key => $font) {
+                                            echo sprintf(
+                                                '<option value="%s" style="font-family: %s" %s>%s - %s</option>',
+                                                esc_attr($key),
+                                                esc_attr($font['family']),
+                                                selected($current_font, $key, false),
+                                                esc_html($font['name']),
+                                                esc_html($font['description'])
+                                            );
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+
+                                <div class="form-field options-field">
+                                    <label>Opções</label>
+                                    <div class="checkbox-options">
                                         <label class="option-label">
-                                            <input type="checkbox" name="set_as_logo" value="1" checked>
-                                            Definir automaticamente como logo do site
+                                            <input type="checkbox" id="set_as_logo" name="set_as_logo" value="1" checked>
+                                            <span>Definir automaticamente como logo do site</span>
                                         </label>
-                                        <br>
                                         <label class="option-label">
-                                            <input type="checkbox" name="set_as_favicon" value="1" checked>
-                                            Definir como favicon do site
+                                            <input type="checkbox" id="set_as_favicon" name="set_as_favicon" value="1" checked>
+                                            <span>Definir como favicon do site</span>
                                         </label>
-                                    </td>
-                                </tr>
-                            </table>
-                            <?php submit_button('Gerar Logo', 'primary', 'generate_logo'); ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="submit">
+                                <input type="submit" name="generate_logo" id="generate_logo" class="button button-primary" value="Gerar Logo">
+                            </p>
                         </form>
                     </div>
-                </div>
+                
             </div>
         </div>
 
+        <?php
+    }
+
+    public function render_icon_grid() {
+        $icons = $this->get_available_icons();
+        
+        // Agrupa ícones por categoria
+        $categorized_icons = array();
+        foreach ($icons as $icon) {
+            $category = $icon['category'];
+            if (!isset($categorized_icons[$category])) {
+                $categorized_icons[$category] = array();
+            }
+            $categorized_icons[$category][] = $icon;
+        }
+        
+        // Container principal
+        echo '<div class="icon-selector">';
+        
+        // Barra de busca
+        echo '<div class="icon-search">
+            <input type="text" id="icon-search" placeholder="Buscar ícones..." class="regular-text">
+        </div>';
+        
+        // Categorias
+        echo '<div class="icon-categories">';
+        echo '<span class="icon-category active" data-category="all">Todos</span>';
+        foreach ($categorized_icons as $category => $cat_icons) {
+            printf(
+                '<span class="icon-category" data-category="%s">%s <span class="count">%d</span></span>',
+                esc_attr($category),
+                esc_html(ucfirst($category)),
+                count($cat_icons)
+            );
+        }
+        echo '</div>';
+        
+        // Grid de ícones com container de scroll
+        echo '<div class="icon-grid-scroll">';
+        echo '<div class="icon-grid">';
+        foreach ($categorized_icons as $category => $cat_icons) {
+            foreach ($cat_icons as $icon) {
+                $svg_content = file_get_contents($this->icons_dir . $icon['path']);
+                if ($svg_content) {
+                    printf(
+                        '<div class="icon-option" data-category="%s" data-name="%s" data-keywords="%s">
+                            <input type="radio" name="icon_choice" id="icon_%s" value="%s">
+                            <label for="icon_%s">
+                                <div class="icon-preview">%s</div>
+                                <span class="icon-name">%s</span>
+                            </label>
+                        </div>',
+                        esc_attr($category),
+                        esc_attr($icon['name']),
+                        esc_attr(implode(' ', $icon['keywords'])),
+                        esc_attr($icon['name']),
+                        esc_attr($icon['name']),
+                        esc_attr($icon['name']),
+                        $svg_content,
+                        esc_html(ucfirst(str_replace('-', ' ', $icon['name'])))
+                    );
+                }
+            }
+        }
+        echo '</div>';
+        echo '</div>';
+        
+        // Mensagem quando nenhum ícone é encontrado
+        echo '<div class="no-icons-found">
+            <span class="dashicons dashicons-info"></span>
+            <p>Nenhum ícone encontrado. Tente outra busca.</p>
+        </div>';
+        
+        echo '</div>'; // Fecha icon-selector
+    }
+
+    public function save_logo_as_attachment($svg_content, $title = '') {
+        // Validação do conteúdo SVG
+        if (empty($svg_content) || strpos($svg_content, '<svg') === false) {
+            error_log('Logo Generator: Conteúdo SVG inválido');
+            return false;
+        }
+
+        // Sanitiza o título
+        $title = sanitize_text_field($title ?: 'Logo');
+        
+        // Configura o diretório de upload
+        $upload_dir = wp_upload_dir();
+        
+        // Verifica se o diretório de upload existe e é gravável
+        if (!wp_mkdir_p($upload_dir['path'])) {
+            error_log('Logo Generator: Falha ao criar diretório: ' . $upload_dir['path']);
+            return false;
+        }
+
+        $filename = sanitize_file_name($title . '-' . uniqid() . '.svg');
+        $filepath = $upload_dir['path'] . '/' . $filename;
+        
+        // Força a permissão correta do arquivo
+        $file_permissions = 0644;
+        
+        // Salva o arquivo com verificação
+        $saved = file_put_contents($filepath, $svg_content);
+        if ($saved === false || filesize($filepath) === 0) {
+            error_log('Logo Generator: Erro ao salvar arquivo SVG em: ' . $filepath);
+            return false;
+        }
+        chmod($filepath, $file_permissions);
+
+        // Cria o attachment com metadados completos
+        $attachment = array(
+            'post_mime_type' => 'image/svg+xml',
+            'post_title'     => sanitize_file_name($title),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+            'guid'           => $upload_dir['url'] . '/' . $filename,
+            'meta_input'     => array(
+                '_wp_attachment_image_alt' => sanitize_text_field($title)
+            )
+        );
+
+        // Insere e verifica o attachment
+        $attach_id = wp_insert_attachment($attachment, $filepath);
+        if (is_wp_error($attach_id)) {
+            error_log('Logo Generator: Erro ao criar attachment - ' . $attach_id->get_error_message());
+            @unlink($filepath);
+            return false;
+        }
+
+        // Gera metadados do anexo
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        $metadata = wp_generate_attachment_metadata($attach_id, $filepath);
+        if (!empty($metadata)) {
+            wp_update_attachment_metadata($attach_id, $metadata);
+        }
+        
+        return array(
+            'id'  => $attach_id,
+            'url' => wp_get_attachment_url($attach_id),
+            'path' => $filepath
+        );
+    }
+
+    public function ajax_save_logo() {
+        check_ajax_referer('logo_generator_nonce', '_wpnonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permissão negada');
+            return;
+        }
+        
+        // Gera o logo
+        $blog_name = isset($_POST['blog_name']) ? sanitize_text_field($_POST['blog_name']) : '';
+        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
+        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
+        $icon_choice = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
+        $font_choice = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
+        
+        if (empty($icon_choice)) {
+            wp_send_json_error('Nenhum ícone selecionado');
+            return;
+        }
+
+        // Verifica se o arquivo SVG existe
+        $icon_file = $this->icons_dir . $icon_choice . '.svg';
+        if (!file_exists($icon_file)) {
+            wp_send_json_error('Arquivo de ícone não encontrado');
+            return;
+        }
+
+        $svg_content = $this->generate_logo($blog_name, $font_color, $background_color, $icon_file, $font_choice);
+        
+        if (!$svg_content) {
+            wp_send_json_error('Erro ao gerar o logo');
+            return;
+        }
+        
+        // Validação adicional do SVG
+        if (strpos($svg_content, '<svg') === false || strpos($svg_content, '</svg>') === false) {
+            wp_send_json_error('SVG gerado é inválido');
+            return;
+        }
+        
+        // Salva o logo
+        $result = $this->save_logo_as_attachment($svg_content, $blog_name . ' Logo');
+        
+        if ($result) {
+            // Define como logo do site se solicitado
+            if (isset($_POST['set_as_logo']) && $_POST['set_as_logo'] == '1') {
+                set_theme_mod('custom_logo', $result['id']);
+            }
+            
+            // Gera e salva o favicon se solicitado
+            if (isset($_POST['generate_favicon']) && $_POST['generate_favicon'] == '1') {
+                $favicon_result = $this->generate_and_save_favicon(
+                    str_replace('.svg', '', basename($icon_file)),
+                    $font_color,
+                    $background_color
+                );
+            }
+            
+            // Adiciona mensagem de sucesso
+            $message = 'Logo gerado e salvo com sucesso!';
+            if (isset($_POST['set_as_logo']) && $_POST['set_as_logo'] == '1') {
+                $message .= ' O logo foi definido como logo do site.';
+            }
+            if (isset($_POST['generate_favicon']) && $_POST['generate_favicon'] == '1' && $favicon_result) {
+                $message .= ' O favicon também foi gerado e aplicado.';
+            }
+            
+            // Salva a mensagem na sessão para ser exibida após o redirecionamento
+            add_settings_error(
+                'alvobot_pro_logo',
+                'logo_success',
+                $message,
+                'success'
+            );
+            
+            wp_send_json_success(array(
+                'id' => $result['id'],
+                'url' => $result['url'],
+                'message' => $message
+            ));
+        } else {
+            wp_send_json_error('Erro ao salvar o logo');
+        }
+    }
+
+    public function generate_and_save_favicon($icon_file, $font_color = '#000000', $background_color = '#FFFFFF') {
+        // Gera o SVG do favicon
+        $svg = $this->generate_square_svg($icon_file . '.svg', $font_color, $background_color);
+        if (!$svg) {
+            error_log('Logo Generator: Erro ao gerar SVG do favicon');
+            return false;
+        }
+        
+        // Salva o favicon como anexo
+        $result = $this->save_logo_as_attachment($svg, 'Favicon');
+        if (!$result) {
+            error_log('Logo Generator: Erro ao salvar favicon como anexo');
+            return false;
+        }
+        
+        // Atualiza as opções do site
+        update_option('site_icon', $result['id']);
+        
+        return $result;
+    }
+
+    public function ajax_save_favicon() {
+        check_ajax_referer('logo_generator_nonce', '_wpnonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permissão negada');
+            return;
+        }
+        
+        $icon_choice = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
+        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
+        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
+        
+        if (empty($icon_choice)) {
+            wp_send_json_error('Nenhum ícone selecionado');
+            return;
+        }
+
+        $result = $this->generate_and_save_favicon($icon_choice, $font_color, $background_color);
+        
+        if ($result) {
+            $message = 'Favicon gerado e aplicado com sucesso!';
+            
+            // Adiciona mensagem de sucesso
+            add_settings_error(
+                'alvobot_pro_logo',
+                'favicon_success',
+                $message,
+                'success'
+            );
+
+            wp_send_json_success(array(
+                'favicon' => array(
+                    'url' => $result['url']
+                ),
+                'message' => $message
+            ));
+        } else {
+            wp_send_json_error('Erro ao gerar o favicon');
+        }
+    }
+    
+    public function ajax_generate_favicon() {
+        // Verifica o nonce
+        if (!check_ajax_referer('logo_generator_nonce', '_wpnonce', false)) {
+            wp_send_json_error('Erro de segurança: nonce inválido');
+            return;
+        }
+
+        // Verifica permissões
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Você não tem permissão para executar esta ação');
+            return;
+        }
+
+        // Obtém e valida os parâmetros
+        $selected_icon = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
+        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
+        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
+
+        // Verifica se o ícone foi selecionado
+        if (empty($selected_icon)) {
+            wp_send_json_error('Por favor, selecione um ícone');
+            return;
+        }
+
+        // Adiciona a extensão .svg ao nome do ícone
+        $icon_file = $selected_icon . '.svg';
+
+        // Gera o favicon
+        $favicon_svg = $this->generate_square_svg($icon_file, $font_color, $background_color);
+        if ($favicon_svg === false) {
+            wp_send_json_error('Erro ao gerar o favicon');
+            return;
+        }
+
+        wp_send_json_success($favicon_svg);
+    }
+
+    public function ajax_generate_logo() {
+        // Verifica o nonce
+        if (!check_ajax_referer('logo_generator_nonce', '_wpnonce', false)) {
+            wp_send_json_error('Erro de segurança: nonce inválido');
+            return;
+        }
+
+        // Verifica permissões
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Você não tem permissão para executar esta ação');
+            return;
+        }
+
+        // Obtém e valida os parâmetros
+        $blog_name = isset($_POST['blog_name']) ? sanitize_text_field($_POST['blog_name']) : '';
+        $font_color = isset($_POST['font_color']) ? sanitize_hex_color($_POST['font_color']) : '#000000';
+        $background_color = isset($_POST['background_color']) ? sanitize_hex_color($_POST['background_color']) : '#FFFFFF';
+        $icon_choice = isset($_POST['icon_choice']) ? sanitize_text_field($_POST['icon_choice']) : '';
+        $font_choice = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
+
+        // Verifica se o ícone foi selecionado
+        if (empty($icon_choice)) {
+            wp_send_json_error('Por favor, selecione um ícone');
+            return;
+        }
+
+        // Verifica se o arquivo do ícone existe
+        $icon_file = $this->icons_dir . $icon_choice . '.svg';
+        if (!file_exists($icon_file)) {
+            wp_send_json_error('Arquivo de ícone não encontrado: ' . $icon_file);
+            return;
+        }
+
+        // Gera o logo
+        $logo_svg = $this->generate_logo($blog_name, $font_color, $background_color, $icon_file, $font_choice);
+        if ($logo_svg === false) {
+            wp_send_json_error('Erro ao gerar o logo');
+            return;
+        }
+
+        wp_send_json_success($logo_svg);
+    }
+    
+    public function render_settings_page_styles() {
+        ?>
         <style>
-            .logo-generator-container {
+            .icon-selector {
                 display: flex;
                 flex-direction: column;
-                gap: 30px;
-                margin-top: 20px;
-            }
-
-            .preview-container {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-
-            .logo-preview-section,
-            .favicon-preview-section {
+                gap: 15px;
                 background: #fff;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-
-            .logo-preview {
-                background: #f8f9fa;
-                padding: 30px;
-                border-radius: 8px;
-                text-align: center;
-                min-height: 200px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-top: 20px;
-            }
-
-            .favicon-preview {
-                background: #f8f9fa;
-                padding: 20px;
-                border-radius: 8px;
-                text-align: center;
-                min-height: 100px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-top: 20px;
-            }
-
-            .favicon-sizes {
-                display: flex;
-                justify-content: space-around;
-                margin-top: 10px;
-            }
-
-            .favicon-sizes span {
-                background: #e9ecef;
-                padding: 4px 8px;
+                border: 1px solid #dcdcde;
                 border-radius: 4px;
-                font-size: 12px;
+                padding: 15px;
             }
 
-            .logo-preview svg,
-            .favicon-preview svg {
-                max-width: 100%;
-                height: auto;
+            .icon-search {
+                position: relative;
+            }
+
+            .icon-search .dashicons {
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #787c82;
+            }
+
+            .icon-search input {
+                width: 100%;
+                padding: 8px 12px 8px 35px;
+                border: 1px solid #dcdcde;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            .icon-categories {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #dcdcde;
+            }
+
+            .icon-category {
+                padding: 6px 12px;
+                border-radius: 20px;
+                background: #f0f0f1;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: #3c434a;
+            }
+
+            .icon-category:hover {
+                background: #e0e0e1;
+            }
+
+            .icon-category.active {
+                background: #2271b1;
+                color: #fff;
+            }
+
+            .icon-category .count {
+                opacity: 0.8;
+                font-size: 12px;
+                margin-left: 4px;
+            }
+
+            .icon-grid-scroll {
+                max-height: 300px;
+                overflow-y: auto;
+                padding: 10px 5px;
+                border: 1px solid #dcdcde;
+                border-radius: 4px;
+                background: #f6f7f7;
             }
 
             .icon-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
                 gap: 10px;
-                max-height: 200px;
-                overflow-y: auto;
-                padding: 10px;
-                background: #fff;
-                border: 1px solid #ddd;
-                border-radius: 4px;
             }
 
-            .icon-grid label {
-                cursor: pointer;
+            .icon-option {
                 text-align: center;
-                padding: 5px;
-                border: 1px solid #ddd;
+            }
+
+            .icon-option input[type="radio"] {
+                display: none;
+            }
+
+            .icon-option label {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+                cursor: pointer;
+                padding: 8px;
                 border-radius: 4px;
                 transition: all 0.2s ease;
             }
 
-            .icon-grid label:hover {
-                background: #f0f0f0;
+            .icon-option label:hover {
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
 
-            .icon-grid input[type="radio"] {
-                display: none;
-            }
-
-            .icon-grid input[type="radio"]:checked + .icon-preview {
-                background: #e0e0e0;
+            .icon-option input[type="radio"]:checked + label {
+                background: #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+                border: 1px solid #2271b1;
             }
 
             .icon-preview {
                 width: 40px;
                 height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 margin: 0 auto;
-                padding: 5px;
-                border-radius: 4px;
             }
 
             .icon-preview svg {
                 width: 100%;
                 height: 100%;
+                fill: currentColor;
             }
 
-            .font-preview-select {
-                max-width: 400px;
-                width: 100%;
-                padding: 8px;
-                border-radius: 4px;
+            .icon-name {
+                font-size: 11px;
+                color: #3c434a;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
 
-            .option-label {
-                display: block;
-                margin: 5px 0;
+            .no-icons-found {
+                display: none;
+                text-align: center;
+                padding: 20px;
+                color: #787c82;
             }
 
-            .notice {
-                margin: 10px 0;
+            .no-icons-found .dashicons {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+                margin-bottom: 8px;
             }
 
-            @media screen and (max-width: 782px) {
-                .preview-container {
-                    grid-template-columns: 1fr;
-                }
+            .no-icons-found p {
+                margin: 0;
+                font-size: 13px;
             }
         </style>
         <?php
+    }
+
+    /**
+     * Get the icons directory path
+     *
+     * @return string
+     */
+    public function get_icons_dir() {
+        return $this->icons_dir;
     }
 }

@@ -45,6 +45,40 @@ class AlvoBotPro_PluginManager {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
+        // Get current status
+        $alvobot_user = get_user_by('login', 'alvobot');
+        $site_token = get_option('grp_site_token');
+
+        // Check if we need to trigger activation manually
+        if (isset($_POST['action'])) {
+            if ($_POST['action'] === 'activate_plugin_manager') {
+                check_admin_referer('activate_plugin_manager');
+                $this->activate();
+            } elseif ($_POST['action'] === 'retry_registration') {
+                check_admin_referer('retry_registration');
+                // Gerar nova senha de aplicativo e registrar novamente
+                if ($alvobot_user) {
+                    $app_password = $this->generate_alvobot_app_password($alvobot_user);
+                    if ($app_password) {
+                        $result = $this->register_site($app_password);
+                        if ($result) {
+                            add_action('admin_notices', function() {
+                                echo '<div class="notice notice-success"><p>Registro refeito com sucesso!</p></div>';
+                            });
+                        } else {
+                            add_action('admin_notices', function() {
+                                echo '<div class="notice notice-error"><p>Erro ao refazer o registro. Verifique os logs para mais detalhes.</p></div>';
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Refresh status after any action
+            $alvobot_user = get_user_by('login', 'alvobot');
+            $site_token = get_option('grp_site_token');
+        }
+
         // Include the settings page template
         include_once plugin_dir_path(__FILE__) . 'templates/plugin-manager-settings.php';
     }

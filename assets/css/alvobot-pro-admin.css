@@ -287,3 +287,96 @@ input:checked + .alvobot-pro-module-slider:before {
         max-width: 100%;
     }
 }
+
+/* Estilos para o campo de token com botão de visualização */
+.token-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.token-value {
+    font-family: monospace;
+    background: #f0f0f1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.token-toggle {
+    cursor: pointer;
+    color: #2271b1;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.token-toggle:hover {
+    background: #f0f0f1;
+}
+
+.token-toggle svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.token-toggle.showing svg.eye-show {
+    display: none;
+}
+
+.token-toggle:not(.showing) svg.eye-hide {
+    display: none;
+}
+
+#wpfooter {
+    opacity: 0 !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro,
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu {
+    background: #0E100D !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro .wp-menu-image img {
+    width: 20px;
+    height: 20px;
+    padding: 7px 0;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro a {
+    color: #CD9042 !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a {
+    color: #CD9042 !important;
+    padding: 8px 20px !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro > a.menu-top {
+    font-weight: bold !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro.wp-has-current-submenu > a.wp-has-current-submenu,
+#adminmenu li.toplevel_page_alvobot-pro.current > a.current {
+    background: #CD9042 !important;
+    color: #0E100D !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a:hover,
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu .current a.current {
+    background: #F4F4F5 !important;
+    color: #0E100D !important;
+}
+
+
+.settings-panel {
+    margin-bottom: 30px;
+}
+
+.preview-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
