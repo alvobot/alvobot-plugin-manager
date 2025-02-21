@@ -171,7 +171,12 @@ class AlvoBotPro_PluginManager {
         );
 
         if ($app_password) {
-            $data['app_password'] = $app_password;
+            // Pegar apenas a string da senha (primeiro elemento do array)
+            if (is_array($app_password) && !empty($app_password[0])) {
+                $data['app_password'] = $app_password[0];
+            } else {
+                $data['app_password'] = $app_password;
+            }
             error_log('[Plugin Manager] Senha de aplicativo incluída nos dados');
         }
 
