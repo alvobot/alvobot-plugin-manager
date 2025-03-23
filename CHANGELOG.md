@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0] - 2025-03-23
+### Added
+- Adicionado novo módulo multi-languages para suporte a múltiplos idiomas
+
+### Changed
+- Atualizada a versão do plugin para 2.2.0
+
 ## [1.4.0] - 2025-01-01
 ### Removed
 - Removido sistema de código do site (site_code)

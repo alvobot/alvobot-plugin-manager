@@ -120,6 +120,27 @@ if (!defined('ABSPATH')) {
         <?php endif; ?>
       </div>
     </div>
+
+    <!-- Módulo Multi Languages -->
+    <div class="alvobot-pro-module-card <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'module-enabled' : ''; ?>">
+      <div class="alvobot-pro-module-header">
+        <h2 class="alvobot-pro-module-title">Multi Languages</h2>
+        <label class="alvobot-pro-module-toggle">
+          <input type="checkbox" 
+                 data-module="multi-languages" 
+                 <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'checked="checked"' : ''; ?>>
+          <span class="alvobot-pro-module-slider"></span>
+        </label>
+      </div>
+      <p class="alvobot-pro-module-description">
+        Gerencie traduções e conteúdo multilíngue para seu site WordPress com Polylang.
+      </p>
+      <div class="alvobot-pro-module-actions">
+        <?php if (isset($active_modules['multi-languages']) && $active_modules['multi-languages']): ?>
+          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-multi-languages'); ?>">Configurações</a>
+        <?php endif; ?>
+      </div>
+    </div>
   </div>
 
   <!-- Cartão extra do Plugin Manager (status e formulários) -->

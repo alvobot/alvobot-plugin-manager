@@ -178,7 +178,8 @@ class AlvoBotPro_EssentialPages {
      */
     public function __construct() {
         $this->base_dir = plugin_dir_path( __FILE__ );
-        add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
+        // Removido: não precisamos adicionar o menu aqui, pois já é adicionado pela classe principal
+        // add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_shortcode( 'alvobot_contact_form', [ $this, 'render_contact_form' ] );
     }
@@ -191,7 +192,7 @@ class AlvoBotPro_EssentialPages {
      */
     public function enqueue_admin_assets( $hook_suffix ) {
         // Só carrega os estilos na página de configurações do módulo
-        if ( 'settings_page_alvobot-essential-pages' !== $hook_suffix ) {
+        if ( 'alvobot-pro_page_alvobot-pro-essential-pages' !== $hook_suffix ) {
             return;
         }
 

@@ -25,7 +25,8 @@ class AlvoBotPro {
             'author-box' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/author-box/class-author-box.php',
             'plugin-manager' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/plugin-manager/class-plugin-manager.php',
             'pre-article' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/alvobot-pre-article/alvobot-pre-article.php',
-            'essential-pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php'
+            'essential-pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
+            'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php'
         );
 
         foreach ($module_files as $module => $file) {
@@ -56,7 +57,8 @@ class AlvoBotPro {
             'author-box' => true,
             'plugin-manager' => true,
             'pre-article' => true,
-            'essential-pages' => true
+            'essential-pages' => true,
+            'multi-languages' => true
         );
 
         // Obtém os módulos ativos do banco de dados
@@ -84,7 +86,8 @@ class AlvoBotPro {
             'author-box' => 'AlvoBotPro_AuthorBox',
             'plugin-manager' => 'AlvoBotPro_PluginManager',
             'pre-article' => 'Alvobot_Pre_Article',
-            'essential-pages' => 'AlvoBotPro_EssentialPages'
+            'essential-pages' => 'AlvoBotPro_EssentialPages',
+            'multi-languages' => 'AlvoBotPro_MultiLanguages'
         );
 
         // Instancia apenas os módulos ativos
@@ -189,6 +192,17 @@ class AlvoBotPro {
             );
         }
 
+        if (isset($this->modules['multi-languages'])) {
+            error_log('Alvobot Pro: Adicionando submenu Multi Languages');
+            add_submenu_page(
+                'alvobot-pro',
+                'Multi Languages',
+                'Multi Languages',
+                'manage_options',
+                'alvobot-pro-multi-languages',
+                array($this->modules['multi-languages'], 'render_settings_page')
+            );
+        }
 
         if (isset($this->modules['plugin-manager'])) {
             error_log('Alvobot Pro: Adicionando submenu Plugin Manager');
@@ -260,7 +274,8 @@ class AlvoBotPro {
                 'author-box' => true,
                 'plugin-manager' => true,
                 'pre-article' => true,
-                'essential-pages' => true
+                'essential-pages' => true,
+                'multi-languages' => true
             ));
         }
 

@@ -12,6 +12,7 @@ Plugin WordPress para gerenciamento de plugins e funcionalidades do AlvoBot Pro.
   - [Author Box](#2-author-box)
   - [Logo Generator](#3-logo-generator)
   - [Pre-Article](#4-pre-article)
+  - [Multi-Languages](#5-multi-languages)
 - [Desinstalação](#desinstalação)
 - [Suporte](#suporte)
 - [Licença](#licença)
@@ -165,6 +166,47 @@ Módulo para gerenciamento de pré-artigos e CTAs.
 GET /wp-json/alvobot-pre-article/v1/posts/123/ctas
 Headers: {
     "Authorization": "Bearer seu-token-aqui"
+}
+```
+
+### 5. Multi-Languages
+
+Módulo para suporte a múltiplos idiomas no site.
+
+#### Funcionalidades
+
+- Gerenciamento de traduções para posts e páginas
+- Suporte para múltiplos idiomas no site
+- Interface simplificada para tradução de conteúdo
+- Compatibilidade com principais plugins de SEO
+
+#### API Endpoints
+
+- `GET /wp-json/alvobot-multi-languages/v1/languages`
+  - Lista todos os idiomas configurados
+  - Requer autenticação via token
+  - Retorna schema com lista de idiomas disponíveis
+
+- `POST /wp-json/alvobot-multi-languages/v1/translations`
+  - Cria ou atualiza traduções para um post/página
+  - Requer autenticação via token
+  - Parâmetros:
+    - `post_id` (integer, obrigatório): ID do post original
+    - `language` (string, obrigatório): Código do idioma (ex: 'en', 'es', 'fr')
+    - `title` (string, obrigatório): Título traduzido
+    - `content` (string, obrigatório): Conteúdo traduzido
+    - `excerpt` (string, opcional): Resumo traduzido
+
+**Exemplo de Criação de Tradução:**
+```json
+POST /wp-json/alvobot-multi-languages/v1/translations
+{
+    "token": "seu-token-aqui",
+    "post_id": 123,
+    "language": "en",
+    "title": "Translated Title",
+    "content": "Translated content goes here...",
+    "excerpt": "Brief description in English"
 }
 ```
 
