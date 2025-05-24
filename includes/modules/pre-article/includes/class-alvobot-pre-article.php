@@ -23,7 +23,7 @@ if (!class_exists('Alvobot_Pre_Article')) {
         /**
          * Nome da opção no banco de dados
          */
-        private $option_name = 'alvobot_pre_artigo_options';
+        private $option_name = 'alvobot_pro_pre_article_settings'; // Standardized option name
 
         /**
          * Textos padrão para as CTAs
@@ -290,45 +290,60 @@ if (!class_exists('Alvobot_Pre_Article')) {
          */
         public function register_settings() {
             register_setting(
-                'alvobot_pre_artigo_settings',
-                'alvobot_pre_artigo_options',
+                'alvobot_pro_pre_article_settings_group', // Standardized option group name
+                $this->option_name,                       // Use standardized name from class property
                 [
                     'sanitize_callback' => [$this, 'sanitize_options'],
-                    'default' => [
-                        'num_ctas' => 2,
-                        'adsense_content' => ''
-                    ]
+                    'default' => $this->get_default_options_for_sanitize()
                 ]
             );
 
+            // Define a consistent page slug for settings sections and fields
+            $settings_page_slug = 'alvobot_pro_pre_article_settings_page';
+
             add_settings_section(
-                'alvobot_pre_artigo_cta_section',
-                __('Configurações dos Botões CTA', 'alvobot-pre-artigo'),
+                'alvobot_pro_pre_article_cta_section',
+                __('Configurações Globais de CTA', 'alvobot-pre-artigo'),
                 null,
-                'alvobot-pre-artigo'
+                $settings_page_slug 
             );
 
             add_settings_field(
                 'num_ctas',
-                __('Quantidade de CTAs', 'alvobot-pre-artigo'),
+                __('Quantidade de CTAs Padrão (Global)', 'alvobot-pre-artigo'),
                 [$this, 'num_ctas_callback'],
-                'alvobot-pre-artigo',
-                'alvobot_pre_artigo_cta_section'
+                $settings_page_slug,
+                'alvobot_pro_pre_article_cta_section'
+            );
+            
+            add_settings_section(
+                'alvobot_pro_pre_article_adsense_section',
+                __('Bloco de Anúncio Global', 'alvobot-pre-artigo'),
+                null,
+                $settings_page_slug
+            );
+
+            add_settings_field(
+                'adsense_content',
+                __('Conteúdo do Bloco de Anúncio (Global)', 'alvobot-pre-artigo'),
+                [$this, 'adsense_content_callback'],
+                $settings_page_slug,
+                'alvobot_pro_pre_article_adsense_section'
             );
 
             add_settings_section(
-                'alvobot_pre_artigo_footer_section',
-                __('Configurações do Rodapé', 'alvobot-pre-artigo'),
+                'alvobot_pro_pre_article_footer_section',
+                __('Configurações do Rodapé Global', 'alvobot-pre-artigo'),
                 null,
-                'alvobot-pre-artigo'
+                $settings_page_slug
             );
 
             add_settings_field(
                 'footer_text',
-                __('Texto do Rodapé', 'alvobot-pre-artigo'),
+                __('Texto do Rodapé Padrão (Global)', 'alvobot-pre-artigo'),
                 [$this, 'footer_text_callback'],
-                'alvobot-pre-artigo',
-                'alvobot_pre_artigo_footer_section'
+                $settings_page_slug,
+                'alvobot_pro_pre_article_footer_section'
             );
         }
 
@@ -336,24 +351,36 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Callback para o campo de quantidade de CTAs
          */
         public function num_ctas_callback() {
-            $options = get_option('alvobot_pre_artigo_options');
-            $num_ctas = $options['num_ctas'] ?? 2;
+            $options = get_option($this->option_name);
+            $num_ctas = isset($options['num_ctas']) ? $options['num_ctas'] : $this->get_default_options_for_sanitize()['num_ctas'];
             ?>
-            <input type="number" name="alvobot_pre_artigo_options[num_ctas]" value="<?php echo esc_attr($num_ctas); ?>" min="1" max="10" />
-            <p class="description"><?php _e('Defina a quantidade padrão de CTAs a serem exibidas nos Pré-Artigos.', 'alvobot-pre-artigo'); ?></p>
+            <input type="number" name="<?php echo esc_attr($this->option_name); ?>[num_ctas]" value="<?php echo esc_attr($num_ctas); ?>" min="1" max="10" />
+            <p class="description"><?php _e('Defina a quantidade padrão de CTAs a serem exibidas globalmente nos Pré-Artigos. Isto pode ser sobrescrito por post.', 'alvobot-pre-artigo'); ?></p>
             <?php
         }
+        
+        /**
+         * Callback para o campo de AdSense
+         */
+        public function adsense_content_callback() {
+            $options = get_option($this->option_name);
+            $adsense_content = isset($options['adsense_content']) ? $options['adsense_content'] : $this->get_default_options_for_sanitize()['adsense_content'];
+            ?>
+            <textarea name="<?php echo esc_attr($this->option_name); ?>[adsense_content]" rows="5" class="large-text code" placeholder="<?php esc_attr_e('Cole aqui o código do AdSense ou digite o texto/HTML que deseja exibir no bloco de anúncio global.', 'alvobot-pre-artigo'); ?>"><?php echo esc_textarea($adsense_content); ?></textarea>
+            <p class="description"><?php _e('Este conteúdo será exibido no bloco de anúncio da página de pré-artigo (globalmente).', 'alvobot-pre-artigo'); ?></p>
+            <?php
+        }
+
 
         /**
          * Callback para o campo de texto do rodapé
          */
         public function footer_text_callback() {
-            $options = get_option('alvobot_pre_artigo_options');
-            $default_footer = 'Aviso Legal: As informações deste site são meramente informativas e não substituem orientação profissional. Os resultados apresentados são ilustrativos, sem garantia de sucesso específico. Somos um site independente, não afiliado a outras marcas, que preza pela privacidade do usuário e protege suas informações pessoais, utilizando apenas para comunicações relacionadas aos nossos serviços.';
-            $footer_text = isset($options['footer_text']) ? $options['footer_text'] : $default_footer;
+            $options = get_option($this->option_name);
+            $footer_text = isset($options['footer_text']) ? $options['footer_text'] : $this->get_default_options_for_sanitize()['footer_text'];
             ?>
-            <textarea id="footer_text" name="alvobot_pre_artigo_options[footer_text]" rows="10" class="large-text code"><?php echo esc_textarea($footer_text); ?></textarea>
-            <p class="description"><?php _e('Use {NOME DO SITE} como placeholder para o nome do site configurado no WordPress.', 'alvobot-pre-artigo'); ?></p>
+            <textarea id="footer_text" name="<?php echo esc_attr($this->option_name); ?>[footer_text]" rows="5" class="large-text code"><?php echo esc_textarea($footer_text); ?></textarea>
+            <p class="description"><?php _e('Use {NOME DO SITE} como placeholder para o nome do site configurado no WordPress. Este é o rodapé padrão global.', 'alvobot-pre-artigo'); ?></p>
             <?php
         }
 
@@ -362,45 +389,54 @@ if (!class_exists('Alvobot_Pre_Article')) {
          */
         public function sanitize_options($input) {
             $sanitized_input = [];
-            $sanitized_input['num_ctas'] = isset($input['num_ctas']) ? absint($input['num_ctas']) : 2;
+            $defaults = $this->get_default_options_for_sanitize();
+
+            $sanitized_input['num_ctas'] = isset($input['num_ctas']) ? absint($input['num_ctas']) : $defaults['num_ctas'];
+            $sanitized_input['footer_text'] = isset($input['footer_text']) ? sanitize_textarea_field($input['footer_text']) : $defaults['footer_text'];
 
             if (isset($input['adsense_content'])) {
                 $allowed_html = array_merge(
                     wp_kses_allowed_html('post'),
                     [
                         'script' => [
-                            'async' => [],
-                            'src' => [],
-                            'crossorigin' => [],
-                            'type' => [],
-                            'data-ad-client' => [],
-                            'data-ad-slot' => []
+                            'async' => true, 
+                            'src' => true,
+                            'crossorigin' => true,
+                            'type' => true,
+                            'data-ad-client' => true,
+                            'data-ad-slot' => true
                         ],
                         'ins' => [
-                            'class' => [],
-                            'style' => [],
-                            'data-ad-client' => [],
-                            'data-ad-slot' => [],
-                            'data-ad-format' => [],
-                            'data-full-width-responsive' => []
+                            'class' => true,
+                            'style' => true,
+                            'data-ad-client' => true,
+                            'data-ad-slot' => true,
+                            'data-ad-format' => true,
+                            'data-full-width-responsive' => true
                         ]
                     ]
                 );
                 $sanitized_input['adsense_content'] = wp_kses($input['adsense_content'], $allowed_html);
+            } else {
+                 $sanitized_input['adsense_content'] = $defaults['adsense_content'];
             }
-
-            $num_ctas = $sanitized_input['num_ctas'];
-            for ($i = 1; $i <= $num_ctas; $i++) {
-                if (isset($input["button_text_{$i}"])) {
-                    $sanitized_input["button_text_{$i}"] = sanitize_text_field($input["button_text_{$i}"]);
-                }
-                if (isset($input["button_color_{$i}"])) {
-                    $sanitized_input["button_color_{$i}"] = sanitize_hex_color($input["button_color_{$i}"]);
-                }
-            }
+            
+            // Global default CTA texts and colors are not part of this option array directly.
+            // They are handled by the default_cta_texts property if not overridden per post.
+            // If these were to become global settings, they would need their own fields and sanitization.
 
             return $sanitized_input;
         }
+        
+        // Helper for default values used in sanitization and settings registration
+        private function get_default_options_for_sanitize() {
+            return [
+                'num_ctas' => 2,
+                'adsense_content' => '',
+                'footer_text' => 'Aviso Legal: As informações deste site são meramente informativas e não substituem orientação profissional. Os resultados apresentados são ilustrativos, sem garantia de sucesso específico. Somos um site independente, não afiliado a outras marcas, que preza pela privacidade do usuário e protege suas informações pessoais, utilizando apenas para comunicações relacionadas aos nossos serviços.'
+            ];
+        }
+
 
         /**
          * Registra as regras de rewrite
@@ -448,24 +484,41 @@ if (!class_exists('Alvobot_Pre_Article')) {
 
                 // Recupera CTAs: usa as configurações personalizadas se existirem
                 $use_custom = get_post_meta($post->ID, '_alvobot_use_custom', true);
+                $final_ctas = [];
+
                 if ('1' === $use_custom) {
-                    $ctas = get_post_meta($post->ID, '_alvobot_ctas', true);
+                    $custom_ctas_data = get_post_meta($post->ID, '_alvobot_ctas', true);
+                    $num_custom_ctas = get_post_meta($post->ID, '_alvobot_num_ctas', true);
+                    $num_custom_ctas = $num_custom_ctas ? intval($num_custom_ctas) : 0;
+
+                    if (is_array($custom_ctas_data)) {
+                        for ($i = 0; $i < $num_custom_ctas; $i++) {
+                            $final_ctas[] = [
+                                'text' => $custom_ctas_data[$i]['text'] ?? ($this->default_cta_texts[$i] ?? __('Saiba Mais', 'alvobot-pre-artigo')),
+                                'color' => $custom_ctas_data[$i]['color'] ?? '#1E73BE'
+                            ];
+                        }
+                    }
                 } else {
-                    $options = get_option('alvobot_pre_artigo_options');
-                    $num_ctas = $options['num_ctas'] ?? 2;
-                    $ctas = [];
-                    for ($i = 1; $i <= $num_ctas; $i++) {
-                        $ctas[] = [
-                            'text' => $options["button_text_{$i}"] ?? '',
-                            'color' => $options["button_color_{$i}"] ?? '#1E73BE'
+                    // Use global defaults
+                    $options = get_option($this->option_name); // Use standardized name
+                    $num_global_ctas = $options['num_ctas'] ?? $this->get_default_options_for_sanitize()['num_ctas'];
+                    for ($i = 0; $i < $num_global_ctas; $i++) {
+                         $final_ctas[] = [
+                            'text' => $this->default_cta_texts[$i] ?? __('Saiba Mais', 'alvobot-pre-artigo'), // Fallback to default texts
+                            'color' => '#1E73BE' // Default color, or could be made a global setting later
                         ];
                     }
                 }
-                set_query_var('alvobot_ctas', $ctas);
+                set_query_var('alvobot_ctas', $final_ctas);
 
-                $options = get_option('alvobot_pre_artigo_options');
-                $adsense_content = $options['adsense_content'] ?? '';
+                $options = get_option($this->option_name); // Use standardized name
+                $adsense_content = $options['adsense_content'] ?? $this->get_default_options_for_sanitize()['adsense_content'];
                 set_query_var('alvobot_adsense_content', $adsense_content);
+                
+                $footer_text_template = $options['footer_text'] ?? $this->get_default_options_for_sanitize()['footer_text'];
+                set_query_var('alvobot_footer_text', str_replace('{NOME DO SITE}', get_bloginfo('name'), $footer_text_template));
+
 
                 $plugin_dir = plugin_dir_path(__FILE__);
                 $template_path = $plugin_dir . '/templates/template-pre-article.php';
@@ -519,13 +572,13 @@ if (!class_exists('Alvobot_Pre_Article')) {
 
             // Adiciona menu apenas na versão free
             add_menu_page(
-                'Alvobot',
-                'Alvobot',
+                __('Alvobot Pré-Artigo', 'alvobot-pre-artigo'), // Page Title
+                __('Pré-Artigo', 'alvobot-pre-artigo'),    // Menu Title
                 'manage_options',
-                'alvobot-pre-artigo',
+                'alvobot_pro_pre_article_settings_page', // Standardized page slug
                 [$this, 'create_admin_page'],
-                'dashicons-admin-generic',
-                6
+                'dashicons-welcome-write-blog', // Icon
+                26 // Position
             );
         }
 
@@ -533,87 +586,27 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Cria a página de admin
          */
         public function create_admin_page() {
-            // Enfileira color picker e estilos customizados
-            wp_enqueue_style('wp-color-picker');
-            wp_enqueue_style(
-                'alvobot-pre-article-admin-css',
-                plugin_dir_url(dirname(__FILE__)) . 'assets/css/admin.css',
-                [],
-                ALVOBOT_PRE_ARTICLE_VERSION
-            );
+            // Enqueue assets needed for this specific settings page if not already handled by main plugin
+            // For standalone operation, this is essential.
+            // For AlvoBot Pro integration, these might be enqueued by AlvoBotPro class based on hook.
+             if (!did_action('admin_enqueue_scripts')) { // Simple check if assets might have been enqueued
+                wp_enqueue_style('wp-color-picker');
+                wp_enqueue_script('wp-color-picker');
+                // Consider enqueuing module-specific admin CSS/JS if not handled globally
+             }
 
-            // Enfileira scripts
-            wp_enqueue_script('wp-color-picker');
-            wp_enqueue_script(
-                'alvobot-pre-article-admin-js',
-                plugin_dir_url(dirname(__FILE__)) . 'assets/js/admin.js',
-                ['jquery', 'wp-color-picker'],
-                ALVOBOT_PRE_ARTICLE_VERSION,
-                true
-            );
-            wp_localize_script('alvobot-pre-article-admin-js', 'alvobotTranslations', [
-                'cta' => __('CTA', 'alvobot-pre-artigo'),
-                'buttonText' => __('Texto do Botão:', 'alvobot-pre-artigo'),
-                'buttonColor' => __('Cor do Botão:', 'alvobot-pre-artigo'),
-                'defaultTexts' => $this->default_cta_texts
-            ]);
-
-            $options = get_option('alvobot_pre_artigo_options');
-            $num_ctas = $options['num_ctas'] ?? 2;
-            $adsense_content = $options['adsense_content'] ?? '';
             ?>
             <div class="alvobot-pro-wrap alvobot-pre-article-wrap">
                 <div class="alvobot-pro-header">
-                    <h1><?php _e('Alvobot Pré-artigo', 'alvobot-pre-artigo'); ?></h1>
-                    <p><?php _e('Configure as opções do módulo de pré-artigo para melhorar a experiência dos seus leitores.', 'alvobot-pre-artigo'); ?></p>
+                    <h1><?php _e('AlvoBot Pré-Artigo Configurações Globais', 'alvobot-pre-artigo'); ?></h1>
+                    <p><?php _e('Configure as opções globais padrão para o módulo de pré-artigo.', 'alvobot-pre-artigo'); ?></p>
                 </div>
                 <form action="options.php" method="POST">
-                    <?php settings_fields('alvobot_pre_artigo_settings'); ?>
-                    
-                    <!-- Seção de Configurações dos Botões CTA -->
-                    <div class="alvobot-pro-module-card cta-config-section">
-                        <h2><?php _e('Configurações dos Botões CTA', 'alvobot-pre-artigo'); ?></h2>
-                        <div class="cta-quantity">
-                            <label for="num_ctas"><strong><?php _e('Quantidade de CTAs:', 'alvobot-pre-artigo'); ?></strong></label>
-                            <input type="number" id="num_ctas" name="alvobot_pre_artigo_options[num_ctas]" value="<?php echo esc_attr($num_ctas); ?>" min="1" max="10" />
-                            <span class="description"><?php _e('Defina a quantidade padrão de CTAs (máximo 10).', 'alvobot-pre-artigo'); ?></span>
-                        </div>
-                        <div id="ctas_container">
-                            <?php 
-                            for ($i = 1; $i <= $num_ctas; $i++) {
-                                $button_text = $options["button_text_{$i}"] ?? ($this->default_cta_texts[$i - 1] ?? '');
-                                $button_color = $options["button_color_{$i}"] ?? '#1E73BE';
-                                ?>
-                                <div class="cta-box">
-                                    <h3><?php printf(__('CTA %d', 'alvobot-pre-artigo'), $i); ?></h3>
-                                    <div class="cta-field">
-                                        <label for="button_text_<?php echo $i; ?>"><?php _e('Texto do Botão:', 'alvobot-pre-artigo'); ?></label>
-                                        <input type="text" id="button_text_<?php echo $i; ?>" name="alvobot_pre_artigo_options[button_text_<?php echo $i; ?>]" value="<?php echo esc_attr($button_text); ?>" />
-                                    </div>
-                                    <div class="cta-field">
-                                        <label for="button_color_<?php echo $i; ?>"><?php _e('Cor do Botão:', 'alvobot-pre-artigo'); ?></label>
-                                        <input type="text" id="button_color_<?php echo $i; ?>" name="alvobot_pre_artigo_options[button_color_<?php echo $i; ?>]" value="<?php echo esc_attr($button_color); ?>" class="wp-color-picker-field" data-default-color="#1E73BE" />
-                                    </div>
-                                </div>
-                            <?php } ?>
-                        </div>
-                        <div class="submit-wrapper">
-                            <?php submit_button(__('Salvar Configurações dos CTAs', 'alvobot-pre-artigo')); ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Seção do Bloco de Anúncio -->
-                    <div class="alvobot-pro-module-card cta-config-section">
-                        <h2><?php _e('Bloco de Anúncio', 'alvobot-pre-artigo'); ?></h2>
-                        <div class="form-group">
-                            <label for="adsense_content" style="display: block; margin-bottom: 0.5em;"><strong><?php _e('Conteúdo do Bloco:', 'alvobot-pre-artigo'); ?></strong></label>
-                            <textarea id="adsense_content" name="alvobot_pre_artigo_options[adsense_content]" rows="8" class="large-text code" placeholder="<?php esc_attr_e('Cole aqui o código do AdSense ou digite o texto que deseja exibir no bloco de anúncio.', 'alvobot-pre-artigo'); ?>"><?php echo esc_textarea($adsense_content); ?></textarea>
-                            <p class="description"><?php _e('Este conteúdo será exibido no bloco de anúncio da página de pré-artigo. Você pode colar um código HTML do AdSense ou digitar um texto personalizado.', 'alvobot-pre-artigo'); ?></p>
-                        </div>
-                        <div class="submit-wrapper">
-                            <?php submit_button(__('Salvar Bloco de Anúncio', 'alvobot-pre-artigo')); ?>
-                        </div>
-                    </div>
+                    <?php 
+                    settings_fields('alvobot_pro_pre_article_settings_group'); // Use the standardized group name
+                    do_settings_sections('alvobot_pro_pre_article_settings_page'); // Use the standardized page slug
+                    submit_button(__('Salvar Configurações Globais', 'alvobot-pre-artigo')); 
+                    ?>
                 </form>
             </div>
             <?php

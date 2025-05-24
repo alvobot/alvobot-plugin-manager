@@ -638,6 +638,6 @@ class AlvoBotPro_EssentialPages {
 /**
  * Instancia a classe ao carregar o plugin
  */
-add_action( 'plugins_loaded', function() {
-    new AlvoBotPro_EssentialPages();
-} );
+// add_action( 'plugins_loaded', function() {
+//     new AlvoBotPro_EssentialPages();
+// } ); // Removed: Class is instantiated by the main AlvoBotPro class if module is active.

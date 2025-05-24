@@ -1,2583 +1,288 @@
 <?php
+/**
+ * AlvoBot Pro Multi-Languages Module - Main Class
+ *
+ * Handles module setup, UI elements (settings page, meta boxes),
+ * and loads specialized API handler classes.
+ */
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit; // Exit if accessed directly
 }
 
 class AlvoBotPro_MultiLanguages {
-    private $namespace = 'alvobot-pro/v1';
-    
-    /** @var int Limite máximo de logs armazenados */
-    private const MAX_LOGS = 100;
 
-    /** @var int Tamanho máximo de conteúdo em bytes (100 MB) */
-    private const MAX_CONTENT_SIZE = 100000000;
-
+    /**
+     * Constructor.
+     * Initializes hooks for UI components and loads API handlers.
+     */
     public function __construct() {
-        add_action('rest_api_init', array($this, 'register_rest_routes'));
+        $this->load_api_handlers();
         
-        // Adiciona o campo `pll_post_translations` às respostas da API REST para posts e páginas
-        add_action('rest_api_init', array($this, 'register_post_translations_field'));
-        
-        // Removido para evitar duplicação de menu
-        // add_action('admin_menu', array($this, 'register_admin_pages'));
+        // UI related hooks
+        // Admin menu is now handled centrally in AlvoBotPro class
+        add_action('add_meta_boxes', array($this, 'register_change_language_meta_box'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_module_assets'));
     }
 
+    /**
+     * Loads and instantiates the specialized API handler classes.
+     *
+     * All REST API functionalities are delegated to these classes.
+     */
+    private function load_api_handlers() {
+        $inc_path = plugin_dir_path(__FILE__) . 'includes/';
+
+        $api_classes_files = [
+            'base'     => $inc_path . 'class-alvobot-pro-ml-base-api.php',
+            'post'     => $inc_path . 'class-alvobot-pro-ml-post-api.php',
+            'category' => $inc_path . 'class-alvobot-pro-ml-category-api.php',
+            'taxonomy' => $inc_path . 'class-alvobot-pro-ml-taxonomy-api.php',
+            'util'     => $inc_path . 'class-alvobot-pro-ml-util-api.php',
+        ];
+
+        // Load base class first
+        if (file_exists($api_classes_files['base'])) {
+            require_once $api_classes_files['base'];
+        } else {
+            error_log('AlvoBot Pro Multi-Languages: CRITICAL - Base API class file not found.');
+            return;
+        }
+        unset($api_classes_files['base']); // Remove from loop
+
+        // Load other API handlers
+        foreach ($api_classes_files as $key => $file_path) {
+            if (file_exists($file_path)) {
+                require_once $file_path;
+                // Construct class name, e.g., AlvoBotPro_MultiLanguages_Post_API
+                $class_name = 'AlvoBotPro_MultiLanguages_' . ucfirst($key) . '_API';
+                if (class_exists($class_name)) {
+                    new $class_name();
+                } else {
+                    error_log("AlvoBot Pro Multi-Languages: API class {$class_name} not found in {$file_path}.");
+                }
+            } else {
+                error_log("AlvoBot Pro Multi-Languages: API handler file not found: {$file_path}.");
+            }
+        }
+    }
+
+    /**
+     * Initialize module (not used for much here as API init is separate).
+     */
     public function init() {
-        // Inicialização adicional se necessário
+        // Additional non-API, non-UI initialization if necessary
     }
 
+    /**
+     * Activation logic for the module (if any).
+     */
     public function activate() {
-        // Ações de ativação se necessário
+        // Example: Set default options for this module if it had its own distinct settings
+        // update_option('alvobot_pro_multi_languages_settings', ['some_default' => true]);
     }
 
+    /**
+     * Deactivation logic for the module (if any).
+     */
     public function deactivate() {
-        // Ações de desativação se necessário
+        // Example: Clean up options or transients
+        // delete_option('alvobot_pro_multi_languages_settings');
     }
 
+    /**
+     * Renders the settings page for the Multi-Languages module.
+     * 
+     * This page primarily checks for Polylang dependency and links to API documentation.
+     */
     public function render_settings_page() {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        // Verifica se o Polylang está ativo
+        echo '<div class="wrap alvobot-pro-wrap">';
+        echo '<div class="alvobot-pro-header"><h1>' . esc_html__('AlvoBot Pro: Multi Idiomas', 'alvobot-pro') . '</h1>';
+        echo '<p>' . esc_html__('Este módulo fornece funcionalidades avançadas para gerenciamento de conteúdo multilíngue através da API REST, em conjunto com o plugin Polylang.', 'alvobot-pro') . '</p></div>';
+
+
         if (!function_exists('pll_languages_list')) {
-            echo '<div class="wrap">';
-            echo '<h1>' . __('Multi Languages', 'alvobot-pro') . '</h1>';
-            echo '<div class="notice notice-error"><p>' . __('O plugin Polylang não está ativo. Este módulo requer o Polylang para funcionar corretamente.', 'alvobot-pro') . '</p></div>';
-            echo '</div>';
+            echo '<div id="message" class="notice notice-error"><p>' . esc_html__('O plugin Polylang não está ativo. O módulo Multi Idiomas do AlvoBot Pro requer o Polylang para funcionar corretamente. Por favor, instale e ative o Polylang.', 'alvobot-pro') . '</p></div>';
+        } else {
+            echo '<div id="message" class="notice notice-success"><p>' . esc_html__('Plugin Polylang detectado. O módulo Multi Idiomas está pronto para uso via API REST.', 'alvobot-pro') . '</p></div>';
+        }
+        echo '</div>'; // .wrap
+    }
+
+    /**
+     * Enqueues module-specific admin assets (CSS and JS for the meta box).
+     *
+     * @param string $hook The current admin page hook.
+     */
+    public function enqueue_module_assets($hook) {
+        global $post;
+        if (($hook === 'post.php' || $hook === 'post-new.php') && $post) {
+            if (function_exists('pll_is_translated_post_type') && pll_is_translated_post_type($post->post_type)) {
+                
+                $css_path = 'includes/modules/multi-languages/assets/css/multi-languages-admin.css';
+                $js_path = 'includes/modules/multi-languages/assets/js/multi-languages-admin.js';
+
+                wp_enqueue_style(
+                    'alvobot-pro-multi-languages-admin',
+                    ALVOBOT_PRO_PLUGIN_URL . $css_path,
+                    array(),
+                    ALVOBOT_PRO_VERSION
+                );
+
+                wp_enqueue_script(
+                    'alvobot-pro-multi-languages-admin',
+                    ALVOBOT_PRO_PLUGIN_URL . $js_path,
+                    array('jquery', 'wp-i18n'), // wp-i18n for JavaScript translations
+                    ALVOBOT_PRO_VERSION,
+                    true
+                );
+
+                $current_language_details = null;
+                $current_lang_slug = null;
+                if (function_exists('pll_get_post_language')) {
+                    $current_lang_slug = pll_get_post_language($post->ID, 'slug');
+                    if ($current_lang_slug && function_exists('PLL')) { // Check if PLL() function exists
+                         $current_language_details = PLL()->model->get_language($current_lang_slug);
+                    }
+                }
+                
+                // Prepare namespace for REST API calls from JS
+                $api_namespace = 'alvobot-pro/v1'; // Ensure this matches the one in API classes
+
+                wp_localize_script('alvobot-pro-multi-languages-admin', 'alvobotMultiLang', array(
+                    'nonce' => wp_create_nonce('alvobot_change_post_language_nonce'), // For AJAX actions if any
+                    'rest_nonce' => wp_create_nonce('wp_rest'), // For REST API
+                    'post_id' => $post->ID,
+                    'current_language_slug' => $current_lang_slug,
+                    'current_language_name' => $current_language_details ? $current_language_details->name : __('Nenhum idioma atribuído', 'alvobot-pro'),
+                    'api_url_base' => esc_url_raw(rest_url($api_namespace . '/change-post-language')),
+                    'text' => array(
+                        'confirm_change_dissociate' => __('Você está prestes a alterar o idioma deste post e dissociá-lo de suas traduções atuais. O post se tornará independente no novo idioma. Continuar?', 'alvobot-pro'),
+                        'confirm_change_associate' => __('Você está prestes a alterar o idioma principal deste post. Ele permanecerá conectado às suas traduções existentes. Continuar?', 'alvobot-pro'),
+                        'changing_language' => __('Alterando idioma...', 'alvobot-pro'),
+                        'language_changed_success' => __('Idioma alterado com sucesso! A página será recarregada para atualizar todas as informações.', 'alvobot-pro'),
+                        'error_changing_language' => __('Erro ao alterar idioma:', 'alvobot-pro'),
+                        'select_language' => __('Por favor, selecione um novo idioma.', 'alvobot-pro'),
+                    )
+                ));
+            }
+        }
+    }
+
+    /**
+     * Registers the meta box for changing post language on translatable post types.
+     */
+    public function register_change_language_meta_box() {
+        if (!function_exists('pll_is_translated_post_type') || !function_exists('pll_get_post_types')) {
+            return; // Polylang not active or functions not available
+        }
+
+        $translatable_post_types = pll_get_post_types(['hide_empty' => false, 'public' => true]); 
+        foreach ($translatable_post_types as $post_type_slug => $post_type_obj) {
+             if (is_string($post_type_slug)) { // Polylang >3.0 returns objects, <3.0 returns slugs
+                add_meta_box(
+                    'alvobot_change_post_language_mb',
+                    __('Idioma do Post (AlvoBot Pro)', 'alvobot-pro'),
+                    array($this, 'render_change_language_meta_box'),
+                    $post_type_slug,
+                    'side', 
+                    'low' 
+                );
+             } elseif (is_object($post_type_obj) && isset($post_type_obj->name)) { // For Polylang 3.0+
+                 add_meta_box(
+                    'alvobot_change_post_language_mb',
+                    __('Idioma do Post (AlvoBot Pro)', 'alvobot-pro'),
+                    array($this, 'render_change_language_meta_box'),
+                    $post_type_obj->name,
+                    'side', 
+                    'low' 
+                );
+             }
+        }
+    }
+
+    /**
+     * Renders the content of the "Change Post Language" meta box.
+     *
+     * @param WP_Post $post The current post object.
+     */
+    public function render_change_language_meta_box($post) {
+        if (!function_exists('pll_languages_list') || !function_exists('pll_get_post_language') || !function_exists('PLL')) {
+            echo '<p>' . esc_html__('O plugin Polylang não está ativo ou funções essenciais não estão disponíveis.', 'alvobot-pro') . '</p>';
             return;
         }
 
-        // Inclui o template da página de configurações
-        include_once plugin_dir_path(__FILE__) . 'templates/multi-languages-settings.php';
+        wp_nonce_field('alvobot_change_post_language_action', 'alvobot_change_post_language_nonce_field');
+
+        $current_lang_slug = pll_get_post_language($post->ID, 'slug');
+        $current_lang_obj = $current_lang_slug ? PLL()->model->get_language($current_lang_slug) : null;
+        $all_languages = pll_languages_list(array('fields' => '', 'hide_empty' => false)); 
+
+        ?>
+        <div id="alvobot-change-language-meta-box-content">
+            <p>
+                <strong><?php esc_html_e('Idioma Atual:', 'alvobot-pro'); ?></strong>
+                <span id="alvobot-current-language-display">
+                    <?php if ($current_lang_obj && isset($current_lang_obj->flag_url) && isset($current_lang_obj->name) && isset($current_lang_obj->slug)) : ?>
+                        <img src="<?php echo esc_url($current_lang_obj->flag_url); ?>" alt="<?php echo esc_attr($current_lang_obj->name); ?>" style="vertical-align:middle; margin-right: 5px;" />
+                        <?php echo esc_html($current_lang_obj->name); ?> (<?php echo esc_html($current_lang_obj->slug); ?>)
+                    <?php else : ?>
+                        <?php esc_html_e('Nenhum idioma atribuído', 'alvobot-pro'); ?>
+                    <?php endif; ?>
+                </span>
+            </p>
+
+            <p>
+                <label for="alvobot_new_language_code"><?php esc_html_e('Alterar para o Idioma:', 'alvobot-pro'); ?></label><br>
+                <select name="alvobot_new_language_code" id="alvobot_new_language_code" style="width:100%;">
+                    <option value=""><?php esc_html_e('-- Selecione um Idioma --', 'alvobot-pro'); ?></option>
+                    <?php if (is_array($all_languages)) : ?>
+                        <?php foreach ($all_languages as $language) : ?>
+                            <?php if ($current_lang_slug === $language->slug) continue; // Skip current language ?>
+                            <option value="<?php echo esc_attr($language->slug); ?>">
+                                <?php echo esc_html($language->name); ?> (<?php echo esc_html($language->slug); ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </p>
+
+            <p>
+                <label>
+                    <input type="checkbox" name="alvobot_update_translations" id="alvobot_update_translations" value="1" checked="checked" />
+                    <?php esc_html_e('Manter este post conectado às suas traduções atuais?', 'alvobot-pro'); ?>
+                </label>
+                <span class="dashicons dashicons-editor-help" title="<?php esc_attr_e('Se marcado, o post permanecerá no mesmo grupo de tradução, apenas o seu idioma principal será alterado. Se desmarcado, este post se tornará independente no novo idioma, e as conexões com traduções anteriores serão removidas.', 'alvobot-pro'); ?>"></span>
+            </p>
+
+            <button type="button" id="alvobot-change-language-button" class="button button-primary">
+                <?php esc_html_e('Alterar Idioma do Post', 'alvobot-pro'); ?>
+            </button>
+            <span id="alvobot-change-language-spinner" class="spinner" style="float:none; vertical-align: middle;"></span>
+            <div id="alvobot-change-language-feedback" style="margin-top:10px;"></div>
+        </div>
+        <?php
     }
     
     /**
-     * Registra as rotas da API REST.
-     */
-    public function register_rest_routes() {
-        $this->namespace = 'alvobot-pro/v1';
-        
-        // Rota para listar idiomas disponíveis
-        register_rest_route($this->namespace, '/languages', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_languages'),
-            'permission_callback' => '__return_true',
-        ]);
-        
-        // Rota para obter URL de um post em um idioma específico
-        register_rest_route($this->namespace, '/language-url', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_language_url'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rota para alterar o idioma de um post existente
-        register_rest_route($this->namespace, '/change-post-language', [
-            'methods' => 'PUT',
-            'callback' => array($this, 'change_post_language'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'update_translations' => [
-                    'required' => false,
-                    'default' => true,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '0', '1'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rotas para tradução de posts
-        register_rest_route($this->namespace, '/translate', [
-            'methods' => 'POST',
-            'callback' => array($this, 'create_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => $this->get_translation_args(),
-        ]);
-        
-        register_rest_route($this->namespace, '/translate', [
-            'methods' => 'PUT',
-            'callback' => array($this, 'update_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => $this->get_translation_args(),
-        ]);
-        
-        register_rest_route($this->namespace, '/translate', [
-            'methods' => 'DELETE',
-            'callback' => array($this, 'delete_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rota para listar traduções de posts
-        register_rest_route($this->namespace, '/translations', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_translations'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'post_type' => [
-                    'default' => 'post',
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'hide_empty' => [
-                    'default' => false,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '1', '0'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rota para verificar existência de tradução
-        register_rest_route($this->namespace, '/translations/check', [
-            'methods' => 'GET',
-            'callback' => array($this, 'check_translation_existence'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rota para listar posts sem traduções
-        register_rest_route($this->namespace, '/translations/missing', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_posts_missing_translations'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'post_type' => [
-                    'default' => 'post',
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'hide_empty' => [
-                    'default' => false,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '1', '0'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rotas para tradução de categorias
-        register_rest_route($this->namespace, '/translate/category', [
-            'methods' => 'POST',
-            'callback' => array($this, 'create_category_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'category_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'name' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ],
-                'description' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ],
-                'slug' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translate/category', [
-            'methods' => 'PUT',
-            'callback' => array($this, 'update_category_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'category_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'name' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ],
-                'description' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ],
-                'slug' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translate/category', [
-            'methods' => 'DELETE',
-            'callback' => array($this, 'delete_category_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'category_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rota para listar traduções de categorias
-        register_rest_route($this->namespace, '/translations/categories', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_categories_translations'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'hide_empty' => [
-                    'default' => false,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '1', '0'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rotas para gerenciamento de slugs
-        register_rest_route($this->namespace, '/slugs', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_all_slugs'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'post_type' => [
-                    'default' => 'post',
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'hide_empty' => [
-                    'default' => false,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '1', '0'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translate/slug', [
-            'methods' => 'POST',
-            'callback' => array($this, 'create_slug_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'slug' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translate/slug', [
-            'methods' => 'PUT',
-            'callback' => array($this, 'update_slug_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'slug' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translate/slug', [
-            'methods' => 'DELETE',
-            'callback' => array($this, 'delete_slug_translation'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'post_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    }
-                ],
-                'language_code' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        // Rotas para gerenciamento de taxonomias
-        register_rest_route($this->namespace, '/taxonomies', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_taxonomies'),
-            'permission_callback' => '__return_true',
-        ]);
-        
-        register_rest_route($this->namespace, '/taxonomy/terms', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_taxonomy_terms'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'taxonomy' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'hide_empty' => [
-                    'default' => false,
-                    'validate_callback' => function($param) {
-                        return is_bool($param) || in_array($param, ['true', 'false', '0', '1'], true);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/taxonomy/untranslated', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_untranslated_terms'),
-            'permission_callback' => '__return_true',
-            'args' => [
-                'taxonomy' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param) && !empty($param);
-                    }
-                ],
-                'per_page' => [
-                    'default' => 10,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ],
-                'page' => [
-                    'default' => 1,
-                    'validate_callback' => function($param) {
-                        return is_numeric($param) && $param > 0;
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/sync-translations', [
-            'methods' => 'POST',
-            'callback' => array($this, 'sync_translations'),
-            'permission_callback' => array($this, 'permissions_check'),
-            'args' => [
-                'translations' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_array($param);
-                    }
-                ]
-            ]
-        ]);
-        
-        register_rest_route($this->namespace, '/translation-stats', [
-            'methods' => 'GET',
-            'callback' => array($this, 'get_translation_stats'),
-            'permission_callback' => '__return_true',
-        ]);
-    }
-
-    /**
-     * Callback para a rota de idiomas disponíveis
-     */
-    public function get_languages() {
-        if (!function_exists('pll_languages_list')) {
-            return new WP_Error('pll_not_active', 'Polylang não está ativo', array('status' => 404));
-        }
-
-        $languages = PLL()->model->get_languages_list();
-        $response = array();
-
-        foreach ($languages as $lang) {
-            $response[] = array(
-                'code' => $lang->slug,
-                'name' => $lang->name,
-                'locale' => $lang->locale,
-                'is_default' => (bool) $lang->is_default,
-                'term_id' => $lang->term_id,
-                'count' => $lang->count,
-                'active' => $lang->active,
-                'flag_url' => $lang->flag_url,
-                'home_url' => $lang->home_url,
-                'search_url' => $lang->search_url,
-                'w3c' => $lang->w3c,
-                'facebook' => $lang->facebook
-            );
-        }
-
-        return new WP_REST_Response($response, 200);
-    }
-
-    /**
-     * Callback para a rota de posts sem tradução completa
-     */
-    public function get_untranslated_posts(WP_REST_Request $request) {
-        if (!function_exists('pll_languages_list') || !function_exists('pll_get_post_translations')) {
-            return new WP_Error('pll_not_active', 'Polylang não está ativo', array('status' => 404));
-        }
-
-        $languages = pll_languages_list();
-        $posts = get_posts(array(
-            'post_type' => array('post', 'page'),
-            'posts_per_page' => -1,
-            'post_status' => 'publish'
-        ));
-
-        $untranslated_posts = array();
-
-        foreach ($posts as $post) {
-            $translations = pll_get_post_translations($post->ID);
-            $missing_languages = array_diff($languages, array_keys($translations));
-
-            if (!empty($missing_languages)) {
-                $post_language = pll_get_post_language($post->ID);
-                $untranslated_posts[] = array(
-                    'post_id' => $post->ID,
-                    'title' => $post->post_title,
-                    'current_language' => $post_language,
-                    'missing_translations' => array_values($missing_languages),
-                    'permalink' => get_permalink($post->ID)
-                );
-            }
-        }
-
-        return new WP_REST_Response($untranslated_posts, 200);
-    }
-
-    /**
-     * Callback para a rota de tradução de categoria
-     */
-    public function get_category_translation(WP_REST_Request $request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error('pll_not_active', 'Polylang não está ativo', array('status' => 404));
-        }
-
-        // Obtém os parâmetros da requisição
-        $category_id = $request->get_param('category_id');
-        $language = $request->get_param('lang');
-
-        // Valida os parâmetros
-        if (!$category_id || !$language) {
-            return new WP_Error(
-                'missing_params',
-                'Parâmetros obrigatórios: category_id e lang',
-                array('status' => 400)
-            );
-        }
-
-        // Verifica se a categoria existe
-        $category = get_term($category_id, 'category');
-        if (!$category || is_wp_error($category)) {
-            return new WP_Error(
-                'invalid_category',
-                'Categoria não encontrada',
-                array('status' => 404)
-            );
-        }
-
-        // Obtém as traduções da categoria
-        $translations = pll_get_term_translations($category_id);
-        
-        // Verifica se existe tradução para o idioma solicitado
-        if (!isset($translations[$language])) {
-            return new WP_Error(
-                'translation_not_found',
-                'Tradução não encontrada para o idioma especificado',
-                array('status' => 404)
-            );
-        }
-
-        // Obtém os detalhes da categoria traduzida
-        $translated_category = get_term($translations[$language], 'category');
-        
-        return new WP_REST_Response(array(
-            'original_category' => array(
-                'id' => (int)$category_id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'language' => pll_get_term_language($category_id)
-            ),
-            'translated_category' => array(
-                'id' => (int)$translations[$language],
-                'name' => $translated_category->name,
-                'slug' => $translated_category->slug,
-                'language' => $language
-            )
-        ), 200);
-    }
-
-    /**
-     * Registra logs com limite de tamanho.
-     */
-    private function log_action(string $action, string $status, string $message, array $details = []) {
-        $logs = $this->get_logs();
-        
-        // Adiciona novo log
-        $logs[] = [
-            'timestamp' => current_time('mysql'),
-            'action' => $action,
-            'status' => $status,
-            'message' => $message,
-            'details' => $details
-        ];
-        
-        // Limita o número de logs
-        if (count($logs) > self::MAX_LOGS) {
-            $logs = array_slice($logs, -self::MAX_LOGS);
-        }
-        
-        update_option('alvobot_multi_languages_logs', $logs);
-    }
-    
-    /**
-     * Obtém logs armazenados.
-     */
-    private function get_logs() {
-        $logs = get_option('alvobot_multi_languages_logs', []);
-        return is_array($logs) ? $logs : [];
-    }
-    
-    /**
-     * Argumentos de paginação reutilizáveis.
-     */
-    private function get_pagination_args(int $default_per_page, string $per_page_desc): array {
-        return [
-            'per_page' => [
-                'default' => $default_per_page,
-                'validate_callback' => function($param) {
-                    return is_numeric($param) && $param > 0 && $param <= 100;
-                },
-                'description' => $per_page_desc,
-            ],
-            'page' => [
-                'default' => 1,
-                'validate_callback' => function($param) {
-                    return is_numeric($param) && $param > 0;
-                },
-                'description' => 'Current page of the collection.',
-            ],
-            'hide_empty' => [
-                'default' => false,
-                'validate_callback' => function($param) {
-                    return is_bool($param) || in_array($param, ['true', 'false', '1', '0'], true);
-                },
-                'description' => 'Whether to hide empty categories or posts.',
-            ],
-        ];
-    }
-
-    /**
-     * Verifica permissões do usuário.
-     */
-    public function permissions_check() {
-        return current_user_can('edit_posts');
-    }
-
-    /**
-     * Argumentos comuns para tradução de posts.
-     */
-    private function get_translation_args() {
-        return array_merge(
-            $this->get_basic_translation_args(),
-            [
-                'title' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'content' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'excerpt' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'slug' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'date' => [
-                    'validate_callback' => function($param) {
-                        return strtotime($param) !== false;
-                    },
-                ],
-                'categories' => [
-                    'required' => true,
-                    'type' => 'array',
-                    'items' => ['type' => 'integer'],
-                ],
-                'featured_media' => [
-                    'validate_callback' => function($param) {
-                        return is_numeric($param);
-                    },
-                ],
-                'meta_input' => [
-                    'validate_callback' => function($param) {
-                        return is_array($param);
-                    },
-                ],
-            ]
-        );
-    }
-
-    /**
-     * Argumentos básicos para tradução (post_id e language_code).
-     */
-    private function get_basic_translation_args() {
-        return [
-            'post_id' => [
-                'required' => true,
-                'validate_callback' => function($param) {
-                    return is_numeric($param);
-                },
-            ],
-            'language_code' => [
-                'required' => true,
-                'validate_callback' => function($param) {
-                    return is_string($param) && strlen($param) === 2;
-                },
-            ],
-        ];
-    }
-
-    /**
-     * Argumentos para tradução de categorias.
-     */
-    private function get_category_translation_args() {
-        return array_merge(
-            $this->get_basic_category_args(),
-            [
-                'name' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'description' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-                'slug' => [
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-            ]
-        );
-    }
-
-    /**
-     * Argumentos básicos para categorias (category_id e language_code).
-     */
-    private function get_basic_category_args() {
-        return [
-            'category_id' => [
-                'required' => true,
-                'validate_callback' => function($param) {
-                    return is_numeric($param);
-                },
-            ],
-            'language_code' => [
-                'required' => true,
-                'validate_callback' => function($param) {
-                    return is_string($param) && strlen($param) === 2;
-                },
-            ],
-        ];
-    }
-
-    /**
-     * Argumentos para tradução de slugs.
-     */
-    private function get_slug_translation_args() {
-        return array_merge(
-            $this->get_basic_translation_args(),
-            [
-                'slug' => [
-                    'required' => true,
-                    'validate_callback' => function($param) {
-                        return is_string($param);
-                    },
-                ],
-            ]
-        );
-    }
-
-    /**
-     * Cria uma nova tradução para um post existente.
-     */
-    public function create_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations') || !function_exists('pll_set_post_language')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post original não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se já existe uma tradução para este idioma
-        $translations = pll_get_post_translations($post_id);
-        if (isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_exists',
-                __('Já existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Prepara os dados do post
-        $post_data = [
-            'post_title' => sanitize_text_field($params['title']),
-            'post_content' => wp_kses_post($params['content']),
-            'post_status' => $post->post_status,
-            'post_type' => $post->post_type,
-            'post_author' => get_current_user_id(),
-        ];
-        
-        // Adiciona campos opcionais
-        if (isset($params['excerpt'])) {
-            $post_data['post_excerpt'] = sanitize_textarea_field($params['excerpt']);
-        }
-        
-        if (isset($params['slug'])) {
-            $post_data['post_name'] = sanitize_title($params['slug']);
-        }
-        
-        if (isset($params['date'])) {
-            $post_data['post_date'] = sanitize_text_field($params['date']);
-            $post_data['post_date_gmt'] = get_gmt_from_date($params['date']);
-        }
-        
-        // Cria o post traduzido
-        $translated_post_id = wp_insert_post($post_data, true);
-        
-        if (is_wp_error($translated_post_id)) {
-            $this->log_action('create_translation', 'error', 'Erro ao criar tradução', [
-                'post_id' => $post_id,
-                'language_code' => $language_code,
-                'error' => $translated_post_id->get_error_message()
-            ]);
-            return $translated_post_id;
-        }
-        
-        // Define o idioma do post traduzido
-        pll_set_post_language($translated_post_id, $language_code);
-        
-        // Atualiza as traduções
-        $translations[$language_code] = $translated_post_id;
-        pll_save_post_translations($translations);
-        
-        // Atualiza categorias se fornecidas
-        if (isset($params['categories']) && is_array($params['categories'])) {
-            $translated_categories = [];
-            
-            foreach ($params['categories'] as $category_id) {
-                // Tenta obter a tradução da categoria no idioma de destino
-                $translated_category = $this->get_translated_term($category_id, 'category', $language_code);
-                if ($translated_category) {
-                    $translated_categories[] = $translated_category;
-                } else {
-                    $translated_categories[] = $category_id;
-                }
-            }
-            
-            wp_set_post_terms($translated_post_id, $translated_categories, 'category');
-        }
-        
-        // Atualiza imagem destacada se fornecida
-        if (isset($params['featured_media']) && $params['featured_media']) {
-            set_post_thumbnail($translated_post_id, intval($params['featured_media']));
-        }
-        
-        // Atualiza meta dados se fornecidos
-        if (isset($params['meta_input']) && is_array($params['meta_input'])) {
-            foreach ($params['meta_input'] as $meta_key => $meta_value) {
-                update_post_meta($translated_post_id, sanitize_key($meta_key), $meta_value);
-            }
-        }
-        
-        $this->log_action('create_translation', 'success', 'Tradução criada com sucesso', [
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'translated_post_id' => $translated_post_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'post_id' => $translated_post_id,
-            'message' => __('Tradução criada com sucesso.', 'alvobot-pro')
-        ], 201);
-    }
-    
-    /**
-     * Atualiza uma tradução existente.
-     */
-    public function update_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post original não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_post_translations($post_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_post_id = $translations[$language_code];
-        
-        // Prepara os dados do post
-        $post_data = [
-            'ID' => $translated_post_id,
-            'post_title' => sanitize_text_field($params['title']),
-            'post_content' => wp_kses_post($params['content']),
-        ];
-        
-        // Adiciona campos opcionais
-        if (isset($params['excerpt'])) {
-            $post_data['post_excerpt'] = sanitize_textarea_field($params['excerpt']);
-        }
-        
-        if (isset($params['slug'])) {
-            $post_data['post_name'] = sanitize_title($params['slug']);
-        }
-        
-        if (isset($params['date'])) {
-            $post_data['post_date'] = sanitize_text_field($params['date']);
-            $post_data['post_date_gmt'] = get_gmt_from_date($params['date']);
-        }
-        
-        // Atualiza o post traduzido
-        $result = wp_update_post($post_data, true);
-        
-        if (is_wp_error($result)) {
-            $this->log_action('update_translation', 'error', 'Erro ao atualizar tradução', [
-                'post_id' => $post_id,
-                'language_code' => $language_code,
-                'error' => $result->get_error_message()
-            ]);
-            return $result;
-        }
-        
-        // Atualiza categorias se fornecidas
-        if (isset($params['categories']) && is_array($params['categories'])) {
-            $translated_categories = [];
-            
-            foreach ($params['categories'] as $category_id) {
-                // Tenta obter a tradução da categoria no idioma de destino
-                $translated_category = $this->get_translated_term($category_id, 'category', $language_code);
-                if ($translated_category) {
-                    $translated_categories[] = $translated_category;
-                } else {
-                    $translated_categories[] = $category_id;
-                }
-            }
-            
-            wp_set_post_terms($translated_post_id, $translated_categories, 'category');
-        }
-        
-        // Atualiza imagem destacada se fornecida
-        if (isset($params['featured_media'])) {
-            if ($params['featured_media']) {
-                set_post_thumbnail($translated_post_id, intval($params['featured_media']));
-            } else {
-                delete_post_thumbnail($translated_post_id);
-            }
-        }
-        
-        // Atualiza meta dados se fornecidos
-        if (isset($params['meta_input']) && is_array($params['meta_input'])) {
-            foreach ($params['meta_input'] as $meta_key => $meta_value) {
-                update_post_meta($translated_post_id, sanitize_key($meta_key), $meta_value);
-            }
-        }
-        
-        $this->log_action('update_translation', 'success', 'Tradução atualizada com sucesso', [
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'translated_post_id' => $translated_post_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'post_id' => $translated_post_id,
-            'message' => __('Tradução atualizada com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-    
-    /**
-     * Exclui uma tradução existente.
-     */
-    public function delete_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post original não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_post_translations($post_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_post_id = $translations[$language_code];
-        
-        // Não permite excluir o post original
-        if ($translated_post_id == $post_id) {
-            return new WP_Error(
-                'cannot_delete_original',
-                __('Não é possível excluir o post original.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Remove a tradução do grupo de traduções
-        unset($translations[$language_code]);
-        pll_save_post_translations($translations);
-        
-        // Exclui o post traduzido
-        $result = wp_delete_post($translated_post_id, true);
-        
-        if (!$result) {
-            $this->log_action('delete_translation', 'error', 'Erro ao excluir tradução', [
-                'post_id' => $post_id,
-                'language_code' => $language_code,
-                'translated_post_id' => $translated_post_id
-            ]);
-            
-            return new WP_Error(
-                'delete_failed',
-                __('Falha ao excluir a tradução.', 'alvobot-pro'),
-                ['status' => 500]
-            );
-        }
-        
-        $this->log_action('delete_translation', 'success', 'Tradução excluída com sucesso', [
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'translated_post_id' => $translated_post_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'message' => __('Tradução excluída com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-    
-    /**
-     * Obtém o ID de um termo traduzido.
+     * Obtém o ID de um termo traduzido. 
+     * This is a general helper that might be used by UI elements if needed.
+     *
+     * @param int    $term_id        Term ID.
+     * @param string $taxonomy       Taxonomy slug.
+     * @param string $language_code  Language code (slug).
+     * @return int|null Term ID of the translation if it exists, else original term_id or null.
      */
     private function get_translated_term($term_id, $taxonomy, $language_code) {
         if (!function_exists('pll_get_term')) {
-            return $term_id;
+            return $term_id; // Polylang not active or function unavailable
         }
         
         $translated_term_id = pll_get_term($term_id, $language_code);
-        return $translated_term_id ? $translated_term_id : $term_id;
-    }
-
-    /**
-     * Cria uma nova tradução para uma categoria existente.
-     */
-    public function create_category_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations') || !function_exists('pll_set_term_language')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-
-        $params = $request->get_params();
-        $category_id = intval($params['category_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se a categoria existe
-        $category = get_term($category_id, 'category');
-        if (!$category || is_wp_error($category)) {
-            return new WP_Error(
-                'category_not_found',
-                __('Categoria original não encontrada.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se já existe uma tradução para este idioma
-        $translations = pll_get_term_translations($category_id);
-        if (isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_exists',
-                __('Já existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Prepara os dados da categoria
-        $term_data = [
-            'name' => sanitize_text_field($params['name']),
-            'description' => isset($params['description']) ? wp_kses_post($params['description']) : '',
-            'slug' => isset($params['slug']) ? sanitize_title($params['slug']) : '',
-            'parent' => 0 // Por padrão, cria no nível raiz
-        ];
-        
-        // Se a categoria original tiver um pai, tenta encontrar a tradução do pai
-        if ($category->parent > 0) {
-            $parent_translations = pll_get_term_translations($category->parent);
-            if (isset($parent_translations[$language_code])) {
-                $term_data['parent'] = $parent_translations[$language_code];
-            }
-        }
-        
-        // Cria a categoria traduzida
-        $result = wp_insert_term(
-            $term_data['name'],
-            'category',
-            [
-                'description' => $term_data['description'],
-                'slug' => $term_data['slug'],
-                'parent' => $term_data['parent']
-            ]
-        );
-        
-        if (is_wp_error($result)) {
-            $this->log_action('create_category_translation', 'error', 'Erro ao criar tradução de categoria', [
-                'category_id' => $category_id,
-                'language_code' => $language_code,
-                'error' => $result->get_error_message()
-            ]);
-            return $result;
-        }
-        
-        $translated_category_id = $result['term_id'];
-        
-        // Define o idioma da categoria traduzida
-        pll_set_term_language($translated_category_id, $language_code);
-        
-        // Atualiza as traduções
-        $translations[$language_code] = $translated_category_id;
-        pll_save_term_translations($translations);
-        
-        $this->log_action('create_category_translation', 'success', 'Tradução de categoria criada com sucesso', [
-            'category_id' => $category_id,
-            'language_code' => $language_code,
-            'translated_category_id' => $translated_category_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'category_id' => $translated_category_id,
-            'message' => __('Tradução de categoria criada com sucesso.', 'alvobot-pro')
-        ], 201);
-    }
-    
-    /**
-     * Atualiza uma tradução existente de categoria.
-     */
-    public function update_category_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $category_id = intval($params['category_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se a categoria existe
-        $category = get_term($category_id, 'category');
-        if (!$category || is_wp_error($category)) {
-            return new WP_Error(
-                'category_not_found',
-                __('Categoria original não encontrada.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_term_translations($category_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_category_id = $translations[$language_code];
-        
-        // Prepara os dados da categoria
-        $term_data = [
-            'name' => sanitize_text_field($params['name'])
-        ];
-        
-        if (isset($params['description'])) {
-            $term_data['description'] = wp_kses_post($params['description']);
-        }
-        
-        if (isset($params['slug'])) {
-            $term_data['slug'] = sanitize_title($params['slug']);
-        }
-        
-        // Atualiza a categoria traduzida
-        $result = wp_update_term($translated_category_id, 'category', $term_data);
-        
-        if (is_wp_error($result)) {
-            $this->log_action('update_category_translation', 'error', 'Erro ao atualizar tradução de categoria', [
-                'category_id' => $category_id,
-                'language_code' => $language_code,
-                'error' => $result->get_error_message()
-            ]);
-            return $result;
-        }
-        
-        $this->log_action('update_category_translation', 'success', 'Tradução de categoria atualizada com sucesso', [
-            'category_id' => $category_id,
-            'language_code' => $language_code,
-            'translated_category_id' => $translated_category_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'category_id' => $translated_category_id,
-            'message' => __('Tradução de categoria atualizada com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-    
-    /**
-     * Exclui uma tradução existente de categoria.
-     */
-    public function delete_category_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $category_id = intval($params['category_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se a categoria existe
-        $category = get_term($category_id, 'category');
-        if (!$category || is_wp_error($category)) {
-            return new WP_Error(
-                'category_not_found',
-                __('Categoria original não encontrada.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_term_translations($category_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_category_id = $translations[$language_code];
-        
-        // Não permite excluir a categoria original
-        if ($translated_category_id == $category_id) {
-            return new WP_Error(
-                'cannot_delete_original',
-                __('Não é possível excluir a categoria original.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Remove a tradução do grupo de traduções
-        unset($translations[$language_code]);
-        pll_save_term_translations($translations);
-        
-        // Exclui a categoria traduzida
-        $result = wp_delete_term($translated_category_id, 'category');
-        
-        if (is_wp_error($result) || $result === false) {
-            $this->log_action('delete_category_translation', 'error', 'Erro ao excluir tradução de categoria', [
-                'category_id' => $category_id,
-                'language_code' => $language_code,
-                'translated_category_id' => $translated_category_id
-            ]);
-            
-            return new WP_Error(
-                'delete_failed',
-                __('Falha ao excluir a tradução de categoria.', 'alvobot-pro'),
-                ['status' => 500]
-            );
-        }
-        
-        $this->log_action('delete_category_translation', 'success', 'Tradução de categoria excluída com sucesso', [
-            'category_id' => $category_id,
-            'language_code' => $language_code,
-            'translated_category_id' => $translated_category_id
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'message' => __('Tradução de categoria excluída com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-    
-    /**
-     * Obtém todas as traduções de categorias com paginação.
-     */
-    public function get_categories_translations($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        $hide_empty = filter_var($params['hide_empty'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Obtém todas as categorias
-        $args = [
-            'taxonomy' => 'category',
-            'hide_empty' => $hide_empty,
-            'number' => $per_page,
-            'offset' => ($page - 1) * $per_page,
-        ];
-        
-        $categories = get_terms($args);
-        
-        if (is_wp_error($categories)) {
-            return $categories;
-        }
-        
-        $result = [];
-        
-        foreach ($categories as $category) {
-            $translations = pll_get_term_translations($category->term_id);
-            $translated_categories = [];
-            
-            foreach ($translations as $lang => $term_id) {
-                $term = get_term($term_id, 'category');
-                if ($term && !is_wp_error($term)) {
-                    $translated_categories[$lang] = [
-                        'id' => $term_id,
-                        'name' => $term->name,
-                        'slug' => $term->slug,
-                        'description' => $term->description,
-                        'count' => $term->count
-                    ];
-                }
-            }
-            
-            // Se hide_empty for true, pula categorias que não têm traduções
-            if ($hide_empty && count($translated_categories) <= 1) {
-                continue;
-            }
-            
-            $result[] = [
-                'id' => $category->term_id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'description' => $category->description,
-                'count' => $category->count,
-                'translations' => $translated_categories
-            ];
-        }
-        
-        // Obtém o total de categorias para paginação
-        $total_categories = wp_count_terms('category', ['hide_empty' => $hide_empty]);
-        
-        $response = new WP_REST_Response($result);
-        $response->header('X-WP-Total', $total_categories);
-        $response->header('X-WP-TotalPages', ceil($total_categories / $per_page));
-        
-        return $response;
-    }
-    
-    /**
-     * Verifica se existe uma tradução para um post em um determinado idioma.
-     */
-    public function check_translation_existence($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_post_translations($post_id);
-        $exists = isset($translations[$language_code]);
-        
-        return new WP_REST_Response([
-            'exists' => $exists,
-            'post_id' => $exists ? $translations[$language_code] : null
-        ]);
-    }
-    
-    /**
-     * Lista posts sem traduções com paginação.
-     */
-    public function get_posts_missing_translations($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations') || !function_exists('pll_languages_list')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        $post_type = sanitize_text_field($params['post_type']);
-        $hide_empty = filter_var($params['hide_empty'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Obtém todos os idiomas configurados
-        $languages = pll_languages_list();
-        
-        if (empty($languages)) {
-            return new WP_REST_Response([]);
-        }
-        
-        // Obtém posts do tipo especificado
-        $args = [
-            'post_type' => $post_type,
-            'post_status' => 'publish',
-            'posts_per_page' => $per_page,
-            'paged' => $page,
-        ];
-        
-        $query = new WP_Query($args);
-        $posts = $query->posts;
-        
-        $result = [];
-        
-        foreach ($posts as $post) {
-            $translations = pll_get_post_translations($post->ID);
-            $missing_languages = array_diff($languages, array_keys($translations));
-            
-            if (!empty($missing_languages)) {
-                $post_language = pll_get_post_language($post->ID);
-                
-                $result[] = [
-                    'id' => $post->ID,
-                    'title' => $post->post_title,
-                    'type' => $post->post_type,
-                    'language' => $post_language,
-                    'translations' => $translations,
-                    'missing_translations' => array_values($missing_languages)
-                ];
-            }
-        }
-        
-        $response = new WP_REST_Response($result);
-        $response->header('X-WP-Total', $query->found_posts);
-        $response->header('X-WP-TotalPages', $query->max_num_pages);
-        
-        return $response;
-    }
-    
-    /**
-     * Obtém todos os slugs de um tipo de post com paginação.
-     */
-    public function get_all_slugs($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_language')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        $post_type = sanitize_text_field($params['post_type']);
-        $hide_empty = filter_var($params['hide_empty'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Obtém posts do tipo especificado
-        $args = [
-            'post_type' => $post_type,
-            'post_status' => 'publish',
-            'posts_per_page' => $per_page,
-            'paged' => $page,
-        ];
-        
-        $query = new WP_Query($args);
-        $posts = $query->posts;
-        
-        $result = [];
-        
-        foreach ($posts as $post) {
-            $language = pll_get_post_language($post->ID);
-            
-            if (!$language) {
-                continue;
-            }
-            
-            $translations = pll_get_post_translations($post->ID);
-            $slugs = [];
-            
-            foreach ($translations as $lang => $post_id) {
-                $translated_post = get_post($post_id);
-                if ($translated_post) {
-                    $slugs[$lang] = $translated_post->post_name;
-                }
-            }
-            
-            // Se hide_empty for true, pula posts que não têm slug
-            if ($hide_empty && empty($slugs)) {
-                continue;
-            }
-            
-            $result[] = [
-                'id' => $post->ID,
-                'title' => $post->post_title,
-                'slug' => $post->post_name,
-                'language' => $language,
-                'translated_slugs' => $slugs
-            ];
-        }
-        
-        $response = new WP_REST_Response($result);
-        $response->header('X-WP-Total', $query->found_posts);
-        $response->header('X-WP-TotalPages', $query->max_num_pages);
-        
-        return $response;
-    }
-    
-    /**
-     * Cria uma tradução de slug para um post.
-     */
-    public function create_slug_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        $slug = sanitize_title($params['slug']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_post_translations($post_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_post_id = $translations[$language_code];
-        
-        // Verifica se o slug já está em uso
-        $slug_exists = get_page_by_path($slug, OBJECT, $post->post_type);
-        if ($slug_exists && $slug_exists->ID != $translated_post_id) {
-            return new WP_Error(
-                'slug_exists',
-                __('Este slug já está em uso por outro post.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Atualiza o slug do post traduzido
-        $result = wp_update_post([
-            'ID' => $translated_post_id,
-            'post_name' => $slug
-        ], true);
-        
-        if (is_wp_error($result)) {
-            $this->log_action('create_slug_translation', 'error', 'Erro ao criar tradução de slug', [
-                'post_id' => $post_id,
-                'language_code' => $language_code,
-                'slug' => $slug,
-                'error' => $result->get_error_message()
-            ]);
-            return $result;
-        }
-        
-        $this->log_action('create_slug_translation', 'success', 'Tradução de slug criada com sucesso', [
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'slug' => $slug
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'post_id' => $translated_post_id,
-            'slug' => $slug,
-            'message' => __('Tradução de slug criada com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-    
-    /**
-     * Atualiza uma tradução existente de slug.
-     */
-    public function update_slug_translation($request) {
-        // Este método é idêntico ao create_slug_translation, pois a operação é a mesma
-        return $this->create_slug_translation($request);
-    }
-    
-    /**
-     * Exclui uma tradução existente de slug (redefine para o slug padrão).
-     */
-    public function delete_slug_translation($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém as traduções existentes
-        $translations = pll_get_post_translations($post_id);
-        
-        // Verifica se existe uma tradução para este idioma
-        if (!isset($translations[$language_code])) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Não existe uma tradução para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        $translated_post_id = $translations[$language_code];
-        $translated_post = get_post($translated_post_id);
-        
-        // Gera um novo slug baseado no título
-        $new_slug = sanitize_title($translated_post->post_title);
-        
-        // Atualiza o slug do post traduzido
-        $result = wp_update_post([
-            'ID' => $translated_post_id,
-            'post_name' => $new_slug
-        ], true);
-        
-        if (is_wp_error($result)) {
-            $this->log_action('delete_slug_translation', 'error', 'Erro ao redefinir slug', [
-                'post_id' => $post_id,
-                'language_code' => $language_code,
-                'error' => $result->get_error_message()
-            ]);
-            return $result;
-        }
-        
-        $this->log_action('delete_slug_translation', 'success', 'Slug redefinido com sucesso', [
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'new_slug' => $new_slug
-        ]);
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'post_id' => $translated_post_id,
-            'new_slug' => $new_slug,
-            'message' => __('Slug redefinido com sucesso.', 'alvobot-pro')
-        ], 200);
-    }
-
-    /**
-     * Obtém a URL de um post em um idioma específico.
-     */
-    public function get_language_url($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post') || !function_exists('get_permalink')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém o ID do post traduzido
-        $translated_post_id = pll_get_post($post_id, $language_code);
-        
-        if (!$translated_post_id) {
-            return new WP_Error(
-                'translation_not_found',
-                __('Tradução não encontrada para este idioma.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Obtém a URL do post traduzido
-        $url = get_permalink($translated_post_id);
-        
-        return new WP_REST_Response([
-            'post_id' => $translated_post_id,
-            'url' => $url
-        ]);
-    }
-    
-    /**
-     * Obtém todas as traduções de posts com paginação.
-     */
-    public function get_translations($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        $post_type = sanitize_text_field($params['post_type']);
-        $hide_empty = filter_var($params['hide_empty'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Obtém posts do tipo especificado
-        $args = [
-            'post_type' => $post_type,
-            'post_status' => 'publish',
-            'posts_per_page' => $per_page,
-            'paged' => $page,
-        ];
-        
-        $query = new WP_Query($args);
-        $posts = $query->posts;
-        
-        $result = [];
-        
-        foreach ($posts as $post) {
-            $translations = pll_get_post_translations($post->ID);
-            $translated_posts = [];
-            
-            foreach ($translations as $lang => $post_id) {
-                $translated_post = get_post($post_id);
-                if ($translated_post) {
-                    $translated_posts[$lang] = [
-                        'id' => $post_id,
-                        'title' => $translated_post->post_title,
-                        'slug' => $translated_post->post_name,
-                        'excerpt' => $translated_post->post_excerpt,
-                        'date' => $translated_post->post_date
-                    ];
-                }
-            }
-            
-            // Se hide_empty for true, pula posts que não têm traduções
-            if ($hide_empty && count($translated_posts) <= 1) {
-                continue;
-            }
-            
-            $post_language = pll_get_post_language($post->ID);
-            
-            $result[] = [
-                'id' => $post->ID,
-                'title' => $post->post_title,
-                'type' => $post->post_type,
-                'language' => $post_language,
-                'translations' => $translated_posts
-            ];
-        }
-        
-        $response = new WP_REST_Response($result);
-        $response->header('X-WP-Total', $query->found_posts);
-        $response->header('X-WP-TotalPages', $query->max_num_pages);
-        
-        return $response;
-    }
-    
-    /**
-     * Obtém a lista de idiomas disponíveis.
-     */
-    
-    /**
-     * Obtém todas as taxonomias disponíveis para tradução.
-     */
-    public function get_taxonomies($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_languages_list')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Obtém todas as taxonomias públicas
-        $taxonomies = get_taxonomies(['public' => true], 'objects');
-        $result = [];
-        
-        foreach ($taxonomies as $taxonomy) {
-            // Verifica se a taxonomia é traduzível pelo Polylang
-            if (pll_is_translated_taxonomy($taxonomy->name)) {
-                $result[] = [
-                    'name' => $taxonomy->name,
-                    'label' => $taxonomy->label,
-                    'description' => $taxonomy->description,
-                    'hierarchical' => $taxonomy->hierarchical,
-                    'rest_base' => $taxonomy->rest_base
-                ];
-            }
-        }
-        
-        return new WP_REST_Response($result);
-    }
-    
-    /**
-     * Obtém todos os termos de uma taxonomia com suas traduções.
-     */
-    public function get_taxonomy_terms($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $taxonomy = sanitize_text_field($params['taxonomy']);
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        $hide_empty = filter_var($params['hide_empty'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Verifica se a taxonomia existe
-        if (!taxonomy_exists($taxonomy)) {
-            return new WP_Error(
-                'taxonomy_not_found',
-                __('Taxonomia não encontrada.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se a taxonomia é traduzível
-        if (!pll_is_translated_taxonomy($taxonomy)) {
-            return new WP_Error(
-                'taxonomy_not_translatable',
-                __('Esta taxonomia não é traduzível pelo Polylang.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Obtém os termos da taxonomia
-        $args = [
-            'taxonomy' => $taxonomy,
-            'hide_empty' => $hide_empty,
-            'number' => $per_page,
-            'offset' => ($page - 1) * $per_page,
-        ];
-        
-        $terms = get_terms($args);
-        
-        if (is_wp_error($terms)) {
-            return $terms;
-        }
-        
-        $result = [];
-        
-        foreach ($terms as $term) {
-            $translations = pll_get_term_translations($term->term_id);
-            $translated_terms = [];
-            
-            foreach ($translations as $lang => $term_id) {
-                $translated_term = get_term($term_id, $taxonomy);
-                if (!is_wp_error($translated_term)) {
-                    $translated_terms[$lang] = [
-                        'id' => $term_id,
-                        'name' => $translated_term->name,
-                        'slug' => $translated_term->slug,
-                        'description' => $translated_term->description,
-                        'count' => $translated_term->count
-                    ];
-                }
-            }
-            
-            // Se hide_empty for true, pula termos que não têm traduções
-            if ($hide_empty && count($translated_terms) <= 1) {
-                continue;
-            }
-            
-            $term_language = pll_get_term_language($term->term_id);
-            
-            $result[] = [
-                'id' => $term->term_id,
-                'name' => $term->name,
-                'slug' => $term->slug,
-                'description' => $term->description,
-                'count' => $term->count,
-                'language' => $term_language,
-                'translations' => $translated_terms
-            ];
-        }
-        
-        $response = new WP_REST_Response($result);
-        $response->header('X-WP-Total', wp_count_terms(['taxonomy' => $taxonomy, 'hide_empty' => $hide_empty]));
-        $response->header('X-WP-TotalPages', ceil(wp_count_terms(['taxonomy' => $taxonomy, 'hide_empty' => $hide_empty]) / $per_page));
-        
-        return $response;
-    }
-    
-    /**
-     * Obtém termos sem traduções completas.
-     */
-    public function get_untranslated_terms($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_get_term_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $taxonomy = sanitize_text_field($params['taxonomy']);
-        $per_page = intval($params['per_page']);
-        $page = intval($params['page']);
-        
-        // Verifica se a taxonomia existe
-        if (!taxonomy_exists($taxonomy)) {
-            return new WP_Error(
-                'taxonomy_not_found',
-                __('Taxonomia não encontrada.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se a taxonomia é traduzível
-        if (!pll_is_translated_taxonomy($taxonomy)) {
-            return new WP_Error(
-                'taxonomy_not_translatable',
-                __('Esta taxonomia não é traduzível pelo Polylang.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Obtém todos os idiomas disponíveis
-        $languages = pll_languages_list();
-        
-        // Obtém os termos da taxonomia
-        $args = [
-            'taxonomy' => $taxonomy,
-            'hide_empty' => false
-        ];
-        
-        $terms = get_terms($args);
-        
-        if (is_wp_error($terms)) {
-            return $terms;
-        }
-        
-        $untranslated_terms = [];
-        
-        foreach ($terms as $term) {
-            $translations = pll_get_term_translations($term->term_id);
-            $missing_languages = array_diff($languages, array_keys($translations));
-            
-            if (!empty($missing_languages)) {
-                $term_language = pll_get_term_language($term->term_id);
-                
-                $untranslated_terms[] = [
-                    'id' => $term->term_id,
-                    'name' => $term->name,
-                    'slug' => $term->slug,
-                    'description' => $term->description,
-                    'count' => $term->count,
-                    'current_language' => $term_language,
-                    'missing_translations' => array_values($missing_languages)
-                ];
-            }
-        }
-        
-        // Aplicar paginação manualmente
-        $total = count($untranslated_terms);
-        $max_pages = ceil($total / $per_page);
-        $offset = ($page - 1) * $per_page;
-        
-        $paginated_terms = array_slice($untranslated_terms, $offset, $per_page);
-        
-        $response = new WP_REST_Response($paginated_terms);
-        $response->header('X-WP-Total', $total);
-        $response->header('X-WP-TotalPages', $max_pages);
-        
-        return $response;
-    }
-    
-    /**
-     * Sincroniza as traduções de um post com o Polylang.
-     */
-    public function sync_translations($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_save_post_translations')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $translations = $params['translations'];
-        
-        if (!is_array($translations) || empty($translations)) {
-            return new WP_Error(
-                'invalid_translations',
-                __('O parâmetro translations deve ser um array não vazio.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        // Verifica se todos os posts existem
-        foreach ($translations as $lang => $post_id) {
-            if (!get_post($post_id)) {
-                return new WP_Error(
-                    'post_not_found',
-                    sprintf(__('Post com ID %d não encontrado.', 'alvobot-pro'), $post_id),
-                    ['status' => 404]
-                );
-            }
-        }
-        
-        // Salva as traduções
-        pll_save_post_translations($translations);
-        
-        $this->log_action(
-            'sync_translations',
-            'success',
-            'Traduções sincronizadas com sucesso',
-            ['translations' => $translations]
-        );
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'message' => __('Traduções sincronizadas com sucesso.', 'alvobot-pro'),
-            'translations' => $translations
-        ]);
-    }
-    
-    /**
-     * Obtém estatísticas de tradução para o site.
-     */
-    public function get_translation_stats() {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_languages_list')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $languages = pll_languages_list();
-        $default_language = pll_default_language();
-        
-        $post_types = ['post', 'page'];
-        $taxonomies = ['category', 'post_tag'];
-        
-        $stats = [
-            'languages' => count($languages),
-            'default_language' => $default_language,
-            'post_types' => [],
-            'taxonomies' => []
-        ];
-        
-        // Estatísticas para tipos de post
-        foreach ($post_types as $post_type) {
-            $total_posts = wp_count_posts($post_type)->publish;
-            $translated_posts = [];
-            
-            foreach ($languages as $language) {
-                $args = [
-                    'post_type' => $post_type,
-                    'post_status' => 'publish',
-                    'posts_per_page' => -1,
-                    'lang' => $language
-                ];
-                
-                $query = new WP_Query($args);
-                $translated_posts[$language] = $query->found_posts;
-            }
-            
-            $stats['post_types'][$post_type] = [
-                'total' => $total_posts,
-                'by_language' => $translated_posts
-            ];
-        }
-        
-        // Estatísticas para taxonomias
-        foreach ($taxonomies as $taxonomy) {
-            if (pll_is_translated_taxonomy($taxonomy)) {
-                $total_terms = wp_count_terms(['taxonomy' => $taxonomy]);
-                $translated_terms = [];
-                
-                foreach ($languages as $language) {
-                    $args = [
-                        'taxonomy' => $taxonomy,
-                        'hide_empty' => false,
-                        'lang' => $language
-                    ];
-                    
-                    $terms = get_terms($args);
-                    $translated_terms[$language] = is_array($terms) ? count($terms) : 0;
-                }
-                
-                $stats['taxonomies'][$taxonomy] = [
-                    'total' => $total_terms,
-                    'by_language' => $translated_terms
-                ];
-            }
-        }
-        
-        return new WP_REST_Response($stats);
-    }
-    
-    /**
-     * Altera o idioma de um post existente.
-     */
-    public function change_post_language($request) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_set_post_language')) {
-            return new WP_Error(
-                'polylang_not_active',
-                __('O plugin Polylang não está ativo.', 'alvobot-pro'),
-                ['status' => 400]
-            );
-        }
-        
-        $params = $request->get_params();
-        $post_id = intval($params['post_id']);
-        $language_code = sanitize_text_field($params['language_code']);
-        $update_translations = filter_var($params['update_translations'], FILTER_VALIDATE_BOOLEAN);
-        
-        // Verifica se o post existe
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error(
-                'post_not_found',
-                __('Post não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Verifica se o idioma existe
-        if (!PLL()->model->get_language($language_code)) {
-            return new WP_Error(
-                'language_not_found',
-                __('Idioma não encontrado.', 'alvobot-pro'),
-                ['status' => 404]
-            );
-        }
-        
-        // Altera o idioma do post
-        pll_set_post_language($post_id, $language_code);
-        
-        // Atualiza as traduções se necessário
-        if ($update_translations) {
-            $translations = pll_get_post_translations($post_id);
-            $translations[$language_code] = $post_id;
-            pll_save_post_translations($translations);
-        }
-        
-        return new WP_REST_Response([
-            'success' => true,
-            'post_id' => $post_id,
-            'language_code' => $language_code,
-            'message' => __('Idioma do post alterado com sucesso.', 'alvobot-pro')
-        ]);
-    }
-    
-    /**
-     * Registra o campo pll_post_translations para posts e páginas na API REST
-     */
-    public function register_post_translations_field() {
-        // Adiciona o campo `pll_post_translations` para posts e páginas.
-        register_rest_field(
-            ['post', 'page'], // Tipos de post onde o campo será adicionado.
-            'pll_post_translations',
-            [
-                'get_callback' => function ($object) {
-                    // Certifica-se de que a função do Polylang está disponível.
-                    if (function_exists('pll_get_post_translations')) {
-                        return pll_get_post_translations($object['id']);
-                    }
-                    return [];
-                },
-                'update_callback' => function ($value, $post) {
-                    // Verifica se o Polylang está ativo e se as funções necessárias existem.
-                    if (function_exists('pll_save_post_translations') && function_exists('pll_set_post_language')) {
-                        // Obtém o idioma do post atual.
-                        $current_lang = pll_get_post_language($post->ID);
-                        
-                        // Define o idioma do post atual, se não estiver definido.
-                        if (!$current_lang && isset($value['lang'])) {
-                            pll_set_post_language($post->ID, $value['lang']);
-                        }
-
-                        // Prepara as traduções para salvar.
-                        $translations = [];
-                        foreach ($value as $lang => $translated_post_id) {
-                            // Verifica se o ID do post traduzido é válido.
-                            if (get_post($translated_post_id)) {
-                                $translations[$lang] = (int) $translated_post_id;
-                            }
-                        }
-
-                        // Adiciona o próprio post às traduções, se o idioma estiver definido.
-                        $post_lang = pll_get_post_language($post->ID);
-                        if ($post_lang) {
-                            $translations[$post_lang] = $post->ID;
-                        }
-
-                        // Salva as traduções.
-                        pll_save_post_translations($translations);
-                    }
-                },
-                'schema' => [
-                    'description' => __('Polylang translations for the post.'),
-                    'type'        => 'object',
-                ],
-            ]
-        );
-    }
-    
-    /**
-     * Registra as páginas de administração do módulo.
-     */
-    public function register_admin_pages() {
-        add_submenu_page(
-            'alvobot-pro',
-            __('Multi Languages', 'alvobot-pro'),
-            __('Multi Languages', 'alvobot-pro'),
-            'manage_options',
-            'alvobot-pro-multi-languages',
-            array($this, 'render_settings_page')
-        );
-    }
-    
-    /**
-     * Renderiza a página de documentação da API.
-     */
-    public function render_api_docs_page() {
-        // Caminho absoluto para o arquivo de template
-        $template_path = plugin_dir_path(__FILE__) . 'templates/multi-languages-api-docs.php';
-        
-        // Verificar se o arquivo existe
-        if (file_exists($template_path)) {
-            include_once $template_path;
-        } else {
-            echo '<div class="wrap"><h1>' . esc_html__('API Documentation', 'alvobot-pro') . '</h1>';
-            echo '<div class="notice notice-error"><p>' . esc_html__('Template file not found:', 'alvobot-pro') . ' ' . esc_html($template_path) . '</p></div>';
-            echo '</div>';
-        }
+        return $translated_term_id ? (int) $translated_term_id : (int) $term_id; // Return original if no translation
     }
 }

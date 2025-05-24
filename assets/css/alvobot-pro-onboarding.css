@@ -1,0 +1,298 @@
+/* AlvoBot Pro Onboarding Wizard Styles */
+body.admin_page_alvobot-pro-onboarding {
+    background-color: #f0f0f1; /* Light gray background for the whole page */
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrollbars from the body itself */
+}
+
+.alvobot-pro-onboarding-wrap {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 760px;
+    margin: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevents content from breaking border-radius */
+    max-height: 90vh; /* Max height to ensure it fits viewport */
+}
+
+.onboarding-header {
+    padding: 20px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.onboarding-header .alvobot-logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 10px;
+}
+
+.onboarding-header h1 {
+    font-size: 24px;
+    color: #1d2327;
+    margin: 0;
+}
+
+.onboarding-steps-indicator {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px 30px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.step-indicator {
+    font-size: 13px;
+    color: #6c757d;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    opacity: 0.7;
+}
+
+.step-indicator.active {
+    font-weight: 600;
+    color: #2271b1; /* WordPress Blue */
+    background-color: #e9f1f8;
+    border-color: #2271b1;
+    opacity: 1;
+}
+
+.onboarding-content {
+    padding: 30px 40px;
+    overflow-y: auto; /* Scroll for content if it overflows */
+    flex-grow: 1;
+}
+
+.onboarding-step-content {
+    display: none; /* Hidden by default, JS will show active step */
+    animation: fadeInStep 0.5s ease-in-out;
+}
+
+.onboarding-step-content.active {
+    display: block;
+}
+
+.onboarding-step-content h2 {
+    font-size: 20px;
+    color: #1d2327;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.onboarding-step-content p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #444;
+    margin-bottom: 15px;
+}
+
+.onboarding-step-content ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 20px;
+}
+
+.onboarding-step-content ul li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #444;
+    padding: 8px 0;
+    border-bottom: 1px dotted #e0e0e0;
+}
+.onboarding-step-content ul li:last-child {
+    border-bottom: none;
+}
+
+
+.onboarding-step-content ul li strong {
+    color: #3c434a;
+}
+
+.onboarding-step-content ul li small {
+    display: block;
+    font-size: 12px;
+    color: #646970;
+    margin-top: 4px;
+}
+
+.status-ok {
+    color: #28a745; /* Green */
+    font-weight: bold;
+}
+
+.status-error {
+    color: #dc3545; /* Red */
+    font-weight: bold;
+}
+
+.onboarding-footer {
+    padding: 20px 30px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+}
+
+.onboarding-footer .button {
+    margin-left: 10px;
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+.step-navigation {
+    display: flex;
+    align-items: center;
+}
+
+
+@keyframes fadeInStep {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hide WordPress interface elements */
+body.admin_page_alvobot-pro-onboarding #wpadminbar,
+body.admin_page_alvobot-pro-onboarding #adminmenumain,
+body.admin_page_alvobot-pro-onboarding #wpfooter,
+body.admin_page_alvobot-pro-onboarding .update-nag,
+body.admin_page_alvobot-pro-onboarding .notice:not(.alvobot-pro-onboarding-notice) { /* Allow specific notices if needed */
+    display: none !important;
+}
+
+/* Override some WordPress default styles for the wizard page */
+#wpcontent {
+    padding-left: 0 !important; /* Remove padding from #wpcontent */
+    margin-left: 0 !important; /* Remove margin if admin menu is hidden */
+}
+
+html.wp-toolbar {
+    padding-top: 0 !important; /* Remove padding from html element if admin bar is hidden */
+}
+
+/* Ensure our wrap takes full width if wpcontent padding is removed */
+.alvobot-pro-onboarding-wrap {
+    box-sizing: border-box;
+}
+
+/* Step 3: Module Configuration */
+.onboarding-module-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 300px; /* Or adjust as needed */
+    overflow-y: auto;
+    padding-right: 10px; /* For scrollbar */
+    margin-top: 10px;
+}
+
+.onboarding-module-item {
+    display: flex;
+    align-items: flex-start; /* Align toggle with the start of text content */
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #fdfdfd;
+}
+
+.onboarding-module-item .alvobot-pro-module-toggle.onboarding-style-toggle {
+    margin-right: 15px;
+    margin-top: 2px; /* Align with first line of text better */
+}
+
+.onboarding-module-item .module-info {
+    flex-grow: 1;
+}
+
+.onboarding-module-item .module-name {
+    font-weight: 600;
+    color: #1d2327;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.onboarding-module-item .module-description {
+    font-size: 13px;
+    color: #444;
+    margin-bottom: 5px;
+    line-height: 1.5;
+}
+
+.onboarding-module-item .module-notice {
+    font-size: 12px;
+    padding: 8px;
+    border-radius: 3px;
+    margin-top: 5px;
+}
+.onboarding-module-item .module-notice.notice-warning { /* Basic WP notice style */
+    border-left: 4px solid #ffb900;
+    background-color: #fff;
+    box-shadow: 0 1px 1px 0 rgba(0,0,0,.1);
+    padding: 1px 12px;
+}
+.onboarding-module-item .module-notice.notice-warning p {
+    margin: 0.5em 0;
+    padding: 2px;
+    font-size: 12px;
+}
+
+
+/* Step 4: Quick Links */
+.quick-links-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
+}
+
+.quick-links-list li {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.quick-links-list li a {
+    text-decoration: none;
+    color: #2271b1; /* WordPress Blue */
+    display: inline-flex; /* For icon alignment */
+    align-items: center;
+}
+
+.quick-links-list li a:hover {
+    text-decoration: underline;
+    color: #135e96;
+}
+
+.quick-links-list li a .dashicons-external {
+    margin-left: 5px;
+    font-size: 16px;
+    line-height: inherit;
+    text-decoration: none;
+}
+
+/* Step 5: Finish */
+.onboarding-step-content[data-step-id="5"] p {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.onboarding-step-content[data-step-id="5"] .button-hero {
+    font-size: 16px;
+    padding: 10px 20px;
+    height: auto;
+}

@@ -226,21 +226,20 @@ class AlvoBotPro_AuthorBox {
         ?>
         <h3><?php _e('Redes Sociais', 'alvobot-pro'); ?></h3>
         <table class="form-table">
-            <?php foreach (array() as $network => $label) : ?>
+            <?php // foreach (array() as $network => $label) : // Empty loop removed ?>
+                <!-- Example structure if fields were present:
                 <tr>
                     <th>
-                        <label for="<?php echo esc_attr($network); ?>"><?php echo esc_html($label); ?></label>
+                        <label for="some_network">Some Network</label>
                     </th>
                     <td>
-                        <input type="url" 
-                               name="<?php echo esc_attr($network); ?>" 
-                               id="<?php echo esc_attr($network); ?>" 
-                               value="<?php echo esc_url(get_user_meta($user->ID, $network, true)); ?>" 
-                               class="regular-text">
+                        <input type="url" name="some_network" id="some_network" value="" class="regular-text">
                     </td>
                 </tr>
-            <?php endforeach; ?>
+                -->
+            <?php // endforeach; ?>
         </table>
+        <p><em><?php _e('Funcionalidade de redes sociais não implementada.', 'alvobot-pro'); ?></em></p>
         <?php
     }
 
@@ -249,12 +248,12 @@ class AlvoBotPro_AuthorBox {
             return;
         }
 
-        $social_networks = array();
-        foreach ($social_networks as $network) {
-            if (isset($_POST[$network])) {
-                update_user_meta($user_id, $network, esc_url_raw($_POST[$network]));
-            }
-        }
+        // $social_networks = array(); // Define actual social network keys if implementing
+        // foreach ($social_networks as $network) { // Empty loop removed
+        //     if (isset($_POST[$network])) {
+        //         update_user_meta($user_id, $network, esc_url_raw($_POST[$network]));
+        //     }
+        // }
     }
 
     public function append_author_box($content) {

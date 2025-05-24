@@ -1,0 +1,52 @@
+/* AlvoBot Pro Multi-Languages Admin Styles */
+
+#alvobot_change_post_language_mb .inside {
+    padding: 12px !important;
+}
+
+#alvobot-change-language-meta-box-content p {
+    margin: 0 0 1em;
+}
+
+#alvobot-change-language-meta-box-content label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+#alvobot-change-language-meta-box-content select#alvobot_new_language_code {
+    width: 100%;
+    margin-bottom: 0.5em;
+}
+
+#alvobot-change-language-meta-box-content #alvobot_update_translations {
+    margin-right: 5px;
+}
+
+#alvobot-change-language-meta-box-content .dashicons-editor-help {
+    color: #646970;
+    cursor: help;
+}
+
+#alvobot-change-language-button {
+    margin-top: 0.5em;
+}
+
+#alvobot-change-language-spinner {
+    display: none; /* Hidden by default, JS will make it inline-block and active */
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+#alvobot-change-language-feedback .notice {
+    margin: 10px 0 0 0;
+    padding: 0.5em 1em;
+    box-shadow: none;
+}
+
+#alvobot-current-language-display img {
+    vertical-align: middle;
+    margin-right: 5px;
+    max-height: 16px; /* Adjust if flags are too large */
+    width: auto;
+}

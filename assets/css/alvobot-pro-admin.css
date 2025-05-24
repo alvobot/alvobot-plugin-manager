@@ -1,71 +1,138 @@
 /* AlvoBot Pro Admin Styles */
 
+/* General Layout & Structure */
 .alvobot-pro-wrap {
-    margin: 20px;
+    margin: 20px 20px 20px 0; /* Standard WordPress admin page margin */
     max-width: 1200px;
 }
 
 .alvobot-pro-header {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 20px 25px;
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    border: 1px solid #c3c4c7;
+    margin-bottom: 25px;
 }
 
 .alvobot-pro-header h1 {
     margin: 0;
-    color: #23282d;
-    font-size: 24px;
+    color: #1d2327;
+    font-size: 23px; /* Matches WP H1 size */
     font-weight: 600;
+    line-height: 1.3;
 }
 
 .alvobot-pro-header p {
-    margin: 10px 0 0;
-    color: #646970;
+    margin: 0.5em 0 0;
+    color: #444;
     font-size: 14px;
 }
 
+/* System Overview Widget */
+#alvobot-pro-system-overview .alvobot-pro-module-content {
+    padding-top: 10px;
+}
+
+.system-info-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.system-info-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.system-info-list li:last-child {
+    border-bottom: none;
+}
+
+.system-info-list strong {
+    color: #3c434a;
+}
+
+.system-info-list span {
+    margin-left: 10px;
+    color: #50575e;
+}
+
+.system-info-list .status-ok {
+    color: #008000; /* Green for OK/Exists */
+    font-weight: bold;
+}
+
+.system-info-list .status-error {
+    color: #d63638; /* Red for Error/Not Found */
+    font-weight: bold;
+}
+
+.system-info-list .button-small {
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.overview-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+}
+
+
+/* Module Cards Grid */
 .alvobot-pro-modules {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Slightly wider min for better content fit */
+    gap: 25px;
+    margin-top: 25px;
 }
 
 .alvobot-pro-module-card {
-    background: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
+    background-color: #fff;
+    border-radius: 4px;
+    padding: 20px 25px; /* Consistent padding */
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    border: 1px solid #c3c4c7;
+    transition: box-shadow 0.1s linear;
+    display: flex;
+    flex-direction: column;
 }
 
 .alvobot-pro-module-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    /* transform: translateY(-2px); */ /* Can be distracting for some users */
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
 }
 
 .alvobot-pro-module-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+    align-items: flex-start; /* Align title and toggle better */
+    margin-bottom: 12px; /* Slightly reduced margin */
+    padding-bottom: 12px; /* Added padding for visual separation */
+    border-bottom: 1px solid #eee;
 }
 
 .alvobot-pro-module-title {
-    font-size: 18px;
+    font-size: 1.1em; /* WordPress H3 like size */
     font-weight: 600;
-    color: #23282d;
+    color: #1d2327;
     margin: 0;
+    line-height: 1.4;
 }
 
-/* Toggle Switch */
+/* Toggle Switch - Existing styles are mostly fine, slight adjustments */
 .alvobot-pro-module-toggle {
     position: relative;
     display: inline-block;
-    width: 50px;
-    height: 26px;
+    width: 44px; /* Slightly smaller */
+    height: 24px; /* Slightly smaller */
+    flex-shrink: 0; /* Prevent toggle from shrinking */
 }
 
 .alvobot-pro-module-toggle input {
@@ -81,54 +148,76 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
+    background-color: #a7aaad; /* WP Gray */
+    transition: .2s;
+    border-radius: 12px; /* Rounded to match height */
 }
 
 .alvobot-pro-module-slider:before {
     position: absolute;
     content: "";
-    height: 20px;
-    width: 20px;
+    height: 18px; /* Smaller handle */
+    width: 18px;  /* Smaller handle */
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: .4s;
+    transition: .2s;
     border-radius: 50%;
+    box-shadow: 0 1px 1px rgba(0,0,0,.1);
 }
 
 input:checked + .alvobot-pro-module-slider {
-    background-color: #2271b1;
+    background-color: #2271b1; /* WordPress Blue */
 }
 
+input:disabled + .alvobot-pro-module-slider {
+    background-color: #d6d9db; /* Lighter gray for disabled */
+    cursor: not-allowed;
+}
+
+input:disabled + .alvobot-pro-module-slider:before {
+    background-color: #f0f0f1;
+}
+
+
 input:checked + .alvobot-pro-module-slider:before {
-    transform: translateX(24px);
+    transform: translateX(20px); /* Adjusted for smaller size */
 }
 
 .alvobot-pro-module-description {
+    color: #444;
+    margin: 0 0 15px 0; /* Consistent margin */
+    line-height: 1.6;
+    font-size: 13px;
+    flex-grow: 1; /* Allow description to take available space */
+}
+
+.alvobot-pro-module-description small {
     color: #646970;
-    margin: 10px 0;
-    line-height: 1.5;
 }
 
 .alvobot-pro-module-actions {
-    margin-top: 15px;
+    margin-top: auto; /* Push actions to the bottom of the card */
+    padding-top: 15px;
+    border-top: 1px solid #eee;
 }
 
-.alvobot-pro-module-actions a {
-    display: inline-block;
-    text-decoration: none;
-    color: #2271b1;
-    margin-right: 10px;
+.alvobot-pro-module-actions .button-secondary {
+    margin-right: 5px;
 }
 
-.alvobot-pro-module-actions a:hover {
-    color: #135e96;
+.alvobot-pro-module-card.module-disabled {
+    background-color: #f6f7f7; /* Slightly different background for disabled modules */
 }
 
-/* Cartões de Status */
-.status-card {
+.alvobot-pro-module-card.module-disabled .alvobot-pro-module-title,
+.alvobot-pro-module-card.module-disabled .alvobot-pro-module-description {
+    color: #6c7781; /* Muted text for disabled modules */
+}
+
+
+/* General Status Card - can be used by other modules if needed */
+.status-card { 
     background: #fff;
     padding: 20px;
     border-radius: 8px;
