@@ -17,11 +17,38 @@ foreach ($ctas as &$cta) {
 }
 unset($cta);
 
-// Prepara o conteúdo
+// Prepara o conteúdo com filtros melhorados
 $content = get_the_content();
-$content = apply_filters('the_content', $content);
-$allowed_tags = '<p><br><strong><em><ul><ol><li><a>';
+
+// Aplica apenas filtros essenciais, evitando plugins que injetam scripts
+$content = wpautop($content); // Converte quebras de linha em parágrafos
+$content = do_shortcode($content); // Processa shortcodes se necessário
+
+// Remove scripts, styles e outros elementos indesejados
+$content = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $content);
+$content = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/mi', '', $content);
+$content = preg_replace('/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/mi', '', $content);
+$content = preg_replace('/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/mi', '', $content);
+$content = preg_replace('/<embed\b[^>]*>/mi', '', $content);
+$content = preg_replace('/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/mi', '', $content);
+
+// Remove atributos JavaScript
+$content = preg_replace('/\s*on\w+\s*=\s*["\'][^"\']*["\']/i', '', $content);
+
+// Remove divs e spans com classes/ids suspeitos (comuns em plugins de ads)
+$content = preg_replace('/<div[^>]*class=["\'][^"\']*(?:ad|advertisement|banner|popup|modal)[^"\']*["\'][^>]*>.*?<\/div>/si', '', $content);
+$content = preg_replace('/<span[^>]*class=["\'][^"\']*(?:ad|advertisement|banner)[^"\']*["\'][^>]*>.*?<\/span>/si', '', $content);
+
+// Remove comentários HTML
+$content = preg_replace('/<!--.*?-->/s', '', $content);
+
+// Tags permitidas para o conteúdo limpo
+$allowed_tags = '<p><br><strong><em><ul><ol><li><a><h1><h2><h3><h4><h5><h6><blockquote>';
 $content = strip_tags($content, $allowed_tags);
+
+// Remove espaços extras e quebras de linha desnecessárias
+$content = preg_replace('/\s+/', ' ', $content);
+$content = trim($content);
 
 // Função para truncar o conteúdo sem quebrar palavras ou tags HTML
 function truncate_html_words($text, $word_limit) {
