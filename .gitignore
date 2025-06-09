@@ -16,6 +16,15 @@ wp-content/mu-plugins/
 wp-content/wp-cache-config.php
 wp-content/plugins/hello.php
 
+# Arquivos de Teste de API
+test-api.php
+test-api.sh
+test-results.log
+API-DOCUMENTATION.md
+API-TEST-RESULTS.md
+*test-report*.json
+*api-test*.log
+
 # Sistema
 .DS_Store
 Thumbs.db

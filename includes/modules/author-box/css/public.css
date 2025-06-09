@@ -1,20 +1,179 @@
-/* 
- * Author Box Public CSS
- * This only contains specific styles needed for the public-facing author box.
- * Most styles are now inherited from the main /assets/css/styles.css
- */
+/* ====================================
+   AlvoBot Author Box - Public Styles
+   Estilos otimizados para a estrutura HTML atual
+   ==================================== */
 
-/* Class customizations for author box if needed */
+/* Author Box Container Principal */
+.alvobot-author-box {
+    margin: var(--alvobot-space-3xl, 32px) 0;
+    background: var(--alvobot-white, #ffffff);
+    border: 1px solid var(--alvobot-gray-200, #f0f0f1);
+    border-radius: var(--alvobot-radius-lg, 12px);
+    box-shadow: var(--alvobot-shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
+    padding: var(--alvobot-space-2xl, 24px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.alvobot-author-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--alvobot-primary, #CD9042), var(--alvobot-primary-dark, #B8803A));
+}
+
+.alvobot-author-box:hover {
+    box-shadow: var(--alvobot-shadow-lg, 0 4px 8px rgba(0, 0, 0, 0.15));
+    transform: translateY(-2px);
+}
+
+/* Título do Author Box */
+.alvobot-author-box .author-box-title {
+    margin: 0 0 var(--alvobot-space-lg, 16px) 0;
+    font-size: var(--alvobot-font-size-lg, 16px);
+    font-weight: 600;
+    color: var(--alvobot-gray-800, #2c3338);
+    text-align: center;
+    padding-bottom: var(--alvobot-space-sm, 8px);
+    border-bottom: 2px solid var(--alvobot-primary, #CD9042);
+}
+
+/* Layout Principal - author-content */
+.alvobot-author-box .author-content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--alvobot-space-lg, 16px);
+}
+
+@media (max-width: 689px) {
+    .alvobot-author-box .author-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+/* Avatar do Autor */
+.alvobot-author-box .author-avatar {
+    flex-shrink: 0;
+    width: 96px;
+    height: 96px;
+    border-radius: var(--alvobot-radius-full, 50%);
+    overflow: hidden;
+    border: 3px solid var(--alvobot-primary, #CD9042);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.alvobot-author-box .author-avatar:hover {
+    border-color: var(--alvobot-primary-dark, #B8803A);
+    transform: scale(1.05);
+}
+
+.alvobot-author-box .author-avatar img,
+.alvobot-author-box .author-avatar .avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    transition: transform 0.3s ease;
+    display: block;
+}
+
+.alvobot-author-box .author-avatar:hover img,
+.alvobot-author-box .author-avatar:hover .avatar {
+    transform: scale(1.1);
+}
+
+@media (max-width: 689px) {
+    .alvobot-author-box .author-avatar {
+        width: 100px;
+        height: 100px;
+        margin-bottom: var(--alvobot-space-lg, 16px);
+    }
+}
+
+/* Informações do Autor */
+.alvobot-author-box .author-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.alvobot-author-box .author-name {
+    margin: 0 0 var(--alvobot-space-sm, 8px) 0;
+    font-size: var(--alvobot-font-size-xl, 18px);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.alvobot-author-box .author-name a {
+    color: var(--alvobot-gray-800, #2c3338);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.alvobot-author-box .author-name a:hover {
+    color: var(--alvobot-primary, #CD9042);
+}
+
 .alvobot-author-box .author-description {
-    margin-top: 10px;
-    line-height: 1.5;
+    margin: 0;
+    font-size: var(--alvobot-font-size-base, 14px);
+    line-height: 1.6;
+    color: var(--alvobot-gray-700, #50575e);
 }
 
-.alvobot-author-box .author-social-links {
-    margin-top: 15px;
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .alvobot-author-box {
+        background: var(--alvobot-gray-800, #2c3338);
+        border-color: var(--alvobot-gray-600, #646970);
+        color: var(--alvobot-gray-200, #f0f0f1);
+    }
+    
+    .alvobot-author-box .author-box-title {
+        color: var(--alvobot-gray-100, #f6f7f7);
+    }
+    
+    .alvobot-author-box .author-name a {
+        color: var(--alvobot-gray-100, #f6f7f7);
+    }
+    
+    .alvobot-author-box .author-description {
+        color: var(--alvobot-gray-300, #e5e5e5);
+    }
 }
 
-.alvobot-author-box .author-social-links a {
-    margin-right: 8px;
-    display: inline-block;
+/* Animações */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alvobot-author-box {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Print Styles */
+@media print {
+    .alvobot-author-box {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        break-inside: avoid;
+    }
+    
+    .alvobot-author-box .author-name a {
+        color: #000;
+        text-decoration: underline;
+    }
 }

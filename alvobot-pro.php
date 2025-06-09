@@ -3,7 +3,7 @@
 Plugin Name: AlvoBot Pro
 Plugin URI: https://app.alvobot.com/
 Description: Suite completa de ferramentas AlvoBot incluindo gerador de logo, author box e gerenciamento de plugins.
-Version: 2.2.1
+Version: 2.2.2
 Author: Alvobot - Cris Franklin
 Author URI: https://app.alvobot.com/
 Text Domain: alvobot-pro

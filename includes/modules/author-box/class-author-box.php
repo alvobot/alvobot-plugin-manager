@@ -18,9 +18,6 @@ class AlvoBotPro_AuthorBox {
     }
 
     public function init() {
-        // Carrega o arquivo de configurações do usuário
-        require_once plugin_dir_path(__FILE__) . 'php/settings-user.php';
-        
         // Carrega o arquivo da API
         require_once plugin_dir_path(__FILE__) . 'php/api.php';
         
@@ -224,36 +221,63 @@ class AlvoBotPro_AuthorBox {
         }
 
         ?>
-        <h3><?php _e('Redes Sociais', 'alvobot-pro'); ?></h3>
-        <table class="form-table">
-            <?php foreach (array() as $network => $label) : ?>
-                <tr>
-                    <th>
-                        <label for="<?php echo esc_attr($network); ?>"><?php echo esc_html($label); ?></label>
-                    </th>
-                    <td>
-                        <input type="url" 
-                               name="<?php echo esc_attr($network); ?>" 
-                               id="<?php echo esc_attr($network); ?>" 
-                               value="<?php echo esc_url(get_user_meta($user->ID, $network, true)); ?>" 
-                               class="regular-text">
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
+        <div class="alvobot-pro-wrap">
+            <div class="alvobot-pro-header">
+                <h1><?php _e('Configurações do Author Box', 'alvobot-pro'); ?></h1>
+                <p><?php _e('Personalize como suas informações de autor aparecem no Author Box.', 'alvobot-pro'); ?></p>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="alvobot-pro-preview-card">
+                <h3><?php _e('Preview em Tempo Real', 'alvobot-pro'); ?></h3>
+                <div class="ab-avatar-preview" style="margin-bottom: 10px;">
+                    <?php 
+                    $custom_avatar_id = get_user_meta($user->ID, 'ab_custom_avatar_id', true);
+                    $avatar_url = $custom_avatar_id ? wp_get_attachment_image_url($custom_avatar_id, 'thumbnail') : get_avatar_url($user->ID);
+                    ?>
+                    <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($user->display_name); ?>" />
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="alvobot-pro-card">
+                <div class="alvobot-pro-card-header">
+                    <h2><?php _e('Configurações do Avatar', 'alvobot-pro'); ?></h2>
+                </div>
+
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th>
+                            <label for="ab_custom_avatar"><?php _e('Avatar Personalizado', 'alvobot-pro'); ?></label>
+                        </th>
+                        <td>
+                            <input type="hidden" name="ab_custom_avatar_id" id="ab_custom_avatar_id" 
+                                   value="<?php echo esc_attr($custom_avatar_id); ?>" />
+                            <input type="button" class="button" id="ab_upload_avatar_button" 
+                                   value="<?php _e('Selecionar Imagem', 'alvobot-pro'); ?>" />
+                            <?php if ($custom_avatar_id) : ?>
+                                <input type="button" class="button" id="ab_remove_avatar_button" 
+                                       value="<?php _e('Remover Imagem', 'alvobot-pro'); ?>" />
+                            <?php endif; ?>
+                            <p class="description">
+                                <?php _e('Esta imagem será usada no Author Box em vez do seu Gravatar.', 'alvobot-pro'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
         <?php
     }
 
     public function save_social_fields($user_id) {
         if (!current_user_can('edit_user', $user_id)) {
-            return;
+            return false;
         }
 
-        $social_networks = array();
-        foreach ($social_networks as $network) {
-            if (isset($_POST[$network])) {
-                update_user_meta($user_id, $network, esc_url_raw($_POST[$network]));
-            }
+        // Salva o avatar personalizado
+        if (isset($_POST['ab_custom_avatar_id'])) {
+            update_user_meta($user_id, 'ab_custom_avatar_id', sanitize_text_field($_POST['ab_custom_avatar_id']));
         }
     }
 
@@ -339,7 +363,7 @@ class AlvoBotPro_AuthorBox {
                 <h3 class="author-box-title"><?php echo esc_html($options['title_text']); ?></h3>
             <?php endif; ?>
             
-            <div class="author-box-content">
+            <div class="author-content">
                 <div class="author-avatar">
                     <?php echo $avatar_html; ?>
                 </div>
@@ -418,10 +442,19 @@ class AlvoBotPro_AuthorBox {
             return;
         }
 
-        // Calculate the correct path to the main styles file
+        $options = get_option($this->option_name);
+        $is_single = is_single();
+        $is_page = is_page();
+        $show_on_posts = !empty($options['display_on_posts']);
+        $show_on_pages = !empty($options['display_on_pages']);
+
+        // Só carrega se deve exibir o Author Box
+        if (($is_single && !$show_on_posts) || ($is_page && !$show_on_pages)) {
+            return;
+        }
+
+        // Carrega estilos principais do AlvoBot
         $main_styles_url = plugins_url('assets/css/styles.css', dirname(dirname(dirname(__FILE__))));
-        
-        // Enqueue the main styles with a unique handle
         wp_enqueue_style(
             'alvobot-pro-main-styles',
             $main_styles_url,
@@ -429,8 +462,13 @@ class AlvoBotPro_AuthorBox {
             $this->version
         );
 
-        // Load dashicons dependency
-        wp_enqueue_style('dashicons');
+        // Carrega estilos específicos do Author Box
+        wp_enqueue_style(
+            'alvobot-author-box-public',
+            plugin_dir_url(__FILE__) . 'css/public.css',
+            array('alvobot-pro-main-styles'),
+            $this->version
+        );
     }
 
     public function enqueue_admin_assets($hook) {
@@ -464,14 +502,19 @@ class AlvoBotPro_AuthorBox {
                 $this->version
             );
             
-            // Standard WordPress color picker
-            wp_enqueue_style('wp-color-picker');
+            // Enqueue public CSS for preview in admin
+            wp_enqueue_style(
+                'alvobot-author-box-public-preview',
+                plugin_dir_url(__FILE__) . 'css/public.css',
+                array('alvobot-author-box-admin'),
+                $this->version
+            );
             
-            // Scripts de administração para o color picker e media uploader
+            // Scripts de administração
             wp_enqueue_script(
                 'alvobot-author-box-admin-js',
                 plugin_dir_url(__FILE__) . 'js/admin.js',
-                array('jquery', 'wp-color-picker'),
+                array('jquery'),
                 $this->version,
                 true
             );

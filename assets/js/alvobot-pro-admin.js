@@ -1,6 +1,45 @@
 jQuery(document).ready(function($) {
     'use strict';
 
+    // Função para gerenciar visibilidade do container de notices
+    function updateNoticesVisibility() {
+        $('.alvobot-notice-container').each(function() {
+            const $container = $(this);
+            const $notices = $container.find('.alvobot-pro-notices');
+            
+            // Verifica se há notices visíveis ou conteúdo real
+            const hasVisibleNotices = $notices.children().filter(':visible').length > 0;
+            const hasOtherContent = $container.children().not('.alvobot-pro-notices').filter(function() {
+                return $.trim($(this).text()) !== '' || $(this).find('*').length > 0;
+            }).length > 0;
+            
+            if (hasVisibleNotices || hasOtherContent) {
+                $container.removeClass('alvobot-notice-container-hidden').show();
+            } else {
+                $container.addClass('alvobot-notice-container-hidden').hide();
+            }
+        });
+    }
+
+    // Executa na inicialização
+    updateNoticesVisibility();
+
+    // Observa mudanças no DOM para atualizar visibilidade
+    if (window.MutationObserver) {
+        const observer = new MutationObserver(function() {
+            updateNoticesVisibility();
+        });
+        
+        $('.alvobot-notice-container').each(function() {
+            observer.observe(this, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style']
+            });
+        });
+    }
+
     // Função para exibir notificações
     function showNotice(message, type = 'success') {
         const notice = $('<div>')
@@ -12,9 +51,14 @@ jQuery(document).ready(function($) {
         $('.alvobot-pro-notices').prepend(notice);
         notice.fadeIn();
         
+        // Atualiza visibilidade após adicionar o notice
+        updateNoticesVisibility();
+        
         setTimeout(function() {
             notice.fadeOut(300, function() {
                 $(this).remove();
+                // Atualiza visibilidade após remover o notice
+                updateNoticesVisibility();
             });
         }, 3000);
     }
@@ -27,10 +71,10 @@ jQuery(document).ready(function($) {
         var $toggle = $(this);
         var moduleId = $toggle.data('module');
         
-        // Impede a desativação do Plugin Manager
+        // Impede a desativação do Status do Sistema
         if (moduleId === 'plugin-manager' || moduleId === 'plugin_manager') {
             $toggle.prop('checked', true);
-            showNotice('O Plugin Manager é um módulo essencial e não pode ser desativado.', 'error');
+            showNotice('O Status do Sistema é um módulo essencial e não pode ser desativado.', 'error');
             return;
         }
         
@@ -257,5 +301,44 @@ jQuery(document).ready(function($) {
         tempInput.remove();
         
         showNotice('Token copiado para a área de transferência!');
+    });
+
+    // Manipulador do botão "Refazer Registro"
+    $('#retry-registration-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const form = $(this);
+        const submitButton = form.find('.retry-registration-btn');
+
+        if (!confirm('Tem certeza que deseja refazer o registro? Uma nova senha de aplicativo será gerada.')) {
+            return;
+        }
+
+        submitButton.prop('disabled', true).val('Processando...');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'grp_retry_registration',
+                nonce: $('#retry_registration_nonce').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    showNotice('Registro refeito com sucesso!');
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotice(response.data.message || 'Erro ao refazer o registro.', 'error');
+                }
+            },
+            error: function() {
+                showNotice('Erro ao conectar com o servidor.', 'error');
+            },
+            complete: function() {
+                submitButton.prop('disabled', false).val('Refazer Registro');
+            }
+        });
     });
 });

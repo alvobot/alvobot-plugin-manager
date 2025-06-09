@@ -11,12 +11,13 @@ if (!defined('ABSPATH')) {
 <div class="alvobot-admin-wrap">
     <div class="alvobot-admin-container">
         <div class="alvobot-admin-header">
-            <h1><?php _e('Gerenciador de Plugins', 'alvobot-pro'); ?></h1>
-            <p><?php _e('Gerencie seus plugins de forma remota e segura através da plataforma AlvoBot.', 'alvobot-pro'); ?></p>
+            <h1><?php _e('Status do Sistema', 'alvobot-pro'); ?></h1>
+            <p><?php _e('Monitore o status da conexão e gerencie a integração com a plataforma AlvoBot.', 'alvobot-pro'); ?></p>
         </div>
 
         <div class="alvobot-notice-container">
-            <!-- Mensagens de sucesso/erro aparecerão aqui -->
+            <div class="alvobot-pro-notices"></div>
+            <?php settings_errors(); ?>
         </div>
 
     <div class="alvobot-card">
@@ -98,11 +99,11 @@ if (!defined('ABSPATH')) {
                     </div>
                 </form>
             <?php else: ?>
-                <form method="post" action="">
-                    <?php wp_nonce_field('retry_registration'); ?>
+                <form method="post" action="" id="retry-registration-form">
+                    <?php wp_nonce_field('retry_registration', 'retry_registration_nonce'); ?>
                     <input type="hidden" name="action" value="retry_registration">
                     <div class="alvobot-btn-group">
-                        <input type="submit" name="submit" class="alvobot-btn alvobot-btn-secondary" value="<?php esc_attr_e('Refazer Registro', 'alvobot-pro'); ?>">
+                        <input type="submit" name="submit" class="alvobot-btn alvobot-btn-secondary retry-registration-btn" value="<?php esc_attr_e('Refazer Registro', 'alvobot-pro'); ?>">
                     </div>
                 </form>
             <?php endif; ?>

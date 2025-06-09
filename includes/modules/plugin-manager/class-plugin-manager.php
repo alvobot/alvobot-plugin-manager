@@ -9,9 +9,7 @@ class AlvoBotPro_PluginManager {
 
     public function __construct() {
         add_action('rest_api_init', array($this, 'register_rest_routes'));
-        
-        // Register activation hook
-        register_activation_hook(ALVOBOT_PRO_PLUGIN_DIR . 'alvobot-pro.php', array($this, 'activate'));
+        $this->init();
     }
 
     public function init() {
@@ -19,6 +17,10 @@ class AlvoBotPro_PluginManager {
         if (!get_option('grp_site_token')) {
             $token = wp_generate_password(32, false);
             update_option('grp_site_token', $token);
+            error_log('[Plugin Manager] Token de site gerado: ' . substr($token, 0, 8) . '...');
+        } else {
+            $existing_token = get_option('grp_site_token');
+            error_log('[Plugin Manager] Token de site já existe: ' . substr($existing_token, 0, 8) . '...');
         }
 
         // Register REST API endpoints
@@ -26,16 +28,32 @@ class AlvoBotPro_PluginManager {
     }
 
     public function activate() {
+        error_log('[Plugin Manager] Iniciando ativação do Plugin Manager');
+        
         // Create alvobot user
         $user = $this->create_alvobot_user();
         
         if ($user && !is_wp_error($user)) {
+            error_log('[Plugin Manager] Usuário alvobot criado com sucesso');
             // Generate app password
             $app_password = $this->generate_alvobot_app_password($user);
             
             if ($app_password) {
+                error_log('[Plugin Manager] Senha de aplicativo gerada, iniciando registro no servidor');
                 // Register site with the central server
-                $this->register_site($app_password);
+                $result = $this->register_site($app_password);
+                if ($result) {
+                    error_log('[Plugin Manager] Registro no servidor concluído com sucesso');
+                } else {
+                    error_log('[Plugin Manager] ERRO: Falha no registro do servidor');
+                }
+            } else {
+                error_log('[Plugin Manager] ERRO: Falha ao gerar senha de aplicativo');
+            }
+        } else {
+            error_log('[Plugin Manager] ERRO: Falha ao criar usuário alvobot');
+            if (is_wp_error($user)) {
+                error_log('[Plugin Manager] Erro WP: ' . $user->get_error_message());
             }
         }
     }
@@ -56,21 +74,37 @@ class AlvoBotPro_PluginManager {
                 $this->activate();
             } elseif ($_POST['action'] === 'retry_registration') {
                 check_admin_referer('retry_registration');
+                error_log('[Plugin Manager] Iniciando processo de refazer registro');
+                
                 // Gerar nova senha de aplicativo e registrar novamente
                 if ($alvobot_user) {
+                    error_log('[Plugin Manager] Usuário alvobot encontrado, gerando nova senha de aplicativo');
                     $app_password = $this->generate_alvobot_app_password($alvobot_user);
                     if ($app_password) {
+                        error_log('[Plugin Manager] Nova senha de aplicativo gerada, registrando no servidor');
                         $result = $this->register_site($app_password);
                         if ($result) {
+                            error_log('[Plugin Manager] Refazer registro: SUCESSO');
                             add_action('admin_notices', function() {
                                 echo '<div class="notice notice-success"><p>Registro refeito com sucesso!</p></div>';
                             });
                         } else {
+                            error_log('[Plugin Manager] Refazer registro: ERRO no servidor');
                             add_action('admin_notices', function() {
                                 echo '<div class="notice notice-error"><p>Erro ao refazer o registro. Verifique os logs para mais detalhes.</p></div>';
                             });
                         }
+                    } else {
+                        error_log('[Plugin Manager] Refazer registro: ERRO ao gerar senha de aplicativo');
+                        add_action('admin_notices', function() {
+                            echo '<div class="notice notice-error"><p>Erro ao gerar nova senha de aplicativo.</p></div>';
+                        });
                     }
+                } else {
+                    error_log('[Plugin Manager] Refazer registro: ERRO - usuário alvobot não encontrado');
+                    add_action('admin_notices', function() {
+                        echo '<div class="notice notice-error"><p>Usuário alvobot não encontrado. Execute a inicialização primeiro.</p></div>';
+                    });
                 }
             }
             
@@ -154,6 +188,8 @@ class AlvoBotPro_PluginManager {
             return false;
         }
         
+        error_log('[Plugin Manager] GRP_SERVER_URL definida: ' . GRP_SERVER_URL);
+        
         // Carrega as funções necessárias do WordPress
         if (!function_exists('get_plugins')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -162,13 +198,16 @@ class AlvoBotPro_PluginManager {
         $plugins = get_plugins();
         $active_plugins = get_option('active_plugins', array());
 
+        $site_token = get_option('grp_site_token');
         $data = array(
             'action' => 'register_site',
             'site_url' => get_site_url(),
-            'token' => get_option('grp_site_token'),
+            'token' => $site_token,
             'wp_version' => get_bloginfo('version'),
             'plugins' => array_keys($plugins),
         );
+        
+        error_log('[Plugin Manager] Token do site: ' . ($site_token ? substr($site_token, 0, 8) . '...' : 'VAZIO'));
 
         if ($app_password) {
             // Pegar apenas a string da senha (primeiro elemento do array)

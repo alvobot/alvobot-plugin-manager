@@ -94,9 +94,12 @@
 /* Container de notificações */
 .alvobot-notice-container {
     margin: 0;
+    padding: 0;
     min-height: 0;
+    transition: all 0.3s ease;
 }
 
+/* Oculta quando completamente vazio */
 .alvobot-notice-container:empty {
     display: none !important;
     margin: 0 !important;
@@ -105,17 +108,19 @@
     min-height: 0 !important;
 }
 
+/* Mostra quando tem conteúdo */
 .alvobot-notice-container:not(:empty) {
     display: block;
     margin-bottom: var(--alvobot-space-2xl);
 }
 
-/* Garantir que containers vazios sem conteúdo real sejam ocultados */
-.alvobot-notice-container:not(:empty):not(:has(*)) {
+/* Oculta quando só tem elementos vazios (CSS moderno com :has) */
+.alvobot-notice-container:has(.alvobot-pro-notices:empty) {
     display: none !important;
     margin: 0 !important;
     padding: 0 !important;
     height: 0 !important;
+    min-height: 0 !important;
 }
 
 /* Para compatibilidade com browsers que não suportam :has() */

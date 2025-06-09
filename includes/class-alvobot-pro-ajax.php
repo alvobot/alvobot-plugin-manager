@@ -10,6 +10,7 @@ class AlvoBotPro_Ajax {
         // Handlers para usuários logados
         add_action('wp_ajax_alvobot_pro_toggle_module', array($this, 'toggle_module'));
         add_action('wp_ajax_grp_register_site', array($this, 'register_site'));
+        add_action('wp_ajax_grp_retry_registration', array($this, 'retry_registration'));
         add_action('wp_ajax_grp_save_settings', array($this, 'save_settings'));
         add_action('wp_ajax_grp_reset_plugin', array($this, 'reset_plugin'));
         add_action('wp_ajax_grp_get_activity_log', array($this, 'get_activity_log'));
@@ -109,6 +110,49 @@ class AlvoBotPro_Ajax {
         }
 
         wp_send_json_success(array('message' => 'Site registrado com sucesso'));
+    }
+
+    /**
+     * Refaz o registro do site no AlvoBot
+     */
+    public function retry_registration() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permissão negada'));
+        }
+
+        if (!check_ajax_referer('retry_registration_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Nonce inválido'));
+        }
+
+        error_log('[AJAX] Iniciando processo de refazer registro via AJAX');
+
+        // Obtém o usuário alvobot
+        $alvobot_user = get_user_by('login', 'alvobot');
+        if (!$alvobot_user) {
+            error_log('[AJAX] Refazer registro: ERRO - usuário alvobot não encontrado');
+            wp_send_json_error(array('message' => 'Usuário alvobot não encontrado. Execute a inicialização primeiro.'));
+        }
+
+        $plugin_manager = new AlvoBotPro_PluginManager();
+        
+        error_log('[AJAX] Usuário alvobot encontrado, gerando nova senha de aplicativo');
+        $app_password = $plugin_manager->generate_alvobot_app_password($alvobot_user);
+        
+        if (!$app_password) {
+            error_log('[AJAX] Refazer registro: ERRO ao gerar senha de aplicativo');
+            wp_send_json_error(array('message' => 'Erro ao gerar nova senha de aplicativo.'));
+        }
+
+        error_log('[AJAX] Nova senha de aplicativo gerada, registrando no servidor');
+        $result = $plugin_manager->register_site($app_password);
+        
+        if ($result) {
+            error_log('[AJAX] Refazer registro: SUCESSO');
+            wp_send_json_success(array('message' => 'Registro refeito com sucesso!'));
+        } else {
+            error_log('[AJAX] Refazer registro: ERRO no servidor');
+            wp_send_json_error(array('message' => 'Erro ao refazer o registro. Verifique os logs para mais detalhes.'));
+        }
     }
 
     /**

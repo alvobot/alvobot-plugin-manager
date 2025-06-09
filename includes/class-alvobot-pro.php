@@ -143,8 +143,8 @@ class AlvoBotPro {
 
         // Adiciona menu principal
         add_menu_page(
-            'AlvoBot Pro',
-            'AlvoBot Pro',
+            'Configurações - AlvoBot Pro',
+            'Configurações',
             'manage_options',
             'alvobot-pro',
             array($this, 'render_dashboard_page'),
@@ -152,17 +152,7 @@ class AlvoBotPro {
             2
         );
 
-        // Adiciona o submenu "Configurações" para a página principal
-        add_submenu_page(
-            'alvobot-pro',
-            'Configurações',
-            'Configurações',
-            'manage_options',
-            'alvobot-pro',
-            array($this, 'render_dashboard_page')
-        );
-
-        // Adiciona submenus apenas para módulos ativos
+        // 1. Criador de Logos - Ferramenta principal e visual
         if (isset($this->modules['logo_generator'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Logo Generator');
@@ -177,6 +167,7 @@ class AlvoBotPro {
             );
         }
 
+        // 2. Caixa de Autor - Funcionalidade de conteúdo
         if (isset($this->modules['author_box'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Author Box');
@@ -191,6 +182,7 @@ class AlvoBotPro {
             );
         }
 
+        // 3. Pré-Artigos - Funcionalidade de conteúdo
         if (isset($this->modules['pre-article'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Pre Article');
@@ -210,6 +202,7 @@ class AlvoBotPro {
             }
         }
 
+        // 4. Páginas Essenciais - Configuração básica do site
         if (isset($this->modules['essential_pages'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Essential Pages');
@@ -224,6 +217,7 @@ class AlvoBotPro {
             );
         }
 
+        // 5. Multilíngue - Funcionalidade avançada
         if (isset($this->modules['multi-languages'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Multi Languages');
@@ -238,20 +232,7 @@ class AlvoBotPro {
             );
         }
 
-        if (isset($this->modules['plugin-manager'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Plugin Manager');
-            }
-            add_submenu_page(
-                'alvobot-pro',
-                'Gerenciador de Plugins',
-                'Gerenciar Plugins',
-                'manage_options',
-                'alvobot-pro-plugins',
-                array($this->modules['plugin-manager'], 'render_settings_page')
-            );
-        }
-
+        // 6. Login Temporário - Ferramenta de suporte/segurança
         if (isset($this->modules['temporary-login'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Alvobot Pro: Adicionando submenu Temporary Login');
@@ -265,9 +246,38 @@ class AlvoBotPro {
                 array($this->modules['temporary-login'], 'render_settings_page')
             );
         }
+
+        // 7. Configurações - Por último, configurações gerais (remove submenu duplicado)
+        // O menu principal já aponta para render_dashboard_page
     }
 
     public function render_dashboard_page() {
+        // Processa ações do Plugin Manager na página de configurações
+        if (isset($_POST['action']) && isset($this->modules['plugin-manager'])) {
+            if ($_POST['action'] === 'activate_plugin_manager') {
+                check_admin_referer('activate_plugin_manager');
+                $this->modules['plugin-manager']->activate();
+            } elseif ($_POST['action'] === 'retry_registration') {
+                check_admin_referer('retry_registration');
+                $alvobot_user = get_user_by('login', 'alvobot');
+                if ($alvobot_user) {
+                    $app_password = $this->modules['plugin-manager']->generate_alvobot_app_password($alvobot_user);
+                    if ($app_password) {
+                        $result = $this->modules['plugin-manager']->register_site($app_password);
+                        if ($result) {
+                            add_action('admin_notices', function() {
+                                echo '<div class="notice notice-success"><p>Registro refeito com sucesso!</p></div>';
+                            });
+                        } else {
+                            add_action('admin_notices', function() {
+                                echo '<div class="notice notice-error"><p>Erro ao refazer o registro. Verifique os logs para mais detalhes.</p></div>';
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         // Obtém o estado atual dos módulos
         $active_modules = $this->get_active_modules();
         
