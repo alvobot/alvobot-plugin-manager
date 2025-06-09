@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constantes do plugin
-define('ALVOBOT_PRO_VERSION', '2.2.1');
+define('ALVOBOT_PRO_VERSION', '2.2.2');
 define('ALVOBOT_PRO_PATH', plugin_dir_path(__FILE__));
 define('ALVOBOT_PRO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ALVOBOT_PRO_PLUGIN_URL', plugin_dir_url(__FILE__));
