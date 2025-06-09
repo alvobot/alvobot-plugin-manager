@@ -40,17 +40,29 @@ class AlvoBotPro_MultiLanguages {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        // Verifica se o Polylang está ativo
-        if (!function_exists('pll_languages_list')) {
-            echo '<div class="wrap">';
-            echo '<h1>' . __('Multi Languages', 'alvobot-pro') . '</h1>';
-            echo '<div class="notice notice-error"><p>' . __('O plugin Polylang não está ativo. Este módulo requer o Polylang para funcionar corretamente.', 'alvobot-pro') . '</p></div>';
-            echo '</div>';
-            return;
+        // Ativar exibição de erros para debug
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Multi-Languages: Iniciando render_settings_page');
         }
 
-        // Inclui o template da página de configurações
-        include_once plugin_dir_path(__FILE__) . 'templates/multi-languages-settings.php';
+        try {
+            // Sempre inclui o template - a verificação do Polylang é feita dentro do template
+            include_once plugin_dir_path(__FILE__) . 'templates/multi-languages-settings.php';
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Multi-Languages: Template carregado com sucesso');
+            }
+        } catch (Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Multi-Languages Error: ' . $e->getMessage());
+            }
+            
+            // Exibir mensagem de erro para o admin
+            echo '<div class="wrap alvobot-admin-page">';  
+            echo '<h1>AlvoBot Multi Languages</h1>';
+            echo '<div class="notice notice-error"><p>Erro ao carregar a página de configurações. Por favor, verifique os logs para mais detalhes.</p></div>';
+            echo '</div>';
+        }
     }
     
     /**

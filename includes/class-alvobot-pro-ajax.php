@@ -48,7 +48,7 @@ class AlvoBotPro_Ajax {
             'logo_generator' => true,
             'author_box' => true,
             'plugin_manager' => true,
-            'pre_article' => true
+            'pre-article' => true
         );
 
         // Mescla com os valores padrão

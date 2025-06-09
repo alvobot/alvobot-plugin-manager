@@ -4,151 +4,151 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<div class="alvobot-pro-wrap">
-  <div class="alvobot-pro-header">
-    <h1>AlvoBot Pro</h1>
-    <p>Gerencie todos os módulos do AlvoBot Pro em um só lugar.</p>
-  </div>
+<div class="alvobot-admin-wrap">
+  <div class="alvobot-admin-container">
+    <div class="alvobot-admin-header">
+      <h1>AlvoBot Pro</h1>
+      <p>Gerencie todos os módulos do AlvoBot Pro em um só lugar.</p>
+    </div>
 
-  <div class="alvobot-pro-notices">
-    <!-- Mensagens de sucesso/erro, se necessário -->
-  </div>
+    <div class="alvobot-notice-container">
+      <!-- Mensagens de sucesso/erro, se necessário -->
+    </div>
 
-  <div class="alvobot-pro-modules">
-    <!-- Módulo Gerador de Logo -->
-    <div class="alvobot-pro-module-card <?php echo isset($active_modules['logo-generator']) && $active_modules['logo-generator'] ? 'module-enabled' : ''; ?>">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Gerador de Logo</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="logo-generator" 
-                 <?php echo isset($active_modules['logo-generator']) && $active_modules['logo-generator'] ? 'checked="checked"' : ''; ?>>
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
+    <div class="alvobot-grid alvobot-grid-auto">
+      <!-- Cartões dos Módulos -->
+      <!-- Módulo Gerador de Logo -->
+      <div class="alvobot-card <?php echo isset($active_modules['logo_generator']) && $active_modules['logo_generator'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Gerador de Logo</h2>
+            <p class="alvobot-card-subtitle">Crie logos profissionais para seus sites WordPress automaticamente.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="logo_generator" 
+                   <?php echo isset($active_modules['logo_generator']) && $active_modules['logo_generator'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['logo_generator']) && $active_modules['logo_generator']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-pro-logo'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
       </div>
-      <p class="alvobot-pro-module-description">
-        Crie logos profissionais para seus sites WordPress automaticamente.
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <?php if (isset($active_modules['logo-generator']) && $active_modules['logo-generator']): ?>
-          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-logo'); ?>">Configurações</a>
-        <?php endif; ?>
+
+      <!-- Módulo Author Box -->
+      <div class="alvobot-card <?php echo isset($active_modules['author_box']) && $active_modules['author_box'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Author Box</h2>
+            <p class="alvobot-card-subtitle">Exiba uma elegante caixa de autor no final dos seus posts.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="author_box" 
+                   <?php echo isset($active_modules['author_box']) && $active_modules['author_box'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['author_box']) && $active_modules['author_box']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-pro-author-box'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <!-- Módulo Pre Article -->
+      <div class="alvobot-card <?php echo isset($active_modules['pre-article']) && $active_modules['pre-article'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Pre Article</h2>
+            <p class="alvobot-card-subtitle">Gere páginas de pré-artigo automaticamente para seus posts existentes.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="pre-article" 
+                   <?php echo isset($active_modules['pre-article']) && $active_modules['pre-article'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['pre-article']) && $active_modules['pre-article']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-pro-pre-article'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <!-- Módulo Plugin Manager (sempre ativo) -->
+      <div class="alvobot-card module-enabled">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Plugin Manager</h2>
+            <p class="alvobot-card-subtitle">Gerencie plugins remotamente através da plataforma AlvoBot.<br><small><em>Este módulo é essencial e não pode ser desativado.</em></small></p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="plugin-manager" 
+                   checked="checked"
+                   disabled="disabled">
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-plugins'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+        </div>
+      </div>
+
+      <!-- Módulo Essential Pages -->
+      <div class="alvobot-card <?php echo isset($active_modules['essential_pages']) && $active_modules['essential_pages'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Páginas Essenciais</h2>
+            <p class="alvobot-card-subtitle">Crie e gerencie páginas essenciais como Termos de Uso, Política de Privacidade e Contato.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="essential_pages" 
+                   <?php echo isset($active_modules['essential_pages']) && $active_modules['essential_pages'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['essential_pages']) && $active_modules['essential_pages']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-pro-essential-pages'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <!-- Módulo Multi Languages -->
+      <div class="alvobot-card <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Multi Languages</h2>
+            <p class="alvobot-card-subtitle">Gerencie traduções e conteúdo multilíngue para seu site WordPress com Polylang.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="multi-languages" 
+                   <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['multi-languages']) && $active_modules['multi-languages']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-pro-multi-languages'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
-    <!-- Módulo Author Box -->
-    <div class="alvobot-pro-module-card <?php echo isset($active_modules['author-box']) && $active_modules['author-box'] ? 'module-enabled' : ''; ?>">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Author Box</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="author-box" 
-                 <?php echo isset($active_modules['author-box']) && $active_modules['author-box'] ? 'checked="checked"' : ''; ?>>
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
-      </div>
-      <p class="alvobot-pro-module-description">
-        Exiba uma elegante caixa de autor no final dos seus posts.
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <?php if (isset($active_modules['author-box']) && $active_modules['author-box']): ?>
-          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-author'); ?>">Configurações</a>
-        <?php endif; ?>
-      </div>
-    </div>
-
-    <!-- Módulo Pre Article -->
-    <div class="alvobot-pro-module-card <?php echo isset($active_modules['pre-article']) && $active_modules['pre-article'] ? 'module-enabled' : ''; ?>">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Pre Article</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="pre-article" 
-                 <?php echo isset($active_modules['pre-article']) && $active_modules['pre-article'] ? 'checked="checked"' : ''; ?>>
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
-      </div>
-      <p class="alvobot-pro-module-description">
-        Gere páginas de pré-artigo automaticamente para seus posts existentes.
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <?php if (isset($active_modules['pre-article']) && $active_modules['pre-article']): ?>
-          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-pre-article'); ?>">Configurações</a>
-        <?php endif; ?>
-      </div>
-    </div>
-
-    <!-- Módulo Plugin Manager (sempre ativo) -->
-    <div class="alvobot-pro-module-card module-enabled">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Plugin Manager</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="plugin-manager" 
-                 checked="checked"
-                 disabled="disabled">
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
-      </div>
-      <p class="alvobot-pro-module-description">
-        Gerencie plugins remotamente através da plataforma AlvoBot.
-        <br>
-        <small><em>Este módulo é essencial e não pode ser desativado.</em></small>
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <a href="<?php echo admin_url('admin.php?page=alvobot-pro-plugins'); ?>">Configurações</a>
-      </div>
-    </div>
-
-    <!-- Módulo Essential Pages -->
-    <div class="alvobot-pro-module-card <?php echo isset($active_modules['essential-pages']) && $active_modules['essential-pages'] ? 'module-enabled' : ''; ?>">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Páginas Essenciais</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="essential-pages" 
-                 <?php echo isset($active_modules['essential-pages']) && $active_modules['essential-pages'] ? 'checked="checked"' : ''; ?>>
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
-      </div>
-      <p class="alvobot-pro-module-description">
-        Crie e gerencie páginas essenciais como Termos de Uso, Política de Privacidade e Contato.
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <?php if (isset($active_modules['essential-pages']) && $active_modules['essential-pages']): ?>
-          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-essential-pages'); ?>">Configurações</a>
-        <?php endif; ?>
-      </div>
-    </div>
-
-    <!-- Módulo Multi Languages -->
-    <div class="alvobot-pro-module-card <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'module-enabled' : ''; ?>">
-      <div class="alvobot-pro-module-header">
-        <h2 class="alvobot-pro-module-title">Multi Languages</h2>
-        <label class="alvobot-pro-module-toggle">
-          <input type="checkbox" 
-                 data-module="multi-languages" 
-                 <?php echo isset($active_modules['multi-languages']) && $active_modules['multi-languages'] ? 'checked="checked"' : ''; ?>>
-          <span class="alvobot-pro-module-slider"></span>
-        </label>
-      </div>
-      <p class="alvobot-pro-module-description">
-        Gerencie traduções e conteúdo multilíngue para seu site WordPress com Polylang.
-      </p>
-      <div class="alvobot-pro-module-actions">
-        <?php if (isset($active_modules['multi-languages']) && $active_modules['multi-languages']): ?>
-          <a href="<?php echo admin_url('admin.php?page=alvobot-pro-multi-languages'); ?>">Configurações</a>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-
-  <!-- Cartão extra do Plugin Manager (status e formulários) -->
-  <div class="alvobot-pro-module-card" style="margin-top: 2em;">
-    <div class="plugin-manager-container">
+    <!-- Cartão extra do Plugin Manager (status e formulários) -->
+    <div class="alvobot-card">
+      <div class="plugin-manager-container">
       <h2><?php _e('Status do Gerenciador de Plugins', 'alvobot-pro'); ?></h2>
       
-      <table class="form-table" role="presentation">
+      <table class="alvobot-form-table" role="presentation">
         <tr>
           <th scope="row"><?php _e('AlvoBot User', 'alvobot-pro'); ?></th>
           <td>
@@ -165,9 +165,9 @@ if (!defined('ABSPATH')) {
             <?php if ($site_token): ?>
               <span style="color: green;">✓</span> <?php _e('Generated', 'alvobot-pro'); ?>
               <br>
-              <div class="token-field">
-                  <code class="token-value" data-token="<?php echo esc_attr($site_token); ?>">••••••••••••••••••••••••••••••••</code>
-                  <button type="button" class="token-toggle" title="<?php esc_attr_e('Mostrar/Ocultar Token', 'alvobot-pro'); ?>">
+              <div class="alvobot-token-field">
+                  <code class="alvobot-token-value" data-token="<?php echo esc_attr($site_token); ?>">••••••••••••••••••••••••••••••••</code>
+                  <button type="button" class="alvobot-token-toggle" title="<?php esc_attr_e('Mostrar/Ocultar Token', 'alvobot-pro'); ?>">
                       <svg class="eye-show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -197,10 +197,11 @@ if (!defined('ABSPATH')) {
           <?php wp_nonce_field('retry_registration'); ?>
           <input type="hidden" name="action" value="retry_registration">
           <p class="submit">
-            <input type="submit" name="submit" id="retry_registration" class="button button-secondary" value="<?php esc_attr_e('Refazer Registro', 'alvobot-pro'); ?>">
+            <input type="submit" name="submit" id="retry_registration" class="alvobot-btn alvobot-btn-secondary" value="<?php esc_attr_e('Refazer Registro', 'alvobot-pro'); ?>">
           </p>
         </form>
       <?php endif; ?>
+      </div>
     </div>
   </div>
 </div>
@@ -221,4 +222,3 @@ if (!defined('ABSPATH')) {
         }
     });
     </script>
-</div>

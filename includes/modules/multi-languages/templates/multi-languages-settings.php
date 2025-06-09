@@ -4,16 +4,125 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<div class="wrap">
-    <h1><?php echo esc_html__('Multi Languages', 'alvobot-pro'); ?></h1>
-    
-    <?php if (!function_exists('pll_languages_list')): ?>
-        <div class="notice notice-error">
-            <p><?php echo esc_html__('O plugin Polylang não está ativo. Este módulo requer o Polylang para funcionar corretamente.', 'alvobot-pro'); ?></p>
+<div class="alvobot-admin-wrap">
+    <div class="alvobot-admin-container">
+        <div class="alvobot-admin-header">
+            <h1><?php echo esc_html__('Gerenciamento Multilíngue', 'alvobot-pro'); ?></h1>
+            <p><?php echo esc_html__('Gerencie conteúdo multilíngue usando o plugin Polylang e tradução automática avançada.', 'alvobot-pro'); ?></p>
         </div>
-    <?php else: ?>
-        <div class="card">
-            <h2><?php echo esc_html__('Idiomas Configurados', 'alvobot-pro'); ?></h2>
+        
+        <div class="alvobot-notice-container">
+            <!-- Notificações serão inseridas aqui -->
+        </div>
+    
+    <?php
+    // Garantir que a função get_plugins esteja disponível
+    require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    $all_plugins = get_plugins();
+    
+    // Verificando se o Polylang está ativo
+    $polylang_active = class_exists('Polylang') || function_exists('pll_the_languages');
+    
+    if (!$polylang_active): // Se o Polylang não estiver ativo
+    ?>
+        <!-- Estado: Polylang não instalado -->
+        <div class="alvobot-card">
+            <div class="alvobot-card-header">
+                <div>
+                    <h2 class="alvobot-card-title">
+                        <?php echo esc_html__('Plugin Necessário: Polylang', 'alvobot-pro'); ?>
+                    </h2>
+                    <p class="alvobot-card-subtitle">
+                        <?php echo esc_html__('O módulo Multi Languages requer o plugin Polylang para funcionar', 'alvobot-pro'); ?>
+                    </p>
+                </div>
+                <div>
+                    <?php
+                    // Verificar se o Polylang está instalado mas não ativo
+                    $polylang_installed = false;
+                    foreach ($all_plugins as $plugin_path => $plugin_data) {
+                        if (strpos($plugin_path, 'polylang') !== false) {
+                            $polylang_installed = true;
+                            break;
+                        }
+                    }
+                    
+                    if ($polylang_active) {
+                        echo '<span class="alvobot-badge alvobot-badge-success"><span class="alvobot-status-indicator success"></span>' . 
+                            esc_html__('Ativo', 'alvobot-pro') . '</span>';
+                    } elseif ($polylang_installed) {
+                        echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' . 
+                            esc_html__('Instalado (Não Ativo)', 'alvobot-pro') . '</span>';
+                    } else {
+                        echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' . 
+                            esc_html__('Não Instalado', 'alvobot-pro') . '</span>';
+                    }
+                    ?>
+                </div>
+            </div>
+            
+            <div class="alvobot-card-content">
+            </div>
+            
+            <div class="alvobot-card-footer">
+                <div class="alvobot-btn-group">
+                    <?php 
+                    // Verificar status novamente para mostrar os botões corretos
+                    if ($polylang_active) {
+                        // Se já estiver ativo, mostrar link para configurações
+                        $settings_url = admin_url('admin.php?page=mlang');
+                    ?>
+                        <a href="<?php echo esc_url($settings_url); ?>" class="alvobot-btn alvobot-btn-primary">
+                            <?php echo esc_html__('Configurar Polylang', 'alvobot-pro'); ?>
+                        </a>
+                    <?php
+                    } elseif ($polylang_installed) {
+                        // Se instalado mas não ativo, mostrar botão para ativar
+                        // Encontrar o caminho correto do plugin
+                        $polylang_plugin_path = '';
+                        foreach ($all_plugins as $plugin_path => $plugin_data) {
+                            if (strpos($plugin_path, 'polylang') !== false) {
+                                $polylang_plugin_path = $plugin_path;
+                                break;
+                            }
+                        }
+                        
+                        $activate_url = wp_nonce_url(
+                            self_admin_url('plugins.php?action=activate&plugin=' . urlencode($polylang_plugin_path)),
+                            'activate-plugin_' . $polylang_plugin_path
+                        );
+                    ?>
+                        <a href="<?php echo esc_url($activate_url); ?>" class="alvobot-btn alvobot-btn-primary">
+                            <?php echo esc_html__('Ativar Polylang', 'alvobot-pro'); ?>
+                        </a>
+                    <?php
+                    } else {
+                        // Se não instalado, mostrar botão para instalar
+                        $install_url = wp_nonce_url(
+                            self_admin_url('update.php?action=install-plugin&plugin=polylang'),
+                            'install-plugin_polylang'
+                        );
+                    ?>
+                        <a href="<?php echo esc_url($install_url); ?>" class="alvobot-btn alvobot-btn-primary">
+                            <?php echo esc_html__('Instalar Polylang', 'alvobot-pro'); ?>
+                        </a>
+                    <?php
+                    }
+                    ?>
+                    <a href="https://wordpress.org/plugins/polylang/" target="_blank" class="alvobot-btn alvobot-btn-outline">
+                        <?php echo esc_html__('Ver no WordPress.org', 'alvobot-pro'); ?>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alvobot-card">
+            <div class="alvobot-card-header">
+                <div>
+                    <h2 class="alvobot-card-title"><?php echo esc_html__('Idiomas', 'alvobot-pro'); ?></h2>
+                </div>
+            </div>
+            <div class="alvobot-card-content">
             <?php
             // Obter idiomas diretamente do banco de dados
             global $wpdb;
@@ -29,9 +138,12 @@ if (!defined('ABSPATH')) {
             ");
             
             if (empty($language_terms)): ?>
-                <p><?php echo esc_html__('Nenhum idioma configurado. Configure os idiomas no Polylang.', 'alvobot-pro'); ?></p>
+                <div class="alvobot-empty-state">
+                    <p><?php echo esc_html__('Nenhum idioma configurado. Configure os idiomas no Polylang para utilizar este módulo.', 'alvobot-pro'); ?></p>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=mlang')); ?>" class="alvobot-btn alvobot-btn-primary"><?php echo esc_html__('Configurar Idiomas', 'alvobot-pro'); ?></a>
+                </div>
             <?php else: ?>
-                <table class="widefat fixed striped">
+                <table class="alvobot-table alvobot-table-striped">
                     <thead>
                         <tr>
                             <th><?php echo esc_html__('Idioma', 'alvobot-pro'); ?></th>
@@ -151,15 +263,21 @@ if (!defined('ABSPATH')) {
                     </tbody>
                 </table>
                 
-                <p class="description" style="margin-top: 10px;">
+                <p class="alvobot-description alvobot-mt-lg">
                     <?php echo esc_html__('Para adicionar ou configurar idiomas, acesse as configurações do Polylang em', 'alvobot-pro'); ?> 
                     <a href="<?php echo esc_url(admin_url('admin.php?page=mlang')); ?>"><?php echo esc_html__('Idiomas', 'alvobot-pro'); ?></a>.
                 </p>
             <?php endif; ?>
+            </div>
         </div>
         
-        <div class="card" style="margin-top: 20px;">
-            <h2><?php echo esc_html__('Estatísticas de Tradução', 'alvobot-pro'); ?></h2>
+        <div class="alvobot-card">
+            <div class="alvobot-card-header">
+                <div>
+                    <h2 class="alvobot-card-title"><?php echo esc_html__('Estatísticas', 'alvobot-pro'); ?></h2>
+                </div>
+            </div>
+            <div class="alvobot-card-content">
             <?php
             // Obter estatísticas de tradução
             $post_types = array('post', 'page');
@@ -194,7 +312,7 @@ if (!defined('ABSPATH')) {
             }
             ?>
             
-            <table class="widefat fixed striped">
+            <table class="alvobot-table alvobot-table-striped">
                 <thead>
                     <tr>
                         <th><?php echo esc_html__('Tipo de Conteúdo', 'alvobot-pro'); ?></th>
@@ -212,49 +330,41 @@ if (!defined('ABSPATH')) {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
         </div>
         
-        <div class="card" style="margin-top: 20px;">
-            <h2><?php echo esc_html__('Sobre o Módulo', 'alvobot-pro'); ?></h2>
-            <p>
-                <?php echo esc_html__('Este módulo permite gerenciar conteúdo multilíngue usando o plugin Polylang.', 'alvobot-pro'); ?>
-            </p>
+    <?php else: // Se o Polylang está ativo ?>
+        <div class="alvobot-card">
+            <div class="alvobot-card-header">
+                <div>
+                    <h2 class="alvobot-card-title">
+                        <?php echo esc_html__('Status do Polylang', 'alvobot-pro'); ?>
+                    </h2>
+                    <p class="alvobot-card-subtitle">
+                        <?php echo esc_html__('O plugin Polylang está ativo e operacional', 'alvobot-pro'); ?>
+                    </p>
+                </div>
+                <div>
+                    <span class="alvobot-badge alvobot-badge-success"><span class="alvobot-status-indicator success"></span>
+                        <?php echo esc_html__('Ativo', 'alvobot-pro'); ?></span>
+                </div>
+            </div>
+            
+            <div class="alvobot-card-content">
+                <p><?php echo esc_html__('O Polylang está configurado corretamente. Você pode gerenciar idiomas e traduções abaixo.', 'alvobot-pro'); ?></p>
+            </div>
+            
+            <div class="alvobot-card-footer">
+                <div class="alvobot-btn-group">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=mlang')); ?>" class="alvobot-btn alvobot-btn-primary">
+                        <?php echo esc_html__('Configurar Polylang', 'alvobot-pro'); ?>
+                    </a>
+                    <a href="https://polylang.pro/doc/" target="_blank" class="alvobot-btn alvobot-btn-outline">
+                        <?php echo esc_html__('Documentação do Polylang', 'alvobot-pro'); ?>
+                    </a>
+                </div>
+            </div>
         </div>
-        
-        <style>
-            .card {
-                padding: 20px;
-                background: #fff;
-                box-shadow: 0 1px 1px rgba(0,0,0,.04);
-                border: 1px solid #e5e5e5;
-                margin-bottom: 20px;
-            }
-            
-            .progress-bar {
-                background-color: #f0f0f0;
-                border-radius: 3px;
-                height: 20px;
-                position: relative;
-                width: 100%;
-            }
-            
-            .progress {
-                background-color: #0073aa;
-                border-radius: 3px;
-                height: 20px;
-                position: absolute;
-                left: 0;
-                top: 0;
-            }
-            
-            .progress-text {
-                position: absolute;
-                width: 100%;
-                text-align: center;
-                color: #000;
-                font-weight: bold;
-                line-height: 20px;
-            }
-        </style>
     <?php endif; ?>
+    </div>
 </div>

@@ -177,11 +177,16 @@ class AlvoBotPro_EssentialPages {
      * Construtor
      */
     public function __construct() {
-        $this->base_dir = plugin_dir_path( __FILE__ );
+        $this->base_dir = dirname(__FILE__) . '/';
         // Removido: não precisamos adicionar o menu aqui, pois já é adicionado pela classe principal
         // add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_shortcode( 'alvobot_contact_form', [ $this, 'render_contact_form' ] );
+
+        // Debug para verificar o caminho dos templates
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Essential Pages base_dir: ' . $this->base_dir);
+        }
     }
 
     /**
@@ -192,15 +197,54 @@ class AlvoBotPro_EssentialPages {
      */
     public function enqueue_admin_assets( $hook_suffix ) {
         // Só carrega os estilos na página de configurações do módulo
-        if ( 'alvobot-pro_page_alvobot-pro-essential-pages' !== $hook_suffix ) {
+        if ( !isset($_GET['page']) || 'alvobot-pro-essential-pages' !== $_GET['page'] ) {
             return;
         }
 
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Enfileirando assets do Essential Pages');
+            error_log('CSS path: ' . plugin_dir_url( __FILE__ ) . 'css/admin.css');
+            error_log('JS path: ' . plugin_dir_url( __FILE__ ) . 'js/admin.js');
+        }
+
+        // Enfileira CSS minificado para melhor performance
         wp_enqueue_style(
             'alvobot-essential-pages-admin',
             plugin_dir_url( __FILE__ ) . 'css/admin.css',
             [],
             $this->plugin_version
+        );
+        
+        // Enfileira o JavaScript minificado com melhorias de UX
+        wp_enqueue_script(
+            'alvobot-essential-pages-admin',
+            plugin_dir_url( __FILE__ ) . 'js/admin.js',
+            ['jquery'],
+            $this->plugin_version,
+            true
+        );
+        
+        // Localiza o script para traduções
+        wp_localize_script(
+            'alvobot-essential-pages-admin',
+            'alvobotEssentialPages',
+            [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('alvobot_essential_pages_nonce'),
+                'strings' => [
+                    'confirmCreate' => __('Isto criará ou recriará todas as páginas essenciais. Continuar?', 'alvobot-pro'),
+                    'confirmDelete' => __('Tem certeza que deseja excluir esta página?', 'alvobot-pro'),
+                    'confirmDeleteAll' => __('Tem certeza que deseja excluir todas as páginas essenciais?', 'alvobot-pro'),
+                    'loading' => __('Processando...', 'alvobot-pro'),
+                    'operationSuccess' => __('Operação realizada com sucesso!', 'alvobot-pro'),
+                    'operationError' => __('Ocorreu um erro ao realizar a operação.', 'alvobot-pro')
+                ],
+                'pageNames' => [
+                    'terms' => __('Termos de Uso', 'alvobot-pro'),
+                    'privacy' => __('Política de Privacidade', 'alvobot-pro'),
+                    'contact' => __('Contato', 'alvobot-pro')
+                ]
+            ]
         );
     }
 
@@ -224,52 +268,87 @@ class AlvoBotPro_EssentialPages {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Essential Pages: render_settings_page chamado');
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                error_log('Essential Pages: Método POST detectado');
+                error_log('Essential Pages: POST data = ' . print_r($_POST, true));
+            }
+        }
 
+        // Processar ações do formulário
+        $action_complete = '';
+        $action_status = 'success';
+        
         // Processa ações enviadas (ações globais ou individuais)
         if ( isset( $_POST['alvobot_action'] ) && check_admin_referer( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ) ) {
             $action = sanitize_text_field( $_POST['alvobot_action'] );
-            if ( 'create_all' === $action ) {
-                $this->create_essential_pages( true );
-                add_settings_error(
-                    'alvobot_essential_pages',
-                    'pages_created',
-                    __( 'Páginas essenciais criadas/recriadas com sucesso.', 'alvobot-pro' ),
-                    'success'
-                );
-            } elseif ( 'delete_all' === $action ) {
-                $this->delete_essential_pages();
-                add_settings_error(
-                    'alvobot_essential_pages',
-                    'pages_deleted',
-                    __( 'Todas as páginas essenciais foram excluídas.', 'alvobot-pro' ),
-                    'success'
-                );
-            } elseif ( 'create_page' === $action && isset( $_POST['page_key'] ) ) {
-                $page_key = sanitize_text_field( $_POST['page_key'] );
-                $this->create_single_page( $page_key );
-                add_settings_error(
-                    'alvobot_essential_pages',
-                    'page_created',
-                    sprintf(
-                        /* translators: %s: page title */
-                        __( 'Página %s criada com sucesso.', 'alvobot-pro' ),
-                        '<strong>' . esc_html( $this->get_page_title( $page_key ) ) . '</strong>'
-                    ),
-                    'success'
-                );
-            } elseif ( 'delete_page' === $action && isset( $_POST['page_key'] ) ) {
-                $page_key = sanitize_text_field( $_POST['page_key'] );
-                $this->delete_single_page( $page_key );
-                add_settings_error(
-                    'alvobot_essential_pages',
-                    'page_deleted',
-                    sprintf(
-                        /* translators: %s: page title */
-                        __( 'Página %s excluída com sucesso.', 'alvobot-pro' ),
-                        '<strong>' . esc_html( $this->get_page_title( $page_key ) ) . '</strong>'
-                    ),
-                    'success'
-                );
+            
+            // Executar a ação solicitada
+            switch ( $action ) {
+                case 'create_all':
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Essential Pages: Iniciando criação de todas as páginas');
+                    }
+                    
+                    $result = $this->create_essential_pages( true );
+                    
+                    // Gravar resultado para exibição 
+                    if ($result) {
+                        $action_complete = 'all_created';
+                    } else {
+                        $action_complete = 'error';
+                        $action_status = 'error';
+                    }
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Essential Pages: Resultado da criação: ' . ($result ? 'sucesso' : 'falha'));
+                    }
+                    break;
+                
+                case 'delete_all':
+                    $this->delete_essential_pages();
+                    $action_complete = 'all_deleted';
+                    break;
+
+                case 'create_page':
+                    if ( isset( $_POST['page_key'] ) ) {
+                        $page_key = sanitize_text_field( $_POST['page_key'] );
+                        if ( isset( $this->essential_pages[ $page_key ] ) ) {
+                            // Exclui a página existente (caso exista) e cria uma nova
+                            $result = $this->create_essential_page( $page_key, true );
+                            $action_complete = $result ? 'created' : 'error';
+                            $action_status = $result ? 'success' : 'error';
+                        }
+                    }
+                    break;
+                
+                case 'delete_page':
+                    if ( isset( $_POST['page_key'] ) ) {
+                        $page_key = sanitize_text_field( $_POST['page_key'] );
+                        if ( isset( $this->essential_pages[ $page_key ] ) ) {
+                            $this->delete_essential_page( $page_key );
+                            $action_complete = 'deleted';
+                        }
+                    }
+                    break;
+            }
+            
+            // Define mensagens para exibir na página após o processamento
+            if ($action_complete) {
+                // Armazenar a mensagem na opção temporária
+                update_option('alvobot_essential_pages_message', [
+                    'action' => $action_complete,
+                    'status' => $action_status,
+                    'time' => time()
+                ]);
+                
+                // Redireciona para mesma página - não use exit() para evitar tela em branco
+                echo "<meta http-equiv='refresh' content='0;url=" . 
+                    esc_url(add_query_arg(['page' => 'alvobot-pro-essential-pages'], admin_url('admin.php'))) . "'>";
+                echo "<p>Redirecionando...</p>";
+                return; // Apenas retorne, não encerre a execução
             }
         }
 
@@ -283,59 +362,101 @@ class AlvoBotPro_EssentialPages {
             ];
         }
         ?>
-        <div class="alvobot-pro-wrap">
-  <div class="alvobot-pro-header">
-    <h1><?php esc_html_e( 'AlvoBot Essential Pages', 'alvobot-pro' ); ?></h1>
-    <p><?php esc_html_e( 'Gerencie as páginas essenciais do site. Veja abaixo o status atual e utilize as ações disponíveis para cada página.', 'alvobot-pro' ); ?></p>
-  </div>
+        <div class="alvobot-admin-wrap">
+            <div class="alvobot-admin-container">
+                <div class="alvobot-admin-header">
+                    <h1><?php esc_html_e( 'Páginas Essenciais', 'alvobot-pro' ); ?></h1>
+                    <p><?php esc_html_e( 'Crie e gerencie páginas essenciais como Termos de Uso, Política de Privacidade e Contato de forma automática.', 'alvobot-pro' ); ?></p>
+                </div>
 
-  <?php settings_errors( 'alvobot_essential_pages' ); ?>
+                <div class="alvobot-notice-container">
+                    <?php 
+                    // Exibir mensagens de notificação
+                    $message_data = get_option('alvobot_essential_pages_message');
+                    if ($message_data && isset($message_data['time']) && (time() - $message_data['time'] < 60)) {
+                        $action = $message_data['action'];
+                        $status_class = ($message_data['status'] === 'success') ? 'updated' : 'error';
+                        $message = '';
+                        
+                        switch($action) {
+                            case 'created':
+                                $message = __('Página criada com sucesso!', 'alvobot-pro');
+                                break;
+                            case 'deleted':
+                                $message = __('Página excluída com sucesso!', 'alvobot-pro');
+                                break;
+                            case 'all_created':
+                                $message = __('Todas as páginas foram criadas com sucesso e adicionadas ao Footer Menu! Adicione esse menu ao rodapé do seu tema.', 'alvobot-pro');
+                                break;
+                            case 'all_deleted':
+                                $message = __('Todas as páginas foram excluídas com sucesso!', 'alvobot-pro');
+                                break;
+                            case 'error':
+                                $message = __('Ocorreu um erro ao processar a ação solicitada.', 'alvobot-pro');
+                                break;
+                            default:
+                                $message = __('Operação concluída com sucesso!', 'alvobot-pro');
+                        }
+                        
+                        echo '<div class="notice ' . $status_class . ' is-dismissible"><p>' . esc_html($message) . '</p></div>';
+                        delete_option('alvobot_essential_pages_message');
+                    }
+                    settings_errors( 'alvobot_essential_pages' ); 
+                    ?>
+                </div>
 
-  <div class="alvobot-pro-modules">
+                <div class="alvobot-grid alvobot-grid-auto">
     <?php foreach ( $this->essential_pages as $key => $page ):
       $status = $pages_status[ $key ];
     ?>
-      <div class="alvobot-pro-module-card <?php echo $status['exists'] ? 'module-enabled' : ''; ?>">
-        <div class="alvobot-pro-module-header">
-          <h2 class="alvobot-pro-module-title">
-            <?php echo esc_html( $this->get_page_title( $key ) ); ?>
-          </h2>
-          <span class="status-indicator <?php echo $status['exists'] ? 'status-registered' : 'status-unregistered'; ?>"></span>
+      <div class="alvobot-card <?php echo $status['exists'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">
+              <?php echo esc_html( $this->get_page_title( $key ) ); ?>
+            </h2>
+            <p class="alvobot-card-subtitle">
+              <?php 
+                printf(
+                  /* translators: %s: page slug */
+                  esc_html__( 'Slug: %s', 'alvobot-pro' ),
+                  esc_html( $page['slug'] )
+                );
+              ?>
+            </p>
+          </div>
+          <div>
+            <?php if ( $status['exists'] ): ?>
+              <span class="alvobot-badge alvobot-badge-success">
+                <span class="alvobot-status-indicator success"></span>
+                <?php esc_html_e( 'Publicado', 'alvobot-pro' ); ?>
+              </span>
+            <?php else: ?>
+              <span class="alvobot-badge alvobot-badge-error">
+                <span class="alvobot-status-indicator error"></span>
+                <?php esc_html_e( 'Não Criado', 'alvobot-pro' ); ?>
+              </span>
+            <?php endif; ?>
+          </div>
         </div>
-        
-        <p class="alvobot-pro-module-description">
-          <?php 
-            printf(
-              /* translators: %s: page slug */
-              esc_html__( 'Slug: %s', 'alvobot-pro' ),
-              esc_html( $page['slug'] )
-            );
-          ?>
-          <br>
-          <?php esc_html_e( 'Status:', 'alvobot-pro' ); ?> 
-          <span class="<?php echo $status['exists'] ? 'text-success' : 'text-error'; ?>">
-            <?php echo $status['exists'] 
-              ? esc_html__( 'Publicado', 'alvobot-pro' ) 
-              : esc_html__( 'Não Criado', 'alvobot-pro' ); ?>
-          </span>
-        </p>
 
-        <div class="alvobot-pro-module-actions">
+        <div class="alvobot-card-footer">
+          <div class="alvobot-btn-group">
           <?php if ( $status['exists'] ): 
             $view_link = get_permalink( $status['id'] );
             $edit_link = get_edit_post_link( $status['id'] );
           ?>
-            <a href="<?php echo esc_url( $view_link ); ?>" target="_blank" class="button button-secondary">
-              <?php esc_html_e( 'Ver', 'alvobot-pro' ); ?>
+            <a href="<?php echo esc_url( $view_link ); ?>" target="_blank" class="alvobot-btn alvobot-btn-outline alvobot-btn-sm">
+              <?php esc_html_e( 'Ver Página', 'alvobot-pro' ); ?>
             </a>
-            <a href="<?php echo esc_url( $edit_link ); ?>" class="button button-secondary">
+            <a href="<?php echo esc_url( $edit_link ); ?>" class="alvobot-btn alvobot-btn-secondary alvobot-btn-sm">
               <?php esc_html_e( 'Editar', 'alvobot-pro' ); ?>
             </a>
             <form method="post" style="display:inline-block;">
               <?php wp_nonce_field( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ); ?>
               <input type="hidden" name="alvobot_action" value="delete_page">
               <input type="hidden" name="page_key" value="<?php echo esc_attr( $key ); ?>">
-              <button type="submit" class="button button-secondary" onclick="return confirm('<?php esc_attr_e( 'Tem certeza que deseja excluir esta página?', 'alvobot-pro' ); ?>');">
+              <button type="submit" class="alvobot-btn alvobot-btn-danger alvobot-btn-sm">
                 <?php esc_html_e( 'Excluir', 'alvobot-pro' ); ?>
               </button>
             </form>
@@ -344,34 +465,41 @@ class AlvoBotPro_EssentialPages {
               <?php wp_nonce_field( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ); ?>
               <input type="hidden" name="alvobot_action" value="create_page">
               <input type="hidden" name="page_key" value="<?php echo esc_attr( $key ); ?>">
-              <button type="submit" class="button button-primary">
-                <?php esc_html_e( 'Criar', 'alvobot-pro' ); ?>
+              <button type="submit" class="alvobot-btn alvobot-btn-primary">
+                <?php esc_html_e( 'Criar Página', 'alvobot-pro' ); ?>
               </button>
             </form>
           <?php endif; ?>
+          </div>
         </div>
       </div>
     <?php endforeach; ?>
   </div>
 
-  <!-- Cartão extra para Ações Globais -->
-  <div class="alvobot-pro-module-card" style="margin-top: 2em;">
-    <div class="alvobot-pro-module-header">
-      <h2 class="alvobot-pro-module-title"><?php esc_html_e( 'Ações Globais', 'alvobot-pro' ); ?></h2>
-    </div>
-    <div class="alvobot-pro-module-actions" style="margin-top: 1em;">
-      <form method="post" style="display: inline-block;">
-        <?php wp_nonce_field( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ); ?>
-        <button type="submit" name="alvobot_action" value="create_all" class="button button-primary" onclick="return confirm('<?php esc_attr_e( 'Isto criará ou recriará todas as páginas essenciais. Continuar?', 'alvobot-pro' ); ?>');">
-          <?php esc_html_e( 'Criar/Recriar Todas', 'alvobot-pro' ); ?>
-        </button>
-        <button type="submit" name="alvobot_action" value="delete_all" class="button" onclick="return confirm('<?php esc_attr_e( 'Tem certeza que deseja excluir TODAS as páginas essenciais?', 'alvobot-pro' ); ?>');">
-          <?php esc_html_e( 'Excluir Todas', 'alvobot-pro' ); ?>
-        </button>
-      </form>
-    </div>
-  </div>
-</div>
+                <!-- Cartão para Ações Globais -->
+                <div class="alvobot-card">
+                    <div class="alvobot-card-header">
+                        <div>
+                            <h2 class="alvobot-card-title"><?php esc_html_e( 'Ações Globais', 'alvobot-pro' ); ?></h2>
+                            <p class="alvobot-card-subtitle"><?php esc_html_e( 'Gerencie todas as páginas essenciais de uma vez', 'alvobot-pro' ); ?></p>
+                        </div>
+                    </div>
+                    <div class="alvobot-card-footer">
+                        <form method="post" class="alvobot-w-full">
+                            <?php wp_nonce_field( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ); ?>
+                            <div class="alvobot-btn-group alvobot-btn-group-centered">
+                                <button type="submit" name="alvobot_action" value="create_all" class="alvobot-btn alvobot-btn-primary">
+                                    <?php esc_html_e( 'Criar/Recriar Todas', 'alvobot-pro' ); ?>
+                                </button>
+                                <button type="submit" name="alvobot_action" value="delete_all" class="alvobot-btn alvobot-btn-danger">
+                                    <?php esc_html_e( 'Excluir Todas', 'alvobot-pro' ); ?>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -384,6 +512,10 @@ class AlvoBotPro_EssentialPages {
     private function get_template_content( string $template ): string {
         $template_file = $this->base_dir . 'templates/' . $template . '.php';
         
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Tentando carregar template: ' . $template_file);
+        }
+
         if ( ! file_exists( $template_file ) ) {
             error_log( sprintf( 'Template file not found: %s', $template_file ) );
             return '';
@@ -513,22 +645,163 @@ class AlvoBotPro_EssentialPages {
     }
 
     /**
+     * Adiciona páginas ao menu do rodapé - se o menu não existir, cria um novo
+     *
+     * @param array $page_ids Array com os IDs das páginas a serem adicionadas ao menu
+     * @return void
+     */
+    private function add_pages_to_footer_menu( array $page_ids ): void {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Essential Pages: Adicionando páginas ao menu do rodapé. IDs: ' . implode(',', $page_ids));
+        }
+        
+        // Vamos primeiro verificar se existe um menu de rodapé
+        $footer_menu_locations = array('footer', 'footer-menu', 'menu-footer', 'bottom', 'bottom-menu');
+        $footer_menu_id = 0;
+        
+        // Verifica se há algum menu já associado a uma localização de rodapé
+        $menu_locations = get_nav_menu_locations();
+        foreach ($footer_menu_locations as $location) {
+            if (isset($menu_locations[$location]) && $menu_locations[$location] > 0) {
+                $footer_menu_id = $menu_locations[$location];
+                break;
+            }
+        }
+        
+        // Se não encontramos um menu de rodapé, vamos procurar um menu com "footer" ou "rodape" no nome
+        if (!$footer_menu_id) {
+            $all_menus = wp_get_nav_menus();
+            foreach ($all_menus as $menu) {
+                if (stripos($menu->name, 'footer') !== false || stripos($menu->name, 'rodape') !== false || 
+                    stripos($menu->name, 'rodapé') !== false || stripos($menu->name, 'bottom') !== false) {
+                    $footer_menu_id = $menu->term_id;
+                    break;
+                }
+            }
+        }
+        
+        // Se ainda não encontramos um menu, vamos criar um novo
+        if (!$footer_menu_id) {
+            $menu_name = __('Footer Menu', 'alvobot-pro');
+            $menu_id = wp_create_nav_menu($menu_name);
+            
+            if (is_wp_error($menu_id)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Essential Pages: Erro ao criar o menu do rodapé - ' . $menu_id->get_error_message());
+                }
+                return;
+            }
+            
+            $footer_menu_id = $menu_id;
+            
+            // Associar o menu a uma localização do tema, se disponível
+            $theme_locations = get_registered_nav_menus();
+            $location_to_use = '';
+            
+            foreach ($footer_menu_locations as $location) {
+                if (isset($theme_locations[$location])) {
+                    $location_to_use = $location;
+                    break;
+                }
+            }
+            
+            if ($location_to_use) {
+                $menu_locations[$location_to_use] = $footer_menu_id;
+                set_theme_mod('nav_menu_locations', $menu_locations);
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Essential Pages: Menu do rodapé criado e associado à localização: ' . $location_to_use);
+                }
+            }
+        }
+        
+        if ($footer_menu_id) {
+            // Obter itens existentes para não duplicar
+            $existing_items = wp_get_nav_menu_items($footer_menu_id);
+            $existing_page_ids = [];
+            
+            if ($existing_items) {
+                foreach ($existing_items as $item) {
+                    if ($item->object === 'page') {
+                        $existing_page_ids[] = $item->object_id;
+                    }
+                }
+            }
+            
+            // Adicionar as páginas ao menu
+            $added_count = 0;
+            foreach ($page_ids as $page_id) {
+                if (!in_array($page_id, $existing_page_ids)) {
+                    $page_data = get_post($page_id);
+                    if ($page_data) {
+                        $item_id = wp_update_nav_menu_item($footer_menu_id, 0, [
+                            'menu-item-title' => get_the_title($page_id),
+                            'menu-item-object' => 'page',
+                            'menu-item-object-id' => $page_id,
+                            'menu-item-type' => 'post_type',
+                            'menu-item-status' => 'publish'
+                        ]);
+                        
+                        if (!is_wp_error($item_id)) {
+                            $added_count++;
+                        }
+                    }
+                }
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Essential Pages: ' . $added_count . ' páginas adicionadas ao menu do rodapé');
+            }
+        }
+    }
+    
+    /**
      * Cria ou recria todas as páginas essenciais
      *
      * @param bool $force_recreate Se true, exclui as páginas existentes antes de recriar.
+     * @return bool Retorna true se todas as páginas foram criadas com sucesso
      */
     public function create_essential_pages( $force_recreate = false ) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Essential Pages: Iniciando create_essential_pages com force_recreate=' . ($force_recreate ? 'true' : 'false'));
+        }
+        
         foreach ( $this->essential_pages as $key => $page_data ) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Essential Pages: Processando página ' . $key . ' (slug: ' . $page_data['slug'] . ')');
+            }
+            
             if ( $force_recreate ) {
                 $existing = get_page_by_path( $page_data['slug'] );
                 if ( $existing ) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Essential Pages: Excluindo página existente ID=' . $existing->ID);
+                    }
                     wp_delete_post( $existing->ID, true );
                 }
             }
+            
             $existing = get_page_by_path( $page_data['slug'] );
             if ( ! $existing ) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Essential Pages: Obtendo conteúdo do template ' . $key);
+                }
+                
                 $content = $this->get_template_content( $key );
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Essential Pages: Template carregado com ' . strlen($content) . ' caracteres');
+                    if (empty($content)) {
+                        error_log('Essential Pages: ERRO - Template vazio para ' . $key);
+                    }
+                }
+                
                 $content = $this->process_content( $content );
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Essential Pages: Conteúdo processado com ' . strlen($content) . ' caracteres');
+                }
+                
                 $page_id = wp_insert_post( [
                     'post_title'   => $this->get_page_title( $key ),
                     'post_name'    => $page_data['slug'],
@@ -537,6 +810,15 @@ class AlvoBotPro_EssentialPages {
                     'post_type'    => 'page',
                     'post_author'  => get_current_user_id()
                 ] );
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    if (is_wp_error($page_id)) {
+                        error_log('Essential Pages: ERRO ao criar página - ' . $page_id->get_error_message());
+                    } else {
+                        error_log('Essential Pages: Página criada com sucesso ID=' . $page_id);
+                    }
+                }
+                
                 if ( ! is_wp_error( $page_id ) ) {
                     update_post_meta( $page_id, '_essential_page_type', $key );
                     update_post_meta( $page_id, '_essential_page_version', $this->plugin_version );
@@ -551,6 +833,26 @@ class AlvoBotPro_EssentialPages {
                 }
             }
         }
+        
+        // Após criar todas as páginas, adiciona ao menu do rodapé
+        $created_page_ids = [];
+        foreach ($this->essential_pages as $key => $page_data) {
+            $page = get_page_by_path($page_data['slug']);
+            if ($page) {
+                $created_page_ids[] = $page->ID;
+            }
+        }
+        
+        if (!empty($created_page_ids)) {
+            $this->add_pages_to_footer_menu($created_page_ids);
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Essential Pages: Resultado final - criou ' . count($created_page_ids) . ' páginas');
+        }
+        
+        // Se pelo menos uma página foi criada, consideramos sucesso
+        return !empty($created_page_ids);
     }
 
     /**

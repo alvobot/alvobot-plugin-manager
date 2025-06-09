@@ -19,14 +19,18 @@ class AlvoBotPro {
     }
 
     private function load_dependencies() {
+        // Carrega a classe base dos módulos
+        require_once ALVOBOT_PRO_PLUGIN_DIR . 'includes/class-alvobot-module-base.php';
+        
         // Carrega os módulos
         $module_files = array(
-            'logo-generator' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/logo-generator/logo-generator.php',
-            'author-box' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/author-box/class-author-box.php',
+            'logo_generator' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/logo-generator/class-logo-generator.php',
+            'author_box' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/author-box/class-author-box.php',
             'plugin-manager' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/plugin-manager/class-plugin-manager.php',
-            'pre-article' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/alvobot-pre-article/alvobot-pre-article.php',
-            'essential-pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
-            'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php'
+            'pre-article' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/pre-article/pre-article.php',
+            'essential_pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
+            'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php',
+            'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php'
         );
 
         foreach ($module_files as $module => $file) {
@@ -49,27 +53,34 @@ class AlvoBotPro {
     }
 
     private function init_modules() {
-        error_log('Alvobot Pro: Iniciando init_modules');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Alvobot Pro: Iniciando init_modules');
+        }
 
         // Carrega módulos ativos das opções com valores padrão
         $default_modules = array(
-            'logo-generator' => true,
-            'author-box' => true,
+            'logo_generator' => true,
+            'author_box' => true,
             'plugin-manager' => true,
             'pre-article' => true,
-            'essential-pages' => true,
-            'multi-languages' => true
+            'essential_pages' => true,
+            'multi-languages' => true,
+            'temporary-login' => true
         );
 
         // Obtém os módulos ativos do banco de dados
         $saved_modules = get_option('alvobot_pro_active_modules');
-        error_log('Alvobot Pro: Módulos salvos: ' . json_encode($saved_modules));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Alvobot Pro: Módulos salvos: ' . json_encode($saved_modules));
+        }
         
         // Se não existir no banco, cria com os valores padrão
         if (false === $saved_modules) {
             update_option('alvobot_pro_active_modules', $default_modules);
             $this->active_modules = $default_modules;
-            error_log('Alvobot Pro: Criando módulos padrão');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Criando módulos padrão');
+            }
         } else {
             // Mescla os módulos salvos com os padrões para garantir que todos os módulos existam
             $this->active_modules = wp_parse_args($saved_modules, $default_modules);
@@ -77,33 +88,42 @@ class AlvoBotPro {
             $this->active_modules['plugin-manager'] = true;
             // Atualiza a opção no banco de dados
             update_option('alvobot_pro_active_modules', $this->active_modules);
-            error_log('Alvobot Pro: Módulos ativos atualizados: ' . json_encode($this->active_modules));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Módulos ativos atualizados: ' . json_encode($this->active_modules));
+            }
         }
 
         // Mapeia os módulos para suas classes
         $module_classes = array(
-            'logo-generator' => 'AlvoBotPro_LogoGenerator',
-            'author-box' => 'AlvoBotPro_AuthorBox',
+            'logo_generator' => 'AlvoBotPro_LogoGenerator',
+            'author_box' => 'AlvoBotPro_AuthorBox',
             'plugin-manager' => 'AlvoBotPro_PluginManager',
             'pre-article' => 'Alvobot_Pre_Article',
-            'essential-pages' => 'AlvoBotPro_EssentialPages',
-            'multi-languages' => 'AlvoBotPro_MultiLanguages'
+            'essential_pages' => 'AlvoBotPro_EssentialPages',
+            'multi-languages' => 'AlvoBotPro_MultiLanguages',
+            'temporary-login' => 'AlvoBotPro_TemporaryLogin'
         );
 
         // Instancia apenas os módulos ativos
         foreach ($module_classes as $module_id => $class_name) {
-            error_log("Alvobot Pro: Verificando módulo {$module_id} ({$class_name})");
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Alvobot Pro: Verificando módulo {$module_id} ({$class_name})");
+            }
             if (
                 isset($this->active_modules[$module_id]) && 
                 $this->active_modules[$module_id] && 
                 class_exists($class_name)
             ) {
-                error_log("Alvobot Pro: Instanciando módulo {$module_id}");
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Alvobot Pro: Instanciando módulo {$module_id}");
+                }
                 $this->modules[$module_id] = new $class_name();
             } else {
-                error_log("Alvobot Pro: Módulo {$module_id} não ativo ou classe não existe");
-                if (!class_exists($class_name)) {
-                    error_log("Alvobot Pro: Classe {$class_name} não existe");
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Alvobot Pro: Módulo {$module_id} não ativo ou classe não existe");
+                    if (!class_exists($class_name)) {
+                        error_log("Alvobot Pro: Classe {$class_name} não existe");
+                    }
                 }
             }
         }
@@ -117,7 +137,9 @@ class AlvoBotPro {
     }
 
     public function add_admin_menu() {
-        error_log('Alvobot Pro: Iniciando add_admin_menu');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Alvobot Pro: Iniciando add_admin_menu');
+        }
 
         // Adiciona menu principal
         add_menu_page(
@@ -141,63 +163,75 @@ class AlvoBotPro {
         );
 
         // Adiciona submenus apenas para módulos ativos
-        if (isset($this->modules['logo-generator'])) {
-            error_log('Alvobot Pro: Adicionando submenu Logo Generator');
+        if (isset($this->modules['logo_generator'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Logo Generator');
+            }
             add_submenu_page(
                 'alvobot-pro',
-                'Gerador de Logo',
-                'Gerador de Logo',
+                'Criador de Logos',
+                'Criador de Logos',
                 'manage_options',
                 'alvobot-pro-logo',
-                array($this->modules['logo-generator'], 'render_settings_page')
+                array($this->modules['logo_generator'], 'render_settings_page')
             );
         }
 
-        if (isset($this->modules['author-box'])) {
-            error_log('Alvobot Pro: Adicionando submenu Author Box');
+        if (isset($this->modules['author_box'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Author Box');
+            }
             add_submenu_page(
                 'alvobot-pro',
                 'Caixa de Autor',
                 'Caixa de Autor',
                 'manage_options',
-                'alvobot-pro-author',
-                array($this->modules['author-box'], 'render_settings_page')
+                'alvobot-pro-author-box',
+                array($this->modules['author_box'], 'render_settings_page')
             );
         }
 
         if (isset($this->modules['pre-article'])) {
-            error_log('Alvobot Pro: Adicionando submenu Pre Article');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Pre Article');
+            }
             add_submenu_page(
                 'alvobot-pro',
-                'Pág. de Pré-Artigo',
-                'Pág. de Pré-Artigo',
+                'Páginas de Pré-Artigo',
+                'Pré-Artigos',
                 'manage_options',
                 'alvobot-pro-pre-article',
                 array($this->modules['pre-article'], 'render_settings_page')
             );
         } else {
-            error_log('Alvobot Pro: Módulo Pre Article não está ativo ou não existe');
-            error_log('Alvobot Pro: Módulos ativos: ' . json_encode($this->modules));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Módulo Pre Article não está ativo ou não existe');
+                error_log('Alvobot Pro: Módulos ativos: ' . json_encode($this->modules));
+            }
         }
 
-        if (isset($this->modules['essential-pages'])) {
-            error_log('Alvobot Pro: Adicionando submenu Essential Pages');
+        if (isset($this->modules['essential_pages'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Essential Pages');
+            }
             add_submenu_page(
                 'alvobot-pro',
                 'Páginas Essenciais',
                 'Páginas Essenciais',
                 'manage_options',
                 'alvobot-pro-essential-pages',
-                array($this->modules['essential-pages'], 'render_settings_page')
+                array($this->modules['essential_pages'], 'render_settings_page')
             );
         }
 
         if (isset($this->modules['multi-languages'])) {
-            error_log('Alvobot Pro: Adicionando submenu Multi Languages');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Multi Languages');
+            }
             add_submenu_page(
                 'alvobot-pro',
-                'Multi Languages',
-                'Multi Languages',
+                'Gerenciamento Multilíngue',
+                'Multilíngue',
                 'manage_options',
                 'alvobot-pro-multi-languages',
                 array($this->modules['multi-languages'], 'render_settings_page')
@@ -205,17 +239,32 @@ class AlvoBotPro {
         }
 
         if (isset($this->modules['plugin-manager'])) {
-            error_log('Alvobot Pro: Adicionando submenu Plugin Manager');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Plugin Manager');
+            }
             add_submenu_page(
                 'alvobot-pro',
-                'Plugins',
-                'Plugins',
+                'Gerenciador de Plugins',
+                'Gerenciar Plugins',
                 'manage_options',
                 'alvobot-pro-plugins',
                 array($this->modules['plugin-manager'], 'render_settings_page')
             );
         }
 
+        if (isset($this->modules['temporary-login'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Alvobot Pro: Adicionando submenu Temporary Login');
+            }
+            add_submenu_page(
+                'alvobot-pro',
+                'Login Temporário',
+                'Login Temporário',
+                'manage_options',
+                'alvobot-pro-temporary-login',
+                array($this->modules['temporary-login'], 'render_settings_page')
+            );
+        }
     }
 
     public function render_dashboard_page() {
@@ -231,15 +280,16 @@ class AlvoBotPro {
     }
 
     public function enqueue_admin_assets($hook) {
-        // Verifica se estamos em uma página do plugin
-        if (strpos($hook, 'alvobot-pro') !== false) {
-            wp_enqueue_style(
-                'alvobot-pro-admin',
-                ALVOBOT_PRO_PLUGIN_URL . 'assets/css/alvobot-pro-admin.css',
-                array(),
-                $this->version
-            );
+        // Sempre carrega os estilos do menu em todas as páginas do admin
+        wp_enqueue_style(
+            'alvobot-pro-menu-styles',
+            ALVOBOT_PRO_PLUGIN_URL . 'assets/css/styles.css',
+            array(),
+            $this->version
+        );
 
+        // Verifica se estamos em uma página do plugin para carregar assets específicos
+        if (strpos($hook, 'alvobot-pro') !== false) {
             wp_enqueue_script(
                 'alvobot-pro-token-visibility',
                 ALVOBOT_PRO_PLUGIN_URL . 'assets/js/token-visibility.js',
@@ -270,12 +320,13 @@ class AlvoBotPro {
         // Garante que as opções padrão existam
         if (!get_option('alvobot_pro_active_modules')) {
             update_option('alvobot_pro_active_modules', array(
-                'logo-generator' => true,
-                'author-box' => true,
+                'logo_generator' => true,
+                'author_box' => true,
                 'plugin-manager' => true,
                 'pre-article' => true,
-                'essential-pages' => true,
-                'multi-languages' => true
+                'essential_pages' => true,
+                'multi-languages' => true,
+                'temporary-login' => true
             ));
         }
 

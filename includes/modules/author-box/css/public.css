@@ -1,135 +1,20 @@
-.alvobot-author-box {
-    margin: 3em 0;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
+/* 
+ * Author Box Public CSS
+ * This only contains specific styles needed for the public-facing author box.
+ * Most styles are now inherited from the main /assets/css/styles.css
+ */
 
-.alvobot-author-box .author-box-title {
-    margin: 0;
-    padding: 1.5em;
-    border-bottom: 1px solid #e5e5e5;
-    font-size: 1.2em;
-    color: #333;
-}
-
-.alvobot-author-box .author-box-content {
-    padding: 1.5em;
-    display: flex;
-    gap: 1.5em;
-    align-items: flex-start;
-}
-
-.alvobot-author-box .author-avatar {
-    flex: 0 0 auto;
-}
-
-.alvobot-author-box .author-avatar img {
-    display: block;
-    border-radius: 50%;
-    width: 96px;
-    height: 96px;
-    object-fit: cover;
-}
-
-.alvobot-author-box .author-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.alvobot-author-box .author-name {
-    margin: 0 0 0.75em;
-    font-size: 1.1em;
-    line-height: 1.4;
-}
-
-.alvobot-author-box .author-name a {
-    color: #333;
-    text-decoration: none;
-    font-weight: 600;
-    transition: color 0.2s ease;
-}
-
-.alvobot-author-box .author-name a:hover {
-    color: #0073aa;
-}
-
+/* Class customizations for author box if needed */
 .alvobot-author-box .author-description {
-    margin: 0 0 1em;
-    font-size: 0.95em;
-    line-height: 1.6;
-    color: #666;
+    margin-top: 10px;
+    line-height: 1.5;
 }
 
-.alvobot-author-box .author-description:empty {
-    display: none;
+.alvobot-author-box .author-social-links {
+    margin-top: 15px;
 }
 
-.alvobot-author-box .author-social-icons {
-    display: flex;
-    gap: 0.75em;
-    margin-top: 1em;
-}
-
-.alvobot-author-box .author-social-icons:empty {
-    display: none;
-}
-
-.alvobot-author-box .author-social-icons a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #f5f5f5;
-    color: #666;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.alvobot-author-box .author-social-icons a:hover {
-    transform: translateY(-2px);
-}
-
-.alvobot-author-box .author-social-icons .dashicons {
-    width: 16px;
-    height: 16px;
-    font-size: 16px;
-    transition: transform 0.2s ease;
-}
-
-/* Cores específicas para cada rede social */
-.alvobot-author-box .author-social-icons a[href*="facebook.com"]:hover {
-    background: #1877f2;
-    color: #fff;
-}
-
-.alvobot-author-box .author-social-icons a[href*="twitter.com"]:hover {
-    background: #1da1f2;
-    color: #fff;
-}
-
-.alvobot-author-box .author-social-icons a[href*="instagram.com"]:hover {
-    background: #e4405f;
-    color: #fff;
-}
-
-.alvobot-author-box .author-social-icons a[href*="linkedin.com"]:hover {
-    background: #0077b5;
-    color: #fff;
-}
-
-/* Responsividade */
-@media screen and (max-width: 600px) {
-    .alvobot-author-box .author-box-content {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .alvobot-author-box .author-social-icons {
-        justify-content: center;
-    }
+.alvobot-author-box .author-social-links a {
+    margin-right: 8px;
+    display: inline-block;
 }

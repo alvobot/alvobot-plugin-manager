@@ -1,0 +1,2568 @@
+/* ====================================
+   AlvoBot Pro - Unified Admin Styles
+   Sistema de Design Padronizado para todos os módulos
+   ==================================== */
+
+/* ====================================
+   VARIÁVEIS CSS
+   ==================================== */
+:root {
+    /* Cores principais */
+    --alvobot-primary: #CD9042;
+    --alvobot-primary-dark: #B8803A;
+    --alvobot-secondary: #0E100D;
+    --alvobot-accent: #2271b1;
+    --alvobot-accent-dark: #135e96;
+    
+    /* Cores de estado */
+    --alvobot-success: #46b450;
+    --alvobot-success-bg: #edfaef;
+    --alvobot-error: #dc3232;
+    --alvobot-error-bg: #fcf0f1;
+    --alvobot-warning: #ffb900;
+    --alvobot-warning-bg: #fcf9e8;
+    --alvobot-info: #2271b1;
+    --alvobot-info-bg: #f0f6fc;
+    
+    /* Cores neutras */
+    --alvobot-white: #ffffff;
+    --alvobot-gray-50: #f9f9f9;
+    --alvobot-gray-100: #f6f7f7;
+    --alvobot-gray-200: #f0f0f1;
+    --alvobot-gray-300: #e5e5e5;
+    --alvobot-gray-400: #dcdcde;
+    --alvobot-gray-500: #c3c4c7;
+    --alvobot-gray-600: #646970;
+    --alvobot-gray-700: #50575e;
+    --alvobot-gray-800: #2c3338;
+    --alvobot-gray-900: #1d2327;
+    
+    /* Tipografia */
+    --alvobot-font-size-xs: 12px;
+    --alvobot-font-size-sm: 13px;
+    --alvobot-font-size-base: 14px;
+    --alvobot-font-size-lg: 16px;
+    --alvobot-font-size-xl: 18px;
+    --alvobot-font-size-2xl: 20px;
+    --alvobot-font-size-3xl: 24px;
+    
+    /* Espaçamentos */
+    --alvobot-space-xs: 4px;
+    --alvobot-space-sm: 8px;
+    --alvobot-space-md: 12px;
+    --alvobot-space-lg: 16px;
+    --alvobot-space-xl: 20px;
+    --alvobot-space-2xl: 24px;
+    --alvobot-space-3xl: 32px;
+    
+    /* Bordas e raios */
+    --alvobot-radius-sm: 4px;
+    --alvobot-radius-md: 8px;
+    --alvobot-radius-lg: 12px;
+    --alvobot-radius-full: 50%;
+    
+    /* Sombras */
+    --alvobot-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --alvobot-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --alvobot-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
+    
+    /* Breakpoints */
+    --alvobot-bp-sm: 480px;
+    --alvobot-bp-md: 782px;
+    --alvobot-bp-lg: 960px;
+    --alvobot-bp-xl: 1200px;
+}
+
+/* ====================================
+   LAYOUT BASE
+   ==================================== */
+.alvobot-admin-wrap {
+    width: 100%;
+    margin: var(--alvobot-space-xl) 0;
+    padding: 0 var(--alvobot-space-lg);
+    box-sizing: border-box;
+}
+
+.alvobot-admin-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-2xl);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Container de notificações */
+.alvobot-notice-container {
+    margin: 0;
+    min-height: 0;
+}
+
+.alvobot-notice-container:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+.alvobot-notice-container:not(:empty) {
+    display: block;
+    margin-bottom: var(--alvobot-space-2xl);
+}
+
+/* Garantir que containers vazios sem conteúdo real sejam ocultados */
+.alvobot-notice-container:not(:empty):not(:has(*)) {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+}
+
+/* Para compatibilidade com browsers que não suportam :has() */
+.alvobot-notice-container-hidden {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+/* ====================================
+   HEADER PADRONIZADO
+   ==================================== */
+.alvobot-admin-header {
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-2xl);
+    border-radius: var(--alvobot-radius-md);
+    box-shadow: var(--alvobot-shadow-md);
+    border-left: 4px solid var(--alvobot-primary);
+}
+
+.alvobot-admin-header h1 {
+    margin: 0 0 var(--alvobot-space-sm);
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-3xl);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.alvobot-admin-header p {
+    margin: 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
+}
+
+.alvobot-admin-header .subtitle {
+    font-size: var(--alvobot-font-size-lg);
+    color: var(--alvobot-gray-700);
+    margin-top: var(--alvobot-space-sm);
+}
+
+/* ====================================
+   CARDS/MÓDULOS PADRONIZADOS
+   ==================================== */
+.alvobot-card {
+    background: var(--alvobot-white);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-2xl);
+    box-shadow: var(--alvobot-shadow-md);
+    border: 1px solid var(--alvobot-gray-300);
+    transition: all 0.3s ease;
+}
+
+.alvobot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--alvobot-shadow-lg);
+}
+
+.alvobot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: var(--alvobot-space-lg);
+}
+
+.alvobot-card-title {
+    margin: 0;
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+}
+
+.alvobot-card-subtitle {
+    margin: var(--alvobot-space-xs) 0 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 400;
+}
+
+.alvobot-card-content {
+    color: var(--alvobot-gray-700);
+    line-height: 1.6;
+}
+
+.alvobot-card-footer {
+    margin-top: var(--alvobot-space-xl);
+    padding-top: var(--alvobot-space-lg);
+}
+
+/* ====================================
+   GRID SYSTEM
+   ==================================== */
+.alvobot-grid {
+    display: grid;
+    gap: var(--alvobot-space-xl);
+}
+
+.alvobot-grid-1 { grid-template-columns: 1fr; }
+.alvobot-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.alvobot-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.alvobot-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.alvobot-grid-auto {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.alvobot-grid-auto-sm {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.alvobot-grid-auto-lg {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+/* ====================================
+   FORMULÁRIOS PADRONIZADOS
+   ==================================== */
+.alvobot-form-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+}
+
+.alvobot-form-table tr {
+    border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-form-table tr:last-child {
+    border-bottom: none;
+}
+
+.alvobot-form-table th {
+    width: 200px;
+    padding: var(--alvobot-space-lg) var(--alvobot-space-lg) var(--alvobot-space-lg) 0;
+    vertical-align: top;
+    text-align: left;
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-base);
+}
+
+.alvobot-form-table td {
+    padding: var(--alvobot-space-lg) 0;
+    vertical-align: top;
+}
+
+/* ====================================
+   CAMPOS DE ENTRADA
+   ==================================== */
+.alvobot-input,
+.alvobot-input[type="text"],
+.alvobot-input[type="email"],
+.alvobot-input[type="number"],
+.alvobot-input[type="password"],
+.alvobot-input[type="url"],
+.alvobot-textarea,
+.alvobot-select {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    border: 1px solid var(--alvobot-gray-400);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
+    color: var(--alvobot-gray-800);
+    background: var(--alvobot-white);
+    transition: all 0.2s ease;
+}
+
+.alvobot-input:focus,
+.alvobot-textarea:focus,
+.alvobot-select:focus {
+    border-color: var(--alvobot-accent);
+    box-shadow: 0 0 0 1px var(--alvobot-accent);
+    outline: none;
+}
+
+.alvobot-input:disabled,
+.alvobot-textarea:disabled,
+.alvobot-select:disabled {
+    background: var(--alvobot-gray-100);
+    color: var(--alvobot-gray-600);
+    cursor: not-allowed;
+}
+
+.alvobot-input-sm {
+    max-width: 150px;
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-input-lg {
+    max-width: 600px;
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-lg);
+}
+
+/* ====================================
+   BOTÕES PADRONIZADOS
+   ==================================== */
+.alvobot-btn,
+.alvobot-admin-wrap .alvobot-btn,
+.alvobot-admin-container .alvobot-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-lg) !important;
+    font-size: var(--alvobot-font-size-base) !important;
+    font-weight: 500 !important;
+    line-height: 1.5 !important;
+    text-decoration: none !important;
+    border-radius: var(--alvobot-radius-sm) !important;
+    border: 1px solid transparent !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    gap: var(--alvobot-space-xs) !important;
+    min-height: 36px !important;
+    box-sizing: border-box !important;
+}
+
+.alvobot-btn:focus {
+    outline: 2px solid var(--alvobot-accent);
+    outline-offset: 2px;
+}
+
+.alvobot-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Variações de botão */
+.alvobot-btn-primary,
+.alvobot-admin-wrap .alvobot-btn-primary,
+.alvobot-admin-container .alvobot-btn-primary {
+    background: var(--alvobot-primary) !important;
+    border-color: var(--alvobot-primary) !important;
+    color: var(--alvobot-white) !important;
+}
+
+.alvobot-btn-primary:hover:not(:disabled),
+.alvobot-admin-wrap .alvobot-btn-primary:hover:not(:disabled),
+.alvobot-admin-container .alvobot-btn-primary:hover:not(:disabled) {
+    background: var(--alvobot-primary-dark) !important;
+    border-color: var(--alvobot-primary-dark) !important;
+    color: var(--alvobot-white) !important;
+}
+
+.alvobot-btn-secondary {
+    background: var(--alvobot-accent);
+    border-color: var(--alvobot-accent);
+    color: var(--alvobot-white);
+}
+
+.alvobot-btn-secondary:hover:not(:disabled) {
+    background: var(--alvobot-accent-dark);
+    border-color: var(--alvobot-accent-dark);
+    color: var(--alvobot-white);
+}
+
+.alvobot-btn-outline {
+    background: transparent;
+    border-color: var(--alvobot-gray-400);
+    color: var(--alvobot-gray-700);
+}
+
+.alvobot-btn-outline:hover:not(:disabled) {
+    background: var(--alvobot-gray-100);
+    border-color: var(--alvobot-gray-500);
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--alvobot-gray-700);
+}
+
+.alvobot-btn-ghost:hover:not(:disabled) {
+    background: var(--alvobot-gray-100);
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-btn-danger {
+    background: var(--alvobot-error);
+    border-color: var(--alvobot-error);
+    color: var(--alvobot-white);
+}
+
+.alvobot-btn-danger:hover:not(:disabled) {
+    background: #b32d2e;
+    border-color: #b32d2e;
+    color: var(--alvobot-white);
+}
+
+.alvobot-btn-success {
+    background: var(--alvobot-success);
+    border-color: var(--alvobot-success);
+    color: var(--alvobot-white);
+}
+
+.alvobot-btn-success:hover:not(:disabled) {
+    background: #419446;
+    border-color: #419446;
+    color: var(--alvobot-white);
+}
+
+/* Tamanhos de botão */
+.alvobot-btn-sm {
+    padding: var(--alvobot-space-xs) var(--alvobot-space-md);
+    font-size: var(--alvobot-font-size-sm);
+    min-height: 28px;
+}
+
+.alvobot-btn-lg {
+    padding: var(--alvobot-space-md) var(--alvobot-space-2xl);
+    font-size: var(--alvobot-font-size-lg);
+    min-height: 44px;
+}
+
+/* Grupos de botões */
+.alvobot-btn-group {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+    flex-wrap: wrap;
+}
+
+.alvobot-btn-group-centered {
+    justify-content: center;
+}
+
+.alvobot-btn-group-right {
+    justify-content: flex-end;
+}
+
+/* ====================================
+   BADGES E STATUS
+   ==================================== */
+.alvobot-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: var(--alvobot-radius-sm);
+    gap: var(--alvobot-space-xs);
+}
+
+.alvobot-badge-success {
+    background: var(--alvobot-success-bg);
+    color: var(--alvobot-success);
+}
+
+.alvobot-badge-error {
+    background: var(--alvobot-error-bg);
+    color: var(--alvobot-error);
+}
+
+.alvobot-badge-warning {
+    background: var(--alvobot-warning-bg);
+    color: var(--alvobot-warning);
+}
+
+.alvobot-badge-info {
+    background: var(--alvobot-info-bg);
+    color: var(--alvobot-info);
+}
+
+.alvobot-badge-neutral {
+    background: var(--alvobot-gray-100);
+    color: var(--alvobot-gray-700);
+}
+
+/* Indicadores de status */
+.alvobot-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--alvobot-radius-full);
+    display: inline-block;
+}
+
+.alvobot-status-indicator.success {
+    background: var(--alvobot-success);
+}
+
+.alvobot-status-indicator.error {
+    background: var(--alvobot-error);
+}
+
+.alvobot-status-indicator.warning {
+    background: var(--alvobot-warning);
+}
+
+.alvobot-status-indicator.info {
+    background: var(--alvobot-info);
+}
+
+/* ====================================
+   NOTIFICAÇÕES
+   ==================================== */
+.alvobot-notice {
+    padding: var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-md);
+    margin: var(--alvobot-space-xl) 0;
+    border-left: 4px solid;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--alvobot-space-md);
+}
+
+.alvobot-notice p {
+    margin: 0;
+    flex: 1;
+}
+
+.alvobot-notice-success {
+    background: var(--alvobot-success-bg);
+    border-left-color: var(--alvobot-success);
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-notice-error {
+    background: var(--alvobot-error-bg);
+    border-left-color: var(--alvobot-error);
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-notice-warning {
+    background: var(--alvobot-warning-bg);
+    border-left-color: var(--alvobot-warning);
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-notice-info {
+    background: var(--alvobot-info-bg);
+    border-left-color: var(--alvobot-info);
+    color: var(--alvobot-gray-800);
+}
+
+/* ====================================
+   TABELAS
+   ==================================== */
+.alvobot-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--alvobot-white);
+    border-radius: var(--alvobot-radius-md);
+    overflow: hidden;
+    box-shadow: var(--alvobot-shadow-sm);
+}
+
+.alvobot-table th,
+.alvobot-table td {
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    text-align: left;
+    border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-table th {
+    background: var(--alvobot-gray-50);
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.alvobot-table tr:last-child td {
+    border-bottom: none;
+}
+
+.alvobot-table tr:hover {
+    background: var(--alvobot-gray-50);
+}
+
+.alvobot-table-striped tr:nth-child(even) {
+    background: var(--alvobot-gray-50);
+}
+
+.alvobot-table-striped tr:nth-child(even):hover {
+    background: var(--alvobot-gray-100);
+}
+
+/* ====================================
+   TOGGLE SWITCHES
+   ==================================== */
+.alvobot-toggle {
+    position: relative !important;
+    display: inline-block !important;
+    width: 50px !important;
+    height: 26px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 50px !important; /* Impede o toggle de esticar ou encolher */
+    vertical-align: middle !important;
+}
+
+.alvobot-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.alvobot-toggle-slider {
+    position: absolute !important;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--alvobot-gray-400);
+    transition: 0.3s;
+    border-radius: 26px;
+    box-sizing: border-box !important;
+}
+
+.alvobot-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px !important;
+    width: 20px !important;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--alvobot-white);
+    transition: 0.3s;
+    border-radius: 50%;
+    box-sizing: border-box !important;
+}
+
+.alvobot-toggle input:checked + .alvobot-toggle-slider {
+    background-color: var(--alvobot-primary);
+}
+
+.alvobot-toggle input:checked + .alvobot-toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.alvobot-toggle input:disabled + .alvobot-toggle-slider {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Estilos adicionais para garantir consistência */
+.alvobot-admin-header .alvobot-toggle,
+.alvobot-card-header .alvobot-toggle,
+.alvobot-card-content .alvobot-toggle {
+    width: 50px !important;
+    height: 26px !important;
+    transform: scale(1) !important;
+}
+
+/* Previne que conteúdo ao redor afete o tamanho */
+.alvobot-toggle-container {
+    display: inline-flex !important;
+    align-items: center !important;
+    margin-left: auto !important;
+}
+
+/* ====================================
+   UTILITÁRIOS
+   ==================================== */
+
+/* Espaçamentos */
+.alvobot-mt-0 { margin-top: 0 !important; }
+.alvobot-mt-xs { margin-top: var(--alvobot-space-xs) !important; }
+.alvobot-mt-sm { margin-top: var(--alvobot-space-sm) !important; }
+.alvobot-mt-md { margin-top: var(--alvobot-space-md) !important; }
+.alvobot-mt-lg { margin-top: var(--alvobot-space-lg) !important; }
+.alvobot-mt-xl { margin-top: var(--alvobot-space-xl) !important; }
+.alvobot-mt-2xl { margin-top: var(--alvobot-space-2xl) !important; }
+.alvobot-mt-3xl { margin-top: var(--alvobot-space-3xl) !important; }
+
+.alvobot-mb-0 { margin-bottom: 0 !important; }
+.alvobot-mb-xs { margin-bottom: var(--alvobot-space-xs) !important; }
+.alvobot-mb-sm { margin-bottom: var(--alvobot-space-sm) !important; }
+.alvobot-mb-md { margin-bottom: var(--alvobot-space-md) !important; }
+.alvobot-mb-lg { margin-bottom: var(--alvobot-space-lg) !important; }
+.alvobot-mb-xl { margin-bottom: var(--alvobot-space-xl) !important; }
+.alvobot-mb-2xl { margin-bottom: var(--alvobot-space-2xl) !important; }
+.alvobot-mb-3xl { margin-bottom: var(--alvobot-space-3xl) !important; }
+
+/* Cores de texto */
+.alvobot-text-primary { color: var(--alvobot-primary) !important; }
+.alvobot-text-secondary { color: var(--alvobot-gray-600) !important; }
+.alvobot-text-success { color: var(--alvobot-success) !important; }
+.alvobot-text-error { color: var(--alvobot-error) !important; }
+.alvobot-text-warning { color: var(--alvobot-warning) !important; }
+.alvobot-text-info { color: var(--alvobot-info) !important; }
+
+/* Alinhamento de texto */
+.alvobot-text-left { text-align: left !important; }
+.alvobot-text-center { text-align: center !important; }
+.alvobot-text-right { text-align: right !important; }
+
+/* Display */
+.alvobot-flex { display: flex !important; }
+.alvobot-inline-flex { display: inline-flex !important; }
+.alvobot-block { display: block !important; }
+.alvobot-inline-block { display: inline-block !important; }
+.alvobot-hidden { display: none !important; }
+
+/* Flex utilities */
+.alvobot-justify-start { justify-content: flex-start !important; }
+.alvobot-justify-center { justify-content: center !important; }
+.alvobot-justify-end { justify-content: flex-end !important; }
+.alvobot-justify-between { justify-content: space-between !important; }
+
+.alvobot-items-start { align-items: flex-start !important; }
+.alvobot-items-center { align-items: center !important; }
+.alvobot-items-end { align-items: flex-end !important; }
+
+.alvobot-flex-col { flex-direction: column !important; }
+.alvobot-flex-row { flex-direction: row !important; }
+
+.alvobot-flex-wrap { flex-wrap: wrap !important; }
+.alvobot-flex-nowrap { flex-wrap: nowrap !important; }
+
+.alvobot-gap-xs { gap: var(--alvobot-space-xs) !important; }
+.alvobot-gap-sm { gap: var(--alvobot-space-sm) !important; }
+.alvobot-gap-md { gap: var(--alvobot-space-md) !important; }
+.alvobot-gap-lg { gap: var(--alvobot-space-lg) !important; }
+.alvobot-gap-xl { gap: var(--alvobot-space-xl) !important; }
+
+/* Largura */
+.alvobot-w-full { width: 100% !important; }
+.alvobot-w-auto { width: auto !important; }
+
+/* ====================================
+   RESPONSIVIDADE
+   ==================================== */
+@media screen and (max-width: 782px) {
+    .alvobot-admin-wrap {
+        padding: 0 var(--alvobot-space-lg);
+        margin: var(--alvobot-space-lg) auto;
+    }
+    
+    .alvobot-admin-header {
+        padding: var(--alvobot-space-xl);
+    }
+    
+    .alvobot-admin-header h1 {
+        font-size: var(--alvobot-font-size-2xl);
+    }
+    
+    .alvobot-card {
+        padding: var(--alvobot-space-xl);
+    }
+    
+    .alvobot-grid-2,
+    .alvobot-grid-3,
+    .alvobot-grid-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-form-table th {
+        width: 100%;
+        padding-bottom: var(--alvobot-space-sm);
+    }
+    
+    .alvobot-form-table td {
+        padding-top: 0;
+    }
+    
+    .alvobot-input,
+    .alvobot-input[type="text"],
+    .alvobot-input[type="email"],
+    .alvobot-input[type="number"],
+    .alvobot-input[type="password"],
+    .alvobot-input[type="url"],
+    .alvobot-textarea,
+    .alvobot-select {
+        max-width: 100%;
+    }
+    
+    .alvobot-btn-group {
+        flex-direction: column;
+    }
+    
+    .alvobot-btn-group .alvobot-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .alvobot-table th,
+    .alvobot-table td {
+        padding: var(--alvobot-space-sm);
+        font-size: var(--alvobot-font-size-sm);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .alvobot-admin-wrap {
+        padding: 0 var(--alvobot-space-md);
+        margin: var(--alvobot-space-md) auto;
+    }
+    
+    .alvobot-admin-header {
+        padding: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-card {
+        padding: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-grid-auto {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ====================================
+   CUSTOMIZAÇÕES DO MENU ADMIN
+   ==================================== */
+#wpfooter {
+    opacity: 0 !important;
+}
+
+/* Menu principal AlvoBot */
+#adminmenu li.toplevel_page_alvobot-pro {
+    background: var(--alvobot-secondary) !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu {
+    background: var(--alvobot-secondary) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Ícone do menu */
+#adminmenu li.toplevel_page_alvobot-pro .wp-menu-image {
+    opacity: 1 !important;
+}
+
+#adminmenu li.toplevel_page_alvobot-pro .wp-menu-image img {
+    width: 20px;
+    height: 20px;
+    padding: 7px 0;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+/* Link principal - estado normal */
+#adminmenu li.toplevel_page_alvobot-pro > a {
+    color: var(--alvobot-primary) !important;
+    background: var(--alvobot-secondary) !important;
+}
+
+/* Link principal - estado hover */
+#adminmenu li.toplevel_page_alvobot-pro > a:hover {
+    color: var(--alvobot-white) !important;
+    background: rgba(205, 144, 66, 0.1) !important;
+}
+
+/* Link principal - estado ativo/selecionado */
+#adminmenu li.toplevel_page_alvobot-pro.wp-has-current-submenu > a.wp-has-current-submenu,
+#adminmenu li.toplevel_page_alvobot-pro.current > a.current {
+    background: var(--alvobot-primary) !important;
+    color: var(--alvobot-secondary) !important;
+}
+
+/* Menu principal texto bold */
+#adminmenu li.toplevel_page_alvobot-pro > a.menu-top {
+    font-weight: bold !important;
+}
+
+/* Submenus */
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a {
+    color: var(--alvobot-primary) !important;
+    padding: 8px 20px !important;
+    background: transparent !important;
+    transition: all 0.2s ease;
+}
+
+/* Submenus - hover */
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a:hover {
+    background: rgba(205, 144, 66, 0.1) !important;
+    color: var(--alvobot-white) !important;
+}
+
+/* Submenu - ativo/selecionado */
+#adminmenu li.toplevel_page_alvobot-pro .wp-submenu .current a.current {
+    background: var(--alvobot-gray-100) !important;
+    color: var(--alvobot-secondary) !important;
+    font-weight: 600;
+}
+
+/* Separador visual */
+#adminmenu li.toplevel_page_alvobot-pro {
+    border-top: 1px solid rgba(205, 144, 66, 0.2);
+    border-bottom: 1px solid rgba(205, 144, 66, 0.2);
+}
+
+/* ====================================
+   CAMPOS ESPECÍFICOS
+   ==================================== */
+
+/* Color Picker */
+.alvobot-color-picker {
+    display: inline-block;
+}
+
+.alvobot-color-picker .wp-color-result {
+    border-radius: var(--alvobot-radius-sm);
+    border: 1px solid var(--alvobot-gray-400);
+    height: 36px;
+    transition: all 0.2s ease;
+}
+
+.alvobot-color-picker .wp-color-result:hover {
+    border-color: var(--alvobot-accent);
+}
+
+/* Token field */
+.alvobot-token-field {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    margin-top: var(--alvobot-space-sm);
+}
+
+.alvobot-token-value {
+    font-family: monospace;
+    background: var(--alvobot-gray-100);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-700);
+}
+
+.alvobot-token-toggle {
+    cursor: pointer;
+    color: var(--alvobot-accent);
+    padding: var(--alvobot-space-xs);
+    border-radius: var(--alvobot-radius-sm);
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+}
+
+.alvobot-token-toggle:hover {
+    background: var(--alvobot-gray-100);
+}
+
+.alvobot-token-toggle svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.alvobot-token-toggle.showing svg.eye-show {
+    display: none;
+}
+
+.alvobot-token-toggle:not(.showing) svg.eye-hide {
+    display: none;
+}
+
+/* Avatar preview */
+.alvobot-avatar-preview {
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-md);
+    display: inline-block;
+    margin-bottom: var(--alvobot-space-md);
+}
+
+.alvobot-avatar-preview img {
+    display: block;
+    max-width: 96px;
+    height: auto;
+    border-radius: var(--alvobot-radius-full);
+    box-shadow: var(--alvobot-shadow-sm);
+}
+
+/* ====================================
+   ANIMAÇÕES E TRANSIÇÕES
+   ==================================== */
+@keyframes alvobot-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.alvobot-loading {
+    animation: alvobot-pulse 1.5s infinite;
+}
+
+.alvobot-fade-in {
+    animation: alvobot-fade-in 0.3s ease-in-out;
+}
+
+@keyframes alvobot-fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====================================
+   DESCRIÇÕES E TEXTOS AUXILIARES
+   ==================================== */
+.alvobot-description {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    font-style: italic;
+    margin-top: var(--alvobot-space-xs);
+    line-height: 1.4;
+}
+
+.alvobot-helper-text {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    margin-top: var(--alvobot-space-sm);
+    line-height: 1.5;
+}
+
+.alvobot-helper-text code {
+    background: var(--alvobot-gray-100);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: var(--alvobot-font-size-xs);
+}
+
+/* ====================================
+   ESTADO VAZIO / PLACEHOLDER
+   ==================================== */
+.alvobot-empty-state {
+    text-align: center;
+    padding: var(--alvobot-space-3xl);
+    color: var(--alvobot-gray-600);
+}
+
+.alvobot-empty-state h3 {
+    margin: 0 0 var(--alvobot-space-lg);
+    color: var(--alvobot-gray-700);
+    font-size: var(--alvobot-font-size-xl);
+}
+
+.alvobot-empty-state p {
+    margin: 0 0 var(--alvobot-space-xl);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.6;
+}
+
+.alvobot-empty-state .alvobot-btn {
+    margin-top: var(--alvobot-space-lg);
+}
+
+/* ====================================
+   ESTILOS LEGADOS DO ADMIN (MIGRADOS)
+   ==================================== */
+
+/* Wrap alternativo para compatibilidade */
+.alvobot-pro-wrap {
+    margin: var(--alvobot-space-xl);
+    max-width: var(--alvobot-bp-xl);
+}
+
+/* Header alternativo para compatibilidade */
+.alvobot-pro-header {
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-xl);
+    border-radius: var(--alvobot-radius-md);
+    box-shadow: var(--alvobot-shadow-md);
+    margin-bottom: var(--alvobot-space-xl);
+}
+
+.alvobot-pro-header h1 {
+    margin: 0;
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-3xl);
+    font-weight: 600;
+}
+
+.alvobot-pro-header p {
+    margin: var(--alvobot-space-sm) 0 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+}
+
+/* Grid de módulos */
+.alvobot-pro-modules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--alvobot-space-xl);
+    margin-top: var(--alvobot-space-xl);
+}
+
+/* Cards de módulo */
+.alvobot-pro-module-card {
+    background: var(--alvobot-white);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-xl);
+    box-shadow: var(--alvobot-shadow-md);
+    border: 1px solid var(--alvobot-gray-300);
+    transition: all 0.3s ease;
+}
+
+.alvobot-pro-module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--alvobot-shadow-lg);
+}
+
+.alvobot-pro-module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--alvobot-space-lg);
+}
+
+.alvobot-pro-module-title {
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+    margin: 0;
+}
+
+/* Toggle Switch para módulos (compatibilidade) */
+.alvobot-pro-module-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.alvobot-pro-module-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.alvobot-pro-module-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--alvobot-gray-400);
+    transition: 0.4s;
+    border-radius: 26px;
+}
+
+.alvobot-pro-module-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--alvobot-white);
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .alvobot-pro-module-slider {
+    background-color: var(--alvobot-accent);
+}
+
+input:checked + .alvobot-pro-module-slider:before {
+    transform: translateX(24px);
+}
+
+.alvobot-pro-module-description {
+    color: var(--alvobot-gray-600);
+    margin: var(--alvobot-space-sm) 0;
+    line-height: 1.5;
+}
+
+.alvobot-pro-module-actions {
+    margin-top: var(--alvobot-space-lg);
+}
+
+.alvobot-pro-module-actions a {
+    display: inline-block;
+    text-decoration: none;
+    color: var(--alvobot-accent);
+    margin-right: var(--alvobot-space-sm);
+    transition: color 0.2s ease;
+}
+
+.alvobot-pro-module-actions a:hover {
+    color: var(--alvobot-accent-dark);
+}
+
+/* Cartões de Status */
+.status-card {
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-xl);
+    border-radius: var(--alvobot-radius-md);
+    box-shadow: var(--alvobot-shadow-md);
+    margin-bottom: var(--alvobot-space-xl);
+}
+
+.status-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--alvobot-space-lg);
+    border-bottom: 1px solid var(--alvobot-gray-300);
+    padding-bottom: var(--alvobot-space-sm);
+}
+
+.status-header h2 {
+    margin: 0;
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--alvobot-radius-full);
+    display: inline-block;
+}
+
+.status-registered .status-indicator {
+    background: var(--alvobot-success);
+}
+
+.status-unregistered .status-indicator {
+    background: var(--alvobot-error);
+}
+
+/* Formulários compatibilidade */
+.alvobot-pro-wrap .form-table {
+    margin-top: var(--alvobot-space-xl);
+}
+
+.alvobot-pro-wrap .form-table th {
+    width: 200px;
+    padding: var(--alvobot-space-xl) var(--alvobot-space-sm) var(--alvobot-space-xl) 0;
+    vertical-align: top;
+    font-weight: 600;
+}
+
+.alvobot-pro-wrap .form-table td {
+    padding: var(--alvobot-space-lg) var(--alvobot-space-sm);
+    vertical-align: middle;
+}
+
+.alvobot-pro-wrap .form-table label {
+    display: block;
+    margin-bottom: var(--alvobot-space-xs);
+}
+
+.alvobot-pro-wrap .form-table input[type="text"],
+.alvobot-pro-wrap .form-table input[type="password"] {
+    width: 100%;
+    max-width: 400px;
+}
+
+.alvobot-pro-wrap .form-table .description {
+    color: var(--alvobot-gray-600);
+    font-style: italic;
+    margin-top: var(--alvobot-space-xs);
+}
+
+/* Tabelas wide */
+.alvobot-pro-wrap .widefat {
+    border: 1px solid var(--alvobot-gray-400);
+    box-shadow: var(--alvobot-shadow-sm);
+    background: var(--alvobot-white);
+    border-spacing: 0;
+    width: 100%;
+    clear: both;
+    margin: var(--alvobot-space-xl) 0;
+}
+
+.alvobot-pro-wrap .widefat th {
+    font-weight: 600;
+    text-align: left;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-sm);
+    line-height: 1.3;
+    background: var(--alvobot-gray-100);
+}
+
+.alvobot-pro-wrap .widefat td {
+    padding: var(--alvobot-space-sm) var(--alvobot-space-sm);
+    vertical-align: top;
+}
+
+.alvobot-pro-wrap .widefat tr:nth-child(odd) {
+    background-color: var(--alvobot-gray-50);
+}
+
+/* Botões compatibilidade */
+.alvobot-pro-wrap .button-secondary {
+    margin-top: var(--alvobot-space-xl);
+}
+
+/* Estados */
+.alvobot-pro-wrap .alvobot-pro-module-card.updating {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.alvobot-pro-wrap .alvobot-pro-module-card.updating .alvobot-pro-module-slider {
+    animation: alvobot-pulse 1.5s infinite;
+}
+
+/* Notificações compatibilidade */
+.alvobot-pro-wrap .notice {
+    margin: var(--alvobot-space-xl) 0;
+    padding: 1px var(--alvobot-space-md);
+    border-left: 4px solid var(--alvobot-error);
+    box-shadow: var(--alvobot-shadow-sm);
+    background: var(--alvobot-white);
+}
+
+.alvobot-pro-wrap .notice-success {
+    border-left-color: var(--alvobot-success);
+}
+
+.alvobot-pro-wrap .notice-warning {
+    border-left-color: var(--alvobot-warning);
+}
+
+/* Token field compatibilidade */
+.token-field {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+}
+
+.token-value {
+    font-family: monospace;
+    background: var(--alvobot-gray-100);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.token-toggle {
+    cursor: pointer;
+    color: var(--alvobot-accent);
+    padding: var(--alvobot-space-xs);
+    border-radius: var(--alvobot-radius-sm);
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+}
+
+.token-toggle:hover {
+    background: var(--alvobot-gray-100);
+}
+
+.token-toggle svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.token-toggle.showing svg.eye-show {
+    display: none;
+}
+
+.token-toggle:not(.showing) svg.eye-hide {
+    display: none;
+}
+
+/* Seções específicas */
+.settings-panel {
+    margin-bottom: var(--alvobot-space-3xl);
+}
+
+.preview-section {
+    margin: var(--alvobot-space-3xl) 0;
+    padding: var(--alvobot-space-xl);
+    background: var(--alvobot-gray-50);
+    border-radius: var(--alvobot-radius-md);
+}
+
+/* Responsivo compatibilidade */
+@media screen and (max-width: 782px) {
+    .alvobot-pro-wrap .alvobot-pro-modules {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-pro-wrap .form-table th {
+        width: auto;
+        display: block;
+    }
+    
+    .alvobot-pro-wrap .form-table td {
+        display: block;
+        padding: var(--alvobot-space-sm) 0;
+    }
+    
+    .alvobot-pro-wrap .form-table input[type="text"],
+    .alvobot-pro-wrap .form-table input[type="password"] {
+        max-width: 100%;
+    }
+}
+
+/* ====================================
+   LOGO GENERATOR - INTERFACE DE ÍCONES
+   ==================================== */
+.icons-grid-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-md);
+    background: var(--alvobot-gray-50);
+}
+
+.icons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--alvobot-space-md);
+}
+
+.icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--alvobot-space-md);
+    border: 2px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    background: var(--alvobot-white);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.icon-item:hover {
+    border-color: var(--alvobot-primary);
+    box-shadow: var(--alvobot-shadow-md);
+    transform: translateY(-2px);
+}
+
+.icon-item.selected {
+    border-color: var(--alvobot-primary);
+    background: var(--alvobot-primary);
+    color: var(--alvobot-white);
+    box-shadow: var(--alvobot-shadow-lg);
+}
+
+.icon-item .icon-preview {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--alvobot-space-sm);
+}
+
+.icon-item .icon-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    filter: none;
+    transition: filter 0.3s ease;
+}
+
+.icon-item.selected .icon-preview img {
+    filter: brightness(0) invert(1);
+}
+
+.icon-item .icon-name {
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--alvobot-gray-700);
+}
+
+.icon-item.selected .icon-name {
+    color: var(--alvobot-white);
+}
+
+.selected-icon-display {
+    padding: var(--alvobot-space-lg);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    background: var(--alvobot-gray-50);
+}
+
+.selected-icon-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+}
+
+.selected-icon-preview #selected-icon-preview {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-sm);
+    background: var(--alvobot-white);
+}
+
+.selected-icon-preview #selected-icon-preview img {
+    max-width: 24px;
+    max-height: 24px;
+}
+
+.selected-icon-preview #selected-icon-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--alvobot-gray-800);
+}
+
+/* Search no grid de ícones */
+.icons-search-box {
+    position: relative;
+}
+
+.icons-search-box .alvobot-input {
+    padding-left: var(--alvobot-space-3xl);
+}
+
+.icons-search-box::before {
+    content: "🔍";
+    position: absolute;
+    left: var(--alvobot-space-md);
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--alvobot-gray-500);
+}
+
+/* Logo Generator Interface Layout */
+.logo-generator-interface {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: var(--alvobot-space-3xl);
+    align-items: start;
+}
+
+.logo-generator-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-2xl);
+}
+
+.logo-preview-section {
+    position: sticky;
+    top: var(--alvobot-space-xl);
+}
+
+.logo-preview {
+    min-height: 300px;
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--alvobot-space-2xl);
+}
+
+.logo-placeholder {
+    text-align: center;
+    color: var(--alvobot-gray-500);
+    font-style: italic;
+}
+
+/* Responsive para Logo Generator */
+@media screen and (max-width: 1200px) {
+    .logo-generator-interface {
+        grid-template-columns: 1fr;
+        gap: var(--alvobot-space-2xl);
+    }
+    
+    .logo-preview-section {
+        position: static;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .icons-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: var(--alvobot-space-sm);
+    }
+    
+    .icon-item {
+        padding: var(--alvobot-space-sm);
+    }
+    
+    .icon-item .icon-preview {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+.ctas-grid,
+#ctas_container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--alvobot-space-xl);
+    margin-top: var(--alvobot-space-xl);
+}
+
+/* ====================================
+   ELEMENTOS DE CÓDIGO E EXEMPLOS
+   ==================================== */
+
+.alvobot-code-block {
+    background: var(--alvobot-gray-100);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-md);
+    font-family: 'Courier New', monospace;
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-800);
+    margin: var(--alvobot-space-md) 0;
+    word-break: break-all;
+}
+
+.alvobot-example-block {
+    background: var(--alvobot-info-bg);
+    border: 1px solid var(--alvobot-info);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-lg);
+    margin: var(--alvobot-space-lg) 0;
+}
+
+.alvobot-example-block h5 {
+    margin: 0 0 var(--alvobot-space-md) 0;
+    color: var(--alvobot-info);
+    font-size: var(--alvobot-font-size-base);
+    font-weight: 600;
+}
+
+.alvobot-code {
+    background: var(--alvobot-gray-800);
+    color: var(--alvobot-gray-50);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-md);
+    font-family: 'Courier New', monospace;
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.4;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+}
+
+/* ====================================
+   STATUS E INDICADORES - TEMPORARY LOGIN
+   ==================================== */
+
+#temporary-login-status {
+    margin-bottom: var(--alvobot-space-lg);
+    min-height: 60px;
+}
+
+#temporary-login-status.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--alvobot-space-xl);
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-md);
+    color: var(--alvobot-gray-600);
+    font-style: italic;
+}
+
+/* Card principal do status */
+.alvobot-temp-login-card {
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    overflow: hidden;
+    box-shadow: var(--alvobot-shadow-sm);
+}
+
+/* Estado ativo */
+.alvobot-temp-login-active {
+    border-color: var(--alvobot-success);
+}
+
+.alvobot-temp-login-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--alvobot-space-lg);
+    background: var(--alvobot-success-bg);
+    border-bottom: 1px solid var(--alvobot-success);
+}
+
+.alvobot-temp-login-status-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-xs);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    background: var(--alvobot-success);
+    color: var(--alvobot-white);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 600;
+}
+
+.alvobot-temp-login-actions {
+    display: flex;
+    gap: var(--alvobot-space-xs);
+}
+
+.alvobot-temp-login-details {
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-temp-login-info {
+    margin-bottom: var(--alvobot-space-lg);
+}
+
+.alvobot-temp-login-title {
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    color: var(--alvobot-gray-800);
+    margin-bottom: var(--alvobot-space-xs);
+}
+
+.alvobot-temp-login-expiry {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-xs);
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-temp-login-url {
+    border-top: 1px solid var(--alvobot-gray-200);
+    padding-top: var(--alvobot-space-lg);
+}
+
+.alvobot-temp-login-label {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-xs);
+    margin-bottom: var(--alvobot-space-sm);
+    color: var(--alvobot-gray-700);
+    font-weight: 600;
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-temp-login-url-wrapper {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+    align-items: center;
+}
+
+.alvobot-temp-login-url-input {
+    flex: 1;
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-300);
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    border-radius: var(--alvobot-radius-sm);
+    font-family: 'Courier New', monospace;
+    font-size: var(--alvobot-font-size-xs);
+    color: var(--alvobot-gray-700);
+    line-height: 1.4;
+}
+
+/* Estado vazio/inativo */
+.alvobot-temp-login-empty {
+    text-align: center;
+    padding: var(--alvobot-space-3xl) var(--alvobot-space-xl);
+    background: var(--alvobot-gray-50);
+}
+
+.alvobot-temp-login-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--alvobot-space-lg);
+    background: var(--alvobot-gray-300);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--alvobot-gray-600);
+    font-size: 28px;
+}
+
+.alvobot-temp-login-empty-title {
+    margin: 0 0 var(--alvobot-space-sm) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+}
+
+.alvobot-temp-login-empty-subtitle {
+    margin: 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Compatibilidade com elementos antigos */
+.temp-login-url-container {
+    margin: var(--alvobot-space-lg) 0;
+}
+
+.temp-login-url-field {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+    align-items: center;
+    margin-top: var(--alvobot-space-sm);
+}
+
+.temp-login-url-field input[readonly] {
+    flex: 1;
+    background: var(--alvobot-gray-100);
+    border: 1px solid var(--alvobot-gray-300);
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    border-radius: var(--alvobot-radius-sm);
+    font-family: monospace;
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-800);
+}
+
+.temp-login-url-field .alvobot-btn {
+    flex-shrink: 0;
+}
+
+/* ====================================
+   CRIAR NOVO LOGIN TEMPORÁRIO
+   ==================================== */
+
+.alvobot-temp-login-creator {
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-xl);
+    margin-top: var(--alvobot-space-lg);
+    text-align: center;
+}
+
+.alvobot-temp-login-action .alvobot-btn {
+    min-width: 250px;
+    justify-content: center;
+}
+
+/* ====================================
+   CONFIGURAÇÕES GERAIS - SETTINGS GRID
+   ==================================== */
+
+.alvobot-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--alvobot-space-xl);
+    margin-top: var(--alvobot-space-lg);
+}
+
+.alvobot-settings-group {
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-xl);
+    box-shadow: var(--alvobot-shadow-sm);
+}
+
+
+.alvobot-settings-group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    margin: 0 0 var(--alvobot-space-lg) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    padding-bottom: var(--alvobot-space-sm);
+    border-bottom: 2px solid var(--alvobot-primary);
+}
+
+.alvobot-settings-group-title .dashicons {
+    color: var(--alvobot-primary);
+    font-size: 20px;
+}
+
+.alvobot-settings-field {
+    margin-bottom: var(--alvobot-space-lg);
+}
+
+.alvobot-settings-field:last-child {
+    margin-bottom: 0;
+}
+
+.alvobot-settings-label {
+    display: block;
+    margin-bottom: var(--alvobot-space-sm);
+    color: var(--alvobot-gray-800);
+    font-weight: 600;
+    font-size: var(--alvobot-font-size-base);
+}
+
+.alvobot-required {
+    color: var(--alvobot-error);
+    margin-left: var(--alvobot-space-xs);
+}
+
+.alvobot-settings-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-sm);
+}
+
+/* Input com unidade */
+.alvobot-input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    max-width: 200px;
+}
+
+.alvobot-input-unit {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Toggle settings */
+.alvobot-settings-toggle {
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-lg);
+    transition: all 0.2s ease;
+}
+
+.alvobot-settings-toggle:hover {
+    background: var(--alvobot-white);
+    border-color: var(--alvobot-primary);
+}
+
+.alvobot-toggle-label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--alvobot-space-md);
+    cursor: pointer;
+    margin: 0;
+}
+
+.alvobot-toggle-label input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+}
+
+.alvobot-toggle-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-xs);
+    flex: 1;
+}
+
+.alvobot-toggle-content strong {
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-base);
+    font-weight: 600;
+}
+
+.alvobot-toggle-content small {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.4;
+}
+
+/* Settings Info - Informações apenas visuais */
+.alvobot-settings-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-lg);
+}
+
+.alvobot-security-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--alvobot-space-md);
+    padding: var(--alvobot-space-lg);
+    background: var(--alvobot-success-bg);
+    border: 1px solid var(--alvobot-success);
+    border-radius: var(--alvobot-radius-md);
+}
+
+.alvobot-security-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--alvobot-success);
+    color: var(--alvobot-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+}
+
+.alvobot-security-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-xs);
+}
+
+.alvobot-security-content strong {
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-base);
+    font-weight: 600;
+}
+
+.alvobot-security-content small {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.4;
+}
+
+/* ====================================
+   COMPONENTES UX MELHORADOS
+   ==================================== */
+
+/* Dashboard Grid */
+.alvobot-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--alvobot-space-xl);
+    margin-bottom: var(--alvobot-space-xl);
+}
+
+.alvobot-dashboard-item {
+    min-height: 150px;
+}
+
+/* Quick Actions */
+.alvobot-quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-lg);
+}
+
+.alvobot-action-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--alvobot-space-lg);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    background: var(--alvobot-white);
+    transition: all 0.2s ease;
+}
+
+.alvobot-action-item:hover {
+    border-color: var(--alvobot-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alvobot-action-item-danger {
+    border-color: var(--alvobot-error);
+    background: var(--alvobot-error-bg);
+}
+
+.alvobot-action-content {
+    flex: 1;
+    margin-right: var(--alvobot-space-lg);
+}
+
+.alvobot-action-content h4 {
+    margin: 0 0 var(--alvobot-space-xs) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+}
+
+.alvobot-action-buttons {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+}
+
+/* Settings Grid */
+.alvobot-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--alvobot-space-2xl);
+}
+
+.alvobot-settings-group {
+    background: var(--alvobot-gray-50);
+    padding: var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-md);
+    border: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-settings-group-title {
+    margin: 0 0 var(--alvobot-space-lg) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    padding-bottom: var(--alvobot-space-sm);
+    border-bottom: 2px solid var(--alvobot-primary);
+}
+
+/* Loading Spinner */
+.alvobot-loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--alvobot-space-sm);
+    padding: var(--alvobot-space-xl);
+    color: var(--alvobot-gray-600);
+}
+
+.alvobot-loading-spinner .dashicons {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Status Components */
+.alvobot-status-active,
+.alvobot-status-inactive {
+    border-radius: var(--alvobot-radius-md);
+    overflow: hidden;
+}
+
+.alvobot-status-active {
+    border: 1px solid var(--alvobot-success);
+    background: var(--alvobot-success-bg);
+}
+
+.alvobot-status-inactive {
+    border: 1px solid var(--alvobot-gray-300);
+    background: var(--alvobot-gray-100);
+}
+
+.alvobot-status-header {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-status-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.alvobot-status-active .alvobot-status-icon {
+    background: var(--alvobot-success);
+    color: var(--alvobot-white);
+}
+
+.alvobot-status-inactive .alvobot-status-icon {
+    background: var(--alvobot-gray-400);
+    color: var(--alvobot-white);
+}
+
+.alvobot-status-content {
+    flex: 1;
+}
+
+.alvobot-status-title {
+    margin: 0 0 var(--alvobot-space-xs) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+}
+
+.alvobot-status-subtitle {
+    margin: 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+}
+
+.alvobot-status-actions {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+}
+
+/* Login URL Section */
+.alvobot-login-url-section {
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-lg);
+    margin-top: var(--alvobot-space-md);
+    border-top: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-url-header {
+    margin-bottom: var(--alvobot-space-md);
+}
+
+.alvobot-url-header .alvobot-form-label {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    font-weight: 600;
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-url-field {
+    display: flex;
+    gap: var(--alvobot-space-sm);
+    margin-bottom: var(--alvobot-space-md);
+}
+
+.alvobot-url-input {
+    flex: 1;
+    font-family: monospace;
+    font-size: var(--alvobot-font-size-sm);
+    background: var(--alvobot-gray-50);
+}
+
+.alvobot-url-note {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    margin: 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+/* API Documentation */
+.alvobot-api-overview {
+    margin-bottom: var(--alvobot-space-xl);
+}
+
+.alvobot-lead {
+    font-size: var(--alvobot-font-size-lg);
+    color: var(--alvobot-gray-700);
+    margin-bottom: var(--alvobot-space-xl);
+    line-height: 1.6;
+}
+
+.alvobot-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--alvobot-space-lg);
+}
+
+.alvobot-stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+    padding: var(--alvobot-space-lg);
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-md);
+}
+
+.alvobot-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--alvobot-primary);
+    color: var(--alvobot-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.alvobot-stat-number {
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 700;
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-stat-label {
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-600);
+}
+
+/* API Docs */
+.alvobot-api-docs {
+    margin-top: var(--alvobot-space-xl);
+    padding-top: var(--alvobot-space-xl);
+    border-top: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-docs-section {
+    margin-bottom: var(--alvobot-space-2xl);
+}
+
+.alvobot-docs-title {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    margin-bottom: var(--alvobot-space-lg);
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 600;
+}
+
+.alvobot-docs-subtitle {
+    margin-bottom: var(--alvobot-space-md);
+    color: var(--alvobot-gray-700);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+}
+
+.alvobot-endpoint-card {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+    padding: var(--alvobot-space-lg);
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    margin-bottom: var(--alvobot-space-lg);
+}
+
+.alvobot-endpoint-method {
+    background: var(--alvobot-success);
+    color: var(--alvobot-white);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-weight: 600;
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-endpoint-url {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+}
+
+.alvobot-endpoint-url code {
+    flex: 1;
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-docs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--alvobot-space-xl);
+}
+
+.alvobot-code-wrapper {
+    position: relative;
+}
+
+.alvobot-code-copy {
+    position: absolute;
+    top: var(--alvobot-space-sm);
+    right: var(--alvobot-space-sm);
+    background: var(--alvobot-gray-700);
+    color: var(--alvobot-white);
+    border: none;
+    padding: var(--alvobot-space-xs);
+    border-radius: var(--alvobot-radius-sm);
+    cursor: pointer;
+    z-index: 10;
+}
+
+.alvobot-code-success {
+    border-left: 4px solid var(--alvobot-success);
+}
+
+/* Parameters Table */
+.alvobot-params-table {
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    overflow: hidden;
+}
+
+.alvobot-param-row {
+    display: grid;
+    grid-template-columns: 150px 80px 1fr;
+    padding: var(--alvobot-space-md);
+    border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-param-row:last-child {
+    border-bottom: none;
+}
+
+.alvobot-param-required {
+    background: var(--alvobot-warning-bg);
+}
+
+.alvobot-param-name {
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-param-type {
+    color: var(--alvobot-info);
+    font-weight: 500;
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-param-desc {
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+/* Copy Notification */
+.alvobot-copy-notification {
+    position: fixed;
+    top: 50px;
+    right: 20px;
+    background: var(--alvobot-success);
+    color: var(--alvobot-white);
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Form Field Inline */
+.alvobot-form-field-inline {
+    margin-top: var(--alvobot-space-md);
+}
+
+.alvobot-form-field-inline .alvobot-checkbox-label {
+    margin: 0;
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-600);
+}
+
+/* Responsive para elementos de login temporário */
+@media screen and (max-width: 768px) {
+    .temp-login-url-field,
+    .alvobot-url-field,
+    .alvobot-temp-login-url-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .alvobot-temp-login-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--alvobot-space-md);
+        text-align: center;
+    }
+    
+    .alvobot-temp-login-actions {
+        justify-content: center;
+    }
+    
+    .alvobot-temp-login-details {
+        padding: var(--alvobot-space-md);
+    }
+    
+    .alvobot-temp-login-url {
+        padding-top: var(--alvobot-space-md);
+    }
+    
+    .alvobot-temp-login-creator {
+        padding: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-temp-login-action .alvobot-btn {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .alvobot-settings-grid {
+        grid-template-columns: 1fr;
+        gap: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-settings-group {
+        padding: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-input-with-unit {
+        max-width: 100%;
+    }
+    
+    .alvobot-settings-toggle {
+        padding: var(--alvobot-space-md);
+    }
+    
+    .alvobot-example-block {
+        padding: var(--alvobot-space-md);
+    }
+    
+    .alvobot-code {
+        font-size: var(--alvobot-font-size-xs);
+        padding: var(--alvobot-space-sm);
+    }
+    
+    .alvobot-action-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--alvobot-space-md);
+    }
+    
+    .alvobot-action-content {
+        margin-right: 0;
+    }
+    
+    .alvobot-action-buttons {
+        justify-content: stretch;
+    }
+    
+    .alvobot-status-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--alvobot-space-lg);
+    }
+    
+    .alvobot-status-actions {
+        justify-content: center;
+    }
+    
+    .alvobot-docs-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-endpoint-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .alvobot-param-row {
+        grid-template-columns: 1fr;
+        gap: var(--alvobot-space-xs);
+    }
+    
+    .alvobot-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

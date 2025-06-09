@@ -1,155 +1,233 @@
-/* AlvoBot Pro Admin Styles */
+/* Essential Pages Admin Styles - Using Unified Design System */
+@import url('../../../../assets/css/styles.css');
 
-.alvobot-pro-wrap {
-    margin: 20px;
-    max-width: 1200px;
-    padding: 20px;
+/* Main container */
+.alvobot-essential-pages .alvobot-admin-wrap {
+    max-width: var(--alvobot-bp-xl);
+    margin: var(--alvobot-space-xl) auto;
+    padding: 0 var(--alvobot-space-xl);
 }
 
-.alvobot-pro-header {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
-
-.alvobot-pro-header h1 {
-    font-size: 23px;
-    font-weight: 400;
-    margin: 0;
-    padding: 9px 0 4px;
-    line-height: 1.3;
-}
-
-.alvobot-pro-header p {
-    margin: 1em 0;
-}
-
-.alvobot-essential-pages {
-    padding: 20px;
-}
-
+/* Header styling */
 .alvobot-essential-pages h1 {
-    font-size: 23px;
-    font-weight: 400;
-    margin: 0;
-    padding: 9px 0 4px;
+    font-size: var(--alvobot-font-size-3xl);
+    font-weight: 600;
+    margin: 0 0 var(--alvobot-space-sm);
+    padding: var(--alvobot-space-sm) 0 var(--alvobot-space-xs);
     line-height: 1.3;
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-essential-pages .description {
-    margin: 1em 0;
-    color: #646970;
+    margin: var(--alvobot-space-lg) 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
 }
 
-/* Cards de páginas */
+/* Page cards grid */
 .page-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
+    gap: var(--alvobot-space-xl);
+    margin: var(--alvobot-space-xl) 0;
 }
 
 .page-card {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
-    padding: 20px;
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-500);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-xl);
     display: flex;
     flex-direction: column;
+    box-shadow: var(--alvobot-shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.page-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--alvobot-shadow-md);
 }
 
 .page-card h2 {
-    margin: 0 0 15px 0;
-    font-size: 1.3em;
+    margin: 0 0 var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-xl);
     font-weight: 600;
+    color: var(--alvobot-gray-900);
 }
 
+/* Page info section */
 .page-info {
-    margin-bottom: 15px;
+    margin-bottom: var(--alvobot-space-lg);
     flex-grow: 1;
 }
 
 .page-info p {
-    margin: 5px 0;
-    color: #50575e;
+    margin: var(--alvobot-space-xs) 0;
+    color: var(--alvobot-gray-700);
+    font-size: var(--alvobot-font-size-base);
 }
 
 .page-info .label {
     font-weight: 600;
-    margin-right: 5px;
+    margin-right: var(--alvobot-space-xs);
+    color: var(--alvobot-gray-800);
 }
 
-/* Botões e ações */
+.status-published {
+    background: var(--alvobot-success-bg);
+    color: var(--alvobot-success);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 500;
+    display: inline-block;
+}
+
+.status-pending {
+    background: var(--alvobot-warning-bg);
+    color: var(--alvobot-warning);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-sm);
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 500;
+    display: inline-block;
+}
+
+/* Page actions */
 .page-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--alvobot-space-sm);
     justify-content: flex-start;
     align-items: center;
     margin-top: auto;
+    flex-wrap: wrap;
 }
 
 .page-actions .button {
-    padding: 4px 12px;
+    padding: var(--alvobot-space-xs) var(--alvobot-space-md);
     height: 32px;
     line-height: 22px;
     white-space: nowrap;
     margin: 0;
+    font-size: var(--alvobot-font-size-sm);
+    border-radius: var(--alvobot-radius-sm);
+    transition: all 0.2s ease;
 }
 
 .page-actions .button-link-delete {
-    color: #d63638;
+    color: var(--alvobot-error);
+    border: 1px solid var(--alvobot-error);
+    background: transparent;
 }
 
 .page-actions .button-link-delete:hover {
-    color: #d63638;
-    background: #f6f7f7;
+    color: var(--alvobot-white);
+    background: var(--alvobot-error);
 }
 
-/* Ações globais */
+/* Global actions section */
 .global-actions {
-    margin: 20px 0;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
+    margin: var(--alvobot-space-xl) 0;
+    padding: var(--alvobot-space-xl);
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-500);
+    border-radius: var(--alvobot-radius-sm);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: var(--alvobot-shadow-sm);
 }
 
 .global-actions .left-actions,
 .global-actions .right-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--alvobot-space-sm);
 }
 
-/* Status */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    line-height: 1.4;
-    font-weight: 500;
+.global-actions .button {
+    padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-base);
+    border-radius: var(--alvobot-radius-sm);
+    transition: all 0.2s ease;
 }
 
-.status-published {
-    background: #edfaef;
-    color: #0a7d33;
+.global-actions .button-primary {
+    background: var(--alvobot-primary);
+    border-color: var(--alvobot-primary);
+    color: var(--alvobot-white);
 }
 
-.status-pending {
-    background: #fcf9e8;
-    color: #974c00;
+.global-actions .button-primary:hover {
+    background: var(--alvobot-primary-dark);
+    border-color: var(--alvobot-primary-dark);
 }
 
-/* Responsividade */
+.global-actions .button-link-delete {
+    color: var(--alvobot-error);
+    border: 1px solid var(--alvobot-error);
+    background: transparent;
+}
+
+.global-actions .button-link-delete:hover {
+    color: var(--alvobot-white);
+    background: var(--alvobot-error);
+}
+
+/* Status indicators using unified system */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--alvobot-radius-full);
+    display: inline-block;
+}
+
+.status-registered .status-indicator {
+    background: var(--alvobot-success);
+}
+
+.status-unregistered .status-indicator {
+    background: var(--alvobot-error);
+}
+
+.text-success {
+    color: var(--alvobot-success);
+}
+
+.text-error {
+    color: var(--alvobot-error);
+}
+
+/* Notices using unified system */
+.notice {
+    margin: var(--alvobot-space-xl) 0;
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-sm);
+    border-left: 4px solid;
+}
+
+.notice-success {
+    background: var(--alvobot-success-bg);
+    border-left-color: var(--alvobot-success);
+    color: var(--alvobot-gray-800);
+}
+
+.notice-error {
+    background: var(--alvobot-error-bg);
+    border-left-color: var(--alvobot-error);
+    color: var(--alvobot-gray-800);
+}
+
+/* Responsive design */
 @media screen and (max-width: 782px) {
+    .alvobot-essential-pages .alvobot-admin-wrap {
+        padding: 0 var(--alvobot-space-lg);
+        margin: var(--alvobot-space-lg) auto;
+    }
+
     .page-cards {
         grid-template-columns: 1fr;
+        gap: var(--alvobot-space-lg);
     }
     
     .page-actions {
@@ -164,102 +242,54 @@
     
     .global-actions {
         flex-direction: column;
-        gap: 12px;
+        gap: var(--alvobot-space-md);
+        padding: var(--alvobot-space-lg);
     }
     
     .global-actions .left-actions,
     .global-actions .right-actions {
         width: 100%;
+        justify-content: center;
     }
     
     .global-actions .button {
         flex: 1;
         text-align: center;
     }
-}
 
-/* Status indicators */
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.status-registered .status-indicator {
-    background: #46b450;
-}
-
-.status-unregistered .status-indicator {
-    background: #dc3232;
-}
-
-.text-success {
-    color: #46b450;
-}
-
-.text-error {
-    color: #dc3232;
-}
-
-/* Notices */
-.notice {
-    margin: 20px 0;
-    padding: 12px 16px;
-    border-radius: 4px;
-}
-
-.notice-success {
-    background: #edfaef;
-    border-left: 4px solid #00a32a;
-}
-
-.notice-error {
-    background: #fcf0f1;
-    border-left: 4px solid #d63638;
-}
-
-/* Status */
-.status-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.status-published {
-    background: #dff0d8;
-    color: #3c763d;
-}
-
-.status-draft {
-    background: #fcf8e3;
-    color: #8a6d3b;
-}
-
-/* Responsive */
-@media screen and (max-width: 782px) {
-    .alvobot-pro-wrap {
-        margin: 10px;
+    .page-card {
+        padding: var(--alvobot-space-lg);
     }
+}
 
-    .alvobot-pro-modules {
-        grid-template-columns: 1fr;
-    }
+/* Additional legacy compatibility */
+.alvobot-pro-wrap {
+    /* Fallback for old class references */
+    max-width: var(--alvobot-bp-xl);
+    margin: var(--alvobot-space-xl) auto;
+    padding: 0 var(--alvobot-space-xl);
+}
 
-    .alvobot-pro-module-actions .button {
-        margin-bottom: 8px;
-    }
+.alvobot-pro-header {
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-2xl);
+    border-radius: var(--alvobot-radius-md);
+    box-shadow: var(--alvobot-shadow-md);
+    margin-bottom: var(--alvobot-space-xl);
+    border-left: 4px solid var(--alvobot-primary);
+}
 
-    .global-actions {
-        flex-direction: column;
-        gap: 10px;
-    }
+.alvobot-pro-header h1 {
+    margin: 0 0 var(--alvobot-space-sm);
+    color: var(--alvobot-gray-900);
+    font-size: var(--alvobot-font-size-3xl);
+    font-weight: 600;
+    line-height: 1.3;
+}
 
-    .global-actions .button {
-        margin: 5px 0;
-        width: 100%;
-        text-align: center;
-    }
+.alvobot-pro-header p {
+    margin: 0;
+    color: var(--alvobot-gray-600);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
 }

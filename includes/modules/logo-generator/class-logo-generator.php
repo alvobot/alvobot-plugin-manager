@@ -531,11 +531,15 @@ class AlvoBotPro_LogoGenerator {
             $vbHeight = isset($viewBoxParts[3]) ? floatval($viewBoxParts[3]) : 24;
 
             // Dimensões do SVG principal
-            $width = 500;
-            $height = 120;
             $icon_size = 80;
             $padding = 20;
             $font_size = 48;
+            $height = 120;
+            
+            // Definimos uma largura de referência para o viewBox, mas o SVG usará largura 100%
+            // Calcula largura aproximada com base no texto (aprox. 0.6 * font_size por caractere + espaço para ícone)
+            $text_width = strlen($blog_name) * ($font_size * 0.6);
+            $viewbox_width = $icon_size + (3 * $padding) + $text_width; // ícone + espaçamento + texto
             
             // Calcula a escala mantendo a proporção
             $scale = min($icon_size / $vbWidth, $icon_size / $vbHeight);
@@ -543,6 +547,12 @@ class AlvoBotPro_LogoGenerator {
             // Calcula posições com centralização precisa
             $iconX = $padding;
             $iconY = ($height - ($vbHeight * $scale)) / 2;
+            
+            // Garante uma largura mínima razoável para o viewBox
+            $min_width = 250;
+            if ($viewbox_width < $min_width) {
+                $viewbox_width = $min_width;
+            }
             $textY = $height / 2; // Centralização vertical precisa
 
             // Obtém a família da fonte
@@ -551,7 +561,7 @@ class AlvoBotPro_LogoGenerator {
 
             // Cria o novo SVG com alinhamento vertical melhorado
             return sprintf(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" style="background-color: %s">
+                '<svg xmlns="http://www.w3.org/2000/svg" width="100%%" height="%d" viewBox="0 0 %d %d" style="background-color: %s">
                     <defs>
                         <style type="text/css">
                             @import url("https://fonts.googleapis.com/css2?family=%s");
@@ -561,9 +571,8 @@ class AlvoBotPro_LogoGenerator {
                     <text x="%d" y="%d" font-family="%s" font-size="%d" font-weight="bold" 
                           fill="%s" dominant-baseline="middle" text-anchor="start">%s</text>
                 </svg>',
-                $width,
                 $height,
-                $width,
+                $viewbox_width,
                 $height,
                 esc_attr($background_color),
                 str_replace(' ', '+', $font_family),
@@ -680,15 +689,16 @@ class AlvoBotPro_LogoGenerator {
             wp_die(__('Você não tem permissão para acessar esta página.'));
         }
         ?>
-        <div class="alvobot-pro-wrap">
-            <div class="alvobot-pro-header">
-                <h1>Gerador de Logo</h1>
-                <p>Crie um logo profissional para seu site em segundos</p>
-            </div>
+        <div class="alvobot-admin-wrap">
+            <div class="alvobot-admin-container">
+                <div class="alvobot-admin-header">
+                    <h1>Gerador de Logo</h1>
+                    <p>Crie um logo profissional para seu site em segundos</p>
+                </div>
 
-            <?php settings_errors('alvobot_pro_logo'); ?>
+                <?php settings_errors('alvobot_pro_logo'); ?>
 
-            <div class="alvobot-pro-module-card">
+                <div class="alvobot-card">
                 
                     <div class="preview-container">
                         <div class="logo-preview-section">
@@ -713,7 +723,7 @@ class AlvoBotPro_LogoGenerator {
                             <div class="form-fields">
                                 <div class="form-field">
                                     <label for="blog_name">Nome do Blog</label>
-                                    <input type="text" id="blog_name" name="blog_name" value="<?php echo esc_attr(get_bloginfo('name')); ?>" class="regular-text" required>
+                                    <input type="text" id="blog_name" name="blog_name" value="<?php echo esc_attr(get_bloginfo('name')); ?>" class="alvobot-input" required>
                                 </div>
 
                                 <div class="color-fields">
@@ -738,7 +748,7 @@ class AlvoBotPro_LogoGenerator {
 
                                 <div class="form-field">
                                     <label for="font_choice">Fonte</label>
-                                    <select id="font_choice" name="font_choice" class="font-preview-select">
+                                    <select id="font_choice" name="font_choice" class="alvobot-select font-preview-select">
                                         <?php
                                         $fonts = $this->get_available_fonts();
                                         $current_font = isset($_POST['font_choice']) ? sanitize_text_field($_POST['font_choice']) : 'montserrat';
@@ -767,13 +777,12 @@ class AlvoBotPro_LogoGenerator {
                                             <input type="checkbox" id="set_as_favicon" name="set_as_favicon" value="1" checked>
                                             <span>Definir como favicon do site</span>
                                         </label>
+                                        <div class="alvobot-btn-group alvobot-btn-group-right">
+                                <button type="submit" name="generate_logo" id="generate_logo" class="alvobot-btn alvobot-btn-primary alvobot-btn-lg">Gerar Logo</button>
+                            </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <p class="submit">
-                                <input type="submit" name="generate_logo" id="generate_logo" class="button button-primary" value="Gerar Logo">
-                            </p>
                         </form>
                     </div>
                 

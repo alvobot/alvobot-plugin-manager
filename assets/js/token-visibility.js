@@ -1,6 +1,6 @@
 jQuery(document).ready(function($) {
-    $('.token-toggle').on('click', function() {
-        var $tokenField = $(this).prev('.token-value');
+    $('.alvobot-token-toggle').on('click', function() {
+        var $tokenField = $(this).prev('.alvobot-token-value');
         var $button = $(this);
         
         if ($button.hasClass('showing')) {

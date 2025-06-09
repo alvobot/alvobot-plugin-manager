@@ -13,6 +13,7 @@ Plugin WordPress para gerenciamento de plugins e funcionalidades do AlvoBot Pro.
   - [Logo Generator](#3-logo-generator)
   - [Pre-Article](#4-pre-article)
   - [Multi-Languages](#5-multi-languages)
+  - [Temporary Login](#6-temporary-login)
 - [Desinstalação](#desinstalação)
 - [Suporte](#suporte)
 - [Licença](#licença)
@@ -209,6 +210,84 @@ POST /wp-json/alvobot-multi-languages/v1/translations
     "excerpt": "Brief description in English"
 }
 ```
+
+### 6. Temporary Login
+
+Módulo para criação de links de login temporário para acesso seguro ao painel administrativo.
+
+#### Funcionalidades
+
+- Geração de links de login temporário com expiração configurável
+- Controle de usuários simultâneos ativos
+- Remoção automática de usuários expirados
+- Interface administrativa intuitiva
+- API externa para integração com sistemas de suporte
+
+#### API Endpoints
+
+**Gerar Link de Login Temporário**
+- `POST /wp-json/alvobot-pro/v1/temporary-login/generate`
+  - Gera um novo link de login temporário
+  - Requer autenticação via token
+  - Parâmetros:
+    - `token` (string, obrigatório): Token de autenticação do site
+    - `expiration_hours` (integer, opcional): Horas até expiração (padrão: 24, máximo: 168)
+    - `description` (string, opcional): Descrição do acesso temporário
+
+**Exemplo de Geração de Login Temporário:**
+```json
+POST /wp-json/alvobot-pro/v1/temporary-login/generate
+{
+    "token": "seu-token-aqui",
+    "expiration_hours": 48,
+    "description": "Suporte técnico - Issue #123"
+}
+```
+
+**Exemplo de Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "login_url": "https://seusite.com/?temp-login-token=abc123&tl-site=xyz789",
+        "expires_at": "2024-01-17 14:30:00",
+        "expires_in_hours": 48,
+        "description": "Suporte técnico - Issue #123",
+        "user_id": 456
+    },
+    "message": "Link de login temporário gerado com sucesso."
+}
+```
+
+#### Endpoints Internos
+
+- `GET /wp-json/alvobot-pro/v1/temporary-login/status`
+  - Obtém status dos logins temporários ativos
+  - Requer permissões administrativas
+
+- `POST /wp-json/alvobot-pro/v1/temporary-login/create`
+  - Cria usuário temporário (interface administrativa)
+  - Requer permissões administrativas
+
+- `POST /wp-json/alvobot-pro/v1/temporary-login/revoke`
+  - Revoga todos os logins temporários
+  - Requer permissões administrativas
+
+#### Configurações
+
+O módulo permite configurar:
+- Dias padrão para expiração (1-30 dias)
+- Número máximo de usuários simultâneos (1-10)
+- Remoção automática de usuários expirados
+- Email para notificações
+
+#### Segurança
+
+- Links expiram automaticamente após o tempo configurado
+- Usuários temporários têm permissões de administrador limitadas
+- Tokens únicos por usuário temporário
+- Validação dupla com token do site
+- Logs de acesso para auditoria
 
 ## Hooks e Filtros
 

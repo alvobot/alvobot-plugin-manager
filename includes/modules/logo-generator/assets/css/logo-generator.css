@@ -1,62 +1,150 @@
-/* Logo Generator Styles */
-.logo-generator-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+/* ==========================================================================
+   AlvoBot Pro Logo Generator - CSS Melhorado
+   ========================================================================== */
+
+/* Variables CSS para melhor manutenção */
+:root {
+    --alvobot-transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --alvobot-transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --alvobot-transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --alvobot-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --alvobot-shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
+/* ==========================================================================
+     Layout Principal
+     ========================================================================== */
 
 .alvobot-pro-logo-generator {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 1rem;
+    gap: var(--alvobot-space-3xl);
+    max-width: var(--alvobot-bp-xl);
+    margin: var(--alvobot-space-3xl) auto;
+    padding: var(--alvobot-space-lg);
+    position: relative;
 }
 
-.logo-generator-form {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* Responsividade melhorada */
+@media (max-width: 1200px) {
+    .alvobot-pro-logo-generator {
+        grid-template-columns: 1fr;
+        gap: var(--alvobot-space-2xl);
+        max-width: var(--alvobot-bp-lg);
+    }
 }
+
+@media (max-width: 768px) {
+    .alvobot-pro-logo-generator {
+        margin: var(--alvobot-space-xl) auto;
+        padding: var(--alvobot-space-md);
+        gap: var(--alvobot-space-xl);
+    }
+}
+
+/* ==========================================================================
+     Containers de Preview
+     ========================================================================== */
 
 .preview-container {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 20px;
-    margin-bottom: 15px;
+    gap: var(--alvobot-space-xl);
+    margin-bottom: var(--alvobot-space-lg);
+}
+
+@media (max-width: 968px) {
+    .preview-container {
+        grid-template-columns: 1fr;
+        gap: var(--alvobot-space-lg);
+    }
 }
 
 .logo-preview-section,
 .favicon-preview-section {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-xl);
+    border-radius: var(--alvobot-radius-lg);
+    box-shadow: var(--alvobot-shadow-sm);
+    border: 1px solid var(--alvobot-gray-200);
+    transition: var(--alvobot-transition-base);
+    position: relative;
+    overflow: hidden;
 }
+
+.logo-preview-section:hover,
+.favicon-preview-section:hover {
+    box-shadow: var(--alvobot-shadow-hover);
+    transform: translateY(-1px);
+}
+
+.logo-preview-section::before,
+.favicon-preview-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--alvobot-accent), var(--alvobot-accent-light));
+}
+
+.logo-preview-section h3,
+.favicon-preview-section h3 {
+    margin: 0 0 var(--alvobot-space-md);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+    position: relative;
+    padding-left: var(--alvobot-space-md);
+}
+
+.logo-preview-section h3::before,
+.favicon-preview-section h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 20px;
+    background: var(--alvobot-accent);
+    border-radius: var(--alvobot-radius-sm);
+}
+
+/* ==========================================================================
+     Áreas de Preview
+     ========================================================================== */
 
 .logo-preview,
 .favicon-preview {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
+    background: linear-gradient(135deg, var(--alvobot-gray-50) 0%, var(--alvobot-white) 100%);
+    padding: var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-md);
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 10px;
+    margin-top: var(--alvobot-space-md);
+    border: 2px dashed var(--alvobot-gray-300);
+    transition: var(--alvobot-transition-base);
+    position: relative;
+    overflow: hidden;
+}
+
+.logo-preview:hover,
+.favicon-preview:hover {
+    border-color: var(--alvobot-accent);
+    background: linear-gradient(135deg, var(--alvobot-accent-light) 0%, var(--alvobot-white) 100%);
 }
 
 .logo-preview {
-    min-height: 100px;
+    min-height: 120px;
 }
 
 .favicon-preview {
-    min-height: 50px;
-    padding: 10px;
+    min-height: 60px;
+    padding: var(--alvobot-space-md);
 }
 
 .logo-preview svg,
@@ -64,36 +152,77 @@
     max-width: 100%;
     height: auto;
     max-height: 100px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    transition: var(--alvobot-transition-base);
 }
+
+.logo-preview svg:hover,
+.favicon-preview svg:hover {
+    transform: scale(1.05);
+}
+
+/* Preview vazio */
+.logo-preview:empty::after,
+.favicon-preview:empty::after {
+    content: '📝 Seu logo aparecerá aqui';
+    color: var(--alvobot-gray-500);
+    font-style: italic;
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.favicon-preview:empty::after {
+    content: '🔍 Favicon preview';
+}
+
+/* ==========================================================================
+     Favicon Sizes Display
+     ========================================================================== */
 
 .favicon-sizes {
     display: flex;
     justify-content: space-around;
-    margin-top: 10px;
+    margin-top: var(--alvobot-space-md);
+    flex-wrap: wrap;
+    gap: var(--alvobot-space-sm);
 }
 
 .favicon-sizes span {
-    background: #e9ecef;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: linear-gradient(135deg, var(--alvobot-gray-100) 0%, var(--alvobot-gray-200) 100%);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-full);
+    font-size: var(--alvobot-font-size-xs);
+    color: var(--alvobot-gray-700);
+    font-weight: 500;
+    transition: var(--alvobot-transition-fast);
+    cursor: default;
+    user-select: none;
 }
+
+.favicon-sizes span:hover {
+    background: linear-gradient(135deg, var(--alvobot-accent-light) 0%, var(--alvobot-accent) 100%);
+    color: var(--alvobot-white);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+     Campos de Formulário
+     ========================================================================== */
 
 .form-fields {
     display: grid;
-    gap: 20px;
+    gap: var(--alvobot-space-xl);
 }
 
 .form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    position: relative;
 }
 
 .form-field label {
+    display: block;
+    margin-bottom: var(--alvobot-space-sm);
     font-weight: 600;
-    font-size: 14px;
-    color: #1d2327;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-sm);
 }
 
 .form-field input[type="text"],
@@ -101,16 +230,69 @@
 .font-preview-select {
     width: 100%;
     max-width: 400px;
-    padding: 8px;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    border: 2px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 1.5;
+    color: var(--alvobot-gray-800);
+    background: var(--alvobot-white);
+    transition: var(--alvobot-transition-base);
+    position: relative;
 }
+
+.form-field input[type="text"]:hover,
+.form-field select:hover,
+.font-preview-select:hover {
+    border-color: var(--alvobot-accent-light);
+}
+
+.form-field input[type="text"]:focus,
+.form-field select:focus,
+.font-preview-select:focus {
+    border-color: var(--alvobot-accent);
+    box-shadow: var(--alvobot-shadow-focus);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+/* Estados de validação */
+.form-field input[type="text"]:invalid {
+    border-color: var(--alvobot-error);
+    animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-2px);
+    }
+
+    75% {
+        transform: translateX(2px);
+    }
+}
+
+/* ==========================================================================
+     Campos de Cor
+     ========================================================================== */
 
 .color-fields {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--alvobot-space-xl);
     max-width: 400px;
+}
+
+@media (max-width: 480px) {
+    .color-fields {
+        grid-template-columns: 1fr;
+    }
 }
 
 .color-fields .form-field {
@@ -119,319 +301,512 @@
 
 .color-fields .color-picker {
     width: 100% !important;
+    min-height: 45px;
+    border-radius: var(--alvobot-radius-md) !important;
+    border: 2px solid var(--alvobot-gray-300) !important;
+    transition: var(--alvobot-transition-base) !important;
 }
 
-/* Logo Generator */
-.logo-generator-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.color-fields .color-picker:hover {
+    border-color: var(--alvobot-accent-light) !important;
+    transform: translateY(-1px);
 }
 
-.logo-preview {
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.favicon-previews {
-    display: flex;
-    gap: 20px;
-    margin-top: 10px;
-}
-
-.favicon-preview-item {
-    text-align: center;
-}
-
-.favicon-preview-item span {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 12px;
-    color: #666;
-}
-
-.favicon-preview-item div {
-    padding: 10px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    display: inline-block;
-}
+/* ==========================================================================
+     Seção de Seleção de Ícones
+     ========================================================================== */
 
 .icon-selection-section {
-    margin-top: 30px;
+    margin-top: var(--alvobot-space-3xl);
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-2xl);
+    border-radius: var(--alvobot-radius-lg);
+    box-shadow: var(--alvobot-shadow-sm);
+    border: 1px solid var(--alvobot-gray-200);
 }
+
+.icon-selection-section h3 {
+    margin: 0 0 var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-xl);
+    font-weight: 700;
+    color: var(--alvobot-gray-900);
+    text-align: center;
+    position: relative;
+    padding-bottom: var(--alvobot-space-md);
+}
+
+.icon-selection-section h3::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--alvobot-accent);
+    border-radius: var(--alvobot-radius-full);
+}
+
+/* ==========================================================================
+     Busca de Ícones
+     ========================================================================== */
 
 .icon-search {
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.icon-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 15px;
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 15px;
-    background: #f9f9f9;
-    border-radius: 8px;
-}
-
-.icon-option {
-    background: #fff;
-    border: 2px solid transparent;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    margin-bottom: var(--alvobot-space-xl);
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    border: 2px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    font-size: var(--alvobot-font-size-base);
+    transition: var(--alvobot-transition-base);
+    background: var(--alvobot-white);
     position: relative;
 }
 
-.icon-option:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.icon-search:focus {
+    border-color: var(--alvobot-accent);
+    box-shadow: var(--alvobot-shadow-focus);
+    outline: none;
 }
 
-.icon-option.selected {
-    border-color: #2271b1;
-    background: #f0f6fc;
+.icon-search::placeholder {
+    color: var(--alvobot-gray-500);
+    font-style: italic;
 }
 
-.icon-option svg {
-    width: 32px;
-    height: 32px;
-    margin-bottom: 8px;
+/* ==========================================================================
+     Categorias de Ícones - MELHORADO
+     ========================================================================== */
+
+.icon-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--alvobot-space-sm);
+    margin-bottom: var(--alvobot-space-xl);
+    padding: var(--alvobot-space-lg);
+    background: linear-gradient(135deg, var(--alvobot-gray-50) 0%, var(--alvobot-gray-100) 100%);
+    border: 1px solid var(--alvobot-gray-200);
+    align-items: center;
+    justify-content: flex-start;
 }
 
-.icon-name {
-    font-size: 11px;
-    color: #666;
-    text-align: center;
+.icon-category {
+    padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
+    background: var(--alvobot-white);
+    border: 2px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    cursor: pointer;
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 500;
+    transition: var(--alvobot-transition-base);
+    user-select: none;
+    color: var(--alvobot-gray-700);
+    position: relative;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-    width: 100%;
+    margin-bottom: var(--alvobot-space-xs);
+    flex-shrink: 0;
 }
 
-/* Responsividade */
-@media (max-width: 782px) {
-    .icon-grid {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    }
-    
-    .favicon-previews {
-        flex-direction: column;
-        align-items: center;
-    }
+.icon-category::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
 }
+
+.icon-category:hover {
+    border-color: var(--alvobot-accent);
+    color: var(--alvobot-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--alvobot-shadow-sm);
+}
+
+.icon-category:hover::before {
+    left: 100%;
+}
+
+.icon-category.active {
+    background: linear-gradient(135deg, var(--alvobot-accent) 0%, var(--alvobot-accent-dark) 100%);
+    border-color: var(--alvobot-accent-dark);
+    color: var(--alvobot-white);
+    box-shadow: var(--alvobot-shadow-md);
+    transform: translateY(-1px);
+}
+
+.icon-category .count {
+    opacity: 0.8;
+    font-size: var(--alvobot-font-size-xs);
+    margin-left: var(--alvobot-space-xs);
+    font-weight: 400;
+}
+
+/* ==========================================================================
+     Grid de Ícones - SIGNIFICATIVAMENTE MELHORADO
+     ========================================================================== */
 
 .icon-grid-container {
-    background: #fff;
-    padding: 15px;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    background: var(--alvobot-white);
+    padding: var(--alvobot-space-lg);
+    border: 2px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-lg);
+    position: relative;
+    overflow: hidden;
 }
 
 .icon-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 12px;
+    gap: var(--alvobot-space-lg);
+    max-height: 450px;
     overflow-y: auto;
-    padding: 15px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    max-height: 400px;
+    padding: var(--alvobot-space-lg);
+    scrollbar-width: thin;
+    scrollbar-color: var(--alvobot-accent) var(--alvobot-gray-100);
+    place-items: center;
+    justify-content: center;
+    align-content: start;
+}
+
+/* Responsividade para o grid de ícones */
+@media (max-width: 1400px) {
+    .icon-grid {
+        grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+        gap: var(--alvobot-space-md);
+    }
+}
+
+@media (max-width: 1200px) {
+    .icon-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: var(--alvobot-space-md);
+    }
+}
+
+@media (max-width: 900px) {
+    .icon-grid {
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        gap: var(--alvobot-space-sm);
+    }
+}
+
+@media (max-width: 600px) {
+    .icon-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: var(--alvobot-space-sm);
+        padding: var(--alvobot-space-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .icon-grid {
+        grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+        gap: var(--alvobot-space-xs);
+    }
+}
+
+/* Scrollbar personalizada para WebKit */
+.icon-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.icon-grid::-webkit-scrollbar-track {
+    background: var(--alvobot-gray-100);
+    border-radius: var(--alvobot-radius-full);
+}
+
+.icon-grid::-webkit-scrollbar-thumb {
+    background: var(--alvobot-accent);
+    border-radius: var(--alvobot-radius-full);
+}
+
+.icon-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--alvobot-accent-dark);
+}
+
+/* Container para cada ícone - FORÇAR QUADRADO */
+.icon-grid .icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 100px;
+    margin: 0 auto;
+    aspect-ratio: 1 / 1; /* Força proporção quadrada */
 }
 
 .icon-grid label {
     cursor: pointer;
     text-align: center;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    width: 90px;
+    padding: var(--alvobot-space-md);
+    border: 2px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-lg);
+    transition: var(--alvobot-transition-base);
+    width: 100%;
+    height: 100%; /* Altura igual à largura */
+    aspect-ratio: 1 / 1; /* Força proporção quadrada */
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    background: var(--alvobot-white);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    margin-bottom: var(--alvobot-space-xs);
+    min-height: 90px;
+    min-width: 90px;
+}
+
+/* Ajustes responsivos para os labels - MANTENDO QUADRADO */
+@media (max-width: 900px) {
+    .icon-grid .icon-item {
+        max-width: 85px;
+    }
+    .icon-grid label {
+        min-height: 80px;
+        min-width: 80px;
+        padding: var(--alvobot-space-sm);
+    }
+}
+
+@media (max-width: 600px) {
+    .icon-grid .icon-item {
+        max-width: 75px;
+    }
+    .icon-grid label {
+        min-height: 75px;
+        min-width: 75px;
+        padding: var(--alvobot-space-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .icon-grid .icon-item {
+        max-width: 70px;
+    }
+    .icon-grid label {
+        min-height: 70px;
+        min-width: 70px;
+        padding: var(--alvobot-space-xs);
+    }
+}
+
+.icon-grid label::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(59, 130, 246, 0.1) 100%);
+    opacity: 0;
+    transition: var(--alvobot-transition-base);
+}
+
+.icon-grid label:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--alvobot-shadow-hover);
+    border-color: var(--alvobot-accent);
+    z-index: 10;
+}
+
+.icon-grid label:hover::before {
+    opacity: 1;
 }
 
 .icon-grid input[type="radio"] {
     display: none;
 }
 
-.icon-grid input[type="radio"]:checked + label {
-    background: #f0f6fc;
-    border-color: #2271b1;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.icon-grid input[type="radio"]:checked+label {
+    background: linear-gradient(135deg, var(--alvobot-info-bg, #e0f2fe) 0%, var(--alvobot-accent-light, #93c5fd) 100%);
+    border-color: var(--alvobot-accent, #3b82f6);
+    color: var(--alvobot-accent-dark, #1e40af);
+    box-shadow: var(--alvobot-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    transform: translateY(-2px) scale(1.02);
 }
 
-.icon-preview {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 4px;
+/* Ícone dentro do label */
+.icon-grid label svg,
+.icon-grid label i {
+    width: 32px;
+    height: 32px;
+    margin-bottom: var(--alvobot-space-xs);
+    transition: var(--alvobot-transition-base);
+    pointer-events: none;
 }
 
-.icon-preview svg {
-    width: 24px;
-    height: 24px;
-    color: currentColor;
+@media (max-width: 600px) {
+
+    .icon-grid label svg,
+    .icon-grid label i {
+        width: 28px;
+        height: 28px;
+    }
 }
 
-.icon-name {
-    font-size: 11px;
-    color: #50575e;
-    width: 100%;
-    max-width: 74px;
+@media (max-width: 480px) {
+
+    .icon-grid label svg,
+    .icon-grid label i {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* Texto do ícone */
+.icon-grid label .icon-name {
+    font-size: var(--alvobot-font-size-xs, 0.75rem);
+    font-weight: 500;
+    color: var(--alvobot-gray-600);
+    line-height: 1.2;
+    text-align: center;
+    margin-top: auto;
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-word;
-    line-height: 1.2;
-    margin: 0;
+    max-height: 2.4em;
 }
 
-.checkbox-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+@media (max-width: 600px) {
+    .icon-grid label .icon-name {
+        font-size: 0.65rem;
+        -webkit-line-clamp: 1;
+        max-height: 1.2em;
+    }
 }
 
-.option-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: normal;
+/* Estados de carregamento */
+.icon-grid.loading {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-.option-label input[type="checkbox"] {
-    margin: 0;
+.icon-grid.loading::after {
+    content: 'Carregando ícones...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: var(--alvobot-space-lg);
+    border-radius: var(--alvobot-radius-md);
+    font-weight: 600;
+    color: var(--alvobot-gray-700);
+    z-index: 100;
 }
 
-.submit {
-    margin-top: 30px;
+/* Mensagem quando nenhum ícone é encontrado */
+.icon-grid:empty::after {
+    content: 'Nenhum ícone encontrado. Tente uma busca diferente.';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--alvobot-gray-500);
+    font-style: italic;
+    font-size: var(--alvobot-font-size-sm);
     text-align: center;
+    padding: var(--alvobot-space-xl);
+    width: 100%;
+    box-sizing: border-box;
 }
 
-#generate_logo {
-    min-width: 200px;
-    padding: 8px 20px;
-    height: auto;
-}
+/* ==========================================================================
+     Paginação de Ícones - NOVO
+     ========================================================================== */
 
-/* Icon Categories */
-.icon-categories {
+.icon-pagination {
     display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: var(--alvobot-space-lg);
+    gap: var(--alvobot-space-sm);
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 20px;
-    padding: 12px;
-    background: #f0f0f1;
-    border-radius: 8px;
 }
 
-.icon-category {
-    padding: 6px 12px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 20px;
+.icon-pagination button {
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    border: 2px solid var(--alvobot-gray-300);
+    background: var(--alvobot-white);
+    color: var(--alvobot-gray-700);
+    border-radius: var(--alvobot-radius-md);
     cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s ease;
-    user-select: none;
+    transition: var(--alvobot-transition-base);
+    font-weight: 500;
+    min-width: 40px;
 }
 
-.icon-category:hover {
-    border-color: #2271b1;
-    color: #2271b1;
+.icon-pagination button:hover:not(:disabled) {
+    border-color: var(--alvobot-accent);
+    color: var(--alvobot-accent);
     transform: translateY(-1px);
 }
 
-.icon-category.active {
-    background: #2271b1;
-    border-color: #2271b1;
-    color: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.icon-pagination button.active {
+    background: var(--alvobot-accent);
+    border-color: var(--alvobot-accent);
+    color: var(--alvobot-white);
 }
 
-.icon-category .count {
-    opacity: 0.7;
-    font-size: 12px;
-    margin-left: 4px;
+.icon-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-/* Responsive */
-@media screen and (max-width: 782px) {
-    .preview-container {
-        grid-template-columns: 1fr;
+/* ==========================================================================
+     Utilitários e Helpers
+     ========================================================================== */
+
+.icon-grid .icon-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Clearfix para flutuação */
+.icon-grid::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Forçar quebra de linha quando necessário */
+.icon-grid .break {
+    flex-basis: 100%;
+    height: 0;
+}
+
+/* Animação de entrada dos ícones */
+@keyframes iconFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Responsive Adjustments */
-@media screen and (max-width: 782px) {
-    .icon-grid {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 8px;
-        padding: 10px;
-    }
-
-    .icon-grid label {
-        padding: 8px;
-        min-height: 80px;
-    }
-
-    .icon-preview {
-        width: 40px;
-        height: 40px;
-    }
-
-    .icon-name {
-        font-size: 10px;
-    }
-
-    .icon-categories {
-        padding: 8px;
-        gap: 6px;
-    }
-
-    .icon-category {
-        padding: 4px 8px;
-        font-size: 12px;
-    }
+.icon-grid label {
+    animation: iconFadeIn 0.3s ease-out;
 }
 
-/* Mensagens de sucesso/erro */
-.notice {
-    margin: 20px 0;
-}
-
-.notice p {
-    margin: 0.5em 0;
-    padding: 2px;
-}
-
-/* Container principal */
-.alvobot-pro-wrap {
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+/* ==========================================================================
+     Fim do CSS
+     ========================================================================== */

@@ -28,7 +28,7 @@ jQuery(document).ready(function($) {
         var moduleId = $toggle.data('module');
         
         // Impede a desativação do Plugin Manager
-        if (moduleId === 'plugin_manager') {
+        if (moduleId === 'plugin-manager' || moduleId === 'plugin_manager') {
             $toggle.prop('checked', true);
             showNotice('O Plugin Manager é um módulo essencial e não pode ser desativado.', 'error');
             return;
@@ -40,8 +40,8 @@ jQuery(document).ready(function($) {
         $toggle.prop('disabled', true);
         
         // Mostra indicador de carregamento
-        var $card = $toggle.closest('.alvobot-pro-module-card');
-        $card.addClass('updating');
+        var $card = $toggle.closest('.alvobot-card');
+        $card.addClass('alvobot-loading');
         
         // Envia requisição AJAX
         $.ajax({
@@ -89,7 +89,7 @@ jQuery(document).ready(function($) {
             complete: function() {
                 // Reabilita o toggle e remove o indicador de carregamento
                 $toggle.prop('disabled', false);
-                $card.removeClass('updating');
+                $card.removeClass('alvobot-loading');
             }
         });
     });

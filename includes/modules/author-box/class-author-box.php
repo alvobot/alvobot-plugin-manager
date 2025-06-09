@@ -368,35 +368,45 @@ class AlvoBotPro_AuthorBox {
             return;
         }
         ?>
-        <div class="alvobot-pro-author-box-wrap">
-            <div class="alvobot-pro-header">
-                <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-                <p><?php _e('Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro'); ?></p>
-            </div>
+        <div class="alvobot-admin-wrap">
+            <div class="alvobot-admin-container">
+                <div class="alvobot-admin-header">
+                    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                    <p><?php _e('Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro'); ?></p>
+                </div>
 
-            <!-- Settings Card -->
-            <div class="alvobot-pro-module-card" style="margin-bottom: 2em;">
-                <div class="alvobot-pro-module-header">
-                    <h2><?php _e('Configurações', 'alvobot-pro'); ?></h2>
+                <div class="alvobot-notice-container">
+                    <?php settings_errors(); ?>
                 </div>
-                <div class="alvobot-pro-module-content">
-                    <form action="options.php" method="post">
-                        <?php
-                        settings_fields($this->option_name);
-                        do_settings_sections($this->option_name);
-                        submit_button(__('Salvar Alterações', 'alvobot-pro'));
-                        ?>
-                    </form>
-                </div>
-            </div>
 
-                        <!-- Preview Card -->
-                        <div class="alvobot-pro-module-card">
-                <div class="alvobot-pro-module-header">
-                    <h2><?php _e('Preview do Author Box', 'alvobot-pro'); ?></h2>
+                <!-- Settings Card -->
+                <div class="alvobot-card">
+                    <div class="alvobot-card-header">
+                        <div>
+                            <h2 class="alvobot-card-title"><?php _e('Configurações', 'alvobot-pro'); ?></h2>
+                        </div>
+                    </div>
+                    <div class="alvobot-card-body">
+                        <form action="options.php" method="post">
+                            <?php
+                            settings_fields($this->option_name);
+                            do_settings_sections($this->option_name);
+                            submit_button(__('Salvar Alterações', 'alvobot-pro'), 'alvobot-btn alvobot-btn-primary');
+                            ?>
+                        </form>
+                    </div>
                 </div>
-                <div class="alvobot-pro-module-content">
-                    <?php echo $this->get_author_box_html(); ?>
+
+                <!-- Preview Card -->
+                <div class="alvobot-card">
+                    <div class="alvobot-card-header">
+                        <div>
+                            <h2 class="alvobot-card-title"><?php _e('Preview do Author Box', 'alvobot-pro'); ?></h2>
+                        </div>
+                    </div>
+                    <div class="alvobot-card-body">
+                        <?php echo $this->get_author_box_html(); ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -408,32 +418,31 @@ class AlvoBotPro_AuthorBox {
             return;
         }
 
+        // Calculate the correct path to the main styles file
+        $main_styles_url = plugins_url('assets/css/styles.css', dirname(dirname(dirname(__FILE__))));
+        
+        // Enqueue the main styles with a unique handle
         wp_enqueue_style(
-            $this->plugin_name . '-author-box',
-            plugin_dir_url(__FILE__) . 'css/public.css',
-            array('dashicons'),
-            $this->version
-        );
-    }
-
-    public function enqueue_admin_assets($hook) {
-        // Carrega os estilos do AlvoBot Pro
-        wp_enqueue_style(
-            'alvobot-pro-admin',
-            plugin_dir_url(dirname(dirname(dirname(__FILE__)))) . 'assets/css/alvobot-pro-admin.css',
+            'alvobot-pro-main-styles',
+            $main_styles_url,
             array(),
             $this->version
         );
 
-        // Carrega os estilos específicos do Author Box
+        // Load dashicons dependency
+        wp_enqueue_style('dashicons');
+    }
+
+    public function enqueue_admin_assets($hook) {
+        // Enqueue the main AlvoBot styles for admin - standard across all modules
         wp_enqueue_style(
-            'ab-admin',
-            plugin_dir_url(__FILE__) . 'css/admin.css',
-            array('alvobot-pro-admin'),
+            'alvobot-admin',
+            plugin_dir_url(dirname(dirname(dirname(__FILE__)))) . 'assets/css/styles.css',
+            array(),
             $this->version
         );
-
-        // Carrega os scripts necessários para o media uploader
+        
+        // Carrega os scripts necessários para o media uploader em páginas de perfil
         if ('profile.php' === $hook || 'user-edit.php' === $hook) {
             wp_enqueue_media();
             wp_enqueue_script(
@@ -444,12 +453,23 @@ class AlvoBotPro_AuthorBox {
                 true
             );
         }
-
-        // Carrega o colorpicker apenas na página de configurações do Author Box
-        if (get_current_screen()->id === 'alvobot-pro_page_alvobot-pro-author') {
+        
+        // Enfileira o Color Picker e seus scripts específicos somente na página de configurações do módulo
+        if (isset($_GET['page']) && $_GET['page'] === 'alvobot-pro-author-box') {
+            // Enqueue module-specific CSS with dependency on main styles
+            wp_enqueue_style(
+                'alvobot-author-box-admin',
+                plugin_dir_url(__FILE__) . 'css/admin.css',
+                array('alvobot-admin'),  // Ensure module CSS depends on main styles
+                $this->version
+            );
+            
+            // Standard WordPress color picker
             wp_enqueue_style('wp-color-picker');
+            
+            // Scripts de administração para o color picker e media uploader
             wp_enqueue_script(
-                'ab-admin',
+                'alvobot-author-box-admin-js',
                 plugin_dir_url(__FILE__) . 'js/admin.js',
                 array('jquery', 'wp-color-picker'),
                 $this->version,

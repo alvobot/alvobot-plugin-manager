@@ -184,7 +184,7 @@ class AlvoBotPro_AuthorBox_Settings {
         ?>
         <input type="text" id="<?php echo esc_attr($id); ?>" 
                name="ab_settings[<?php echo esc_attr($id); ?>]" 
-               value="<?php echo esc_attr($value); ?>" class="regular-text">
+               value="<?php echo esc_attr($value); ?>" class="alvobot-input">
         <?php
     }
 
@@ -229,15 +229,25 @@ class AlvoBotPro_AuthorBox_Settings {
             return;
         }
         ?>
-        <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <form action="options.php" method="post">
-                <?php
-                settings_fields('ab_settings');
-                do_settings_sections('ab_settings');
-                submit_button();
-                ?>
-            </form>
+        <div class="alvobot-admin-wrap">
+            <div class="alvobot-admin-container">
+                <div class="alvobot-admin-header">
+                    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                    <p>Configure as configurações de exibição e layout da caixa de autor</p>
+                </div>
+
+                <div class="alvobot-card">
+                    <form action="options.php" method="post">
+                        <?php
+                        settings_fields('ab_settings');
+                        do_settings_sections('ab_settings');
+                        ?>
+                        <div class="alvobot-btn-group alvobot-btn-group-right">
+                            <button type="submit" class="alvobot-btn alvobot-btn-primary">Salvar Configurações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
         <?php
     }
