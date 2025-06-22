@@ -169,31 +169,38 @@ if (!defined('ABSPATH')) {
                             }
                         }
                         
+                        // PERFORMANCE: Query única otimizada para contar posts e páginas de todos os idiomas
+                        $lang_counts = array();
+                        if (!empty($language_terms)) {
+                            $term_ids = array_column($language_terms, 'term_id');
+                            $placeholders = implode(',', array_fill(0, count($term_ids), '%d'));
+                            
+                            $counts_query = $wpdb->prepare("
+                                SELECT tt.term_id, p.post_type, COUNT(*) as count
+                                FROM {$wpdb->posts} p
+                                JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
+                                JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+                                WHERE tt.term_id IN ($placeholders)
+                                AND p.post_type IN ('post', 'page')
+                                AND p.post_status = 'publish'
+                                GROUP BY tt.term_id, p.post_type
+                            ", ...$term_ids);
+                            
+                            $counts_results = $wpdb->get_results($counts_query);
+                            
+                            // Organiza os resultados em array indexado por term_id e post_type
+                            foreach ($counts_results as $count_result) {
+                                $lang_counts[$count_result->term_id][$count_result->post_type] = intval($count_result->count);
+                            }
+                        }
+                        
                         foreach ($language_terms as $lang): 
                             // Obter código do idioma da meta
                             $lang_code = $lang->meta_value;
                             
-                            // Contar posts para este idioma
-                            $post_count = $wpdb->get_var($wpdb->prepare("
-                                SELECT COUNT(*) 
-                                FROM {$wpdb->posts} p
-                                JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
-                                JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-                                WHERE tt.term_id = %d
-                                AND p.post_type = 'post'
-                                AND p.post_status = 'publish'
-                            ", $lang->term_id));
-                            
-                            // Contar páginas para este idioma
-                            $page_count = $wpdb->get_var($wpdb->prepare("
-                                SELECT COUNT(*) 
-                                FROM {$wpdb->posts} p
-                                JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
-                                JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-                                WHERE tt.term_id = %d
-                                AND p.post_type = 'page'
-                                AND p.post_status = 'publish'
-                            ", $lang->term_id));
+                            // PERFORMANCE: Usar dados já carregados em uma query
+                            $post_count = isset($lang_counts[$lang->term_id]['post']) ? $lang_counts[$lang->term_id]['post'] : 0;
+                            $page_count = isset($lang_counts[$lang->term_id]['page']) ? $lang_counts[$lang->term_id]['page'] : 0;
                             
                             // Verificar se é o idioma padrão (várias verificações)
                             $is_default = false;

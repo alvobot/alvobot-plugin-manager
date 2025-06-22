@@ -1,0 +1,829 @@
+/* Modal de Tradução Aprimorado */
+.alvobot-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alvobot-modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.alvobot-modal-header {
+    padding: 24px;
+    border-bottom: 1px solid #e1e5e9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.alvobot-modal-header h2 {
+    margin: 0;
+    color: #2c3338;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.alvobot-modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.alvobot-modal-close:hover {
+    background: #e1e5e9;
+    color: #2c3338;
+}
+
+.alvobot-modal-body {
+    padding: 24px;
+    min-height: 400px;
+}
+
+.alvobot-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e1e5e9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Etapas da Tradução */
+.alvobot-translation-step h3 {
+    margin: 0 0 16px 0;
+    color: #2c3338;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.alvobot-translation-step p {
+    margin: 0 0 20px 0;
+    color: #646970;
+    line-height: 1.6;
+}
+
+/* Grid de Idiomas */
+.alvobot-language-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.alvobot-language-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.alvobot-language-option:hover {
+    border-color: #CD9042;
+    background: #fef9f3;
+}
+
+.alvobot-language-option.selected {
+    border-color: #CD9042;
+    background: #CD9042;
+    color: white;
+}
+
+.alvobot-language-option input {
+    margin: 0;
+}
+
+.alvobot-language-flag {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.alvobot-language-name {
+    font-weight: 500;
+    flex: 1;
+}
+
+.alvobot-language-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+/* Grid de Opções */
+.alvobot-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.alvobot-option-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.alvobot-option-item:hover {
+    border-color: #CD9042;
+    background: #fef9f3;
+}
+
+.alvobot-option-item input:checked + .alvobot-checkmark + .alvobot-option-content {
+    color: #2c3338;
+}
+
+.alvobot-checkmark {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #dcdcde;
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.alvobot-option-item input:checked + .alvobot-checkmark {
+    background: #CD9042;
+    border-color: #CD9042;
+}
+
+.alvobot-option-item input:checked + .alvobot-checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.alvobot-option-content {
+    flex: 1;
+}
+
+.alvobot-option-content strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #2c3338;
+    font-weight: 600;
+}
+
+.alvobot-option-content small {
+    color: #646970;
+    line-height: 1.4;
+}
+
+/* Progresso */
+.alvobot-progress-container {
+    margin-bottom: 24px;
+}
+
+.alvobot-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.alvobot-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #CD9042, #B8803A);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.alvobot-progress-text {
+    text-align: center;
+    color: #2c3338;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.alvobot-progress-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.alvobot-progress-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f6f7f7;
+    border-radius: 6px;
+}
+
+.alvobot-progress-label {
+    color: #646970;
+    font-weight: 500;
+}
+
+.alvobot-progress-value {
+    color: #2c3338;
+    font-weight: 600;
+}
+
+/* Log de Tradução */
+.alvobot-progress-log {
+    background: #f6f7f7;
+    border-radius: 6px;
+    padding: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.alvobot-progress-log h4 {
+    margin: 0 0 12px 0;
+    color: #2c3338;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.alvobot-log-content {
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.alvobot-log-entry {
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: flex;
+    gap: 8px;
+}
+
+.alvobot-log-info {
+    background: #e7f3ff;
+    color: #004085;
+}
+
+.alvobot-log-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.alvobot-log-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.alvobot-log-time {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.alvobot-log-message {
+    flex: 1;
+}
+
+/* Estatísticas de Conclusão */
+.alvobot-completion-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.alvobot-stat-item {
+    text-align: center;
+    padding: 20px;
+    background: #f6f7f7;
+    border-radius: 8px;
+    border: 1px solid #e1e5e9;
+}
+
+.alvobot-stat-number {
+    font-size: 32px;
+    font-weight: bold;
+    color: #CD9042;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.alvobot-stat-label {
+    color: #646970;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.alvobot-completion-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* Botões */
+.alvobot-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-decoration: none;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 8px;
+    min-height: 36px;
+    box-sizing: border-box;
+}
+
+.alvobot-btn-primary {
+    background: #CD9042;
+    border-color: #CD9042;
+    color: white;
+}
+
+.alvobot-btn-primary:hover:not(:disabled) {
+    background: #B8803A;
+    border-color: #B8803A;
+    color: white;
+}
+
+.alvobot-btn-outline {
+    background: transparent;
+    border-color: #dcdcde;
+    color: #2c3338;
+}
+
+.alvobot-btn-outline:hover:not(:disabled) {
+    background: #f6f7f7;
+    border-color: #c3c4c7;
+    color: #2c3338;
+}
+
+.alvobot-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .alvobot-modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .alvobot-modal-header {
+        padding: 16px;
+    }
+    
+    .alvobot-modal-body {
+        padding: 16px;
+    }
+    
+    .alvobot-modal-footer {
+        padding: 12px 16px;
+        flex-direction: column;
+    }
+    
+    .alvobot-language-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-options-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-completion-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .alvobot-completion-actions {
+        flex-direction: column;
+    }
+    
+    .alvobot-btn {
+        width: 100%;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.alvobot-modal-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Seleção de idiomas melhorada */
+.alvobot-language-option {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.alvobot-language-option input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.alvobot-language-option .alvobot-checkmark {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    height: 20px;
+    width: 20px;
+    background-color: #f6f7f7;
+    border: 2px solid #dcdcde;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.alvobot-language-option:hover .alvobot-checkmark {
+    border-color: #CD9042;
+    background-color: #fef9f3;
+}
+
+.alvobot-language-option.selected .alvobot-checkmark {
+    background-color: #CD9042;
+    border-color: #CD9042;
+}
+
+.alvobot-language-option.selected .alvobot-checkmark:after {
+    content: "";
+    position: absolute;
+    display: block;
+    left: 6px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.alvobot-language-option .alvobot-option-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-right: 40px; /* Space for checkbox */
+}
+
+.alvobot-language-flag {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.alvobot-language-flag img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.alvobot-language-name {
+    flex: 1;
+    font-weight: 500;
+    color: #2c3338;
+}
+
+.alvobot-language-option small {
+    color: #646970;
+    font-size: 12px;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Estados de seleção */
+.alvobot-language-option.selected {
+    background: linear-gradient(135deg, #CD9042, #B8803A);
+    color: white;
+    border-color: #CD9042;
+}
+
+.alvobot-language-option.selected .alvobot-language-name,
+.alvobot-language-option.selected small {
+    color: white;
+}
+
+/* Contador de seleção */
+.alvobot-selected-count {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Notificações melhoradas */
+.alvobot-notification {
+    position: fixed;
+    top: 32px;
+    right: 20px;
+    z-index: 100001;
+    max-width: 400px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.alvobot-notification-success {
+    border-left: 4px solid #00a32a;
+}
+
+.alvobot-notification-error {
+    border-left: 4px solid #d63638;
+}
+
+.alvobot-notification-info {
+    border-left: 4px solid #0073aa;
+}
+
+.alvobot-notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+
+.alvobot-notification-content .dashicons {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+
+.alvobot-notification-success .dashicons {
+    color: #00a32a;
+}
+
+.alvobot-notification-error .dashicons {
+    color: #d63638;
+}
+
+.alvobot-notification-info .dashicons {
+    color: #0073aa;
+}
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Ocultar inputs de checkbox nativos */
+.alvobot-option-item input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* Modal de Teste de Conexão */
+.alvobot-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.alvobot-loading .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    margin-bottom: 16px;
+    color: #0073aa;
+}
+
+.alvobot-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.alvobot-test-result {
+    display: flex;
+    align-items: flex-start;
+    padding: 30px 20px;
+    gap: 20px;
+}
+
+.alvobot-result-icon {
+    flex-shrink: 0;
+}
+
+.alvobot-result-icon .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.alvobot-result-content {
+    flex-grow: 1;
+}
+
+.alvobot-result-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.alvobot-result-content p {
+    margin: 0 0 16px 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+#result-details {
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-top: 16px;
+}
+
+#result-details-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#result-details-list li {
+    margin: 0;
+    padding: 4px 0;
+    color: #555;
+}
+
+.alvobot-modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e1e5e9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8f9fa;
+}
+
+/* Botão sutil de reset no Status do Sistema */
+.alvobot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alvobot-reset-stats-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.alvobot-reset-stats-btn:hover {
+    background: #f0f0f0;
+    color: #dc3232;
+    opacity: 1;
+    transform: rotate(180deg);
+}
+
+.alvobot-reset-stats-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Modal pequeno para confirmação */
+.alvobot-modal-small {
+    max-width: 500px;
+    width: 90%;
+}
+
+/* Seção de aviso no modal de reset */
+.alvobot-reset-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+}
+
+.alvobot-warning-icon {
+    flex-shrink: 0;
+}
+
+.alvobot-warning-icon .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #ffb900;
+}
+
+.alvobot-warning-content {
+    flex-grow: 1;
+}
+
+.alvobot-warning-content p {
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.alvobot-warning-content ul {
+    margin: 8px 0 12px 20px;
+    color: #666;
+}
+
+.alvobot-warning-content li {
+    margin-bottom: 4px;
+}
+
+.alvobot-warning-content em {
+    color: #dc3232;
+    font-weight: 500;
+}
+
+/* Botão de perigo */
+.alvobot-btn-danger {
+    background: #dc3232;
+    color: white;
+    border: 1px solid #dc3232;
+}
+
+.alvobot-btn-danger:hover {
+    background: #c62d2d;
+    border-color: #c62d2d;
+}
+
+.alvobot-btn-danger:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
