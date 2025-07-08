@@ -88,9 +88,8 @@ class AlvoBotPro_MultiLanguages {
         // Assets administrativos
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         
-        // Handlers AJAX
-        add_action('wp_ajax_alvobot_translate_and_create_post', array($this, 'ajax_translate_and_create_post'));
-        add_action('wp_ajax_alvobot_add_to_translation_queue', array($this, 'ajax_add_to_translation_queue'));
+        // Handlers AJAX centralizados no Ajax Controller
+        // Removido: add_action('wp_ajax_alvobot_translate_and_create_post') - agora no Ajax Controller
         
         // Cron schedules
         add_filter('cron_schedules', array($this, 'add_cron_schedules'));
@@ -118,7 +117,7 @@ class AlvoBotPro_MultiLanguages {
         try {
             // Inicializa serviço unificado de tradução
             if (class_exists('AlvoBotPro_Translation_Service')) {
-                $this->translation_service = new AlvoBotPro_Translation_Service();
+                $this->translation_service = AlvoBotPro_Translation_Service::get_instance();
             }
             
             // Inicializa serviço de API REST
@@ -191,91 +190,9 @@ class AlvoBotPro_MultiLanguages {
         }
     }
     
-    /**
-     * Handler AJAX principal - delega para Translation Service
-     */
-    public function ajax_translate_and_create_post() {
-        AlvoBotPro::debug_log('multi-languages', 'Iniciando tradução via AJAX');
-        
-        // Verifica nonce
-        if (!check_ajax_referer('alvobot_nonce', 'nonce', false)) {
-            wp_send_json_error('Nonce inválido');
-            return;
-        }
-        
-        // Verifica permissões
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error('Permissões insuficientes');
-            return;
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $target_lang = sanitize_text_field($_POST['target_lang']);
-        $options = $_POST['options'] ?? array();
-        
-        // Converte strings boolean para boolean real
-        foreach (['preserveFormatting', 'translateMetaFields', 'translateLinks', 'force_overwrite'] as $key) {
-            if (isset($options[$key])) {
-                $options[$key] = filter_var($options[$key], FILTER_VALIDATE_BOOLEAN);
-            }
-        }
-        
-        if (!$this->translation_service) {
-            wp_send_json_error('Serviço de tradução não disponível');
-            return;
-        }
-        
-        // Delega para o Translation Service
-        $result = $this->translation_service->translate_and_create_post($post_id, $target_lang, $options);
-        
-        if ($result['success']) {
-            wp_send_json_success($result);
-        } else {
-            wp_send_json_error($result['error']);
-        }
-    }
+    // Método removido - centralizado no Ajax Controller
     
-    /**
-     * Handler AJAX para adicionar à fila - delega para Translation Service
-     */
-    public function ajax_add_to_translation_queue() {
-        // Verifica nonce e permissões
-        if (!check_ajax_referer('alvobot_nonce', 'nonce', false)) {
-            wp_send_json_error('Nonce inválido');
-            return;
-        }
-        
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error('Permissões insuficientes');
-            return;
-        }
-        
-        $post_id = intval($_POST['post_id']);
-        $target_languages = array_map('sanitize_text_field', $_POST['target_languages']);
-        $options = $_POST['options'] ?? array();
-        
-        if (!$this->translation_service) {
-            wp_send_json_error('Serviço de tradução não disponível');
-            return;
-        }
-        
-        // Delega para o Translation Service
-        $queue_id = $this->translation_service->add_to_translation_queue($post_id, $target_languages, $options);
-        
-        if ($queue_id) {
-            $post = get_post($post_id);
-            wp_send_json_success(array(
-                'queue_id' => $queue_id,
-                'message' => sprintf(
-                    __('Post "%s" foi adicionado à fila de tradução para %d idiomas.', 'alvobot-pro'),
-                    $post->post_title,
-                    count($target_languages)
-                )
-            ));
-        } else {
-            wp_send_json_error('Falha ao adicionar à fila de tradução');
-        }
-    }
+    // Método removido - centralizado no Ajax Controller
     
     /**
      * Adiciona botão "Traduzir" nas ações das linhas de posts/páginas
@@ -347,7 +264,7 @@ class AlvoBotPro_MultiLanguages {
             'alvobot-translation-interface',
             plugin_dir_url(__FILE__) . 'assets/js/translation-interface.js',
             array('jquery', 'wp-util'),
-            '1.0.1',
+            '2.0.0',
             true
         );
         

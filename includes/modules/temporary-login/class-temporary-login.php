@@ -201,6 +201,9 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
             }
             
             // Remove o usuário
+            if (!function_exists('wp_delete_user')) {
+                require_once(ABSPATH . 'wp-admin/includes/user.php');
+            }
             wp_delete_user($user->ID, $admin_id);
             
             // Limpa a expiração das configurações

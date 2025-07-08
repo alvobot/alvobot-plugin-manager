@@ -36,7 +36,7 @@ class AlvoBotPro_Translation_Queue {
             'min_indicators_percent' => 0.05,        // 5% das palavras devem ser indicadores
             'min_indicators_absolute' => 3,          // Mínimo absoluto de indicadores
             'min_text_length' => 50,                 // Tamanho mínimo de texto para validar
-            'orphan_timeout_minutes' => 5,           // Timeout para itens órfãos
+            'orphan_timeout_minutes' => 15,          // Timeout para itens órfãos
             'chunk_sleep_ms' => 100,                 // Sleep entre chunks (ms)
             'string_sleep_ms' => 50                  // Sleep entre strings (ms)
         );
@@ -272,12 +272,12 @@ class AlvoBotPro_Translation_Queue {
         }
         
         // Agora busca o item que acabamos de marcar como processing
-        $item = $wpdb->get_row($wpdb->prepare(
+        $item = $wpdb->get_row(
             "SELECT * FROM {$this->table_name} 
              WHERE status = 'processing' AND started_at IS NOT NULL 
              ORDER BY started_at DESC 
              LIMIT 1"
-        ));
+        );
         
         if (!$item) {
             $this->log_progress('system', 'error', '❌ Falha ao recuperar item após lock atomic', []);
@@ -335,295 +335,182 @@ class AlvoBotPro_Translation_Queue {
                 'total_languages' => count($target_langs)
             ]);
             
-            // Implementar tradução real com OpenAI
+            // Processa usando a lógica comum
+            return $this->process_item($item);
+            
+        } catch (Exception $e) {
+            $error_message = $e->getMessage();
+            AlvoBotPro::debug_log('multi-languages', "Erro ao processar item {$item->id}: {$error_message}");
+            
+            global $wpdb;
+            $wpdb->update($this->table_name, [
+                'status' => 'failed',
+                'progress' => 0,
+                'logs' => json_encode([[
+                    'timestamp' => current_time('mysql'),
+                    'level' => 'error',
+                    'message' => "Erro: {$error_message}"
+                ]]),
+                'error_log' => $error_message,
+                'completed_at' => current_time('mysql')
+            ], ['id' => $item->id]);
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Processa um item específico da fila
+     * 
+     * @param int $queue_id ID do item na fila
+     * @return bool True se processado com sucesso
+     */
+    public function process_specific_item($queue_id) {
+        global $wpdb;
+        $this->create_table();
+        
+        // Busca o item específico
+        $item = $this->get_item($queue_id);
+        
+        if (!$item) {
+            AlvoBotPro::debug_log('multi-languages', "Item {$queue_id} não encontrado");
+            return false;
+        }
+        
+        if ($item->status !== 'pending') {
+            AlvoBotPro::debug_log('multi-languages', "Item {$queue_id} não está pendente. Status: {$item->status}");
+            return false;
+        }
+        
+        // Marca como processando atomicamente
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'status' => 'processing',
+                'started_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            ],
+            [
+                'id' => $queue_id,
+                'status' => 'pending' // Só atualiza se ainda estiver pendente
+            ]
+        );
+        
+        if (!$updated) {
+            AlvoBotPro::debug_log('multi-languages', "Não foi possível marcar item {$queue_id} como processando");
+            return false;
+        }
+        
+        // Recarrega o item com status atualizado
+        $item = $this->get_item($queue_id);
+        
+        // Processa o item usando a mesma lógica do process_next_item
+        return $this->process_item($item);
+    }
+    
+    /**
+     * Lógica comum de processamento de item (extraída para reutilização)
+     */
+    private function process_item($item) {
+        global $wpdb;
+        
+        if (!$item || $item->status !== 'processing') {
+            return false;
+        }
+        
+        try {
+            $start_time = microtime(true);
+            $post = get_post($item->post_id);
+            
+            if (!$post) {
+                throw new Exception("Post {$item->post_id} não encontrado");
+            }
+            
+            // Decodifica dados JSON
+            $target_langs = json_decode($item->target_langs, true);
+            $options = json_decode($item->options, true) ?: [];
+            
+            // Logs de progresso
             $logs = [
                 [
                     'timestamp' => current_time('mysql'),
                     'level' => 'info',
-                    'message' => "🚀 Iniciado processamento do post '{$post->post_title}'",
-                    'progress_data' => [
-                        'step' => 'initialization',
-                        'total_languages' => count($target_langs),
-                        'estimated_chunks' => 'calculating...'
-                    ]
+                    'message' => "🚀 Iniciado processamento do post '{$post->post_title}'"
                 ]
             ];
             
             $source_lang = $item->source_lang;
-            $progress = 15; // Progresso inicial mais alto após validações
+            $progress = 15;
             $translated_posts_created = 0;
             
+            // Processa cada idioma
             foreach ($target_langs as $lang_index => $target_lang) {
                 try {
-                    $lang_start_time = microtime(true);
                     $current_lang_progress = $lang_index + 1;
-                    
-                    $this->log_progress('translation', 'info', "🌍 Iniciando tradução para {$target_lang}", [
-                        'queue_id' => $item->id,
-                        'source_lang' => $source_lang,
-                        'target_lang' => $target_lang,
-                        'language_progress' => "{$current_lang_progress}/{" . count($target_langs) . "}",
-                        'overall_progress' => $progress . '%',
-                        'memory_usage' => $this->format_bytes(memory_get_usage())
-                    ]);
                     
                     $logs[] = [
                         'timestamp' => current_time('mysql'),
                         'level' => 'info',
-                        'message' => "🌍 Traduzindo de '{$source_lang}' para '{$target_lang}' ({$current_lang_progress}/" . count($target_langs) . ")",
-                        'progress_data' => [
-                            'current_language' => $target_lang,
-                            'language_index' => $current_lang_progress,
-                            'total_languages' => count($target_langs),
-                            'overall_progress' => $progress
-                        ]
+                        'message' => "🌍 Traduzindo de '{$source_lang}' para '{$target_lang}' ({$current_lang_progress}/" . count($target_langs) . ")"
                     ];
                     
-                    // Atualizar progresso no banco
+                    // Atualizar progresso
                     $this->update_progress_realtime($item->id, $progress, "Traduzindo para {$target_lang}");
                     
-                    // PRIMEIRA VERIFICAÇÃO: Verificar se já existe tradução para este idioma (mais robusta)
-                    $this->log_progress('polylang', 'info', '🔍 Verificando traduções existentes', [
-                        'queue_id' => $item->id,
-                        'target_lang' => $target_lang,
-                        'post_id' => $post->ID
-                    ]);
-                    
+                    // Verifica se já existe tradução
                     if (function_exists('pll_get_post_translations')) {
-                        $polylang_check_start = microtime(true);
                         $translations = pll_get_post_translations($post->ID);
-                        $polylang_check_time = microtime(true) - $polylang_check_start;
-                        
-                        // Verificação adicional por query direta para garantir
-                        global $wpdb;
-                        $existing_post = $wpdb->get_var($wpdb->prepare(
-                            "SELECT p.ID FROM {$wpdb->posts} p 
-                             INNER JOIN {$wpdb->term_relationships} tr ON p.ID = tr.object_id
-                             INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-                             INNER JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
-                             WHERE p.post_status IN ('publish', 'draft') 
-                             AND p.post_type = %s
-                             AND tt.taxonomy = 'language'
-                             AND t.slug = %s
-                             AND p.ID != %d",
-                            $post->post_type,
-                            $target_lang,
-                            $post->ID
-                        ));
-                        
-                        $this->log_progress('polylang', 'info', '✅ Verificação Polylang concluída', [
-                            'queue_id' => $item->id,
-                            'check_time' => round($polylang_check_time * 1000, 2) . 'ms',
-                            'existing_translations' => array_keys($translations),
-                            'total_existing' => count($translations),
-                            'direct_query_result' => $existing_post ? 'found_duplicate' : 'no_duplicate'
-                        ]);
-                        
-                        // Verifica tanto pelo Polylang quanto pela query direta
-                        if (isset($translations[$target_lang]) || $existing_post) {
-                            $existing_id = isset($translations[$target_lang]) ? $translations[$target_lang] : $existing_post;
-                            
-                            $this->log_progress('translation', 'error', "❌ Tradução já existe para {$target_lang}", [
-                                'queue_id' => $item->id,
-                                'existing_post_id' => $existing_id,
-                                'detection_method' => isset($translations[$target_lang]) ? 'polylang' : 'direct_query',
-                                'skipping_language' => $target_lang
-                            ]);
-                            
-                            $logs[] = [
-                                'timestamp' => current_time('mysql'),
-                                'level' => 'error',
-                                'message' => "❌ Já existe uma tradução para '{$target_lang}' (Post ID: {$existing_id})"
-                            ];
-                            
-                            // Marcar como erro em vez de sucesso parcial
-                            throw new Exception("Já existe uma tradução para este idioma");
-                        }
-                    }
-                    
-                    // Obter instância do translation engine
-                    $this->log_progress('engine', 'info', '🔧 Carregando motor de tradução', [
-                        'queue_id' => $item->id
-                    ]);
-                    
-                    $engine_start = microtime(true);
-                    $translation_engine = $this->get_translation_engine();
-                    $engine_load_time = microtime(true) - $engine_start;
-                    
-                    if (!$translation_engine) {
-                        throw new Exception("Motor de tradução não disponível");
-                    }
-                    
-                    $this->log_progress('engine', 'success', '✅ Motor de tradução carregado', [
-                        'queue_id' => $item->id,
-                        'load_time' => round($engine_load_time * 1000, 2) . 'ms',
-                        'engine_class' => get_class($translation_engine)
-                    ]);
-                    
-                    // Traduzir baseado no tipo de conteúdo
-                    $translation_start = microtime(true);
-                    $this->log_progress('translation', 'info', "🎯 Iniciando tradução de {$post->post_type}", [
-                        'queue_id' => $item->id,
-                        'post_type' => $post->post_type,
-                        'content_length' => strlen($post->post_content),
-                        'strategy' => $post->post_type === 'post' ? 'article_chunks' : 'page_strings'
-                    ]);
-                    
-                    if ($post->post_type === 'post') {
-                        $translation_result = $this->translate_article($post, $source_lang, $target_lang, $translation_engine, $logs, $item->id);
-                    } else {
-                        $translation_result = $this->translate_page($post, $source_lang, $target_lang, $translation_engine, $logs, $item->id);
-                    }
-                    
-                    $translation_time = microtime(true) - $translation_start;
-                    
-                    if (!$translation_result['success']) {
-                        throw new Exception($translation_result['error'] ?? 'Falha na tradução');
-                    }
-                    
-                    $this->log_progress('translation', 'success', "✅ Tradução concluída para {$target_lang}", [
-                        'queue_id' => $item->id,
-                        'translation_time' => round($translation_time, 2) . 's',
-                        'original_title' => $post->post_title,
-                        'translated_title' => $translation_result['title'],
-                        'original_length' => strlen($post->post_content),
-                        'translated_length' => strlen($translation_result['content']),
-                        'chunks_translated' => $translation_result['chunks_translated'] ?? 'N/A',
-                        'method' => $translation_result['translation_method'] ?? 'unknown'
-                    ]);
-                    
-                    $translated_title = $translation_result['title'];
-                    $translated_content = $translation_result['content'];
-                    $logs = array_merge($logs, $translation_result['logs'] ?? []);
-                    
-                    // VALIDAÇÃO EM DUAS CAMADAS: Programática + AI
-                    $validation_start = microtime(true);
-                    $full_translated_text = $translated_title . ' ' . wp_strip_all_tags($translated_content);
-                    
-                    $this->log_progress('validation', 'info', '🔍 Iniciando validação em duas camadas', [
-                        'queue_id' => $item->id,
-                        'text_length' => strlen($full_translated_text),
-                        'expected_language' => $target_lang,
-                        'validation_strategy' => 'programmatic_plus_ai'
-                    ]);
-                    
-                    $validation_passed = $this->validate_translation($full_translated_text, $target_lang, $logs);
-                    $validation_time = microtime(true) - $validation_start;
-                    
-                    if (!$validation_passed) {
-                        $this->log_progress('validation', 'error', "❌ Validação falhou para {$target_lang}", [
-                            'queue_id' => $item->id,
-                            'validation_time' => round($validation_time, 2) . 's',
-                            'result' => 'draft',
-                            'reason' => 'failed_language_validation'
-                        ]);
-                        
-                        $logs[] = [
-                            'timestamp' => current_time('mysql'),
-                            'level' => 'error',
-                            'message' => "❌ Validação de idioma falhou - post será criado como rascunho para revisão manual",
-                            'progress_data' => [
-                                'validation_time' => round($validation_time, 2) . 's',
-                                'status' => 'draft'
-                            ]
-                        ];
-                        
-                        // Criar post como rascunho quando validação falha
-                        $post_creation_start = microtime(true);
-                        $translated_post_id = $this->create_translated_post($post, $translated_title, $translated_content, $target_lang, 'draft');
-                        $post_creation_time = microtime(true) - $post_creation_start;
-                        
-                        if ($translated_post_id) {
-                            $this->log_progress('post', 'warning', "⚠️ Post criado como RASCUNHO", [
-                                'queue_id' => $item->id,
-                                'post_id' => $translated_post_id,
-                                'status' => 'draft',
-                                'creation_time' => round($post_creation_time, 2) . 's',
-                                'requires_review' => true
-                            ]);
-                            
+                        if (isset($translations[$target_lang])) {
                             $logs[] = [
                                 'timestamp' => current_time('mysql'),
                                 'level' => 'warning',
-                                'message' => "⚠️ Post traduzido criado como rascunho (ID: {$translated_post_id}) - requer revisão",
-                                'progress_data' => [
-                                    'post_id' => $translated_post_id,
-                                    'status' => 'draft'
-                                ]
+                                'message' => "⚠️ Tradução para '{$target_lang}' já existe"
                             ];
+                            continue;
                         }
+                    }
+                    
+                    // Realiza a tradução
+                    if (!class_exists('AlvoBotPro_Translation_Service')) {
+                        throw new Exception('Classe AlvoBotPro_Translation_Service não encontrada');
+                    }
+                    $translation_service = AlvoBotPro_Translation_Service::get_instance();
+                    $result = $translation_service->translate_and_create_post($post->ID, $target_lang, $options);
+                    
+                    if ($result['success']) {
+                        $translated_posts_created++;
+                        $progress = min(95, 15 + (80 * ($lang_index + 1) / count($target_langs)));
                         
-                        $progress += (75 / count($target_langs)); // Progresso mesmo falhando validação
-                        continue;
+                        $logs[] = [
+                            'timestamp' => current_time('mysql'),
+                            'level' => 'success',
+                            'message' => "✅ Tradução para '{$target_lang}' concluída"
+                        ];
+                    } else {
+                        $logs[] = [
+                            'timestamp' => current_time('mysql'),
+                            'level' => 'error',
+                            'message' => "❌ Falha ao traduzir para '{$target_lang}': " . ($result['error'] ?? 'Erro desconhecido')
+                        ];
                     }
                     
-                    $this->log_progress('validation', 'success', "✅ Validação aprovada para {$target_lang}", [
-                        'queue_id' => $item->id,
-                        'validation_time' => round($validation_time, 2) . 's',
-                        'result' => 'publish',
-                        'quality_approved' => true
-                    ]);
-                    
-                    $logs[] = [
-                        'timestamp' => current_time('mysql'),
-                        'level' => 'success',
-                        'message' => "✅ Validação de idioma aprovada - criando post para publicação",
-                        'progress_data' => [
-                            'validation_result' => 'passed',
-                            'status' => 'publish'
-                        ]
-                    ];
-                    
-                    // Criar post traduzido e publicar quando validação passa
-                    $post_creation_start = microtime(true);
-                    $translated_post_id = $this->create_translated_post($post, $translated_title, $translated_content, $target_lang, 'publish');
-                    $post_creation_time = microtime(true) - $post_creation_start;
-                    
-                    if (!$translated_post_id) {
-                        throw new Exception("Falha ao criar post traduzido");
-                    }
-                    
-                    $this->log_progress('post', 'success', "🎉 Post PUBLICADO com sucesso", [
-                        'queue_id' => $item->id,
-                        'post_id' => $translated_post_id,
-                        'status' => 'publish',
-                        'creation_time' => round($post_creation_time, 2) . 's',
-                        'language' => $target_lang,
-                        'total_process_time' => round(microtime(true) - $lang_start_time, 2) . 's'
-                    ]);
-                    
-                    $logs[] = [
-                        'timestamp' => current_time('mysql'),
-                        'level' => 'success',
-                        'message' => "🎉 Post traduzido criado com sucesso (ID: {$translated_post_id})",
-                        'progress_data' => [
-                            'post_id' => $translated_post_id,
-                            'status' => 'publish',
-                            'language' => $target_lang
-                        ]
-                    ];
-                    
-                    $translated_posts_created++;
-                    $progress += (75 / count($target_langs));
-                    
-                } catch (Exception $e) {
+                } catch (Exception $lang_e) {
                     $logs[] = [
                         'timestamp' => current_time('mysql'),
                         'level' => 'error',
-                        'message' => "Erro ao traduzir para '{$target_lang}': " . $e->getMessage()
+                        'message' => "❌ Erro ao traduzir para '{$target_lang}': " . $lang_e->getMessage()
                     ];
-                    AlvoBotPro::debug_log('multi-languages', "Erro tradução {$target_lang}: " . $e->getMessage());
                 }
             }
             
-            // Determinar status final
+            // Determina status final
             if ($translated_posts_created === count($target_langs)) {
                 $final_status = 'completed';
                 $final_progress = 100;
                 $logs[] = [
                     'timestamp' => current_time('mysql'),
                     'level' => 'success',
-                    'message' => "Tradução concluída com sucesso para todos os idiomas"
+                    'message' => '🎉 Tradução concluída com sucesso para todos os idiomas'
                 ];
             } elseif ($translated_posts_created > 0) {
                 $final_status = 'partial';
@@ -651,44 +538,28 @@ class AlvoBotPro_Translation_Queue {
                 'completed_at' => current_time('mysql')
             ], ['id' => $item->id]);
             
-            // Incrementa contador de posts traduzidos se a tradução foi bem-sucedida
-            if ($final_status === 'completed' && $translated_posts_created > 0) {
-                if (class_exists('AlvoBotPro_OpenAI_Translation_Provider')) {
-                    $provider = new AlvoBotPro_OpenAI_Translation_Provider();
-                    if (method_exists($provider, 'increment_post_translation_count')) {
-                        // Incrementa uma vez por idioma traduzido (não apenas uma vez por post)
-                        for ($i = 0; $i < $translated_posts_created; $i++) {
-                            $provider->increment_post_translation_count();
-                        }
-                        AlvoBotPro::debug_log('multi-languages', "Contador incrementado {$translated_posts_created} vezes para item {$item->id}");
-                    }
-                }
-            }
+            AlvoBotPro::debug_log('multi-languages', "Item {$item->id} processado com status '{$final_status}'");
             
-            AlvoBotPro::debug_log('multi-languages', "Item {$item->id} finalizado com status '{$final_status}' - {$translated_posts_created} traduções criadas");
+            return true;
             
         } catch (Exception $e) {
             $error_message = $e->getMessage();
             AlvoBotPro::debug_log('multi-languages', "Erro ao processar item {$item->id}: {$error_message}");
             
-            $logs = [
-                [
-                    'timestamp' => current_time('mysql'),
-                    'level' => 'error',
-                    'message' => "Erro: {$error_message}"
-                ]
-            ];
-            
             $wpdb->update($this->table_name, [
                 'status' => 'failed',
                 'progress' => 0,
-                'logs' => json_encode($logs),
-                'error_message' => $error_message,
+                'logs' => json_encode([[
+                    'timestamp' => current_time('mysql'),
+                    'level' => 'error',
+                    'message' => "Erro: {$error_message}"
+                ]]),
+                'error_log' => $error_message,
                 'completed_at' => current_time('mysql')
             ], ['id' => $item->id]);
+            
+            return false;
         }
-        
-        return true;
     }
 
     // --- AJAX Handlers ---
@@ -816,9 +687,144 @@ class AlvoBotPro_Translation_Queue {
         }
     }
     
+    public function ajax_get_item_details() {
+        // SEGURANÇA: Verificar nonce e permissões
+        if (!check_ajax_referer('alvobot_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Nonce inválido']);
+        }
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(['message' => 'Permissões insuficientes']);
+        }
+        
+        // SEGURANÇA: Validar input
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!$id || $id <= 0) {
+            wp_send_json_error(['message' => 'ID inválido.']);
+        }
+        
+        global $wpdb;
+        $this->create_table();
+        $item = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table_name} WHERE id = %d", $id));
+        
+        if (!$item) {
+            wp_send_json_error(['message' => 'Item não encontrado.']);
+        }
+        
+        // Coleta informações detalhadas
+        $details = $this->get_item_detailed_info($item);
+        
+        wp_send_json_success([
+            'item' => $item,
+            'details' => $details
+        ]);
+    }
+    
+    private function get_item_detailed_info($item) {
+        $details = [];
+        
+        // Carrega dados do post original
+        if ($item->post_id) {
+            $post = get_post($item->post_id);
+            if ($post) {
+                $details['post_data'] = [
+                    'post_type' => $post->post_type,
+                    'post_status' => $post->post_status,
+                    'post_author' => $post->post_author,
+                    'post_title' => $post->post_title,
+                    'post_excerpt' => $post->post_excerpt,
+                    'post_content' => $post->post_content,
+                    'content_length' => strlen($post->post_content),
+                    'post_date' => $post->post_date,
+                    'post_modified' => $post->post_modified
+                ];
+            }
+        }
+        
+        // Configurações de tradução
+        if ($item->options) {
+            $details['settings'] = json_decode($item->options, true);
+        }
+        
+        // Sistema de tradução
+        $details['translation_system'] = [
+            'provider' => 'OpenAI',
+            'model' => 'gpt-4o-mini',
+            'system_status' => 'active'
+        ];
+        
+        // Métricas
+        $queue_stats = $this->get_queue_status();
+        $details['metrics'] = [
+            'queue_position' => $this->get_item_position_in_queue($item->id),
+            'estimated_time' => 'Calculando...',
+            'retry_count' => $item->retry_count ?? 0,
+            'total_items_in_queue' => $queue_stats->total ?? 0
+        ];
+        
+        // Logs detalhados com payloads
+        if ($item->logs) {
+            $logs = json_decode($item->logs, true);
+            $details['logs'] = $this->parse_detailed_logs($logs);
+        }
+        
+        return $details;
+    }
+    
+    private function parse_detailed_logs($logs) {
+        if (!is_array($logs)) {
+            return [];
+        }
+        
+        $parsed_logs = [];
+        
+        foreach ($logs as $log) {
+            $parsed_log = $log;
+            
+            // Se o log contém JSON estruturado (payloads OpenAI)
+            if (isset($log['message']) && is_string($log['message'])) {
+                // Procura por logs estruturados de OpenAI
+                if (strpos($log['message'], 'OPENAI_REQUEST_START:') !== false ||
+                    strpos($log['message'], 'OPENAI_RESPONSE:') !== false ||
+                    strpos($log['message'], 'OPENAI_API_ERROR:') !== false) {
+                    
+                    // Extrai o JSON do log
+                    $json_start = strpos($log['message'], '{');
+                    if ($json_start !== false) {
+                        $json_part = substr($log['message'], $json_start);
+                        $decoded = json_decode($json_part, true);
+                        if ($decoded) {
+                            $parsed_log['structured_data'] = $decoded;
+                            $parsed_log['has_payload'] = true;
+                        }
+                    }
+                }
+            }
+            
+            $parsed_logs[] = $parsed_log;
+        }
+        
+        return $parsed_logs;
+    }
+    
+    private function get_item_position_in_queue($item_id) {
+        global $wpdb;
+        
+        $position = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*) + 1 
+            FROM {$this->table_name} 
+            WHERE status = 'pending' 
+            AND priority >= (SELECT priority FROM {$this->table_name} WHERE id = %d)
+            AND created_at < (SELECT created_at FROM {$this->table_name} WHERE id = %d)
+        ", $item_id, $item_id));
+        
+        return $position ?: 1;
+    }
+    
     public function download_logs_handler() {
-        // SEGURANÇA: Verificar nonce com nome padronizado e permissões
-        if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', 'alvobot_multi_languages_nonce')) {
+        // SEGURANÇA: Verificar nonce e permissões
+        $nonce = $_GET['nonce'] ?? $_GET['_wpnonce'] ?? '';
+        if (!wp_verify_nonce($nonce, 'alvobot_nonce')) {
             wp_die('Nonce inválido');
         }
         
@@ -842,18 +848,160 @@ class AlvoBotPro_Translation_Queue {
         header('Content-Type: text/plain; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . sanitize_file_name($filename) . '"');
         
+        // Busca todos os dados do item para log detalhado
+        $item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d", 
+            $id
+        ), ARRAY_A);
+        
+        if (!$item) {
+            echo "Item não encontrado na fila.\n";
+            exit;
+        }
+        
+        // Cabeçalho do relatório
+        echo "================================================================================\n";
+        echo "                    RELATÓRIO DETALHADO DE TRADUÇÃO\n";
+        echo "================================================================================\n\n";
+        
+        // Informações gerais do item
+        echo "INFORMAÇÕES GERAIS:\n";
+        echo "─────────────────────────────────────────────────────────────────────────────\n";
+        echo "Queue ID: {$item['id']}\n";
+        echo "Post ID: {$item['post_id']}\n";
+        echo "Status: {$item['status']}\n";
+        echo "Criado em: {$item['created_at']}\n";
+        echo "Atualizado em: {$item['updated_at']}\n";
+        
+        if (!empty($item['started_at'])) {
+            echo "Iniciado em: {$item['started_at']}\n";
+        }
+        if (!empty($item['completed_at'])) {
+            echo "Concluído em: {$item['completed_at']}\n";
+        }
+        
+        echo "\n";
+        
+        // Decodifica dados JSON
+        $target_languages = json_decode($item['target_languages'], true);
+        $options = json_decode($item['options'], true);
+        $result_data = json_decode($item['result_data'], true);
         $logs = json_decode($logs_json, true);
+        
+        // Idiomas de destino
+        echo "IDIOMAS DE DESTINO:\n";
+        echo "─────────────────────────────────────────────────────────────────────────────\n";
+        if (is_array($target_languages)) {
+            foreach ($target_languages as $index => $lang) {
+                echo sprintf("  %d. %s\n", $index + 1, $lang);
+            }
+        }
+        echo "\n";
+        
+        // Opções de tradução
+        echo "OPÇÕES DE TRADUÇÃO:\n";
+        echo "─────────────────────────────────────────────────────────────────────────────\n";
+        if (is_array($options)) {
+            foreach ($options as $key => $value) {
+                $display_value = is_bool($value) ? ($value ? 'SIM' : 'NÃO') : $value;
+                echo sprintf("  %-25s: %s\n", $key, $display_value);
+            }
+        }
+        echo "\n";
+        
+        // Dados de resultado (se disponíveis)
+        if (is_array($result_data) && !empty($result_data)) {
+            echo "DADOS DE RESULTADO:\n";
+            echo "─────────────────────────────────────────────────────────────────────────────\n";
+            $this->print_array_detailed($result_data, "  ");
+            echo "\n";
+        }
+        
+        // Logs cronológicos detalhados
+        echo "LOGS CRONOLÓGICOS DETALHADOS:\n";
+        echo "─────────────────────────────────────────────────────────────────────────────\n";
+        
         if (is_array($logs) && !empty($logs)) {
-            foreach ($logs as $log) {
-                $timestamp = isset($log['timestamp']) ? sanitize_text_field($log['timestamp']) : 'N/A';
-                $level = isset($log['level']) ? strtoupper(sanitize_text_field($log['level'])) : 'INFO';
-                $message = isset($log['message']) ? sanitize_text_field($log['message']) : '';
-                echo "[{$timestamp}] [{$level}] {$message}\n";
+            foreach ($logs as $index => $log) {
+                $timestamp = isset($log['timestamp']) ? $log['timestamp'] : 'N/A';
+                $category = isset($log['category']) ? strtoupper($log['category']) : 'GENERAL';
+                $level = isset($log['level']) ? strtoupper($log['level']) : 'INFO';
+                $message = isset($log['message']) ? $log['message'] : '';
+                
+                echo sprintf("[%s] [%s:%s] %s\n", $timestamp, $category, $level, $message);
+                
+                // Mostra TODOS os dados armazenados no campo 'data'
+                if (isset($log['data']) && is_array($log['data']) && !empty($log['data'])) {
+                    echo "    ┌─ DADOS DETALHADOS:\n";
+                    foreach ($log['data'] as $key => $value) {
+                        if ($key === 'queue_id') continue; // Skip queue_id pois já temos
+                        
+                        if (is_array($value)) {
+                            echo "    │  {$key}:\n";
+                            $this->print_array_detailed($value, "    │    ");
+                        } elseif (is_bool($value)) {
+                            echo "    │  {$key}: " . ($value ? 'SIM' : 'NÃO') . "\n";
+                        } elseif (is_numeric($value)) {
+                            // Formata números grandes (como timestamps) de forma legível
+                            if ($key === 'query_time' && $value > 1000000000) {
+                                echo "    │  {$key}: " . date('Y-m-d H:i:s', (int)$value) . " ({$value})\n";
+                            } else {
+                                echo "    │  {$key}: {$value}\n";
+                            }
+                        } elseif (is_string($value)) {
+                            // Mostra strings completas para logs detalhados
+                            if (strlen($value) > 500) {
+                                echo "    │  {$key}: " . substr($value, 0, 500) . "...\n";
+                                echo "    │    [CONTEÚDO TRUNCADO - Total: " . strlen($value) . " caracteres]\n";
+                            } else {
+                                echo "    │  {$key}: {$value}\n";
+                            }
+                        } else {
+                            echo "    │  {$key}: " . print_r($value, true) . "\n";
+                        }
+                    }
+                    echo "    └─\n";
+                }
+                
+                // Adiciona dados extras se existirem (compatibilidade)
+                if (isset($log['extra_data']) && is_array($log['extra_data'])) {
+                    echo "    ┌─ DADOS EXTRAS LEGADOS:\n";
+                    $this->print_array_detailed($log['extra_data'], "    │  ");
+                    echo "    └─\n";
+                }
+                
+                echo "\n";
             }
         } else {
-            echo "Nenhum log encontrado para este item.";
+            echo "Nenhum log encontrado para este item.\n";
         }
+        
+        echo "\n================================================================================\n";
+        echo "                           FIM DO RELATÓRIO\n";
+        echo "================================================================================\n";
         exit;
+    }
+    
+    /**
+     * Imprime array de forma detalhada e legível
+     */
+    private function print_array_detailed($array, $indent = "") {
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                echo "{$indent}{$key}:\n";
+                $this->print_array_detailed($value, $indent . "  ");
+            } elseif (is_bool($value)) {
+                echo "{$indent}{$key}: " . ($value ? 'SIM' : 'NÃO') . "\n";
+            } elseif (is_numeric($value)) {
+                echo "{$indent}{$key}: {$value}\n";
+            } elseif (is_string($value)) {
+                // Trunca strings muito longas para legibilidade
+                $display_value = strlen($value) > 200 ? substr($value, 0, 200) . '...[TRUNCADO]' : $value;
+                echo "{$indent}{$key}: {$display_value}\n";
+            } else {
+                echo "{$indent}{$key}: " . print_r($value, true) . "\n";
+            }
+        }
     }
     
     public function process_queue_background() {
@@ -924,17 +1072,17 @@ class AlvoBotPro_Translation_Queue {
         
         AlvoBotPro::debug_log('multi-languages', 'AJAX: Forçando reset de itens órfãos');
         
-        // Força reset de todos os itens em processing (independente do tempo)
+        // Força reset de todos os itens travados (processing e failed)
         global $wpdb;
         $this->create_table();
         
-        $processing_items = $wpdb->get_results(
-            "SELECT id, post_id, started_at FROM {$this->table_name} WHERE status = 'processing'"
+        $stuck_items = $wpdb->get_results(
+            "SELECT id, post_id, status, started_at FROM {$this->table_name} WHERE status IN ('processing', 'failed')"
         );
         
-        if (!empty($processing_items)) {
-            foreach ($processing_items as $item) {
-                AlvoBotPro::debug_log('multi-languages', "Forçando reset do item {$item->id} (post {$item->post_id})");
+        if (!empty($stuck_items)) {
+            foreach ($stuck_items as $item) {
+                AlvoBotPro::debug_log('multi-languages', "Forçando reset do item {$item->id} (post {$item->post_id}, status: {$item->status})");
                 
                 $current_logs = $wpdb->get_var($wpdb->prepare(
                     "SELECT logs FROM {$this->table_name} WHERE id = %d", 
@@ -961,8 +1109,8 @@ class AlvoBotPro_Translation_Queue {
             }
             
             wp_send_json_success([
-                'message' => 'Resetados ' . count($processing_items) . ' itens órfãos',
-                'items_reset' => count($processing_items)
+                'message' => 'Resetados ' . count($stuck_items) . ' itens órfãos',
+                'items_reset' => count($stuck_items)
             ]);
         } else {
             wp_send_json_success([
@@ -1268,7 +1416,7 @@ class AlvoBotPro_Translation_Queue {
                 $chunk_number = $index + 1;
                 $chunk_length = strlen($chunk);
                 
-                $this->log_progress('chunk', 'info', "🔄 Traduzindo chunk {$chunk_number}/{count($content_chunks)}", [
+                $this->log_progress('chunk', 'info', "🔄 Traduzindo chunk {$chunk_number}/" . count($content_chunks), [
                     'queue_id' => $queue_id,
                     'chunk_index' => $chunk_number,
                     'total_chunks' => count($content_chunks),
@@ -1956,5 +2104,428 @@ class AlvoBotPro_Translation_Queue {
         } else {
             return $bytes . ' B';
         }
+    }
+    
+    /**
+     * Obter um item específico da fila
+     * 
+     * @param int $queue_id ID do item
+     * @return object|null Item da fila ou null se não encontrado
+     */
+    public function get_queue_item($queue_id) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'alvobot_translation_queue';
+        
+        $result = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table_name} WHERE id = %d",
+            $queue_id
+        ));
+        
+        return $result;
+    }
+    
+    /**
+     * Alias para get_queue_item para compatibilidade
+     */
+    public function get_item($queue_id) {
+        return $this->get_queue_item($queue_id);
+    }
+    
+    /**
+     * Obter posição na fila
+     * 
+     * @param int $queue_id ID do item
+     * @return int Posição na fila (1-indexed)
+     */
+    public function get_queue_position($queue_id) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'alvobot_translation_queue';
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) + 1 
+             FROM {$table_name} 
+             WHERE status IN ('pending', 'processing') 
+             AND (priority > (SELECT priority FROM {$table_name} WHERE id = %d)
+                 OR (priority = (SELECT priority FROM {$table_name} WHERE id = %d) 
+                     AND created_at < (SELECT created_at FROM {$table_name} WHERE id = %d)))",
+            $queue_id, $queue_id, $queue_id
+        ));
+        
+        return (int) $result;
+    }
+    
+    /**
+     * Estimar tempo de conclusão
+     * 
+     * @param int $queue_id ID do item
+     * @return string Tempo estimado
+     */
+    public function get_estimated_completion_time($queue_id) {
+        $position = $this->get_queue_position($queue_id);
+        
+        // Estimativa simples: 5 minutos por item
+        $minutes = $position * 5;
+        
+        if ($minutes < 60) {
+            return $minutes . ' minutos';
+        } else {
+            $hours = floor($minutes / 60);
+            $remaining_minutes = $minutes % 60;
+            return $hours . 'h ' . $remaining_minutes . 'm';
+        }
+    }
+    
+    /**
+     * Obter total de itens na fila
+     * 
+     * @return int Total de itens
+     */
+    public function get_total_items() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'alvobot_translation_queue';
+        
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table_name}");
+    }
+    
+    /**
+     * Obter itens à frente na fila
+     * 
+     * @param int $queue_id ID do item
+     * @return int Número de itens à frente
+     */
+    public function get_items_ahead($queue_id) {
+        return $this->get_queue_position($queue_id) - 1;
+    }
+    
+    /**
+     * Obter logs detalhados de um item específico da fila
+     * 
+     * @param int $queue_id ID do item
+     * @return array Array de logs estruturados com payloads completos
+     */
+    public function get_item_logs($queue_id) {
+        $item = $this->get_queue_item($queue_id);
+        if (!$item) {
+            return array();
+        }
+        
+        $logs = array();
+        
+        // 1. Buscar logs do PHP error log
+        $php_logs = $this->extract_php_error_logs($queue_id, $item->post_id);
+        
+        // 2. Buscar logs detalhados de requisições OpenAI
+        $openai_logs = $this->extract_openai_request_logs($queue_id, $item->post_id);
+        
+        // 3. Buscar logs do sistema da fila
+        $queue_logs = $this->extract_queue_system_logs($queue_id);
+        
+        // 4. Combinar e ordenar todos os logs por timestamp
+        $all_logs = array_merge($php_logs, $openai_logs, $queue_logs);
+        
+        // Ordenar por timestamp
+        usort($all_logs, function($a, $b) {
+            $time_a = strtotime($a['timestamp'] ?? '1970-01-01');
+            $time_b = strtotime($b['timestamp'] ?? '1970-01-01');
+            return $time_a - $time_b;
+        });
+        
+        return $all_logs;
+    }
+    
+    /**
+     * Extrair logs do PHP error log relacionados ao item
+     */
+    private function extract_php_error_logs($queue_id, $post_id) {
+        $logs = array();
+        
+        // Tentar ler o arquivo de log do PHP
+        $log_files = array(
+            ini_get('error_log'),
+            WP_CONTENT_DIR . '/debug.log',
+            '/var/log/php_errors.log',
+            '/var/log/apache2/error.log'
+        );
+        
+        foreach ($log_files as $log_file) {
+            if (!$log_file || !file_exists($log_file) || !is_readable($log_file)) {
+                continue;
+            }
+            
+            $file_logs = $this->parse_php_log_file($log_file, $queue_id, $post_id);
+            $logs = array_merge($logs, $file_logs);
+        }
+        
+        return $logs;
+    }
+    
+    /**
+     * Parse arquivo de log PHP procurando entradas relacionadas
+     */
+    private function parse_php_log_file($log_file, $queue_id, $post_id) {
+        $logs = array();
+        
+        // Ler últimas 10MB do arquivo (para performance)
+        $file_size = filesize($log_file);
+        $chunk_size = min($file_size, 10 * 1024 * 1024); // 10MB
+        
+        $handle = fopen($log_file, 'r');
+        if (!$handle) {
+            return $logs;
+        }
+        
+        fseek($handle, max(0, $file_size - $chunk_size));
+        $content = fread($handle, $chunk_size);
+        fclose($handle);
+        
+        $lines = explode("\n", $content);
+        
+        foreach ($lines as $line) {
+            // Buscar por padrões relacionados ao nosso sistema
+            if (strpos($line, 'multi-languages') !== false && 
+                (strpos($line, "queue_id: {$queue_id}") !== false || 
+                 strpos($line, "post_id: {$post_id}") !== false ||
+                 strpos($line, "Post ID: {$post_id}") !== false ||
+                 strpos($line, "Queue ID: {$queue_id}") !== false ||
+                 strpos($line, "OPENAI_REQUEST") !== false ||
+                 strpos($line, "OPENAI_RESPONSE") !== false)) {
+                
+                $parsed_log = $this->parse_log_line($line);
+                if ($parsed_log) {
+                    $logs[] = $parsed_log;
+                }
+            }
+        }
+        
+        return $logs;
+    }
+    
+    /**
+     * Extrair logs detalhados de requisições OpenAI
+     */
+    private function extract_openai_request_logs($queue_id, $post_id) {
+        $logs = array();
+        
+        // Buscar logs específicos de requisições OpenAI nos logs do WordPress
+        $wp_logs = $this->get_wordpress_debug_logs($queue_id, $post_id);
+        
+        foreach ($wp_logs as $log) {
+            if (strpos($log['message'], 'OPENAI_REQUEST') !== false || 
+                strpos($log['message'], 'OPENAI_RESPONSE') !== false ||
+                strpos($log['message'], 'OPENAI_SUCCESS') !== false ||
+                strpos($log['message'], 'OPENAI_API_ERROR') !== false) {
+                
+                $parsed = $this->parse_openai_log($log);
+                if ($parsed) {
+                    $logs[] = $parsed;
+                }
+            }
+        }
+        
+        return $logs;
+    }
+    
+    /**
+     * Extrair logs do sistema da fila
+     */
+    private function extract_queue_system_logs($queue_id) {
+        $logs = array();
+        
+        // Buscar logs específicos do sistema de fila
+        $queue_logs = $this->get_wordpress_debug_logs($queue_id, null);
+        
+        foreach ($queue_logs as $log) {
+            if (strpos($log['message'], '[QUEUE:') !== false ||
+                strpos($log['message'], '[SYSTEM:') !== false ||
+                strpos($log['message'], '[TRANSLATION:') !== false ||
+                strpos($log['message'], '[ENGINE:') !== false) {
+                
+                $logs[] = array(
+                    'timestamp' => $log['timestamp'],
+                    'level' => $this->extract_log_level($log['message']),
+                    'type' => 'queue_system',
+                    'message' => $log['message'],
+                    'raw_data' => $log
+                );
+            }
+        }
+        
+        return $logs;
+    }
+    
+    /**
+     * Obter logs de debug do WordPress
+     */
+    private function get_wordpress_debug_logs($queue_id, $post_id) {
+        $logs = array();
+        
+        // Se WP_DEBUG_LOG estiver ativado, tentar ler o debug.log
+        if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+            $debug_log = WP_CONTENT_DIR . '/debug.log';
+            if (file_exists($debug_log) && is_readable($debug_log)) {
+                $file_logs = $this->parse_php_log_file($debug_log, $queue_id, $post_id);
+                $logs = array_merge($logs, $file_logs);
+            }
+        }
+        
+        return $logs;
+    }
+    
+    /**
+     * Parse linha de log individual
+     */
+    private function parse_log_line($line) {
+        // Padrão típico: [timestamp] [AlvoBot Pro - module] message
+        if (preg_match('/\[([^\]]+)\]\s*\[AlvoBot Pro - ([^\]]+)\]\s*(.+)/', $line, $matches)) {
+            return array(
+                'timestamp' => $matches[1],
+                'module' => $matches[2],
+                'message' => trim($matches[3]),
+                'level' => $this->extract_log_level($matches[3]),
+                'type' => 'system',
+                'raw_line' => $line
+            );
+        }
+        
+        // Padrão alternativo para logs PHP
+        if (preg_match('/\[([^\]]+)\]\s*(.+)/', $line, $matches)) {
+            return array(
+                'timestamp' => $matches[1],
+                'message' => trim($matches[2]),
+                'level' => $this->extract_log_level($matches[2]),
+                'type' => 'php',
+                'raw_line' => $line
+            );
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Parse log específico do OpenAI com payload completo
+     */
+    private function parse_openai_log($log) {
+        $message = $log['message'];
+        
+        // Extrair JSON do log
+        if (strpos($message, '🚀 OPENAI REQUEST START:') !== false) {
+            $json_start = strpos($message, '{');
+            if ($json_start !== false) {
+                $json_data = substr($message, $json_start);
+                $parsed_data = json_decode($json_data, true);
+                
+                if ($parsed_data) {
+                    return array(
+                        'timestamp' => $log['timestamp'],
+                        'level' => 'info',
+                        'type' => 'openai_request',
+                        'event' => 'REQUEST_START',
+                        'message' => 'OpenAI Request Started',
+                        'request_details' => $parsed_data['request_details'] ?? null,
+                        'text_analytics' => $parsed_data['text_analytics'] ?? null,
+                        'cost_estimation' => $parsed_data['cost_estimation'] ?? null,
+                        'headers' => $parsed_data['headers'] ?? null,
+                        'payload' => $parsed_data['payload'] ?? null,
+                        'curl_equivalent' => $parsed_data['curl_equivalent'] ?? null,
+                        'raw_data' => $parsed_data
+                    );
+                }
+            }
+        }
+        
+        if (strpos($message, '📥 OPENAI RESPONSE:') !== false) {
+            $json_start = strpos($message, '{');
+            if ($json_start !== false) {
+                $json_data = substr($message, $json_start);
+                $parsed_data = json_decode($json_data, true);
+                
+                if ($parsed_data) {
+                    return array(
+                        'timestamp' => $log['timestamp'],
+                        'level' => 'info',
+                        'type' => 'openai_response',
+                        'event' => 'RESPONSE_RECEIVED',
+                        'message' => 'OpenAI Response Received',
+                        'response_details' => $parsed_data['response_details'] ?? null,
+                        'rate_limit_info' => $parsed_data['rate_limit_info'] ?? null,
+                        'response_headers' => $parsed_data['response_headers'] ?? null,
+                        'response_body' => $parsed_data['full_response_body'] ?? null,
+                        'raw_data' => $parsed_data
+                    );
+                }
+            }
+        }
+        
+        if (strpos($message, '✅ OPENAI SUCCESS:') !== false) {
+            $json_start = strpos($message, '{');
+            if ($json_start !== false) {
+                $json_data = substr($message, $json_start);
+                $parsed_data = json_decode($json_data, true);
+                
+                if ($parsed_data) {
+                    return array(
+                        'timestamp' => $log['timestamp'],
+                        'level' => 'success',
+                        'type' => 'openai_success',
+                        'event' => 'SUCCESS',
+                        'message' => 'OpenAI Request Successful',
+                        'success_details' => $parsed_data['success_details'] ?? null,
+                        'token_usage' => $parsed_data['token_usage'] ?? null,
+                        'cost_calculation' => $parsed_data['cost_calculation'] ?? null,
+                        'translation_result' => $parsed_data['translation_result'] ?? null,
+                        'raw_data' => $parsed_data
+                    );
+                }
+            }
+        }
+        
+        if (strpos($message, '💥 OPENAI API ERROR:') !== false) {
+            $json_start = strpos($message, '{');
+            if ($json_start !== false) {
+                $json_data = substr($message, $json_start);
+                $parsed_data = json_decode($json_data, true);
+                
+                if ($parsed_data) {
+                    return array(
+                        'timestamp' => $log['timestamp'],
+                        'level' => 'error',
+                        'type' => 'openai_error',
+                        'event' => 'API_ERROR',
+                        'message' => 'OpenAI API Error',
+                        'error_details' => $parsed_data['error_details'] ?? null,
+                        'rate_limit_analysis' => $parsed_data['rate_limit_analysis'] ?? null,
+                        'full_error_response' => $parsed_data['full_error_response'] ?? null,
+                        'raw_data' => $parsed_data
+                    );
+                }
+            }
+        }
+        
+        return array(
+            'timestamp' => $log['timestamp'],
+            'level' => 'info',
+            'type' => 'openai_generic',
+            'message' => $message,
+            'raw_data' => $log
+        );
+    }
+    
+    /**
+     * Extrair nível do log da mensagem
+     */
+    private function extract_log_level($message) {
+        if (strpos($message, 'ERROR') !== false || strpos($message, '💥') !== false) {
+            return 'error';
+        }
+        if (strpos($message, 'WARNING') !== false || strpos($message, '⚠️') !== false) {
+            return 'warning';
+        }
+        if (strpos($message, 'SUCCESS') !== false || strpos($message, '✅') !== false) {
+            return 'success';
+        }
+        return 'info';
     }
 }

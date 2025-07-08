@@ -23,7 +23,6 @@ define('ALVOBOT_PRO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ALVOBOT_PRO_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('ALVOBOT_PRO_PLUGIN_FILE', __FILE__);
 define('GRP_SERVER_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/api_plugin');
-define('ALVOBOT_PLUGIN_UPDATE_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/update_plugin');
 
 // Carrega o arquivo da classe principal
 require_once ALVOBOT_PRO_PLUGIN_DIR . 'includes/class-alvobot-pro.php';

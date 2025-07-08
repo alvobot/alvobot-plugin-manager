@@ -94,6 +94,26 @@ jQuery(document).ready(function($) {
     // Inicializar o estado do checkbox
     $('input[name="alvobot_use_custom"]').trigger('change');
 
+    // Handler para os radio buttons de tipo de CTA
+    $('input[name="alvobot_cta_type"]').on('change', function() {
+        var type = $(this).val();
+        if (type === 'shortcode') {
+            $('#alvobot_default_cta_options').slideUp('fast');
+            $('#alvobot_shortcode_options').slideDown('fast');
+        } else {
+            $('#alvobot_shortcode_options').slideUp('fast');
+            $('#alvobot_default_cta_options').slideDown('fast', function() {
+                // Re-inicializa CTAs se necessário
+                if ($('#alvobot_ctas_container').children('.cta-box').length === 0) {
+                    $('#alvobot_num_ctas').trigger('change');
+                }
+            });
+        }
+    });
+
+    // Inicializar o estado dos radio buttons
+    $('input[name="alvobot_cta_type"]:checked').trigger('change');
+
     // Handler para a página de configurações
     $('#num_ctas').on('change input', function() {
         var quantidade = parseInt($(this).val());

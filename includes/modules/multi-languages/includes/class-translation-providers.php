@@ -94,7 +94,7 @@ class AlvoBotPro_OpenAI_Translation_Provider implements AlvoBotPro_Translation_P
                 );
             }
         } catch (Exception $e) {
-            error_log('AlvoBot Multi Languages: Erro ao carregar linguagens do Polylang: ' . $e->getMessage());
+            AlvoBotPro::debug_log('multi-languages', 'Erro ao carregar linguagens do Polylang: ' . $e->getMessage());
         }
     }
     
@@ -176,6 +176,9 @@ class AlvoBotPro_OpenAI_Translation_Provider implements AlvoBotPro_Translation_P
                 $translated_text = substr($translated_text, 1, -1);
             }
             
+            // LIMPEZA AUTOMÁTICA: Remove tags órfãs e limpa entidades HTML
+            $translated_text = $this->clean_orphaned_tags($translated_text);
+            
             $usage_info = array(
                 'prompt_tokens' => $result['usage']['prompt_tokens'] ?? 0,
                 'completion_tokens' => $result['usage']['completion_tokens'] ?? 0,
@@ -212,6 +215,7 @@ class AlvoBotPro_OpenAI_Translation_Provider implements AlvoBotPro_Translation_P
 **Instructions:**
 1. Translate the text from {$source_lang_name} to {$target_lang_name} ({$target_lang_code}).
 2. Preserve the original tone, context, and intent.
+3. **CRITICAL**: Preserve ALL paragraph breaks and line breaks EXACTLY as they appear in the original text. Do not merge paragraphs or remove line breaks.
 
 **CRITICAL - Shortcodes and JSON:**
 1. DO NOT modify or translate ANY content between shortcode tags [shortcode]...[/shortcode]
@@ -226,24 +230,31 @@ class AlvoBotPro_OpenAI_Translation_Provider implements AlvoBotPro_Translation_P
         // Instruções específicas para HTML
         if ($preserve_html) {
             $prompt .= "
-3. If the text contains HTML tags like <p>, <strong>, <h1>, <h2>, <h3>, <div>, or <img>, keep them intact.
+3. If the text contains HTML tags like <p>, <strong>, <h1>, <h2>, <h3>, <div>, or <img>, keep them intact. **PRESERVE ALL LINE BREAKS EXACTLY AS THEY APPEAR IN THE ORIGINAL TEXT** - do not add or remove any line breaks.
 4. **CRITICAL**: NEVER add new HTML tags, IDs, spans, divs, or attributes that were not in the original text.
 5. **CRITICAL**: Do not add any <span>, <div>, or other wrapper elements around translated text.
 6. Maintain the exact same HTML structure - do not modify IDs, classes, or tag attributes.
 7. Do not add closing tags like </div> if they were not in the original text.
-8. Convert HTML entities like &nbsp; to regular spaces when appropriate.
-9. Do not wrap translated text in additional HTML elements.
-10. **NEVER** add structural elements like <span>, <div>, <section> that don't exist in the original.";
+8. **CRITICAL**: Convert HTML entities like &nbsp; to regular spaces (convert &nbsp; to space).
+9. **CRITICAL**: ALWAYS remove orphaned closing tags like </span>, </div>, </section> that appear without matching opening tags.
+10. **CRITICAL**: Remove any standalone closing tags that don't have corresponding opening tags in the text.
+11. Do not wrap translated text in additional HTML elements.
+12. **NEVER** add structural elements like <span>, <div>, <section> that don't exist in the original.
+13. **CLEAN-UP RULE**: If you see closing tags like </span> or </div> without matching opening tags, remove them completely.";
         } else {
             $prompt .= "
 3. Return only clean text without any HTML tags or scripts.";
         }
         
         $prompt .= "
-11. **Crucially, your response must contain ONLY the translated text and nothing else.** Do not add any explanations, apologies, or introductory phrases like \"Here is the translation:\".
-12. **CRITICAL: Do not add, modify, or remove any HTML structure. Only translate the text content within existing tags.**
-13. **ABSOLUTELY FORBIDDEN**: Do not add <span>, <div>, <section>, or any wrapper elements.
-14. **ABSOLUTELY FORBIDDEN**: Do not add closing tags like </div>, </span>, </section> that weren't in the original.";
+
+**FINAL CRITICAL INSTRUCTIONS:**
+14. **Crucially, your response must contain ONLY the translated text and nothing else.** Do not add any explanations, apologies, or introductory phrases like \"Here is the translation:\".
+15. **CRITICAL: Do not add, modify, or remove any HTML structure. Only translate the text content within existing tags.**
+16. **ABSOLUTELY FORBIDDEN**: Do not add <span>, <div>, <section>, or any wrapper elements.
+17. **ABSOLUTELY FORBIDDEN**: Do not add closing tags like </div>, </span>, </section> that weren't in the original.
+18. **MANDATORY CLEAN-UP**: Convert &nbsp; to regular spaces, remove orphaned closing tags without opening pairs.
+19. **QUALITY CHECK**: Before responding, verify no orphaned </span>, </div>, </section> tags exist in your output.";
         
         if (!empty($context)) {
             $prompt .= "
@@ -289,9 +300,13 @@ Now, translate the following text:
     }
     
     /**
-     * Faz requisição para a API OpenAI
+     * Faz requisição para a API OpenAI com logging detalhado
      */
     private function make_request($data, $headers) {
+        $request_start_time = microtime(true);
+        $timestamp = date('Y-m-d H:i:s');
+        
+        // Prepara dados da requisição
         $args = array(
             'body' => json_encode($data),
             'headers' => $headers,
@@ -299,16 +314,17 @@ Now, translate the following text:
             'user-agent' => 'AlvoBot Multi Languages'
         );
         
+        // LOGGING DETALHADO - INÍCIO DA REQUISIÇÃO
+        $this->log_detailed_request_start($data, $headers, $args, $timestamp);
+        
+        // Faz a requisição
         $response = wp_remote_post($this->api_url, $args);
         
+        $request_end_time = microtime(true);
+        $request_duration = round(($request_end_time - $request_start_time) * 1000, 2); // ms
+        
         if (is_wp_error($response)) {
-            // SEGURANÇA: Remove dados sensíveis dos logs de erro
-            $safe_args = $args;
-            if (isset($safe_args['headers']['Authorization'])) {
-                $safe_args['headers']['Authorization'] = 'Bearer [HIDDEN]';
-            }
-            
-            AlvoBotPro::debug_log('multi-languages', 'Erro wp_remote_post: ' . $response->get_error_message());
+            $this->log_detailed_request_error($response, $args, $request_duration, $timestamp);
             
             return array(
                 'success' => false,
@@ -318,6 +334,18 @@ Now, translate the following text:
         
         $body = wp_remote_retrieve_body($response);
         $code = wp_remote_retrieve_response_code($response);
+        $response_headers = wp_remote_retrieve_headers($response);
+        
+        // LOGGING DETALHADO - RESPOSTA COMPLETA
+        $this->log_detailed_response($code, $body, $response_headers, $request_duration, $timestamp);
+        
+        // Atualiza informações de rate limit para o motor de tradução
+        if (class_exists('AlvoBotPro_Translation_Engine')) {
+            global $alvobot_translation_engine;
+            if ($alvobot_translation_engine && method_exists($alvobot_translation_engine, 'update_api_rate_limit_info')) {
+                $alvobot_translation_engine->update_api_rate_limit_info((array) $response_headers);
+            }
+        }
         
         if ($code !== 200) {
             $error_data = json_decode($body, true);
@@ -325,8 +353,7 @@ Now, translate the following text:
                 ? $error_data['error']['message'] 
                 : 'HTTP Error: ' . $code;
                 
-            // SEGURANÇA: Log sem expor dados sensíveis
-            AlvoBotPro::debug_log('multi-languages', "Erro OpenAI API (HTTP {$code}): {$error_message}");
+            $this->log_detailed_api_error($code, $error_data, $body, $request_duration, $timestamp);
                 
             return array(
                 'success' => false,
@@ -334,11 +361,314 @@ Now, translate the following text:
             );
         }
         
+        // LOGGING DETALHADO - SUCESSO
+        $this->log_detailed_success($body, $request_duration, $timestamp);
+        
         return array(
             'success' => true,
             'data' => $body,
             'response_code' => $code
         );
+    }
+
+    /**
+     * Log detalhado do início da requisição com payload completo
+     */
+    private function log_detailed_request_start($data, $headers, $args, $timestamp) {
+        // Calcula estatísticas do texto
+        $text_to_translate = '';
+        if (isset($data['messages']) && is_array($data['messages'])) {
+            foreach ($data['messages'] as $message) {
+                if (isset($message['content'])) {
+                    $text_to_translate .= $message['content'] . ' ';
+                }
+            }
+        }
+        
+        $text_length = strlen(trim($text_to_translate));
+        $estimated_input_tokens = ceil($text_length / 4); // Estimativa aproximada
+        $word_count = str_word_count(trim($text_to_translate));
+        
+        // Custo estimado
+        $model_info = $this->get_model_info($data['model'] ?? 'unknown');
+        $estimated_input_cost = 0;
+        $estimated_output_cost = 0;
+        
+        if ($model_info) {
+            $estimated_input_cost = ($estimated_input_tokens / 1000) * $model_info['cost_input'];
+            $estimated_output_cost = (($data['max_tokens'] ?? 1000) / 1000) * $model_info['cost_output'];
+        }
+        
+        $total_estimated_cost = $estimated_input_cost + $estimated_output_cost;
+        
+        // Headers limpos para log (sem API key)
+        $safe_headers = $headers;
+        if (isset($safe_headers['Authorization'])) {
+            $api_key_preview = 'sk-' . substr($this->settings['api_key'], 3, 4) . '...' . substr($this->settings['api_key'], -4);
+            $safe_headers['Authorization'] = 'Bearer ' . $api_key_preview;
+        }
+        
+        // Payload limpo para log
+        $safe_data = $data;
+        
+        // Comando curl equivalente
+        $curl_command = $this->generate_curl_equivalent($safe_data, $safe_headers);
+        
+        // Log estruturado
+        $log_entry = [
+            'timestamp' => $timestamp,
+            'event' => 'OPENAI_REQUEST_START',
+            'request_details' => [
+                'url' => $this->api_url,
+                'method' => 'POST',
+                'model' => $data['model'] ?? 'unknown',
+                'max_tokens' => $data['max_tokens'] ?? 0,
+                'temperature' => $data['temperature'] ?? 0,
+                'timeout' => $this->settings['timeout'],
+                'user_agent' => 'AlvoBot Multi Languages'
+            ],
+            'text_analytics' => [
+                'text_length_chars' => $text_length,
+                'estimated_input_tokens' => $estimated_input_tokens,
+                'word_count' => $word_count,
+                'text_preview' => substr(trim($text_to_translate), 0, 200) . '...'
+            ],
+            'cost_estimation' => [
+                'model_input_cost_per_1k' => $model_info['cost_input'] ?? 0,
+                'model_output_cost_per_1k' => $model_info['cost_output'] ?? 0,
+                'estimated_input_cost_usd' => $estimated_input_cost,
+                'estimated_output_cost_usd' => $estimated_output_cost,
+                'total_estimated_cost_usd' => $total_estimated_cost
+            ],
+            'headers' => $safe_headers,
+            'payload' => $safe_data,
+            'curl_equivalent' => $curl_command
+        ];
+        
+        AlvoBotPro::debug_log('multi-languages', '🚀 OPENAI REQUEST START: ' . json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Log detalhado de erro de requisição
+     */
+    private function log_detailed_request_error($wp_error, $args, $duration_ms, $timestamp) {
+        $safe_args = $args;
+        if (isset($safe_args['headers']['Authorization'])) {
+            $api_key_preview = 'sk-' . substr($this->settings['api_key'], 3, 4) . '...' . substr($this->settings['api_key'], -4);
+            $safe_args['headers']['Authorization'] = 'Bearer ' . $api_key_preview;
+        }
+        
+        $log_entry = [
+            'timestamp' => $timestamp,
+            'event' => 'OPENAI_REQUEST_ERROR',
+            'error_details' => [
+                'type' => 'wp_error',
+                'message' => $wp_error->get_error_message(),
+                'code' => $wp_error->get_error_code(),
+                'data' => $wp_error->get_error_data()
+            ],
+            'request_duration_ms' => $duration_ms,
+            'request_args' => $safe_args
+        ];
+        
+        AlvoBotPro::debug_log('multi-languages', '❌ OPENAI REQUEST ERROR: ' . json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Log detalhado da resposta completa
+     */
+    private function log_detailed_response($code, $body, $response_headers, $duration_ms, $timestamp) {
+        $response_size_bytes = strlen($body);
+        $response_size_kb = round($response_size_bytes / 1024, 2);
+        
+        // Rate limit headers importantes
+        $rate_limit_info = [
+            'remaining_requests' => $response_headers['x-ratelimit-remaining-requests'] ?? 'unknown',
+            'remaining_tokens' => $response_headers['x-ratelimit-remaining-tokens'] ?? 'unknown',
+            'reset_requests' => $response_headers['x-ratelimit-reset-requests'] ?? 'unknown',
+            'reset_tokens' => $response_headers['x-ratelimit-reset-tokens'] ?? 'unknown',
+            'limit_requests' => $response_headers['x-ratelimit-limit-requests'] ?? 'unknown',
+            'limit_tokens' => $response_headers['x-ratelimit-limit-tokens'] ?? 'unknown'
+        ];
+        
+        $log_entry = [
+            'timestamp' => $timestamp,
+            'event' => 'OPENAI_RESPONSE_RECEIVED',
+            'response_details' => [
+                'http_code' => $code,
+                'response_size_bytes' => $response_size_bytes,
+                'response_size_kb' => $response_size_kb,
+                'request_duration_ms' => $duration_ms,
+                'throughput_kb_per_second' => $duration_ms > 0 ? round(($response_size_kb / $duration_ms) * 1000, 2) : 0
+            ],
+            'rate_limit_info' => $rate_limit_info,
+            'response_headers' => (array) $response_headers,
+            'response_body_preview' => substr($body, 0, 500) . '...',
+            'full_response_body' => $body
+        ];
+        
+        AlvoBotPro::debug_log('multi-languages', '📥 OPENAI RESPONSE: ' . json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Log detalhado de erro da API
+     */
+    private function log_detailed_api_error($code, $error_data, $body, $duration_ms, $timestamp) {
+        $log_entry = [
+            'timestamp' => $timestamp,
+            'event' => 'OPENAI_API_ERROR',
+            'error_details' => [
+                'http_code' => $code,
+                'error_type' => $error_data['error']['type'] ?? 'unknown',
+                'error_code' => $error_data['error']['code'] ?? 'unknown',
+                'error_message' => $error_data['error']['message'] ?? 'Unknown error',
+                'error_param' => $error_data['error']['param'] ?? null
+            ],
+            'rate_limit_analysis' => [
+                'is_rate_limit_error' => $code === 429,
+                'retry_after_suggested' => $this->extract_retry_after($error_data),
+                'rate_limit_type' => $this->identify_rate_limit_type($error_data)
+            ],
+            'request_duration_ms' => $duration_ms,
+            'full_error_response' => $body
+        ];
+        
+        AlvoBotPro::debug_log('multi-languages', '💥 OPENAI API ERROR: ' . json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Log detalhado de sucesso
+     */
+    private function log_detailed_success($body, $duration_ms, $timestamp) {
+        $response_data = json_decode($body, true);
+        
+        // Extrai informações de uso
+        $usage_info = $response_data['usage'] ?? [];
+        $prompt_tokens = $usage_info['prompt_tokens'] ?? 0;
+        $completion_tokens = $usage_info['completion_tokens'] ?? 0;
+        $total_tokens = $usage_info['total_tokens'] ?? 0;
+        
+        // Calcula custos reais
+        $model_id = $response_data['model'] ?? $this->settings['model'];
+        $model_info = $this->get_model_info($model_id);
+        
+        $actual_input_cost = 0;
+        $actual_output_cost = 0;
+        
+        if ($model_info) {
+            $actual_input_cost = ($prompt_tokens / 1000) * $model_info['cost_input'];
+            $actual_output_cost = ($completion_tokens / 1000) * $model_info['cost_output'];
+        }
+        
+        $total_actual_cost = $actual_input_cost + $actual_output_cost;
+        
+        // Extrai texto traduzido
+        $translated_text = '';
+        if (isset($response_data['choices'][0]['message']['content'])) {
+            $translated_text = trim($response_data['choices'][0]['message']['content']);
+        }
+        
+        $log_entry = [
+            'timestamp' => $timestamp,
+            'event' => 'OPENAI_SUCCESS',
+            'success_details' => [
+                'request_duration_ms' => $duration_ms,
+                'tokens_per_second' => $duration_ms > 0 ? round(($total_tokens / $duration_ms) * 1000, 2) : 0,
+                'model_used' => $model_id,
+                'finish_reason' => $response_data['choices'][0]['finish_reason'] ?? 'unknown'
+            ],
+            'token_usage' => [
+                'prompt_tokens' => $prompt_tokens,
+                'completion_tokens' => $completion_tokens,
+                'total_tokens' => $total_tokens,
+                'efficiency_ratio' => $prompt_tokens > 0 ? round($completion_tokens / $prompt_tokens, 2) : 0
+            ],
+            'cost_calculation' => [
+                'input_cost_usd' => $actual_input_cost,
+                'output_cost_usd' => $actual_output_cost,
+                'total_cost_usd' => $total_actual_cost,
+                'cost_per_token' => $total_tokens > 0 ? round($total_actual_cost / $total_tokens, 6) : 0
+            ],
+            'translation_result' => [
+                'output_length_chars' => strlen($translated_text),
+                'output_word_count' => str_word_count($translated_text),
+                'translation_preview' => substr($translated_text, 0, 200) . '...',
+                'full_translation' => $translated_text
+            ],
+            'full_openai_response' => $response_data
+        ];
+        
+        AlvoBotPro::debug_log('multi-languages', '✅ OPENAI SUCCESS: ' . json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Gera comando curl equivalente para debug
+     */
+    private function generate_curl_equivalent($data, $headers) {
+        $curl_parts = ['curl -X POST'];
+        $curl_parts[] = '"' . $this->api_url . '"';
+        
+        foreach ($headers as $key => $value) {
+            $curl_parts[] = '-H "' . $key . ': ' . $value . '"';
+        }
+        
+        $curl_parts[] = '-H "Content-Type: application/json"';
+        $curl_parts[] = "-d '" . json_encode($data, JSON_UNESCAPED_UNICODE) . "'";
+        $curl_parts[] = '--connect-timeout ' . $this->settings['timeout'];
+        $curl_parts[] = '--max-time ' . ($this->settings['timeout'] + 10);
+        
+        return implode(' ', $curl_parts);
+    }
+
+    /**
+     * Extrai informação de retry-after do erro
+     */
+    private function extract_retry_after($error_data) {
+        if (isset($error_data['error']['message'])) {
+            $message = $error_data['error']['message'];
+            
+            // Procura por padrões como "Try again in 6s" ou "retry after 30s"
+            if (preg_match('/try again in (\d+)s/i', $message, $matches)) {
+                return (int) $matches[1];
+            }
+            
+            if (preg_match('/retry after (\d+)s/i', $message, $matches)) {
+                return (int) $matches[1];
+            }
+            
+            if (preg_match('/please wait (\d+) seconds/i', $message, $matches)) {
+                return (int) $matches[1];
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Identifica o tipo de rate limit
+     */
+    private function identify_rate_limit_type($error_data) {
+        if (isset($error_data['error']['message'])) {
+            $message = strtolower($error_data['error']['message']);
+            
+            if (strpos($message, 'requests per minute') !== false) {
+                return 'requests_per_minute';
+            }
+            
+            if (strpos($message, 'tokens per minute') !== false) {
+                return 'tokens_per_minute';
+            }
+            
+            if (strpos($message, 'requests per day') !== false) {
+                return 'requests_per_day';
+            }
+            
+            if (strpos($message, 'tokens per day') !== false) {
+                return 'tokens_per_day';
+            }
+        }
+        
+        return 'unknown';
     }
     
     /**
@@ -508,7 +838,7 @@ Now, translate the following text:
             return;
         }
 
-        error_log('AlvoBot Multi Languages: Buscando modelos da API OpenAI...');
+        AlvoBotPro::debug_log('multi-languages', 'Buscando modelos da API OpenAI...');
         
         // Busca modelos da API OpenAI
         $headers = array(
@@ -523,14 +853,14 @@ Now, translate the following text:
         ));
         
         if (is_wp_error($response)) {
-            error_log('AlvoBot Multi Languages: Erro na requisição - ' . $response->get_error_message());
+            AlvoBotPro::debug_log('multi-languages', 'Erro na requisição - ' . $response->get_error_message());
             $this->load_fallback_models();
             return;
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         if ($response_code !== 200) {
-            error_log('AlvoBot Multi Languages: Response code: ' . $response_code);
+            AlvoBotPro::debug_log('multi-languages', 'Response code: ' . $response_code);
             $this->load_fallback_models();
             return;
         }
@@ -539,7 +869,7 @@ Now, translate the following text:
         $data = json_decode($body, true);
         
         if (!$data || !isset($data['data'])) {
-            error_log('AlvoBot Multi Languages: JSON inválido ou estrutura inesperada');
+            AlvoBotPro::debug_log('multi-languages', 'JSON inválido ou estrutura inesperada');
             $this->load_fallback_models();
             return;
         }
@@ -572,9 +902,9 @@ Now, translate the following text:
             if ($this->is_models_cache_enabled()) {
                 set_transient('alvobot_openai_models', $openai_models, 24 * HOUR_IN_SECONDS);
             }
-            error_log('AlvoBot Multi Languages: ' . count($openai_models) . ' modelos carregados com sucesso da API OpenAI');
+            AlvoBotPro::debug_log('multi-languages', count($openai_models) . ' modelos carregados com sucesso da API OpenAI');
         } else {
-            error_log('AlvoBot Multi Languages: Nenhum modelo de chat compatível encontrado');
+            AlvoBotPro::debug_log('multi-languages', 'Nenhum modelo de chat compatível encontrado');
             $this->load_fallback_models();
         }
     }
@@ -1006,8 +1336,9 @@ Now, translate the following text:
         // Remove espaços extras dentro de tags
         $text = preg_replace('/(<[^>]+)\s+([^>]*>)/', '$1 $2', $text);
         
-        // Normaliza espaços entre palavras
-        $text = preg_replace('/\s{2,}/', ' ', $text);
+        // Normaliza espaços entre palavras (mas preserva quebras de linha)
+        // Usa negative lookbehind/lookahead para não afetar quebras de linha
+        $text = preg_replace('/[^\S\n]{2,}/', ' ', $text);
         
         // Remove espaços no início e fim de elementos block
         $block_elements = array('p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote');
@@ -1016,11 +1347,13 @@ Now, translate the following text:
             $text = preg_replace("/\s+(<\/{$element}>)/", '$1', $text);
         }
         
-        // Remove quebras de linha extras
-        $text = preg_replace('/\n\s*\n\s*\n/', "\n\n", $text);
+        // PRESERVE LINE BREAKS - Only remove excessive line breaks (more than 2 consecutive)
+        // This preserves single and double line breaks as they are important for formatting
+        $text = preg_replace('/\n{4,}/', "\n\n\n", $text);
         
-        // Limpeza final de espaços em volta de elementos HTML
-        $text = preg_replace('/>\s+</', '><', $text);
+        // Limpeza final de espaços em volta de elementos HTML (preserva quebras de linha)
+        // Remove apenas espaços, não quebras de linha entre tags
+        $text = preg_replace('/>[^\S\n]+</', '><', $text);
         
         AlvoBotPro::debug_log('multi-languages', "HTML Normalize: Completed aggressive cleanup");
         
@@ -1122,5 +1455,60 @@ Analyze the following text and provide your response:
             'provider' => 'openai',
             'timestamp' => current_time('mysql')
         );
+    }
+    
+    /**
+     * Limpa tags órfãs e entidades HTML problemáticas
+     */
+    private function clean_orphaned_tags($text) {
+        // 1. Converte entidades HTML comuns para espaços normais
+        $text = str_replace('&nbsp;', ' ', $text);
+        $text = str_replace('&amp;', '&', $text);
+        $text = str_replace('&lt;', '<', $text);
+        $text = str_replace('&gt;', '>', $text);
+        $text = str_replace('&quot;', '"', $text);
+        $text = str_replace('&#39;', "'", $text);
+        
+        // 2. Lista de tags que frequentemente aparecem órfãs
+        $orphaned_closing_tags = [
+            '</span>',
+            '</div>',
+            '</section>',
+            '</article>',
+            '</aside>',
+            '</header>',
+            '</footer>',
+            '</main>',
+            '</nav>'
+        ];
+        
+        // 3. Remove tags de fechamento órfãs (sem abertura correspondente)
+        foreach ($orphaned_closing_tags as $closing_tag) {
+            $opening_tag = str_replace('</', '<', $closing_tag);
+            $opening_tag = str_replace('>', '', $opening_tag) . '>';
+            
+            // Conta aberturas e fechamentos
+            $opening_count = substr_count($text, $opening_tag);
+            $closing_count = substr_count($text, $closing_tag);
+            
+            // Se há mais fechamentos que aberturas, remove os extras
+            if ($closing_count > $opening_count) {
+                $excess_closings = $closing_count - $opening_count;
+                
+                // Remove as tags de fechamento em excesso (da direita para esquerda)
+                for ($i = 0; $i < $excess_closings; $i++) {
+                    $last_pos = strrpos($text, $closing_tag);
+                    if ($last_pos !== false) {
+                        $text = substr_replace($text, '', $last_pos, strlen($closing_tag));
+                    }
+                }
+            }
+        }
+        
+        // 4. Remove espaços múltiplos criados pela limpeza
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim($text);
+        
+        return $text;
     }
 }

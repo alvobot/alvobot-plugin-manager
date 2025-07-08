@@ -124,33 +124,33 @@ class AlvoBotPro_Ajax {
             wp_send_json_error(array('message' => 'Nonce inválido'));
         }
 
-        error_log('[AJAX] Iniciando processo de refazer registro via AJAX');
+        AlvoBotPro::debug_log('core', '[AJAX] Iniciando processo de refazer registro via AJAX');
 
         // Obtém o usuário alvobot
         $alvobot_user = get_user_by('login', 'alvobot');
         if (!$alvobot_user) {
-            error_log('[AJAX] Refazer registro: ERRO - usuário alvobot não encontrado');
+            AlvoBotPro::debug_log('core', '[AJAX] Refazer registro: ERRO - usuário alvobot não encontrado');
             wp_send_json_error(array('message' => 'Usuário alvobot não encontrado. Execute a inicialização primeiro.'));
         }
 
         $plugin_manager = new AlvoBotPro_PluginManager();
         
-        error_log('[AJAX] Usuário alvobot encontrado, gerando nova senha de aplicativo');
+        AlvoBotPro::debug_log('core', '[AJAX] Usuário alvobot encontrado, gerando nova senha de aplicativo');
         $app_password = $plugin_manager->generate_alvobot_app_password($alvobot_user);
         
         if (!$app_password) {
-            error_log('[AJAX] Refazer registro: ERRO ao gerar senha de aplicativo');
+            AlvoBotPro::debug_log('core', '[AJAX] Refazer registro: ERRO ao gerar senha de aplicativo');
             wp_send_json_error(array('message' => 'Erro ao gerar nova senha de aplicativo.'));
         }
 
-        error_log('[AJAX] Nova senha de aplicativo gerada, registrando no servidor');
+        AlvoBotPro::debug_log('core', '[AJAX] Nova senha de aplicativo gerada, registrando no servidor');
         $result = $plugin_manager->register_site($app_password);
         
         if ($result) {
-            error_log('[AJAX] Refazer registro: SUCESSO');
+            AlvoBotPro::debug_log('core', '[AJAX] Refazer registro: SUCESSO');
             wp_send_json_success(array('message' => 'Registro refeito com sucesso!'));
         } else {
-            error_log('[AJAX] Refazer registro: ERRO no servidor');
+            AlvoBotPro::debug_log('core', '[AJAX] Refazer registro: ERRO no servidor');
             wp_send_json_error(array('message' => 'Erro ao refazer o registro. Verifique os logs para mais detalhes.'));
         }
     }

@@ -13,8 +13,10 @@ class AlvoBotPro_AuthorBox {
     private $option_name = 'alvobot_pro_author_box';
 
     public function __construct() {
+        AlvoBotPro::debug_log('author_box', 'Inicializando módulo Author Box');
         $this->version = ALVOBOT_PRO_VERSION;
         $this->init();
+        AlvoBotPro::debug_log('author_box', 'Módulo Author Box inicializado com sucesso');
     }
 
     public function init() {
@@ -282,11 +284,14 @@ class AlvoBotPro_AuthorBox {
     }
 
     public function append_author_box($content) {
+        AlvoBotPro::debug_log('author_box', 'Verificando se deve exibir author box para post ID: ' . get_the_ID());
+        
         // Obtém as opções
         $options = get_option($this->option_name);
 
         // Verifica se deve exibir o author box
         if (!is_singular()) {
+            AlvoBotPro::debug_log('author_box', 'Não é página singular - author box não será exibido');
             return $content;
         }
 
@@ -298,8 +303,11 @@ class AlvoBotPro_AuthorBox {
         $show_on_posts = !empty($options['display_on_posts']);
         $show_on_pages = !empty($options['display_on_pages']);
 
+        AlvoBotPro::debug_log('author_box', "Configurações: Posts={$show_on_posts}, Pages={$show_on_pages}, Current: Single={$is_single}, Page={$is_page}");
+
         // Retorna apenas o conteúdo se não deve exibir
         if (($is_single && !$show_on_posts) || ($is_page && !$show_on_pages)) {
+            AlvoBotPro::debug_log('author_box', 'Author box desabilitado para este tipo de conteúdo');
             return $content;
         }
 
@@ -307,8 +315,11 @@ class AlvoBotPro_AuthorBox {
         $author_id = get_the_author_meta('ID');
         
         if (!$author_id) {
+            AlvoBotPro::debug_log('author_box', 'Autor não encontrado - author box não será exibido');
             return $content;
         }
+
+        AlvoBotPro::debug_log('author_box', "Exibindo author box para autor ID: {$author_id}");
 
         // Gera o HTML do author box
         $author_box = $this->get_author_box_html();

@@ -213,6 +213,57 @@
 }
 
 /* ====================================
+   COMPONENTES COLAPSÁVEIS (ACCORDION)
+   ==================================== */
+.alvobot-collapsible-header {
+    cursor: pointer;
+    padding-right: var(--alvobot-space-sm); /* Space for the button */
+}
+
+.alvobot-collapsible-header:hover {
+    background-color: var(--alvobot-gray-50);
+}
+
+.alvobot-collapse-toggle {
+    background: transparent;
+    border: none;
+    color: var(--alvobot-gray-700);
+    cursor: pointer;
+    padding: var(--alvobot-space-sm);
+    line-height: 1;
+    border-radius: var(--alvobot-radius-full);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.alvobot-collapse-toggle:hover {
+    background-color: var(--alvobot-gray-200);
+}
+
+.alvobot-collapse-toggle:focus {
+    outline: 1px solid var(--alvobot-accent);
+    box-shadow: 0 0 0 1px var(--alvobot-accent);
+}
+
+.alvobot-collapse-toggle .dashicons {
+    font-size: 20px;
+    transition: transform 0.2s ease-in-out;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.alvobot-collapse-toggle[aria-expanded="true"] .dashicons {
+    transform: rotate(0deg);
+}
+
+.alvobot-collapse-toggle[aria-expanded="false"] .dashicons {
+    transform: rotate(-90deg);
+}
+
+.alvobot-card-content.collapsed {
+    display: none;
+}
+
+/* ====================================
    GRID SYSTEM
    ==================================== */
 .alvobot-grid {
@@ -224,6 +275,7 @@
 .alvobot-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .alvobot-grid-3 { grid-template-columns: repeat(3, 1fr); }
 .alvobot-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.alvobot-grid-5 { grid-template-columns: repeat(5, 1fr); }
 
 .alvobot-grid-auto {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -430,6 +482,18 @@
     color: var(--alvobot-white);
 }
 
+.alvobot-btn-warning {
+    background: var(--alvobot-warning);
+    border-color: var(--alvobot-warning);
+    color: var(--alvobot-gray-900);
+}
+
+.alvobot-btn-warning:hover:not(:disabled) {
+    background: #e6a700;
+    border-color: #e6a700;
+    color: var(--alvobot-gray-900);
+}
+
 /* Tamanhos de botão */
 .alvobot-btn-sm {
     padding: var(--alvobot-space-xs) var(--alvobot-space-md);
@@ -621,6 +685,28 @@
     vertical-align: middle !important;
 }
 
+/* Toggle menor para debug */
+.alvobot-toggle-small {
+    width: 40px !important;
+    height: 20px !important;
+    flex: 0 0 40px !important;
+}
+
+.alvobot-toggle-small .alvobot-toggle-slider {
+    border-radius: 20px;
+}
+
+.alvobot-toggle-small .alvobot-toggle-slider:before {
+    height: 14px !important;
+    width: 14px !important;
+    left: 3px;
+    bottom: 3px;
+}
+
+.alvobot-toggle-small input:checked + .alvobot-toggle-slider:before {
+    transform: translateX(20px);
+}
+
 .alvobot-toggle input {
     opacity: 0;
     width: 0;
@@ -776,7 +862,8 @@
     
     .alvobot-grid-2,
     .alvobot-grid-3,
-    .alvobot-grid-4 {
+    .alvobot-grid-4,
+    .alvobot-grid-5 {
         grid-template-columns: 1fr;
     }
     
@@ -2571,3 +2658,645 @@ input:checked + .alvobot-pro-module-slider:before {
         grid-template-columns: 1fr;
     }
 }
+
+/* ====================================
+   SEÇÃO DEBUG DOS MÓDULOS
+   ==================================== */
+.alvobot-debug-status {
+    margin-left: var(--alvobot-space-sm);
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-600);
+    font-weight: 500;
+}
+
+.alvobot-debug-info {
+    margin-top: var(--alvobot-space-lg);
+    padding: var(--alvobot-space-md);
+    background: var(--alvobot-info-bg);
+    border: 1px solid var(--alvobot-info);
+    border-radius: var(--alvobot-radius-sm);
+}
+
+.alvobot-debug-info p {
+    margin: 0 0 var(--alvobot-space-sm) 0;
+    color: var(--alvobot-gray-700);
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.5;
+}
+
+.alvobot-debug-info p:last-child {
+    margin-bottom: 0;
+}
+
+.alvobot-debug-info code {
+    background: var(--alvobot-gray-100);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: var(--alvobot-font-size-xs);
+    color: var(--alvobot-gray-800);
+}
+
+/* Debug toggle row */
+.alvobot-form-table tr.alvobot-debug-row {
+    border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-form-table tr.alvobot-debug-row:last-child {
+    border-bottom: none;
+}
+
+.alvobot-form-table tr.alvobot-debug-row th {
+    font-weight: 500;
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-form-table tr.alvobot-debug-row td {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+}
+
+/* ====================================
+   MULTI-LANGUAGES MODULE STYLES
+   ==================================== */
+
+/* AG Grid integração com tema AlvoBot */
+.ag-theme-alpine {
+    --ag-font-family: inherit;
+    --ag-font-size: 14px;
+    --ag-foreground-color: var(--alvobot-gray-900);
+    --ag-background-color: var(--alvobot-white);
+    --ag-header-foreground-color: var(--alvobot-gray-800);
+    --ag-header-background-color: var(--alvobot-gray-50);
+    --ag-odd-row-background-color: var(--alvobot-white);
+    --ag-row-hover-color: var(--alvobot-gray-50);
+    --ag-selected-row-background-color: var(--alvobot-info-bg);
+    --ag-border-color: var(--alvobot-gray-200);
+    --ag-row-border-color: var(--alvobot-gray-100);
+}
+
+/* Botões de ação do grid */
+.alvobot-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6b7280;
+}
+
+.alvobot-btn-icon:hover:not([disabled]) {
+    background: #f8fafc;
+    border-color: var(--alvobot-primary);
+    color: var(--alvobot-primary);
+    transform: translateY(-1px);
+}
+
+.alvobot-btn-icon.alvobot-btn-danger:hover:not([disabled]) {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.alvobot-btn-icon[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toolbar */
+.alvobot-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0;
+}
+
+.alvobot-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.alvobot-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.alvobot-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.alvobot-filter-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Cards de estatísticas */
+.alvobot-card-stat {
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.alvobot-card-stat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--alvobot-gray-300);
+}
+
+.alvobot-card-pending::before { background: var(--alvobot-warning); }
+.alvobot-card-processing::before { background: var(--alvobot-info); }
+.alvobot-card-completed::before { background: var(--alvobot-success); }
+.alvobot-card-failed::before { background: var(--alvobot-error); }
+
+/* Info grid no modal */
+.alvobot-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--alvobot-gray-50);
+    border-radius: 8px;
+}
+
+.alvobot-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.alvobot-info-item label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--alvobot-gray-700);
+}
+
+.alvobot-info-item span {
+    font-size: 0.875rem;
+    color: var(--alvobot-gray-900);
+}
+
+/* Log viewer */
+.alvobot-log-viewer {
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--alvobot-gray-50);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.alvobot-log-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 0.875rem;
+    background: white;
+    border-left: 3px solid var(--alvobot-gray-300);
+}
+
+.alvobot-log-info { border-left-color: var(--alvobot-info); }
+.alvobot-log-success { border-left-color: var(--alvobot-success); }
+.alvobot-log-error { border-left-color: var(--alvobot-error); }
+.alvobot-log-warning { border-left-color: var(--alvobot-warning); }
+
+.alvobot-log-time {
+    color: var(--alvobot-gray-600);
+    font-size: 0.8rem;
+    min-width: 80px;
+}
+
+.alvobot-log-level {
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    min-width: 60px;
+    text-align: center;
+}
+
+.alvobot-log-info .alvobot-log-level {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.alvobot-log-success .alvobot-log-level {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.alvobot-log-error .alvobot-log-level {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.alvobot-log-warning .alvobot-log-level {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.alvobot-log-message {
+    flex: 1;
+    color: var(--alvobot-gray-800);
+}
+
+
+/* Estilos para Modal de Detalhes */
+.alvobot-details-section {
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-md);
+    margin-bottom: var(--alvobot-space-lg);
+    overflow: hidden;
+}
+
+.alvobot-section-header {
+    background: var(--alvobot-gray-50);
+    border-bottom: 1px solid var(--alvobot-gray-200);
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alvobot-section-header h3 {
+    margin: 0;
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+}
+
+.alvobot-phase-detail-btn {
+    background: var(--alvobot-primary);
+    color: var(--alvobot-white);
+    border: none;
+    padding: 4px 8px;
+    border-radius: var(--alvobot-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.alvobot-phase-detail-btn:hover {
+    background: var(--alvobot-primary-hover);
+    transform: scale(1.05);
+}
+
+.alvobot-phase-detail-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.alvobot-details-section h3 {
+    background: var(--alvobot-gray-50);
+    margin: 0;
+    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 600;
+    color: var(--alvobot-gray-900);
+    border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-details-section .alvobot-info-grid {
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.alvobot-info-item.full-width label {
+    display: block;
+    margin-bottom: var(--alvobot-space-sm);
+    font-weight: 600;
+    color: var(--alvobot-gray-700);
+}
+
+.alvobot-content-preview {
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-md);
+    font-family: 'Courier New', monospace;
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.5;
+    color: var(--alvobot-gray-800);
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.alvobot-code-block {
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-code-block pre {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-lg);
+    font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 0;
+}
+
+.alvobot-error-log {
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-error-log pre {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-lg);
+    font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+    font-size: var(--alvobot-font-size-sm);
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 0;
+}
+
+/* Modal de detalhes específico */
+#details-modal .alvobot-modal-content {
+    width: 95vw;
+    max-width: 1200px;
+    height: 95vh;
+    max-height: 900px;
+}
+
+#details-modal .alvobot-modal-body {
+    max-height: calc(95vh - 120px);
+    overflow-y: auto;
+    padding: var(--alvobot-space-lg);
+}
+
+/* Scrollbar customizada para modal de detalhes */
+#details-modal .alvobot-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#details-modal .alvobot-modal-body::-webkit-scrollbar-track {
+    background: var(--alvobot-gray-100);
+    border-radius: 4px;
+}
+
+#details-modal .alvobot-modal-body::-webkit-scrollbar-thumb {
+    background: var(--alvobot-gray-400);
+    border-radius: 4px;
+}
+
+#details-modal .alvobot-modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--alvobot-gray-500);
+}
+
+/* Estilos para Modal de Detalhes de Fase */
+.alvobot-phase-details {
+    padding: var(--alvobot-space-lg);
+}
+
+.alvobot-phase-details h4 {
+    color: var(--alvobot-gray-900);
+    font-weight: 600;
+    margin-bottom: var(--alvobot-space-md);
+    padding-bottom: var(--alvobot-space-sm);
+    border-bottom: 2px solid var(--alvobot-primary);
+}
+
+.alvobot-phase-details h5 {
+    color: var(--alvobot-gray-800);
+    font-weight: 500;
+    margin: var(--alvobot-space-md) 0 var(--alvobot-space-sm) 0;
+}
+
+.alvobot-phase-details ul {
+    margin: var(--alvobot-space-sm) 0;
+    padding-left: var(--alvobot-space-lg);
+}
+
+.alvobot-phase-details li {
+    margin-bottom: var(--alvobot-space-xs);
+}
+
+.alvobot-phase-details .alvobot-log-entry {
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-sm);
+    padding: var(--alvobot-space-sm);
+    margin-bottom: var(--alvobot-space-sm);
+    font-family: monospace;
+    font-size: var(--alvobot-font-size-sm);
+}
+
+/* Ajustes para modal de fase em mobile */
+#phase-details-modal .alvobot-modal-content {
+    width: 90vw;
+    max-width: 800px;
+    height: 90vh;
+    max-height: 700px;
+}
+
+#phase-details-modal .alvobot-modal-body {
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+    padding: var(--alvobot-space-md);
+}
+
+/* Responsivo para Multi-Languages */
+@media (max-width: 768px) {
+    .alvobot-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .alvobot-toolbar-left,
+    .alvobot-toolbar-right {
+        justify-content: center;
+    }
+    
+    
+    .alvobot-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ag-theme-alvobot {
+        --ag-row-height: 48px;
+    }
+    
+    /* Ajustes para modal de detalhes em mobile */
+    #details-modal .alvobot-modal-content {
+        width: 98vw;
+        height: 98vh;
+        margin: 1vh auto;
+    }
+    
+    #details-modal .alvobot-modal-body {
+        max-height: calc(98vh - 100px);
+        padding: var(--alvobot-space-md);
+    }
+    
+    .alvobot-details-section h3 {
+        padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+        font-size: var(--alvobot-font-size-md);
+    }
+    
+    .alvobot-details-section .alvobot-info-grid {
+        padding: var(--alvobot-space-md);
+    }
+    
+    .alvobot-code-block,
+    .alvobot-error-log {
+        padding: var(--alvobot-space-md);
+    }
+}
+
+/* ====================================
+   LOGS DETALHADOS COM PAYLOADS
+   ==================================== */
+.alvobot-payload-section {
+    margin: var(--alvobot-space-md) 0;
+    border-radius: var(--alvobot-border-radius);
+    background: var(--alvobot-gray-50);
+    border: 1px solid var(--alvobot-gray-200);
+    overflow: hidden;
+}
+
+.alvobot-payload-section h6 {
+    margin: 0;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    background: var(--alvobot-gray-100);
+    border-bottom: 1px solid var(--alvobot-gray-200);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 600;
+    color: var(--alvobot-gray-800);
+}
+
+.alvobot-payload-code {
+    margin: 0 !important;
+    padding: var(--alvobot-space-md) !important;
+    background: var(--alvobot-white) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace !important;
+    font-size: var(--alvobot-font-size-xs) !important;
+    line-height: 1.4 !important;
+    color: var(--alvobot-gray-800) !important;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.alvobot-curl-code {
+    margin: 0 !important;
+    padding: var(--alvobot-space-md) !important;
+    background: var(--alvobot-gray-900) !important;
+    color: #00ff00 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace !important;
+    font-size: var(--alvobot-font-size-xs) !important;
+    line-height: 1.4 !important;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.alvobot-error-code {
+    margin: 0 !important;
+    padding: var(--alvobot-space-md) !important;
+    background: var(--alvobot-error-bg) !important;
+    color: var(--alvobot-error) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace !important;
+    font-size: var(--alvobot-font-size-xs) !important;
+    line-height: 1.4 !important;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.alvobot-log-with-payload {
+    background: var(--alvobot-info-bg);
+    border-radius: var(--alvobot-border-radius);
+    padding: var(--alvobot-space-md);
+}
+
+.alvobot-phase-details {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.alvobot-phase-details h5 {
+    margin: var(--alvobot-space-lg) 0 var(--alvobot-space-md) 0;
+    color: var(--alvobot-gray-800);
+    font-size: var(--alvobot-font-size-md);
+    font-weight: 600;
+    border-bottom: 2px solid var(--alvobot-gray-200);
+    padding-bottom: var(--alvobot-space-sm);
+}
+
+.alvobot-phase-details h6 {
+    margin: var(--alvobot-space-md) 0 var(--alvobot-space-sm) 0;
+    color: var(--alvobot-gray-700);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 600;
+}
+
+/* Scrollbar customizada para seções de payload */
+.alvobot-payload-code::-webkit-scrollbar,
+.alvobot-curl-code::-webkit-scrollbar,
+.alvobot-error-code::-webkit-scrollbar {
+    height: 8px;
+}
+
+.alvobot-payload-code::-webkit-scrollbar-track,
+.alvobot-curl-code::-webkit-scrollbar-track,
+.alvobot-error-code::-webkit-scrollbar-track {
+    background: var(--alvobot-gray-100);
+}
+
+.alvobot-payload-code::-webkit-scrollbar-thumb,
+.alvobot-curl-code::-webkit-scrollbar-thumb,
+.alvobot-error-code::-webkit-scrollbar-thumb {
+    background: var(--alvobot-gray-400);
+    border-radius: 4px;
+}
+
+.alvobot-payload-code::-webkit-scrollbar-thumb:hover,
+.alvobot-curl-code::-webkit-scrollbar-thumb:hover,
+.alvobot-error-code::-webkit-scrollbar-thumb:hover {
+    background: var(--alvobot-gray-500);
+}}

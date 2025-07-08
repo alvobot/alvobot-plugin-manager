@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 if (have_posts()) : while (have_posts()) : the_post();
 
+// Verifica se deve usar shortcode ou CTAs padrão
+$use_shortcode = get_query_var('alvobot_use_shortcode');
+$shortcode = get_query_var('alvobot_shortcode');
+
 // Obtém as CTAs personalizadas ou padrão
 $ctas = get_query_var('alvobot_ctas');
 
@@ -296,10 +300,21 @@ $second_part = wpautop($second_part);
                     ?>
                 </div>
 
-                <!-- CTAs -->
+                <?php 
+                // Script após o primeiro parágrafo
+                if (class_exists('Alvobot_Pre_Article')) {
+                    Alvobot_Pre_Article::render_custom_script('after_first_paragraph'); 
+                }
+                ?>
+
+                <!-- CTAs ou Shortcode -->
                 <div class="cta-buttons">
                     <?php
-                    if (!empty($ctas)) {
+                    if ($use_shortcode && !empty($shortcode)) {
+                        // Renderiza o shortcode
+                        echo do_shortcode($shortcode);
+                    } elseif (!empty($ctas)) {
+                        // Renderiza os botões CTA padrão
                         foreach ($ctas as $index => $cta) {
                             // Constrói a UTM
                             $utm_params = [
@@ -318,8 +333,12 @@ $second_part = wpautop($second_part);
                     ?>
                 </div>
 
-                <!-- Bloco de Anúncio -->
-
+                <?php 
+                // Script após os botões CTA
+                if (class_exists('Alvobot_Pre_Article')) {
+                    Alvobot_Pre_Article::render_custom_script('after_ctas'); 
+                }
+                ?>
 
                 <!-- Segunda parte do conteúdo -->
                 <div class="excerpt-continuation">
@@ -339,8 +358,21 @@ $second_part = wpautop($second_part);
                     ?>
                 </div>
 
+                <?php 
+                // Script após o segundo parágrafo
+                if (class_exists('Alvobot_Pre_Article')) {
+                    Alvobot_Pre_Article::render_custom_script('after_second_paragraph'); 
+                }
+                ?>
 
             </div>
+
+            <?php 
+            // Script antes do rodapé
+            if (class_exists('Alvobot_Pre_Article')) {
+                Alvobot_Pre_Article::render_custom_script('before_footer'); 
+            }
+            ?>
 
             <footer class="pre-article-footer">
                 <div class="footer-content">

@@ -83,41 +83,19 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
             ALVOBOT_PRO_VERSION
         );
         
-        // JavaScript
-        wp_enqueue_script(
-            'alvobot-multi-languages-interface',
-            $module_url . 'assets/js/translation-interface.js',
-            array('jquery', 'wp-api'),
-            ALVOBOT_PRO_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'alvobot-multi-languages-modal',
-            $module_url . 'assets/js/translation-modal.js',
-            array('jquery'),
-            ALVOBOT_PRO_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'alvobot-multi-languages-list',
-            $module_url . 'assets/js/translation-list.js',
-            array('jquery'),
-            ALVOBOT_PRO_VERSION,
-            true
-        );
+        // JavaScript - usa apenas translation-interface.js unificado
+        // Removido carregamento duplicado - translation-interface.js já é carregado pela classe principal
         
         wp_enqueue_script(
             'alvobot-multi-languages-queue',
             $module_url . 'assets/js/translation-queue.js',
             array('jquery'),
-            ALVOBOT_PRO_VERSION,
+            ALVOBOT_PRO_VERSION . '.2',
             true
         );
         
-        // Localização
-        wp_localize_script('alvobot-multi-languages-interface', 'alvobotMultiLanguages', array(
+        // Localização para o script de fila
+        wp_localize_script('alvobot-multi-languages-queue', 'alvobotMultiLanguages', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url($this->namespace),
             'nonce' => wp_create_nonce('alvobot_nonce'),

@@ -78,9 +78,6 @@ jQuery(document).ready(function($) {
                 return;
             }
 
-            if (!confirm('Tem certeza que deseja remover este item da fila? Esta ação não pode ser desfeita.')) {
-                return;
-            }
             
             row.css('opacity', '0.5');
             button.prop('disabled', true);

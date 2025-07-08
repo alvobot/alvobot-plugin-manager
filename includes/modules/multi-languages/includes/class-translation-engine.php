@@ -145,9 +145,24 @@ class AlvoBotPro_Translation_Engine {
                 return $this->translation_cache[$cache_key];
             }
 
-            // Verifica rate limiting
+            // Implementa retry automático para rate limit
+            $max_retries = 3;
+            $retry_delay = 60; // 60 segundos entre tentativas
+            
+            for ($attempt = 1; $attempt <= $max_retries; $attempt++) {
+                // Verifica rate limiting apenas nas tentativas subsequentes
+                if ($attempt > 1 && $this->settings['rate_limiting'] && !$this->check_rate_limit()) {
+                    AlvoBotPro::debug_log('multi-languages', "Tentativa {$attempt}/{$max_retries}: Rate limit ainda ativo, aguardando {$retry_delay}s");
+                    sleep($retry_delay);
+                    continue;
+                }
+                
+                break; // Sai do loop se rate limit não estiver ativo
+            }
+            
+            // Se todas as tentativas falharam por rate limit
             if ($this->settings['rate_limiting'] && !$this->check_rate_limit()) {
-                return $this->error_response('Rate limit excedido. Tente novamente em alguns minutos.');
+                return $this->error_response('Rate limit persistente após ' . $max_retries . ' tentativas. Item será reprocessado automaticamente.');
             }
 
             // Auto-detecção de idioma
@@ -985,13 +1000,29 @@ class AlvoBotPro_Translation_Engine {
     }
 
     /**
-     * Verifica rate limiting
+     * Verifica rate limiting com detecção automática de limites da API
      */
     private function check_rate_limit() {
-        $key = 'alvobot_rate_limit_' . $this->active_provider;
-        $current_count = get_transient($key) ?: 0;
+        $provider_key = 'alvobot_rate_limit_' . $this->active_provider;
+        $api_rate_limit_key = 'alvobot_api_rate_limit_' . $this->active_provider;
         
-        return $current_count < $this->settings['rate_limit_requests'];
+        // Verifica rate limit local (nosso controle)
+        $current_count = get_transient($provider_key) ?: 0;
+        $local_limit_ok = $current_count < $this->settings['rate_limit_requests'];
+        
+        // Verifica rate limit da API (baseado em headers de resposta)
+        $api_rate_limit = get_transient($api_rate_limit_key);
+        $api_limit_ok = true;
+        
+        if ($api_rate_limit) {
+            $remaining_requests = intval($api_rate_limit['remaining_requests'] ?? 0);
+            $remaining_tokens = intval($api_rate_limit['remaining_tokens'] ?? 0);
+            $api_limit_ok = $remaining_requests > 0 && $remaining_tokens > 100; // Buffer de 100 tokens
+            
+            AlvoBotPro::debug_log('multi-languages', 'API Rate Limit Check: Requests=' . $remaining_requests . ', Tokens=' . $remaining_tokens);
+        }
+        
+        return $local_limit_ok && $api_limit_ok;
     }
 
     /**
@@ -1003,6 +1034,93 @@ class AlvoBotPro_Translation_Engine {
         $new_count = $current_count + 1;
         
         set_transient($key, $new_count, $this->settings['rate_limit_period']);
+    }
+    
+    /**
+     * Atualiza informações de rate limit baseado em headers da API
+     */
+    public function update_api_rate_limit_info($response_headers) {
+        if (!is_array($response_headers)) {
+            return;
+        }
+        
+        $api_rate_limit_key = 'alvobot_api_rate_limit_' . $this->active_provider;
+        
+        $rate_limit_info = [
+            'remaining_requests' => $response_headers['x-ratelimit-remaining-requests'] ?? null,
+            'remaining_tokens' => $response_headers['x-ratelimit-remaining-tokens'] ?? null,
+            'reset_requests' => $response_headers['x-ratelimit-reset-requests'] ?? null,
+            'reset_tokens' => $response_headers['x-ratelimit-reset-tokens'] ?? null,
+            'limit_requests' => $response_headers['x-ratelimit-limit-requests'] ?? null,
+            'limit_tokens' => $response_headers['x-ratelimit-limit-tokens'] ?? null,
+            'updated_at' => time()
+        ];
+        
+        // Salva por 5 minutos
+        set_transient($api_rate_limit_key, $rate_limit_info, 300);
+        
+        AlvoBotPro::debug_log('multi-languages', 'Rate Limit atualizado: ' . json_encode($rate_limit_info));
+    }
+    
+    /**
+     * Implementa retry com backoff exponencial para rate limits
+     */
+    public function translate_with_rate_limit_retry($text, $source_lang, $target_lang, $options = array()) {
+        $max_retries = 5;
+        $base_delay = 2; // segundos
+        $max_delay = 120; // máximo 2 minutos
+        
+        for ($attempt = 1; $attempt <= $max_retries; $attempt++) {
+            // Verifica rate limit antes de tentar
+            if (!$this->check_rate_limit()) {
+                $delay = min($base_delay * pow(2, $attempt - 1), $max_delay);
+                
+                AlvoBotPro::debug_log('multi-languages', 
+                    "Rate limit ativo. Tentativa {$attempt}/{$max_retries}. Aguardando {$delay}s antes da próxima tentativa.");
+                
+                if ($attempt < $max_retries) {
+                    sleep($delay);
+                    continue;
+                } else {
+                    return $this->error_response("Rate limit persistente após {$max_retries} tentativas. Item será reprocessado automaticamente.");
+                }
+            }
+            
+            // Tenta fazer a tradução
+            $result = $this->translate_text($text, $source_lang, $target_lang, $options);
+            
+            // Se sucesso, retorna
+            if ($result['success']) {
+                if ($attempt > 1) {
+                    AlvoBotPro::debug_log('multi-languages', "Tradução bem-sucedida após {$attempt} tentativas");
+                }
+                return $result;
+            }
+            
+            // Se erro de rate limit (429), continua tentando
+            if (isset($result['error']) && (
+                strpos(strtolower($result['error']), 'rate limit') !== false ||
+                strpos(strtolower($result['error']), '429') !== false ||
+                strpos(strtolower($result['error']), 'try again') !== false
+            )) {
+                $delay = min($base_delay * pow(2, $attempt - 1), $max_delay);
+                
+                AlvoBotPro::debug_log('multi-languages', 
+                    "Erro de rate limit detectado: {$result['error']}. Tentativa {$attempt}/{$max_retries}. Aguardando {$delay}s.");
+                
+                if ($attempt < $max_retries) {
+                    sleep($delay);
+                    continue;
+                } else {
+                    return $this->error_response("Rate limit persistente após {$max_retries} tentativas: {$result['error']}");
+                }
+            }
+            
+            // Se outro tipo de erro, retorna imediatamente
+            return $result;
+        }
+        
+        return $this->error_response("Máximo de tentativas excedido");
     }
 
     /**

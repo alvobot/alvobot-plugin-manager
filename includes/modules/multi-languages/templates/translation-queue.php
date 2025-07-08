@@ -3,8 +3,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Inicializa a fila se não existir
-$queue = new AlvoBotPro_Translation_Queue();
+// Usa a instância da fila já existente
+global $alvobot_translation_queue;
+if (!$alvobot_translation_queue) {
+    // Fallback apenas se não existir
+    $alvobot_translation_queue = new AlvoBotPro_Translation_Queue();
+}
+$queue = $alvobot_translation_queue;
 $queue->create_table();
 
 $stats = $queue->get_queue_status();
@@ -25,7 +30,6 @@ if ($script_enqueued) {
         'translations' => array(
             'error' => __('Erro', 'alvobot-pro'),
             'success' => __('Sucesso', 'alvobot-pro'),
-            'confirm_delete' => __('Tem certeza que deseja excluir?', 'alvobot-pro'),
             'processing' => __('Processando...', 'alvobot-pro')
         )
     ));
@@ -208,6 +212,62 @@ if ($script_enqueued) {
     </div>
 </div>
 
+<!-- Modal de Detalhes Completos -->
+<div id="details-modal" class="alvobot-modal" style="display: none;">
+    <div class="alvobot-modal-content" style="max-width: 95vw; max-height: 95vh;">
+        <div class="alvobot-modal-header">
+            <h2><?php echo esc_html__('Detalhes Completos da Tradução', 'alvobot-pro'); ?> - <span id="details-post-title"></span></h2>
+            <button class="alvobot-modal-close" type="button">&times;</button>
+        </div>
+        
+        <div class="alvobot-modal-body" style="overflow-y: auto; max-height: calc(95vh - 120px);">
+            <div id="details-content">
+                <p><?php echo esc_html__('Carregando detalhes completos...', 'alvobot-pro'); ?></p>
+            </div>
+        </div>
+        
+        <div class="alvobot-modal-footer">
+            <div class="alvobot-btn-group">
+                <button type="button" class="alvobot-btn alvobot-btn-outline alvobot-modal-close">
+                    <?php echo esc_html__('Fechar', 'alvobot-pro'); ?>
+                </button>
+                <button type="button" class="alvobot-btn alvobot-btn-primary" id="copy-details">
+                    <span class="dashicons dashicons-admin-page"></span>
+                    <?php echo esc_html__('Copiar Detalhes', 'alvobot-pro'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes de Fase -->
+<div id="phase-details-modal" class="alvobot-modal" style="display: none;">
+    <div class="alvobot-modal-content" style="max-width: 80vw; max-height: 90vh;">
+        <div class="alvobot-modal-header">
+            <h2><?php echo esc_html__('Detalhes da Fase:', 'alvobot-pro'); ?> <span id="phase-details-title"></span></h2>
+            <button class="alvobot-modal-close" type="button">&times;</button>
+        </div>
+        
+        <div class="alvobot-modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
+            <div id="phase-details-content">
+                <p><?php echo esc_html__('Carregando detalhes da fase...', 'alvobot-pro'); ?></p>
+            </div>
+        </div>
+        
+        <div class="alvobot-modal-footer">
+            <div class="alvobot-btn-group">
+                <button type="button" class="alvobot-btn alvobot-btn-outline alvobot-modal-close">
+                    <?php echo esc_html__('Fechar', 'alvobot-pro'); ?>
+                </button>
+                <button type="button" class="alvobot-btn alvobot-btn-primary" id="copy-phase-details">
+                    <span class="dashicons dashicons-admin-page"></span>
+                    <?php echo esc_html__('Copiar Dados', 'alvobot-pro'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- AG Grid CSS e JS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.0/styles/ag-theme-alpine.css">
@@ -224,7 +284,6 @@ var alvobotMultiLanguages = {
     translations: {
         error: '<?php echo __('Erro', 'alvobot-pro'); ?>',
         success: '<?php echo __('Sucesso', 'alvobot-pro'); ?>',
-        confirm_delete: '<?php echo __('Tem certeza que deseja excluir?', 'alvobot-pro'); ?>',
         processing: '<?php echo __('Processando...', 'alvobot-pro'); ?>'
     }
 };
@@ -498,7 +557,7 @@ jQuery(document).ready(function($) {
             
             return `
                 <div style="display: flex; gap: 4px; justify-content: center;">
-                    <button class="alvobot-btn-icon" data-action="view-logs" data-id="${item.id}" title="Ver Logs">
+                    <button class="alvobot-btn-icon" data-action="view-details" data-id="${item.id}" title="Ver Detalhes Completos e Logs">
                         <span class="dashicons dashicons-visibility"></span>
                     </button>
                     ${canDelete ? 
@@ -526,9 +585,14 @@ jQuery(document).ready(function($) {
             $('#search-input').on('input', this.debounce(() => this.applyFilters(), 300));
             
             // Ações do grid (delegadas)
+            $(document).on('click', '[data-action="view-details"]', (e) => {
+                const id = $(e.currentTarget).data('id');
+                this.viewDetails(id);
+            });
+            
             $(document).on('click', '[data-action="view-logs"]', (e) => {
                 const id = $(e.currentTarget).data('id');
-                this.viewLogs(id);
+                this.viewDetails(id);
             });
             
             $(document).on('click', '[data-action="delete"]', (e) => {
@@ -539,9 +603,26 @@ jQuery(document).ready(function($) {
             // Modal
             $('.alvobot-modal-close').on('click', () => this.closeModal());
             $('#download-logs').on('click', () => this.downloadLogs());
+            $('#copy-details').on('click', () => this.copyDetails());
+            $('#copy-phase-details').on('click', () => this.copyPhaseDetails());
+            
+            // Handlers para botões de detalhes de fase (delegados)
+            $(document).on('click', '.alvobot-phase-detail-btn', (e) => {
+                const phase = $(e.currentTarget).data('phase');
+                const itemId = $(e.currentTarget).data('item-id');
+                this.showPhaseDetails(phase, itemId);
+            });
             
             $('#logs-modal').on('click', (e) => {
                 if (e.target.id === 'logs-modal') this.closeModal();
+            });
+            
+            $('#details-modal').on('click', (e) => {
+                if (e.target.id === 'details-modal') this.closeModal();
+            });
+            
+            $('#phase-details-modal').on('click', (e) => {
+                if (e.target.id === 'phase-details-modal') this.closeModal();
             });
         }
         
@@ -649,6 +730,7 @@ jQuery(document).ready(function($) {
         }
         
         processQueue() {
+            console.log('AlvoBot Queue: Iniciando processamento da fila');
             $.ajax({
                 url: CONFIG.ajaxUrl,
                 type: 'POST',
@@ -656,7 +738,11 @@ jQuery(document).ready(function($) {
                     action: 'alvobot_process_translation_queue',
                     nonce: CONFIG.nonce
                 },
+                beforeSend: function() {
+                    console.log('AlvoBot Queue: Enviando requisição de processamento...');
+                },
                 success: (response) => {
+                    console.log('AlvoBot Queue: Resposta recebida:', response);
                     if (response.success) {
                         this.showNotice('Processamento iniciado com sucesso', 'success');
                         this.loadData();
@@ -673,12 +759,15 @@ jQuery(document).ready(function($) {
                         }
                         this.showNotice('Erro ao processar fila: ' + errorMessage, 'error');
                     }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AlvoBot Queue: Erro AJAX ao processar fila:', {status, error, xhr});
+                    this.showNotice('Erro de comunicação ao processar fila', 'error');
                 }
             });
         }
         
         clearCompleted() {
-            if (!confirm('Tem certeza que deseja limpar todas as traduções concluídas?')) return;
             
             $.ajax({
                 url: CONFIG.ajaxUrl,
@@ -709,8 +798,7 @@ jQuery(document).ready(function($) {
         }
         
         resetOrphanedItems() {
-            if (!confirm('Tem certeza que deseja resetar todos os itens travados? Eles serão recolocados na fila.')) return;
-            
+            console.log('AlvoBot Queue: Iniciando reset de itens órfãos');
             $.ajax({
                 url: CONFIG.ajaxUrl,
                 type: 'POST',
@@ -718,7 +806,11 @@ jQuery(document).ready(function($) {
                     action: 'alvobot_reset_orphaned_items',
                     nonce: CONFIG.nonce
                 },
+                beforeSend: function() {
+                    console.log('AlvoBot Queue: Enviando requisição de reset...');
+                },
                 success: (response) => {
+                    console.log('AlvoBot Queue: Resposta de reset recebida:', response);
                     if (response.success) {
                         const message = response.data.message || 'Itens resetados com sucesso';
                         this.showNotice(message, 'success');
@@ -738,14 +830,13 @@ jQuery(document).ready(function($) {
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Erro ao resetar itens:', {status, error});
+                    console.error('AlvoBot Queue: Erro AJAX ao resetar itens:', {status, error, xhr});
                     this.showNotice('Erro de comunicação ao resetar itens', 'error');
                 }
             });
         }
         
         deleteItem(id) {
-            if (!confirm('Tem certeza que deseja excluir este item da fila?')) return;
             
             $.ajax({
                 url: CONFIG.ajaxUrl,
@@ -849,8 +940,653 @@ jQuery(document).ready(function($) {
             $('#logs-modal').fadeIn(300);
         }
         
+        viewDetails(id) {
+            console.log('AlvoBot Queue: Visualizando detalhes completos do item:', id);
+            
+            $.ajax({
+                url: CONFIG.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'alvobot_get_queue_item_details',
+                    nonce: CONFIG.nonce,
+                    id: id
+                },
+                success: (response) => {
+                    console.log('AlvoBot Queue: Resposta de detalhes recebida:', response);
+                    if (response.success) {
+                        this.showDetailsModal(response.data);
+                    } else {
+                        let errorMessage = 'Erro desconhecido';
+                        if (response.data) {
+                            if (typeof response.data === 'string') {
+                                errorMessage = response.data;
+                            } else if (response.data.message) {
+                                errorMessage = response.data.message;
+                            } else {
+                                errorMessage = JSON.stringify(response.data);
+                            }
+                        }
+                        this.showNotice('Erro ao carregar detalhes: ' + errorMessage, 'error');
+                    }
+                }
+            });
+        }
+        
+        showDetailsModal(data) {
+            const item = data.item;
+            const details = data.details || {};
+            
+            $('#details-post-title').text(item.post_title || 'Sem título');
+            
+            // Montar HTML dos detalhes completos
+            let detailsHtml = this.buildDetailsHtml(item, details);
+            
+            $('#details-content').html(detailsHtml);
+            this.currentDetailsItem = item;
+            this.currentDetailsData = details;
+            $('#details-modal').fadeIn(300);
+        }
+        
+        buildDetailsHtml(item, details) {
+            // Informações básicas
+            let html = '<div class="alvobot-details-section">';
+            html += '<div class="alvobot-section-header">';
+            html += '<h3>🔍 Informações Básicas</h3>';
+            html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="basic" data-item-id="${item.id}" title="Ver detalhes da fase básica">`;
+            html += '<span class="dashicons dashicons-visibility"></span>';
+            html += '</button>';
+            html += '</div>';
+            html += '<div class="alvobot-info-grid">';
+            html += `<div class="alvobot-info-item"><label>ID da Fila:</label><span>${item.id}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Post ID:</label><span>${item.post_id}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Título:</label><span>${item.post_title || 'N/A'}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Status:</label><span class="alvobot-badge">${this.getStatusText(item.status)}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Progresso:</label><span>${item.progress}%</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Prioridade:</label><span>${item.priority}</span></div>`;
+            html += '</div></div>';
+
+            // Idiomas
+            html += '<div class="alvobot-details-section">';
+            html += '<div class="alvobot-section-header">';
+            html += '<h3>🌐 Configuração de Idiomas</h3>';
+            html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="languages" data-item-id="${item.id}" title="Ver detalhes da configuração de idiomas">`;
+            html += '<span class="dashicons dashicons-visibility"></span>';
+            html += '</button>';
+            html += '</div>';
+            html += '<div class="alvobot-info-grid">';
+            html += `<div class="alvobot-info-item"><label>Idioma Origem:</label><span>${item.source_lang}</span></div>`;
+            
+            try {
+                const targetLangs = JSON.parse(item.target_langs);
+                html += `<div class="alvobot-info-item"><label>Idiomas Destino:</label><span>${targetLangs.join(', ')}</span></div>`;
+            } catch (e) {
+                html += `<div class="alvobot-info-item"><label>Idiomas Destino:</label><span>${item.target_langs}</span></div>`;
+            }
+            html += '</div></div>';
+
+            // Timestamps
+            html += '<div class="alvobot-details-section">';
+            html += '<div class="alvobot-section-header">';
+            html += '<h3>⏰ Histórico de Data/Hora</h3>';
+            html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="timeline" data-item-id="${item.id}" title="Ver detalhes do histórico temporal">`;
+            html += '<span class="dashicons dashicons-visibility"></span>';
+            html += '</button>';
+            html += '</div>';
+            html += '<div class="alvobot-info-grid">';
+            html += `<div class="alvobot-info-item"><label>Criado em:</label><span>${item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : 'N/A'}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Iniciado em:</label><span>${item.started_at ? new Date(item.started_at).toLocaleString('pt-BR') : 'N/A'}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Concluído em:</label><span>${item.completed_at ? new Date(item.completed_at).toLocaleString('pt-BR') : 'N/A'}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Última Atualização:</label><span>${item.updated_at ? new Date(item.updated_at).toLocaleString('pt-BR') : 'N/A'}</span></div>`;
+            html += '</div></div>';
+
+            // Configurações e Dados Técnicos
+            if (details.settings) {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>⚙️ Configurações da Tradução</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="settings" data-item-id="${item.id}" title="Ver detalhes das configurações">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += '<div class="alvobot-code-block">';
+                html += '<pre>' + JSON.stringify(details.settings, null, 2) + '</pre>';
+                html += '</div></div>';
+            }
+
+            // Post Data
+            if (details.post_data) {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>📝 Dados do Post Original</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="post_data" data-item-id="${item.id}" title="Ver detalhes completos do post">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += '<div class="alvobot-info-grid">';
+                html += `<div class="alvobot-info-item"><label>Tipo:</label><span>${details.post_data.post_type || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Status:</label><span>${details.post_data.post_status || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Autor:</label><span>${details.post_data.post_author || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Tamanho do Conteúdo:</label><span>${details.post_data.content_length || 0} caracteres</span></div>`;
+                html += '</div>';
+                
+                if (details.post_data.post_excerpt) {
+                    html += '<div class="alvobot-info-item full-width">';
+                    html += '<label>Excerpt:</label>';
+                    html += `<div class="alvobot-content-preview">${details.post_data.post_excerpt}</div>`;
+                    html += '</div>';
+                }
+                
+                if (details.post_data.post_content) {
+                    const contentPreview = details.post_data.post_content.substring(0, 500) + (details.post_data.post_content.length > 500 ? '...' : '');
+                    html += '<div class="alvobot-info-item full-width">';
+                    html += '<label>Conteúdo (preview):</label>';
+                    html += `<div class="alvobot-content-preview">${contentPreview.replace(/\n/g, '<br>')}</div>`;
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            // Sistema de Tradução
+            if (details.translation_system) {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>🔧 Sistema de Tradução</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="translation_system" data-item-id="${item.id}" title="Ver detalhes do sistema de tradução">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += '<div class="alvobot-info-grid">';
+                html += `<div class="alvobot-info-item"><label>Provider:</label><span>${details.translation_system.provider || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Modelo:</label><span>${details.translation_system.model || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Status:</label><span>${details.translation_system.system_status || 'N/A'}</span></div>`;
+                html += '</div></div>';
+            }
+
+            // Métricas
+            if (details.metrics) {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>📊 Métricas e Estatísticas</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="metrics" data-item-id="${item.id}" title="Ver detalhes das métricas">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += '<div class="alvobot-info-grid">';
+                html += `<div class="alvobot-info-item"><label>Posição na Fila:</label><span>${details.metrics.queue_position || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Tempo Estimado:</label><span>${details.metrics.estimated_time || 'N/A'}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Tentativas:</label><span>${details.metrics.retry_count || 0}</span></div>`;
+                html += `<div class="alvobot-info-item"><label>Total na Fila:</label><span>${details.metrics.total_items_in_queue || 'N/A'}</span></div>`;
+                html += '</div></div>';
+            }
+
+            // Logs de erro se houver
+            if (item.error_log && item.error_log !== 'NULL' && item.error_log !== '') {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>⚠️ Log de Erros</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="errors" data-item-id="${item.id}" title="Ver detalhes dos erros">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += '<div class="alvobot-error-log">';
+                html += `<pre>${item.error_log.replace(/\n/g, '<br>')}</pre>`;
+                html += '</div></div>';
+            }
+
+            // Logs Detalhados
+            if (details.logs && details.logs.length > 0) {
+                html += '<div class="alvobot-details-section">';
+                html += '<div class="alvobot-section-header">';
+                html += '<h3>📋 Logs Detalhados</h3>';
+                html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="logs" data-item-id="${item.id}" title="Ver análise completa dos logs">`;
+                html += '<span class="dashicons dashicons-visibility"></span>';
+                html += '</button>';
+                html += '</div>';
+                html += `<div class="alvobot-info-grid">`;
+                html += `<div class="alvobot-info-item"><label>Total de Logs:</label><span>${details.logs.length}</span></div>`;
+                const lastLog = details.logs[details.logs.length - 1];
+                if (lastLog) {
+                    html += `<div class="alvobot-info-item"><label>Último Log:</label><span>${lastLog.timestamp || 'N/A'}</span></div>`;
+                }
+                html += '</div></div>';
+            }
+
+            // Dados RAW
+            html += '<div class="alvobot-details-section">';
+            html += '<div class="alvobot-section-header">';
+            html += '<h3>🔧 Dados RAW Completos</h3>';
+            html += `<button class="alvobot-btn-icon alvobot-phase-detail-btn" data-phase="raw_data" data-item-id="${item.id}" title="Ver dados RAW completos">`;
+            html += '<span class="dashicons dashicons-visibility"></span>';
+            html += '</button>';
+            html += '</div>';
+            html += '<div class="alvobot-code-block">';
+            html += '<pre>' + JSON.stringify({item: item, details: details}, null, 2) + '</pre>';
+            html += '</div></div>';
+
+            return html;
+        }
+        
+        copyDetails() {
+            if (!this.currentDetailsItem || !this.currentDetailsData) {
+                this.showNotice('Nenhum item selecionado para copiar', 'error');
+                return;
+            }
+            
+            const textToCopy = JSON.stringify({
+                item: this.currentDetailsItem,
+                details: this.currentDetailsData
+            }, null, 2);
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    this.showNotice('Detalhes copiados para a área de transferência!', 'success');
+                }).catch(() => {
+                    this.fallbackCopyText(textToCopy);
+                });
+            } else {
+                this.fallbackCopyText(textToCopy);
+            }
+        }
+        
+        fallbackCopyText(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                this.showNotice('Detalhes copiados para a área de transferência!', 'success');
+            } catch (err) {
+                this.showNotice('Erro ao copiar para a área de transferência', 'error');
+            }
+            textArea.remove();
+        }
+        
+        showPhaseDetails(phase, itemId) {
+            if (!this.currentDetailsItem || !this.currentDetailsData) {
+                this.showNotice('Dados de detalhes não disponíveis', 'error');
+                return;
+            }
+            
+            const phaseData = this.getPhaseSpecificData(phase);
+            const phaseTitle = this.getPhaseTitle(phase);
+            
+            $('#phase-details-title').text(phaseTitle);
+            $('#phase-details-content').html(phaseData.html);
+            
+            this.currentPhaseData = phaseData.data;
+            this.currentPhase = phase;
+            
+            $('#phase-details-modal').fadeIn(300);
+        }
+        
+        getPhaseTitle(phase) {
+            const titles = {
+                'basic': '🔍 Informações Básicas',
+                'languages': '🌐 Configuração de Idiomas',
+                'timeline': '⏰ Histórico Temporal',
+                'settings': '⚙️ Configurações',
+                'post_data': '📝 Post Original',
+                'translation_system': '🔧 Sistema de Tradução',
+                'metrics': '📊 Métricas',
+                'errors': '⚠️ Logs de Erro',
+                'logs': '📋 Logs Detalhados',
+                'raw_data': '🔧 Dados RAW'
+            };
+            return titles[phase] || phase;
+        }
+        
+        getPhaseSpecificData(phase) {
+            const item = this.currentDetailsItem;
+            const details = this.currentDetailsData;
+            let html = '';
+            let data = {};
+            
+            switch (phase) {
+                case 'basic':
+                    data = {
+                        queue_id: item.id,
+                        post_id: item.post_id,
+                        title: item.post_title,
+                        status: item.status,
+                        progress: item.progress,
+                        priority: item.priority,
+                        retry_count: item.retry_count
+                    };
+                    html = this.buildBasicPhaseHtml(data);
+                    break;
+                    
+                case 'languages':
+                    try {
+                        const targetLangs = JSON.parse(item.target_langs);
+                        data = {
+                            source_language: item.source_lang,
+                            target_languages: targetLangs,
+                            total_languages: targetLangs.length,
+                            options: item.options ? JSON.parse(item.options) : null
+                        };
+                    } catch (e) {
+                        data = {
+                            source_language: item.source_lang,
+                            target_languages: item.target_langs,
+                            parsing_error: e.message
+                        };
+                    }
+                    html = this.buildLanguagesPhaseHtml(data);
+                    break;
+                    
+                case 'timeline':
+                    data = {
+                        created_at: item.created_at,
+                        started_at: item.started_at,
+                        completed_at: item.completed_at,
+                        updated_at: item.updated_at,
+                        duration: this.calculateDuration(item.started_at, item.completed_at),
+                        queue_time: this.calculateDuration(item.created_at, item.started_at)
+                    };
+                    html = this.buildTimelinePhaseHtml(data);
+                    break;
+                    
+                case 'settings':
+                    data = details.settings || {};
+                    html = this.buildSettingsPhaseHtml(data);
+                    break;
+                    
+                case 'post_data':
+                    data = details.post_data || {};
+                    html = this.buildPostDataPhaseHtml(data);
+                    break;
+                    
+                case 'translation_system':
+                    data = details.translation_system || {};
+                    html = this.buildTranslationSystemPhaseHtml(data);
+                    break;
+                    
+                case 'metrics':
+                    data = details.metrics || {};
+                    html = this.buildMetricsPhaseHtml(data);
+                    break;
+                    
+                case 'errors':
+                    data = {
+                        error_log: item.error_log,
+                        retry_count: item.retry_count,
+                        last_error_time: item.updated_at
+                    };
+                    html = this.buildErrorsPhaseHtml(data);
+                    break;
+                    
+                case 'logs':
+                    data = details.logs || [];
+                    html = this.buildLogsPhaseHtml(data);
+                    break;
+                    
+                case 'raw_data':
+                    data = { item: item, details: details };
+                    html = this.buildRawDataPhaseHtml(data);
+                    break;
+                    
+                default:
+                    data = { error: 'Fase não reconhecida' };
+                    html = '<p>Fase não reconhecida: ' + phase + '</p>';
+            }
+            
+            return { html: html, data: data };
+        }
+        
+        buildBasicPhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            html += '<div class="alvobot-info-grid">';
+            Object.entries(data).forEach(([key, value]) => {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                html += `<div class="alvobot-info-item"><label>${label}:</label><span>${value || 'N/A'}</span></div>`;
+            });
+            html += '</div>';
+            html += '<div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+            html += '</div>';
+            return html;
+        }
+        
+        buildLanguagesPhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            html += '<h4>Configuração de Idiomas Detalhada</h4>';
+            html += '<div class="alvobot-info-grid">';
+            html += `<div class="alvobot-info-item"><label>Idioma de Origem:</label><span>${data.source_language}</span></div>`;
+            html += `<div class="alvobot-info-item"><label>Total de Idiomas Destino:</label><span>${data.total_languages || 'N/A'}</span></div>`;
+            html += '</div>';
+            if (Array.isArray(data.target_languages)) {
+                html += '<h5>Idiomas de Destino:</h5>';
+                html += '<ul>';
+                data.target_languages.forEach(lang => {
+                    html += `<li><strong>${lang}</strong></li>`;
+                });
+                html += '</ul>';
+            }
+            html += '<div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+            html += '</div>';
+            return html;
+        }
+        
+        buildTimelinePhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            html += '<h4>Análise Temporal Completa</h4>';
+            html += '<div class="alvobot-info-grid">';
+            Object.entries(data).forEach(([key, value]) => {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                if (value && key.includes('_at')) {
+                    const formattedDate = new Date(value).toLocaleString('pt-BR');
+                    html += `<div class="alvobot-info-item"><label>${label}:</label><span>${formattedDate}</span></div>`;
+                } else {
+                    html += `<div class="alvobot-info-item"><label>${label}:</label><span>${value || 'N/A'}</span></div>`;
+                }
+            });
+            html += '</div>';
+            html += '<div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+            html += '</div>';
+            return html;
+        }
+        
+        buildSettingsPhaseHtml(data) {
+            return '<div class="alvobot-phase-details"><div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div></div>';
+        }
+        
+        buildPostDataPhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            html += '<h4>Dados Completos do Post</h4>';
+            if (data.post_content) {
+                html += '<h5>Conteúdo Completo:</h5>';
+                html += `<div class="alvobot-content-preview">${data.post_content.replace(/\n/g, '<br>')}</div>`;
+            }
+            html += '<div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+            html += '</div>';
+            return html;
+        }
+        
+        buildTranslationSystemPhaseHtml(data) {
+            return '<div class="alvobot-phase-details"><div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div></div>';
+        }
+        
+        buildMetricsPhaseHtml(data) {
+            return '<div class="alvobot-phase-details"><div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div></div>';
+        }
+        
+        buildErrorsPhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            if (data.error_log && data.error_log !== 'NULL') {
+                html += '<h4>Log de Erro Completo:</h4>';
+                html += '<div class="alvobot-error-log">';
+                html += `<pre>${data.error_log.replace(/\n/g, '<br>')}</pre>`;
+                html += '</div>';
+            }
+            html += '<div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+            html += '</div>';
+            return html;
+        }
+        
+        buildLogsPhaseHtml(data) {
+            let html = '<div class="alvobot-phase-details">';
+            html += '<h4>Análise Completa dos Logs com Payloads</h4>';
+            
+            if (Array.isArray(data) && data.length > 0) {
+                html += `<p><strong>Total de ${data.length} entradas de log</strong></p>`;
+                
+                // Separa logs com e sem payloads
+                const logsWithPayloads = data.filter(log => log.has_payload);
+                const regularLogs = data.filter(log => !log.has_payload);
+                
+                if (logsWithPayloads.length > 0) {
+                    html += '<h5>📡 Logs com Payloads OpenAI (' + logsWithPayloads.length + '):</h5>';
+                    
+                    logsWithPayloads.forEach((log, index) => {
+                        html += `<div class="alvobot-log-entry alvobot-log-with-payload" style="margin-bottom: 20px; border-left: 4px solid #3b82f6; padding-left: 15px;">`;
+                        html += `<div style="font-weight: bold; color: #1e40af; margin-bottom: 8px;">`;
+                        html += `📡 Request/Response ${index + 1} - ${log.timestamp || 'N/A'}`;
+                        html += `</div>`;
+                        
+                        if (log.structured_data) {
+                            const structData = log.structured_data;
+                            
+                            // Headers da requisição
+                            if (structData.headers) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>🔑 Headers da Requisição:</h6>';
+                                html += '<pre class="alvobot-payload-code">' + JSON.stringify(structData.headers, null, 2) + '</pre>';
+                                html += '</div>';
+                            }
+                            
+                            // Payload da requisição
+                            if (structData.payload) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>📤 Payload da Requisição:</h6>';
+                                html += '<pre class="alvobot-payload-code">' + JSON.stringify(structData.payload, null, 2) + '</pre>';
+                                html += '</div>';
+                            }
+                            
+                            // Comando cURL equivalente
+                            if (structData.curl_equivalent) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>💻 Comando cURL Equivalente:</h6>';
+                                html += '<pre class="alvobot-curl-code">' + structData.curl_equivalent + '</pre>';
+                                html += '</div>';
+                            }
+                            
+                            // Resposta completa
+                            if (structData.full_response_body) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>📥 Resposta Completa da API:</h6>';
+                                try {
+                                    const responseJson = JSON.parse(structData.full_response_body);
+                                    html += '<pre class="alvobot-payload-code">' + JSON.stringify(responseJson, null, 2) + '</pre>';
+                                } catch (e) {
+                                    html += '<pre class="alvobot-payload-code">' + structData.full_response_body + '</pre>';
+                                }
+                                html += '</div>';
+                            }
+                            
+                            // Rate limit info
+                            if (structData.rate_limit_info) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>⏱️ Informações de Rate Limit:</h6>';
+                                html += '<pre class="alvobot-payload-code">' + JSON.stringify(structData.rate_limit_info, null, 2) + '</pre>';
+                                html += '</div>';
+                            }
+                            
+                            // Análise de custos
+                            if (structData.cost_estimation) {
+                                html += '<div class="alvobot-payload-section">';
+                                html += '<h6>💰 Estimativa de Custos:</h6>';
+                                html += '<pre class="alvobot-payload-code">' + JSON.stringify(structData.cost_estimation, null, 2) + '</pre>';
+                                html += '</div>';
+                            }
+                            
+                            // Detalhes de erro (se aplicável)
+                            if (structData.error_details) {
+                                html += '<div class="alvobot-payload-section" style="border-left: 4px solid #dc2626;">';
+                                html += '<h6>❌ Detalhes do Erro:</h6>';
+                                html += '<pre class="alvobot-error-code">' + JSON.stringify(structData.error_details, null, 2) + '</pre>';
+                                html += '</div>';
+                            }
+                        }
+                        
+                        html += `</div>`;
+                    });
+                }
+                
+                if (regularLogs.length > 0) {
+                    html += '<h5>📋 Logs Regulares (' + regularLogs.length + '):</h5>';
+                    regularLogs.forEach((log, index) => {
+                        html += `<div class="alvobot-log-entry" style="margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">`;
+                        html += `<span style="color: #6b7280; font-size: 12px;">${log.timestamp || 'N/A'}</span> - `;
+                        html += `<span>${log.message || 'N/A'}</span>`;
+                        html += `</div>`;
+                    });
+                }
+            } else {
+                html += '<p>Nenhum log disponível para este item.</p>';
+            }
+            
+            html += '<div class="alvobot-code-block" style="margin-top: 20px;">';
+            html += '<h6>📊 Dados RAW Completos:</h6>';
+            html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            html += '</div>';
+            html += '</div>';
+            
+            return html;
+        }
+        
+        buildRawDataPhaseHtml(data) {
+            return '<div class="alvobot-phase-details"><div class="alvobot-code-block"><pre>' + JSON.stringify(data, null, 2) + '</pre></div></div>';
+        }
+        
+        calculateDuration(startTime, endTime) {
+            if (!startTime || !endTime) return 'N/A';
+            
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const diffMs = end - start;
+            
+            if (diffMs < 0) return 'N/A';
+            
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+            
+            if (diffHours > 0) {
+                return `${diffHours}h ${diffMins % 60}m ${diffSecs % 60}s`;
+            } else if (diffMins > 0) {
+                return `${diffMins}m ${diffSecs % 60}s`;
+            } else {
+                return `${diffSecs}s`;
+            }
+        }
+        
+        copyPhaseDetails() {
+            if (!this.currentPhaseData) {
+                this.showNotice('Nenhum dado de fase selecionado para copiar', 'error');
+                return;
+            }
+            
+            const textToCopy = JSON.stringify(this.currentPhaseData, null, 2);
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    this.showNotice('Dados da fase copiados para a área de transferência!', 'success');
+                }).catch(() => {
+                    this.fallbackCopyText(textToCopy);
+                });
+            } else {
+                this.fallbackCopyText(textToCopy);
+            }
+        }
+        
         closeModal() {
             $('#logs-modal').fadeOut(300);
+            $('#details-modal').fadeOut(300);
+            $('#phase-details-modal').fadeOut(300);
         }
         
         downloadLogs() {

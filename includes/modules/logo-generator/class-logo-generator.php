@@ -325,7 +325,7 @@ class AlvoBotPro_LogoGenerator {
     }
 
     public function get_available_fonts() {
-        error_log('[Logo Generator] Getting available fonts');
+        AlvoBotPro::debug_log('logo-generator', '[Logo Generator] Getting available fonts');
         return array(
             'montserrat' => array(
                 'name'        => 'Montserrat',
@@ -507,7 +507,7 @@ class AlvoBotPro_LogoGenerator {
 
     public function generate_logo($blog_name, $font_color, $background_color, $icon_file, $font_choice) {
         if (empty($blog_name) || empty($icon_file) || !file_exists($icon_file)) {
-            error_log('Logo Generator: Arquivo não encontrado ou parâmetros inválidos - ' . $icon_file);
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Arquivo não encontrado ou parâmetros inválidos - ' . $icon_file);
             return false;
         }
 
@@ -515,7 +515,7 @@ class AlvoBotPro_LogoGenerator {
             // Carrega o SVG original
             $svg_content = file_get_contents($icon_file);
             if ($svg_content === false) {
-                error_log('Logo Generator: Erro ao ler arquivo SVG - ' . $icon_file);
+                AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao ler arquivo SVG - ' . $icon_file);
                 return false;
             }
 
@@ -589,7 +589,7 @@ class AlvoBotPro_LogoGenerator {
             );
 
         } catch (Exception $e) {
-            error_log('Logo Generator: Erro ao gerar logo - ' . $e->getMessage());
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao gerar logo - ' . $e->getMessage());
             return false;
         }
     }
@@ -602,7 +602,7 @@ class AlvoBotPro_LogoGenerator {
 
         // Verifica se o arquivo existe
         if (!file_exists($icon_file)) {
-            error_log('Logo Generator: Arquivo de favicon não encontrado - ' . $icon_file);
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Arquivo de favicon não encontrado - ' . $icon_file);
             return false;
         }
 
@@ -610,7 +610,7 @@ class AlvoBotPro_LogoGenerator {
             // Carrega o SVG original
             $svg_content = file_get_contents($icon_file);
             if ($svg_content === false) {
-                error_log('Logo Generator: Erro ao ler arquivo SVG do favicon - ' . $icon_file);
+                AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao ler arquivo SVG do favicon - ' . $icon_file);
                 return false;
             }
 
@@ -654,7 +654,7 @@ class AlvoBotPro_LogoGenerator {
             );
 
         } catch (Exception $e) {
-            error_log('Logo Generator: Erro ao gerar favicon - ' . $e->getMessage());
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao gerar favicon - ' . $e->getMessage());
             return false;
         }
     }
@@ -868,7 +868,7 @@ class AlvoBotPro_LogoGenerator {
     public function save_logo_as_attachment($svg_content, $title = '') {
         // Validação do conteúdo SVG
         if (empty($svg_content) || strpos($svg_content, '<svg') === false) {
-            error_log('Logo Generator: Conteúdo SVG inválido');
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Conteúdo SVG inválido');
             return false;
         }
 
@@ -880,7 +880,7 @@ class AlvoBotPro_LogoGenerator {
         
         // Verifica se o diretório de upload existe e é gravável
         if (!wp_mkdir_p($upload_dir['path'])) {
-            error_log('Logo Generator: Falha ao criar diretório: ' . $upload_dir['path']);
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Falha ao criar diretório: ' . $upload_dir['path']);
             return false;
         }
 
@@ -893,7 +893,7 @@ class AlvoBotPro_LogoGenerator {
         // Salva o arquivo com verificação
         $saved = file_put_contents($filepath, $svg_content);
         if ($saved === false || filesize($filepath) === 0) {
-            error_log('Logo Generator: Erro ao salvar arquivo SVG em: ' . $filepath);
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao salvar arquivo SVG em: ' . $filepath);
             return false;
         }
         chmod($filepath, $file_permissions);
@@ -913,7 +913,7 @@ class AlvoBotPro_LogoGenerator {
         // Insere e verifica o attachment
         $attach_id = wp_insert_attachment($attachment, $filepath);
         if (is_wp_error($attach_id)) {
-            error_log('Logo Generator: Erro ao criar attachment - ' . $attach_id->get_error_message());
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao criar attachment - ' . $attach_id->get_error_message());
             @unlink($filepath);
             return false;
         }
@@ -1021,14 +1021,14 @@ class AlvoBotPro_LogoGenerator {
         // Gera o SVG do favicon
         $svg = $this->generate_square_svg($icon_file . '.svg', $font_color, $background_color);
         if (!$svg) {
-            error_log('Logo Generator: Erro ao gerar SVG do favicon');
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao gerar SVG do favicon');
             return false;
         }
         
         // Salva o favicon como anexo
         $result = $this->save_logo_as_attachment($svg, 'Favicon');
         if (!$result) {
-            error_log('Logo Generator: Erro ao salvar favicon como anexo');
+            AlvoBotPro::debug_log('logo-generator', 'Logo Generator: Erro ao salvar favicon como anexo');
             return false;
         }
         

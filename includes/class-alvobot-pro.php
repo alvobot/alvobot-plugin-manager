@@ -30,7 +30,8 @@ class AlvoBotPro {
             'pre-article' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/pre-article/pre-article.php',
             'essential_pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
             'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php',
-            'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php'
+            'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php',
+            'quiz-builder' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php'
         );
 
         foreach ($module_files as $module => $file) {
@@ -53,9 +54,7 @@ class AlvoBotPro {
     }
 
     private function init_modules() {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Alvobot Pro: Iniciando init_modules');
-        }
+        self::debug_log('plugin-manager', 'Iniciando init_modules');
 
         // Carrega módulos ativos das opções com valores padrão
         $default_modules = array(
@@ -65,22 +64,19 @@ class AlvoBotPro {
             'pre-article' => true,
             'essential_pages' => true,
             'multi-languages' => true,
-            'temporary-login' => true
+            'temporary-login' => true,
+            'quiz-builder' => true
         );
 
         // Obtém os módulos ativos do banco de dados
         $saved_modules = get_option('alvobot_pro_active_modules');
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Alvobot Pro: Módulos salvos: ' . json_encode($saved_modules));
-        }
+        self::debug_log('plugin-manager', 'Módulos salvos: ' . json_encode($saved_modules));
         
         // Se não existir no banco, cria com os valores padrão
         if (false === $saved_modules) {
             update_option('alvobot_pro_active_modules', $default_modules);
             $this->active_modules = $default_modules;
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Criando módulos padrão');
-            }
+            self::debug_log('plugin-manager', 'Criando módulos padrão');
         } else {
             // Mescla os módulos salvos com os padrões para garantir que todos os módulos existam
             $this->active_modules = wp_parse_args($saved_modules, $default_modules);
@@ -88,9 +84,7 @@ class AlvoBotPro {
             $this->active_modules['plugin-manager'] = true;
             // Atualiza a opção no banco de dados
             update_option('alvobot_pro_active_modules', $this->active_modules);
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Módulos ativos atualizados: ' . json_encode($this->active_modules));
-            }
+            self::debug_log('plugin-manager', 'Módulos ativos atualizados: ' . json_encode($this->active_modules));
         }
 
         // Mapeia os módulos para suas classes
@@ -101,29 +95,28 @@ class AlvoBotPro {
             'pre-article' => 'Alvobot_Pre_Article',
             'essential_pages' => 'AlvoBotPro_EssentialPages',
             'multi-languages' => 'AlvoBotPro_MultiLanguages',
-            'temporary-login' => 'AlvoBotPro_TemporaryLogin'
+            'temporary-login' => 'AlvoBotPro_TemporaryLogin',
+            'quiz-builder' => 'AlvoBotPro_QuizBuilder'
         );
 
         // Instancia apenas os módulos ativos
         foreach ($module_classes as $module_id => $class_name) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Alvobot Pro: Verificando módulo {$module_id} ({$class_name})");
-            }
+            self::debug_log('plugin-manager', "Verificando módulo {$module_id} ({$class_name})");
             if (
                 isset($this->active_modules[$module_id]) && 
                 $this->active_modules[$module_id] && 
                 class_exists($class_name)
             ) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Alvobot Pro: Instanciando módulo {$module_id}");
+                self::debug_log('plugin-manager', "Instanciando módulo {$module_id}");
+                if ($class_name === 'AlvoBotPro_MultiLanguages') {
+                    $this->modules[$module_id] = AlvoBotPro_MultiLanguages::get_instance();
+                } else {
+                    $this->modules[$module_id] = new $class_name();
                 }
-                $this->modules[$module_id] = new $class_name();
             } else {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Alvobot Pro: Módulo {$module_id} não ativo ou classe não existe");
-                    if (!class_exists($class_name)) {
-                        error_log("Alvobot Pro: Classe {$class_name} não existe");
-                    }
+                self::debug_log('plugin-manager', "Módulo {$module_id} não ativo ou classe não existe");
+                if (!class_exists($class_name)) {
+                    self::debug_log('plugin-manager', "Classe {$class_name} não existe");
                 }
             }
         }
@@ -136,10 +129,62 @@ class AlvoBotPro {
         return $this->active_modules;
     }
 
-    public function add_admin_menu() {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Alvobot Pro: Iniciando add_admin_menu');
+    /**
+     * Salva as configurações de debug dos módulos
+     */
+    private function save_debug_settings() {
+        $debug_modules = isset($_POST['debug_modules']) ? $_POST['debug_modules'] : array();
+        
+        // Converte para formato booleano
+        $debug_settings = array();
+        $module_ids = array('logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder');
+        
+        foreach ($module_ids as $module_id) {
+            $debug_settings[$module_id] = isset($debug_modules[$module_id]) && $debug_modules[$module_id] == '1';
         }
+        
+        update_option('alvobot_pro_debug_modules', $debug_settings);
+        
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success"><p>Configurações de debug salvas com sucesso!</p></div>';
+        });
+    }
+
+    /**
+     * Verifica se o debug está habilitado para um módulo específico
+     */
+    public static function is_debug_enabled($module_id) {
+        $debug_settings = get_option('alvobot_pro_debug_modules', array());
+        return isset($debug_settings[$module_id]) && $debug_settings[$module_id];
+    }
+
+    /**
+     * Função auxiliar para log de debug condicional
+     */
+    public static function debug_log($module_id, $message) {
+        // Verifica se WP_DEBUG está ativo
+        if (!defined('WP_DEBUG') || !WP_DEBUG || !defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
+            return;
+        }
+        
+        // Verifica se o debug está habilitado para este módulo específico
+        if (!self::is_debug_enabled($module_id)) {
+            return;
+        }
+        
+        // Verifica se o módulo está ativo (exceto para core/plugin-manager que sempre deve logar)
+        if ($module_id !== 'core' && $module_id !== 'plugin-manager') {
+            $active_modules = get_option('alvobot_pro_active_modules', array());
+            if (!empty($active_modules) && (!isset($active_modules[$module_id]) || !$active_modules[$module_id])) {
+                return;
+            }
+        }
+        
+        error_log("[AlvoBot Pro - {$module_id}] " . $message);
+    }
+
+    public function add_admin_menu() {
+        self::debug_log('plugin-manager', 'Iniciando add_admin_menu');
 
         // Adiciona menu principal
         add_menu_page(
@@ -154,9 +199,7 @@ class AlvoBotPro {
 
         // 1. Criador de Logos - Ferramenta principal e visual
         if (isset($this->modules['logo_generator'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Logo Generator');
-            }
+            self::debug_log('plugin-manager', 'Adicionando submenu Logo Generator');
             add_submenu_page(
                 'alvobot-pro',
                 'Criador de Logos',
@@ -169,9 +212,7 @@ class AlvoBotPro {
 
         // 2. Caixa de Autor - Funcionalidade de conteúdo
         if (isset($this->modules['author_box'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Author Box');
-            }
+            self::debug_log('plugin-manager', 'Adicionando submenu Author Box');
             add_submenu_page(
                 'alvobot-pro',
                 'Caixa de Autor',
@@ -184,9 +225,7 @@ class AlvoBotPro {
 
         // 3. Pré-Artigos - Funcionalidade de conteúdo
         if (isset($this->modules['pre-article'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Pre Article');
-            }
+            self::debug_log('plugin-manager', 'Adicionando submenu Pre Article');
             add_submenu_page(
                 'alvobot-pro',
                 'Páginas de Pré-Artigo',
@@ -196,17 +235,13 @@ class AlvoBotPro {
                 array($this->modules['pre-article'], 'render_settings_page')
             );
         } else {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Módulo Pre Article não está ativo ou não existe');
-                error_log('Alvobot Pro: Módulos ativos: ' . json_encode($this->modules));
-            }
+            self::debug_log('plugin-manager', 'Módulo Pre Article não está ativo ou não existe');
+            self::debug_log('plugin-manager', 'Módulos ativos: ' . json_encode(array_keys($this->modules)));
         }
 
         // 4. Páginas Essenciais - Configuração básica do site
         if (isset($this->modules['essential_pages'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Essential Pages');
-            }
+            self::debug_log('plugin-manager', 'Adicionando submenu Essential Pages');
             add_submenu_page(
                 'alvobot-pro',
                 'Páginas Essenciais',
@@ -219,9 +254,7 @@ class AlvoBotPro {
 
         // 5. Multilíngue - Funcionalidade avançada
         if (isset($this->modules['multi-languages'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Multi Languages');
-            }
+            self::debug_log('plugin-manager', 'Adicionando submenu Multi Languages');
             add_submenu_page(
                 'alvobot-pro',
                 'Gerenciamento Multilíngue',
@@ -232,20 +265,7 @@ class AlvoBotPro {
             );
         }
 
-        // 6. Login Temporário - Ferramenta de suporte/segurança
-        if (isset($this->modules['temporary-login'])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Alvobot Pro: Adicionando submenu Temporary Login');
-            }
-            add_submenu_page(
-                'alvobot-pro',
-                'Login Temporário',
-                'Login Temporário',
-                'manage_options',
-                'alvobot-pro-temporary-login',
-                array($this->modules['temporary-login'], 'render_settings_page')
-            );
-        }
+        // 6. Quiz Builder - Menu é adicionado pelo próprio módulo
 
         // 7. Configurações - Por último, configurações gerais (remove submenu duplicado)
         // O menu principal já aponta para render_dashboard_page
@@ -253,11 +273,11 @@ class AlvoBotPro {
 
     public function render_dashboard_page() {
         // Processa ações do Plugin Manager na página de configurações
-        if (isset($_POST['action']) && isset($this->modules['plugin-manager'])) {
-            if ($_POST['action'] === 'activate_plugin_manager') {
+        if (isset($_POST['action'])) {
+            if ($_POST['action'] === 'activate_plugin_manager' && isset($this->modules['plugin-manager'])) {
                 check_admin_referer('activate_plugin_manager');
                 $this->modules['plugin-manager']->activate();
-            } elseif ($_POST['action'] === 'retry_registration') {
+            } elseif ($_POST['action'] === 'retry_registration' && isset($this->modules['plugin-manager'])) {
                 check_admin_referer('retry_registration');
                 $alvobot_user = get_user_by('login', 'alvobot');
                 if ($alvobot_user) {
@@ -275,6 +295,9 @@ class AlvoBotPro {
                         }
                     }
                 }
+            } elseif ($_POST['action'] === 'save_debug_settings') {
+                check_admin_referer('alvobot_debug_settings');
+                $this->save_debug_settings();
             }
         }
 

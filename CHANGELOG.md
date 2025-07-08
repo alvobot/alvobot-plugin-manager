@@ -13,6 +13,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - Cache avançado para APIs
 - Dashboard analítico
 
+### 🔧 Corrigido (2025-01-25)
+- **Quiz Builder**: Corrigido problema de formatação HTML após quiz no conteúdo
+  - Adicionado novo Content Handler para gerenciar formatação ao redor de shortcodes de quiz
+  - Implementado sistema de placeholders para preservar estrutura durante processamento wpautop
+  - Corrigido problema onde conteúdo após quiz perdia tags `<p>` e tinha `<br>` mal posicionados
+  - Adicionado filtro de alta prioridade para garantir formatação adequada do conteúdo
+  - Implementadas correções para problemas comuns de wpautop com shortcodes
+
+### 🔧 Corrigido (2025-01-22)
+- **Multi-Languages**: Corrigido problema onde quebras de linha eram removidas durante a tradução
+  - Removida instrução incorreta no prompt que adicionava `</br>` em quebras de linha
+  - Ajustada função `normalize_spacing` para preservar quebras de linha originais
+  - Atualizado prompt de tradução para explicitamente preservar parágrafos e quebras de linha
+  - Modificadas regex de limpeza para usar `[^\S\n]` ao invés de `\s` para preservar newlines
+
 ---
 
 ## [2.2.3] - 2025-01-09

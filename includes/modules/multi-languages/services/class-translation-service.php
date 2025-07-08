@@ -17,22 +17,38 @@ class AlvoBotPro_Translation_Service {
     
     private $translation_engine;
     private $translation_queue;
+    private static $instance = null;
     
-    public function __construct() {
+    /**
+     * Singleton pattern para evitar múltiplas instâncias
+     */
+    public static function get_instance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    private function __construct() {
         $this->init_dependencies();
     }
     
     /**
-     * Inicializa dependências
+     * Inicializa dependências com instâncias únicas
      */
     private function init_dependencies() {
-        if (class_exists('AlvoBotPro_Translation_Engine')) {
-            $this->translation_engine = new AlvoBotPro_Translation_Engine();
-        }
+        // Usa variáveis globais para garantir instância única
+        global $alvobot_translation_engine, $alvobot_translation_queue;
         
-        if (class_exists('AlvoBotPro_Translation_Queue')) {
-            $this->translation_queue = new AlvoBotPro_Translation_Queue();
+        if (!$alvobot_translation_engine && class_exists('AlvoBotPro_Translation_Engine')) {
+            $alvobot_translation_engine = new AlvoBotPro_Translation_Engine();
         }
+        $this->translation_engine = $alvobot_translation_engine;
+        
+        if (!$alvobot_translation_queue && class_exists('AlvoBotPro_Translation_Queue')) {
+            $alvobot_translation_queue = new AlvoBotPro_Translation_Queue();
+        }
+        $this->translation_queue = $alvobot_translation_queue;
     }
     
     /**

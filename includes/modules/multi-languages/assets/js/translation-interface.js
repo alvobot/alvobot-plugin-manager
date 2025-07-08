@@ -719,14 +719,8 @@
         // Close selection modal
         $('#alvobot-language-selection-modal').remove();
         
-        // If multiple languages or user preference, add to queue instead of direct translation
-        if (targetLanguages.length > 1) {
-            addToTranslationQueue(postId, postTitle, postType, targetLanguages);
-        } else {
-            // Single language - show progress modal and process directly
-            showBulkTranslationProgress(postId, postTitle, postType, targetLanguages);
-            processBulkTranslations(postId, targetLanguages);
-        }
+        // Always add to queue for consistent processing (whether single or multiple languages)
+        addToTranslationQueue(postId, postTitle, postType, targetLanguages);
     }
 
     /**
@@ -737,13 +731,21 @@
         showQueueProgress(postId, postTitle, postType, targetLanguages);
         
         // Add to queue via AJAX
+        console.log('AlvoBot Translation: Enviando para fila:', {
+            action: 'alvobot_add_to_translation_queue',
+            post_id: postId,
+            target_langs: targetLanguages,
+            nonce: AlvoBotTranslation.nonce,
+            languages_count: targetLanguages.length
+        });
+        
         $.ajax({
             url: AlvoBotTranslation.ajaxUrl,
             type: 'POST',
             data: {
                 action: 'alvobot_add_to_translation_queue',
                 post_id: postId,
-                target_langs: targetLanguages,  // Note: using target_langs to match backend expectation
+                target_langs: targetLanguages,
                 nonce: AlvoBotTranslation.nonce,
                 options: {
                     preserveFormatting: true,
@@ -897,228 +899,8 @@
         }, 1000);
     }
 
-    /**
-     * Shows bulk translation progress modal
-     */
-    function showBulkTranslationProgress(postId, postTitle, postType, targetLanguages) {
-        const languageNames = targetLanguages.map(langCode => {
-            const lang = AlvoBotTranslation.languagesList.find(l => l.slug === langCode);
-            return lang ? (lang.native_name || lang.name) : langCode;
-        }).join(', ');
 
-        const progressHTML = `
-            <div class="alvobot-modal" id="alvobot-bulk-progress-modal" style="display: flex;">
-                <div class="alvobot-modal-backdrop"></div>
-                <div class="alvobot-modal-content">
-                    <div class="alvobot-modal-header">
-                        <h2>
-                            <span class="dashicons dashicons-update-alt"></span>
-                            Traduzindo "${postTitle}"
-                        </h2>
-                    </div>
-                    <div class="alvobot-modal-body">
-                        <div class="alvobot-progress-container">
-                            <div class="alvobot-progress-bar">
-                                <div class="alvobot-progress-fill" style="width: 0%"></div>
-                            </div>
-                            <div class="alvobot-progress-text">Preparando traduções...</div>
-                        </div>
-                        
-                        <div class="alvobot-progress-details">
-                            <div class="alvobot-progress-item">
-                                <span class="alvobot-progress-label">Idiomas:</span>
-                                <span class="alvobot-progress-value">${targetLanguages.length}</span>
-                            </div>
-                            <div class="alvobot-progress-item">
-                                <span class="alvobot-progress-label">Concluídas:</span>
-                                <span class="alvobot-progress-value" id="completed-translations">0</span>
-                            </div>
-                            <div class="alvobot-progress-item">
-                                <span class="alvobot-progress-label">Pendentes:</span>
-                                <span class="alvobot-progress-value" id="pending-translations">${targetLanguages.length}</span>
-                            </div>
-                        </div>
-                        
-                        <p><small>Traduzindo para: ${languageNames}</small></p>
-                        
-                        <div class="alvobot-progress-log">
-                            <h4>Log de Progresso:</h4>
-                            <div class="alvobot-log-content" id="translation-log"></div>
-                        </div>
-                    </div>
-                    <div class="alvobot-modal-footer">
-                        <button type="button" class="alvobot-btn alvobot-btn-outline" id="alvobot-cancel-bulk-translation">
-                            Cancelar Traduções
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
 
-        $('body').append(progressHTML);
-    }
-
-    /**
-     * Processes bulk translations for multiple languages
-     */
-    async function processBulkTranslations(postId, targetLanguages) {
-        let completed = 0;
-        let failed = 0;
-        const results = [];
-
-        for (let i = 0; i < targetLanguages.length; i++) {
-            const targetLang = targetLanguages[i];
-            const langName = AlvoBotTranslation.languagesList.find(l => l.slug === targetLang)?.name || targetLang;
-            
-            try {
-                logProgress('info', `Iniciando tradução para ${langName}...`);
-                updateBulkProgress(i, targetLanguages.length, `Traduzindo para ${langName}...`);
-
-                // Call translation API
-                const result = await $.ajax({
-                    url: AlvoBotTranslation.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'alvobot_translate_and_create_post',
-                        post_id: postId,
-                        target_lang: targetLang,
-                        nonce: AlvoBotTranslation.nonce,
-                        options: {
-                            preserveFormatting: true,
-                            translateMetaFields: true,
-                            translateLinks: false
-                        }
-                    }
-                });
-
-                if (result.success) {
-                    completed++;
-                    results.push({
-                        language: targetLang,
-                        success: true,
-                        data: result.data
-                    });
-                    logProgress('success', `✓ ${langName}: Tradução concluída com sucesso`);
-                } else {
-                    failed++;
-                    results.push({
-                        language: targetLang,
-                        success: false,
-                        error: result.data
-                    });
-                    logProgress('error', `✗ ${langName}: ${result.data}`);
-                }
-
-            } catch (error) {
-                failed++;
-                results.push({
-                    language: targetLang,
-                    success: false,
-                    error: error.responseText || error.message
-                });
-                logProgress('error', `✗ ${langName}: Erro na tradução`);
-            }
-
-            // Update counters
-            $('#completed-translations').text(completed + failed);
-            $('#pending-translations').text(targetLanguages.length - (completed + failed));
-        }
-
-        // Show completion
-        updateBulkProgress(targetLanguages.length, targetLanguages.length, 'Traduções concluídas!');
-        showBulkTranslationResults(results, completed, failed);
-    }
-
-    /**
-     * Updates bulk translation progress
-     */
-    function updateBulkProgress(current, total, message) {
-        const percentage = Math.round((current / total) * 100);
-        $('.alvobot-progress-fill').css('width', percentage + '%');
-        $('.alvobot-progress-text').text(message);
-    }
-
-    /**
-     * Logs progress in the translation log
-     */
-    function logProgress(type, message) {
-        const time = new Date().toLocaleTimeString();
-        const logEntry = `
-            <div class="alvobot-log-entry alvobot-log-${type}">
-                <span class="alvobot-log-time">${time}</span>
-                <span class="alvobot-log-message">${message}</span>
-            </div>
-        `;
-        
-        $('#translation-log').append(logEntry);
-        
-        // Auto-scroll to bottom
-        const logContainer = document.querySelector('.alvobot-progress-log');
-        if (logContainer) {
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-    }
-
-    /**
-     * Shows bulk translation results
-     */
-    function showBulkTranslationResults(results, completed, failed) {
-        const successList = results.filter(r => r.success).map(r => {
-            const lang = AlvoBotTranslation.languagesList.find(l => l.slug === r.language);
-            return `<li>✓ ${lang?.name || r.language}</li>`;
-        }).join('');
-
-        const failedList = results.filter(r => !r.success).map(r => {
-            const lang = AlvoBotTranslation.languagesList.find(l => l.slug === r.language);
-            return `<li>✗ ${lang?.name || r.language}: ${r.error}</li>`;
-        }).join('');
-
-        // Update modal content to show results
-        $('#alvobot-bulk-progress-modal .alvobot-modal-body').html(`
-            <div class="alvobot-completion-stats">
-                <div class="alvobot-stat-item">
-                    <div class="alvobot-stat-number">${completed}</div>
-                    <div class="alvobot-stat-label">Concluídas</div>
-                </div>
-                <div class="alvobot-stat-item">
-                    <div class="alvobot-stat-number">${failed}</div>
-                    <div class="alvobot-stat-label">Com Erro</div>
-                </div>
-                <div class="alvobot-stat-item">
-                    <div class="alvobot-stat-number">${results.length}</div>
-                    <div class="alvobot-stat-label">Total</div>
-                </div>
-            </div>
-            
-            ${completed > 0 ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #155724;">Traduções Concluídas:</h4>
-                    <ul style="color: #155724;">${successList}</ul>
-                </div>
-            ` : ''}
-            
-            ${failed > 0 ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #721c24;">Traduções com Erro:</h4>
-                    <ul style="color: #721c24;">${failedList}</ul>
-                </div>
-            ` : ''}
-        `);
-
-        // Update footer
-        $('#alvobot-bulk-progress-modal .alvobot-modal-footer').html(`
-            <button type="button" class="alvobot-btn alvobot-btn-primary" onclick="location.reload()">
-                Atualizar Página
-            </button>
-            <button type="button" class="alvobot-btn alvobot-btn-outline" id="alvobot-close-results">
-                Fechar
-            </button>
-        `);
-
-        $('#alvobot-close-results').on('click', function() {
-            $('#alvobot-bulk-progress-modal').remove();
-        });
-    }
 
     // Expõe API global
     window.AlvoBotTranslation = AlvoBotTranslation;

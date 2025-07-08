@@ -379,27 +379,27 @@
             showTranslationProgress();
             updateProgress(10, 'Analisando conteúdo...');
 
-            // Inicia tradução via AJAX
+            // Adiciona à fila de tradução
             const result = await $.ajax({
                 url: alvobotTranslation.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'alvobot_translate_and_create_post',
+                    action: 'alvobot_add_to_translation_queue',
                     post_id: postId,
-                    target_lang: targetLang,
+                    target_langs: [targetLang],
                     options: options,
                     nonce: alvobotTranslation.nonce
                 }
             });
 
             if (result.success) {
-                updateProgress(100, alvobotTranslation.strings.translationComplete);
+                updateProgress(100, 'Adicionado à fila de tradução');
                 
                 setTimeout(() => {
-                    showTranslationSuccess(result.data);
+                    showQueueSuccess(result.data);
                 }, 1000);
             } else {
-                throw new Error(result.data || 'Erro desconhecido na tradução');
+                throw new Error(result.data.message || result.data || 'Erro desconhecido ao adicionar à fila');
             }
 
         } catch (error) {
@@ -428,24 +428,25 @@
     }
 
     /**
-     * Mostra sucesso da tradução
+     * Mostra sucesso ao adicionar à fila
      */
-    function showTranslationSuccess(data) {
+    function showQueueSuccess(data) {
+        const queueUrl = alvobotTranslation.adminUrl + 'admin.php?page=alvobot-pro-multi-languages&tab=queue';
         const message = `
             <div style="text-align: center; padding: 20px;">
                 <div style="color: var(--alvobot-success); font-size: 48px; margin-bottom: 16px;">
                     <span class="dashicons dashicons-yes-alt"></span>
                 </div>
                 <h3 style="margin: 0 0 16px; color: var(--alvobot-gray-800);">
-                    ${alvobotTranslation.strings.translationComplete}
+                    Adicionado à Fila de Tradução
                 </h3>
                 <p style="margin: 0 0 24px; color: var(--alvobot-gray-600);">
-                    Post traduzido com sucesso! Redirecionando para o editor...
+                    O post foi adicionado à fila e será traduzido automaticamente em segundo plano.
                 </p>
                 <div class="alvobot-btn-group">
-                    <a href="${data.edit_url}" class="alvobot-btn alvobot-btn-primary">
-                        <span class="dashicons dashicons-edit"></span>
-                        Editar Tradução
+                    <a href="${queueUrl}" class="alvobot-btn alvobot-btn-primary">
+                        <span class="dashicons dashicons-list-view"></span>
+                        Ver Fila de Tradução
                     </a>
                     <button type="button" class="alvobot-btn alvobot-btn-outline" onclick="closeTranslationModal()">
                         Fechar
@@ -455,13 +456,6 @@
         `;
         
         $('.alvobot-translation-modal-body').html(message);
-        
-        // Redireciona após 3 segundos se não fechou o modal
-        setTimeout(() => {
-            if (currentTranslationModal) {
-                window.location.href = data.edit_url;
-            }
-        }, 3000);
     }
 
     /**

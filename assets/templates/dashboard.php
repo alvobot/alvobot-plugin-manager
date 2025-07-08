@@ -122,6 +122,27 @@ if (!defined('ABSPATH')) {
           <?php endif; ?>
         </div>
       </div>
+
+      <!-- Módulo Quiz Builder -->
+      <div class="alvobot-card <?php echo isset($active_modules['quiz-builder']) && $active_modules['quiz-builder'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">Quiz Builder</h2>
+            <p class="alvobot-card-subtitle">Crie quizzes interativos com navegação por URL única, otimizados para monetização.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="quiz-builder" 
+                   <?php echo isset($active_modules['quiz-builder']) && $active_modules['quiz-builder'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['quiz-builder']) && $active_modules['quiz-builder']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-quiz-builder'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
+      </div>
     </div>
 
     <!-- Seção Status do Sistema -->
@@ -215,8 +236,114 @@ if (!defined('ABSPATH')) {
       </div>
     </div>
 
+
+    <!-- Seção Debug dos Módulos -->
+    <div class="alvobot-card alvobot-collapsible-card">
+      <div class="alvobot-card-header alvobot-collapsible-header">
+        <div>
+          <h2 class="alvobot-card-title">Debug dos Módulos</h2>
+          <p class="alvobot-card-subtitle">Configure o debug individual de cada módulo (logs salvos em debug.log)</p>
+        </div>
+        <button type="button" class="alvobot-collapse-toggle" aria-expanded="false" aria-controls="debug-modules-content" title="<?php esc_attr_e('Alternar visibilidade', 'alvobot-pro'); ?>">
+          <span class="dashicons dashicons-arrow-down-alt2"></span>
+        </button>
+      </div>
+      
+      <div class="alvobot-card-content collapsed" id="debug-modules-content">
+        <form method="post" action="">
+          <?php wp_nonce_field('alvobot_debug_settings'); ?>
+          <input type="hidden" name="action" value="save_debug_settings">
+          
+          <table class="alvobot-form-table" role="presentation">
+            <?php
+            $debug_settings = get_option('alvobot_pro_debug_modules', array());
+            $module_names = array(
+              'logo_generator' => 'Gerador de Logo',
+              'author_box' => 'Author Box',
+              'pre-article' => 'Pre Article',
+              'essential_pages' => 'Páginas Essenciais',
+              'multi-languages' => 'Multi Languages',
+              'temporary-login' => 'Login Temporário',
+              'quiz-builder' => 'Quiz Builder',
+              'plugin-manager' => 'Plugin Manager'
+            );
+            
+            foreach ($module_names as $module_id => $module_name):
+              if (isset($active_modules[$module_id]) && $active_modules[$module_id]):
+            ?>
+            <tr>
+              <th scope="row"><?php echo esc_html($module_name); ?></th>
+              <td>
+                <label class="alvobot-toggle">
+                  <input type="checkbox" 
+                         name="debug_modules[<?php echo esc_attr($module_id); ?>]" 
+                         value="1"
+                         <?php echo isset($debug_settings[$module_id]) && $debug_settings[$module_id] ? 'checked="checked"' : ''; ?>>
+                  <span class="alvobot-toggle-slider"></span>
+                </label>
+                <span class="alvobot-debug-status">
+                  <?php echo isset($debug_settings[$module_id]) && $debug_settings[$module_id] ? 'Ativo' : 'Inativo'; ?>
+                </span>
+              </td>
+            </tr>
+            <?php 
+              endif;
+            endforeach; 
+            ?>
+          </table>
+          
+          <div class="alvobot-card-footer">
+            <div class="alvobot-btn-group">
+              <input type="submit" name="submit" class="alvobot-btn alvobot-btn-primary" value="<?php esc_attr_e('Salvar Configurações de Debug', 'alvobot-pro'); ?>">
+            </div>
+          </div>
+        </form>
+        
+        <div class="alvobot-debug-info">
+          <p><strong>Nota:</strong> O arquivo de log está localizado em: <code><?php echo esc_html(WP_CONTENT_DIR . '/debug.log'); ?></code></p>
+          <p>Para visualizar os logs, certifique-se de que WP_DEBUG e WP_DEBUG_LOG estejam habilitados no wp-config.php.</p>
+        </div>
+      </div>
+    </div>
+
     <script>
     jQuery(document).ready(function($) {
+        // Collapsible card for Debug dos Módulos
+        var $debugCard = $('.alvobot-collapsible-card').has('#debug-modules-content');
+        var $debugCardHeader = $debugCard.find('.alvobot-collapsible-header');
+        
+        if ($debugCardHeader.length) {
+            $debugCardHeader.on('click', function(e) {
+                var $clickedElement = $(e.target);
+                // Only toggle if the click is on the header itself or the toggle button/its icon,
+                // not on other interactive elements within the header.
+                if ($clickedElement.is('.alvobot-collapsible-header, .alvobot-card-title, .alvobot-card-subtitle, .alvobot-collapse-toggle, .dashicons')) {
+                     // Proceed to toggle if the click is on a non-interactive part of the header or the toggle button itself.
+                } else if ($clickedElement.closest('.alvobot-collapse-toggle').length) {
+                    // Proceed if click is within the toggle button (e.g. on the span/icon)
+                } else {
+                    return; // Click was on another interactive element, do not toggle
+                }
+
+                var $header = $(this);
+                var $toggleButton = $header.find('.alvobot-collapse-toggle');
+                var $content = $('#' + $toggleButton.attr('aria-controls'));
+
+                if (!$content.length) return;
+
+                var isExpanded = $toggleButton.attr('aria-expanded') === 'true';
+
+                $toggleButton.attr('aria-expanded', !isExpanded);
+                
+                if (isExpanded) {
+                    $content.slideUp(200, function() { $(this).addClass('collapsed'); });
+                } else {
+                    $content.removeClass('collapsed').slideDown(200);
+                }
+            });
+        }
+
+        // Original jQuery ready content starts below:
         // Verifica se há algum erro na URL
         const urlParams = new URLSearchParams(window.location.search);
         const error = urlParams.get('error');

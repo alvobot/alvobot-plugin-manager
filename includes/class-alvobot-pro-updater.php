@@ -138,8 +138,8 @@ class AlvoBotPro_Updater {
         $current_version = ALVOBOT_PRO_VERSION;
         
         // Debug
-        error_log("Current version: " . $current_version);
-        error_log("Latest version: " . $latest_version);
+        AlvoBotPro::debug_log('core', "Current version: " . $current_version);
+        AlvoBotPro::debug_log('core', "Latest version: " . $latest_version);
         
         $doUpdate = version_compare($latest_version, $current_version, 'gt');
         
