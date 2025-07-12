@@ -24,35 +24,52 @@ unset($cta);
 // Prepara o conteúdo com filtros melhorados
 $content = get_the_content();
 
+// Verifica se quiz está permitido e se existe quiz no conteúdo
+$options = get_option('alvobot_pre_artigo_options');
+$allow_quiz = isset($options['allow_quiz']) ? $options['allow_quiz'] : false;
+$has_quiz = strpos($content, '[quiz') !== false;
+
 // Aplica apenas filtros essenciais, evitando plugins que injetam scripts
 $content = wpautop($content); // Converte quebras de linha em parágrafos
 $content = do_shortcode($content); // Processa shortcodes se necessário
 
-// Remove scripts, styles e outros elementos indesejados
-$content = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $content);
-$content = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/mi', '', $content);
-$content = preg_replace('/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/mi', '', $content);
-$content = preg_replace('/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/mi', '', $content);
-$content = preg_replace('/<embed\b[^>]*>/mi', '', $content);
-$content = preg_replace('/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/mi', '', $content);
+// Se quiz NÃO está permitido OU não há quiz no conteúdo, remove elementos potencialmente perigosos
+if (!$allow_quiz || !$has_quiz) {
+    // Remove scripts, styles e outros elementos indesejados
+    $content = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $content);
+    $content = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/mi', '', $content);
+    $content = preg_replace('/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/mi', '', $content);
+    $content = preg_replace('/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/mi', '', $content);
+    $content = preg_replace('/<embed\b[^>]*>/mi', '', $content);
+    $content = preg_replace('/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/mi', '', $content);
 
-// Remove atributos JavaScript
-$content = preg_replace('/\s*on\w+\s*=\s*["\'][^"\']*["\']/i', '', $content);
+    // Remove atributos JavaScript
+    $content = preg_replace('/\s*on\w+\s*=\s*["\'][^"\']*["\']/i', '', $content);
 
-// Remove divs e spans com classes/ids suspeitos (comuns em plugins de ads)
-$content = preg_replace('/<div[^>]*class=["\'][^"\']*(?:ad|advertisement|banner|popup|modal)[^"\']*["\'][^>]*>.*?<\/div>/si', '', $content);
-$content = preg_replace('/<span[^>]*class=["\'][^"\']*(?:ad|advertisement|banner)[^"\']*["\'][^>]*>.*?<\/span>/si', '', $content);
+    // Remove divs e spans com classes/ids suspeitos (comuns em plugins de ads)
+    $content = preg_replace('/<div[^>]*class=["\'][^"\']*(?:ad|advertisement|banner|popup|modal)[^"\']*["\'][^>]*>.*?<\/div>/si', '', $content);
+    $content = preg_replace('/<span[^>]*class=["\'][^"\']*(?:ad|advertisement|banner)[^"\']*["\'][^>]*>.*?<\/span>/si', '', $content);
+}
 
-// Remove comentários HTML
+// Remove comentários HTML sempre
 $content = preg_replace('/<!--.*?-->/s', '', $content);
 
 // Tags permitidas para o conteúdo limpo
 $allowed_tags = '<p><br><strong><em><ul><ol><li><a><h1><h2><h3><h4><h5><h6><blockquote>';
-$content = strip_tags($content, $allowed_tags);
 
-// Remove espaços extras e quebras de linha desnecessárias
-$content = preg_replace('/\s+/', ' ', $content);
-$content = trim($content);
+// Se quiz está permitido e há quiz no conteúdo, adiciona tags necessárias para o quiz funcionar
+if ($allow_quiz && $has_quiz) {
+    $allowed_tags .= '<div><span><form><input><button><label><script><style><noscript>';
+}
+
+// Só aplica strip_tags se não houver quiz OU se quiz não estiver permitido
+if (!$allow_quiz || !$has_quiz) {
+    $content = strip_tags($content, $allowed_tags);
+    
+    // Remove espaços extras e quebras de linha desnecessárias
+    $content = preg_replace('/\s+/', ' ', $content);
+    $content = trim($content);
+}
 
 // Função para truncar o conteúdo sem quebrar palavras ou tags HTML
 function truncate_html_words($text, $word_limit) {
@@ -121,48 +138,103 @@ function truncate_html_words($text, $word_limit) {
     return [$result, $truncated];
 }
 
-// Primeira parte - 400 caracteres
-$first_part = '';
-$first_truncated = false;
-$words = explode(' ', strip_tags($content));
-$word_count = 0;
-$first_part_words = [];
-
-foreach ($words as $word) {
-    $word_count += strlen($word);
-    $first_part_words[] = $word;
+// Se quiz está permitido e há quiz no conteúdo, precisa separar o texto do quiz
+if ($allow_quiz && $has_quiz) {
+    // Primeiro, pega o conteúdo original SEM processar shortcodes
+    $raw_content = get_the_content();
     
-    if ($word_count >= 200) {
+    // Encontra a posição do shortcode quiz no conteúdo original
+    $quiz_pos = strpos($raw_content, '[quiz');
+    
+    if ($quiz_pos !== false) {
+        // Pega apenas o texto antes do quiz
+        $text_before_quiz = substr($raw_content, 0, $quiz_pos);
+        
+        // Aplica formatação básica ao texto antes do quiz
+        $text_before_quiz = wpautop($text_before_quiz);
+        
+        // Divide o texto antes do quiz normalmente
+        $words = explode(' ', strip_tags($text_before_quiz));
+        $word_count = 0;
+        $first_part_words = [];
+        
+        foreach ($words as $word) {
+            $word_count += strlen($word);
+            $first_part_words[] = $word;
+            
+            if ($word_count >= 200) {
+                break;
+            }
+        }
+        
+        $first_part_text = implode(' ', $first_part_words);
+        
+        // Reaplica formatação ao texto truncado
+        $first_part = wpautop($first_part_text);
+        
+        // Extrai o shortcode quiz completo do conteúdo original
+        $quiz_end_pos = strpos($raw_content, '[/quiz]', $quiz_pos);
+        if ($quiz_end_pos !== false) {
+            $quiz_shortcode = substr($raw_content, $quiz_pos, $quiz_end_pos - $quiz_pos + 7);
+            // Processa APENAS o shortcode do quiz
+            $processed_quiz = do_shortcode($quiz_shortcode);
+            $first_part .= "\n" . $processed_quiz;
+        }
+        
+        $second_part = '';
         $first_truncated = true;
-        break;
+        $second_truncated = false;
+    } else {
+        // Fallback caso não encontre o quiz (não deveria acontecer)
+        $first_part = $content;
+        $second_part = '';
+        $first_truncated = false;
+        $second_truncated = false;
     }
-}
+} else {
+    // Primeira parte - 400 caracteres
+    $first_part = '';
+    $first_truncated = false;
+    $words = explode(' ', strip_tags($content));
+    $word_count = 0;
+    $first_part_words = [];
 
-$first_part = implode(' ', $first_part_words);
-
-// Pega o restante do conteúdo
-$remaining_words = array_slice($words, count($first_part_words));
-$second_part = '';
-$second_truncated = false;
-$char_count = 0;
-$second_part_words = [];
-
-// Segunda parte - 150 caracteres
-foreach ($remaining_words as $word) {
-    $char_count += strlen($word);
-    $second_part_words[] = $word;
-    
-    if ($char_count >= 400) {
-        $second_truncated = true;
-        break;
+    foreach ($words as $word) {
+        $word_count += strlen($word);
+        $first_part_words[] = $word;
+        
+        if ($word_count >= 200) {
+            $first_truncated = true;
+            break;
+        }
     }
+
+    $first_part = implode(' ', $first_part_words);
+
+    // Pega o restante do conteúdo
+    $remaining_words = array_slice($words, count($first_part_words));
+    $second_part = '';
+    $second_truncated = false;
+    $char_count = 0;
+    $second_part_words = [];
+
+    // Segunda parte - 150 caracteres
+    foreach ($remaining_words as $word) {
+        $char_count += strlen($word);
+        $second_part_words[] = $word;
+        
+        if ($char_count >= 400) {
+            $second_truncated = true;
+            break;
+        }
+    }
+
+    $second_part = implode(' ', $second_part_words);
+
+    // Reaplica as tags HTML ao conteúdo
+    $first_part = wpautop($first_part);
+    $second_part = wpautop($second_part);
 }
-
-$second_part = implode(' ', $second_part_words);
-
-// Reaplica as tags HTML ao conteúdo
-$first_part = wpautop($first_part);
-$second_part = wpautop($second_part);
 
 ?>
 <!DOCTYPE html>
@@ -287,16 +359,21 @@ $second_part = wpautop($second_part);
                 <!-- Primeira parte do conteúdo -->
                 <div class="excerpt">
                     <?php 
-                    // Remove qualquer HTML no final que possa causar quebra de linha
-                    $first_part = preg_replace('/<\/p>\s*$/', '', $first_part);
-                    // Remove espaços e pontuação final
-                    $first_part = rtrim($first_part, " \n\r\t\v\x00.");
-                    // Adiciona UTM ao link
-                    $continue_1_url = add_query_arg([
-                        'utm_content' => 'continue_1'
-                    ], get_permalink());
-                    // Adiciona o continue na mesma linha
-                    echo $first_part . ' <a href="' . esc_url($continue_1_url) . '" class="continue-reading">...continue</a>';
+                    // Se há quiz, mostra o conteúdo completo sem "continue"
+                    if ($allow_quiz && $has_quiz) {
+                        echo $first_part;
+                    } else {
+                        // Remove qualquer HTML no final que possa causar quebra de linha
+                        $first_part = preg_replace('/<\/p>\s*$/', '', $first_part);
+                        // Remove espaços e pontuação final
+                        $first_part = rtrim($first_part, " \n\r\t\v\x00.");
+                        // Adiciona UTM ao link
+                        $continue_1_url = add_query_arg([
+                            'utm_content' => 'continue_1'
+                        ], get_permalink());
+                        // Adiciona o continue na mesma linha
+                        echo $first_part . ' <a href="' . esc_url($continue_1_url) . '" class="continue-reading">...continue</a>';
+                    }
                     ?>
                 </div>
 
@@ -340,7 +417,8 @@ $second_part = wpautop($second_part);
                 }
                 ?>
 
-                <!-- Segunda parte do conteúdo -->
+                <!-- Segunda parte do conteúdo (apenas quando não há quiz) -->
+                <?php if (!$allow_quiz || !$has_quiz): ?>
                 <div class="excerpt-continuation">
                     <?php 
                     if (!empty($second_part)) {
@@ -357,6 +435,7 @@ $second_part = wpautop($second_part);
                     }
                     ?>
                 </div>
+                <?php endif; ?>
 
                 <?php 
                 // Script após o segundo parágrafo

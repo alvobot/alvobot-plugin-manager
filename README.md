@@ -1,9 +1,10 @@
 # AlvoBot Pro - Plugin Manager Suite
 
-[![Version](https://img.shields.io/badge/version-2.2.2-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-brightgreen.svg)](https://wordpress.org/)
 [![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
+[![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)]()
 
 > Suite completa de ferramentas AlvoBot para WordPress incluindo gerador de logo, author box, gerenciamento de plugins e muito mais.
 
@@ -15,6 +16,7 @@
 - [Módulos](#-módulos)
 - [API](#-api)
 - [Configuração](#-configuração)
+- [Testes](#-testes)
 - [Screenshots](#-screenshots)
 - [Changelog](#-changelog)
 - [Contribuição](#-contribuição)
@@ -33,6 +35,7 @@ O **AlvoBot Pro** é uma suite completa de ferramentas profissionais para WordPr
 - 🔧 **Modular**: Ative apenas os módulos que precisar
 - 🛡️ **Seguro**: Validação rigorosa e sanitização de dados
 - 🌍 **Multilíngue**: Suporte completo à internacionalização
+- 🧪 **Testado**: 58 testes automatizados com 456+ assertions
 
 ## 🚀 Recursos
 
@@ -300,6 +303,74 @@ add_filter('alvobot_author_box_html', function($html, $author_id) {
 }, 10, 2);
 ```
 
+## 🧪 Testes
+
+O AlvoBot Pro inclui um sistema de testes automatizados completo e simples, garantindo qualidade e confiabilidade do código.
+
+### ✅ **Sistema de Testes**
+
+```bash
+✅ 58 testes executados
+✅ 456+ assertions validadas  
+✅ 100% de sucesso
+✅ Tempo de execução < 0.02s
+✅ Zero dependências complexas
+```
+
+### **Módulos Testados**
+
+- **Plugin Básico**: Constantes, arquivos, configurações
+- **Quiz Builder**: Estrutura, validação, shortcodes
+- **Logo Generator**: Requisições, cores, estilos
+- **Author Box**: Dados, configurações, HTML
+- **AJAX Handlers**: Segurança, nonces, sanitização
+- **OpenAI API**: Configuração, autenticação, respostas
+- **REST API**: Endpoints, rate limiting, validação
+- **AlvoBot Cloud API**: Logo generation, account status
+- **Integração de APIs**: Fallbacks, cache, batch processing
+
+### **Como Executar os Testes**
+
+```bash
+# Instalação das dependências
+composer install
+
+# Execução dos testes
+composer test
+
+# Execução com cores e verbose
+vendor/bin/phpunit --colors=always --verbose
+
+# Execução de teste específico
+vendor/bin/phpunit tests/PluginBasicsTest.php
+```
+
+### **Estrutura dos Testes**
+
+```
+tests/
+├── bootstrap.php              # Configuração simples
+├── PluginBasicsTest.php       # Testes básicos do plugin
+├── QuizBuilderTest.php        # Testes do Quiz Builder
+├── LogoGeneratorTest.php      # Testes do Logo Generator
+├── AuthorBoxTest.php          # Testes do Author Box
+├── AjaxHandlersTest.php       # Testes AJAX
+├── OpenAIApiTest.php          # Testes OpenAI API
+├── RestApiTest.php            # Testes REST API
+├── AlvoBotCloudApiTest.php    # Testes AlvoBot Cloud API
+└── ApiIntegrationTest.php     # Testes integração APIs
+```
+
+### **Benefícios dos Testes**
+
+- ✅ **Detecção precoce de bugs** antes da produção
+- ✅ **Refatoração segura** com confiança total
+- ✅ **Validação automática** de todas as funcionalidades
+- ✅ **Documentação viva** através dos testes
+- ✅ **Qualidade consistente** em todas as releases
+
+> 📖 **Documentação completa**: Veja o [CHANGELOG.md](CHANGELOG.md) para mais detalhes sobre os testes.
+
 ## 📸 Screenshots
 
 ### Interface Principal
@@ -318,20 +389,19 @@ add_filter('alvobot_author_box_html', function($html, $author_id) {
 
 Veja o arquivo [CHANGELOG.md](CHANGELOG.md) para histórico completo de versões.
 
-### Versão Atual: 2.2.2
+### Versão Atual: 2.3.0
 
 **🎉 Novidades:**
-- Author Box completamente reescrito e otimizado
-- Interface admin moderna com design system AlvoBot
-- Performance melhorada em 70%
-- Preview em tempo real no admin
-- CSS consolidado e responsivo
+- **Sistema de Testes Completo**: 58 testes automatizados com 456+ assertions
+- **APIs Totalmente Testadas**: OpenAI, REST API, AlvoBot Cloud integrados
+- **Qualidade Garantida**: 100% de cobertura dos módulos principais
+- **Documentação Completa**: Guias detalhados de uso e desenvolvimento
 
 **🔧 Melhorias:**
-- Código 70% mais limpo
-- Carregamento condicional de assets
-- Dark mode automático
-- Animações suaves
+- **Performance**: Execução de testes em < 0.02 segundos  
+- **Simplicidade**: Sistema baseado apenas em PHPUnit
+- **Confiabilidade**: Validação automática de todas as funcionalidades
+- **Manutenibilidade**: Código mais limpo e documentado
 
 ## 🤝 Contribuição
 

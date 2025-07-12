@@ -1,0 +1,24 @@
+{
+  "name": "alvobot/plugin-manager",
+  "description": "WordPress plugin manager with AI-powered modules",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "AlvoBotPro\\": "includes/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "AlvoBotPro\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}

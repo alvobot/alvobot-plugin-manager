@@ -581,12 +581,13 @@ class Alvobot_Quiz_Shortcode {
             
             // Redirect with score
             if (!empty($atts['redirect_url'])) {
+                $adjusted_redirect_url = $this->adjust_redirect_url_for_pre_article($atts['redirect_url']);
                 $redirect_url = add_query_arg(array(
                     'score' => $score,
                     'total' => $total_scored,
                     'percentage' => $percentage,
                     'quiz_id' => $quiz_id
-                ), $atts['redirect_url']);
+                ), $adjusted_redirect_url);
                 
                 $output .= $this->generate_redirect_html($redirect_url);
             }
@@ -604,7 +605,8 @@ class Alvobot_Quiz_Shortcode {
                     $redirect_params['responses'] = implode(',', $answers);
                 }
                 
-                $redirect_url = add_query_arg($redirect_params, $atts['redirect_url']);
+                $adjusted_redirect_url = $this->adjust_redirect_url_for_pre_article($atts['redirect_url']);
+                $redirect_url = add_query_arg($redirect_params, $adjusted_redirect_url);
                 $output .= $this->generate_redirect_html($redirect_url);
             }
         }
@@ -650,6 +652,14 @@ class Alvobot_Quiz_Shortcode {
         
         // Obter URL canônica e preservar parâmetros originais
         $canonical_url = get_permalink(get_the_ID());
+        
+        // Verificar se estamos em uma página de pré-artigo
+        if (get_query_var('alvobot_pre_article')) {
+            // Se estamos em pré-artigo, usar a URL com prefixo /pre/
+            $post_slug = get_post_field('post_name', get_the_ID());
+            $canonical_url = home_url('/pre/' . $post_slug);
+        }
+        
         // Garantir que a URL não tenha sufixos aquiz-e (mas preserva números originais do slug)
         $canonical_url = preg_replace('/-aquiz-e\d+\/?$/', '', $canonical_url);
         $canonical_url = rtrim($canonical_url, '/');
@@ -1004,7 +1014,8 @@ class Alvobot_Quiz_Shortcode {
             }
         }
         
-        return add_query_arg($redirect_params, $atts['redirect_url']);
+        $adjusted_redirect_url = $this->adjust_redirect_url_for_pre_article($atts['redirect_url']);
+        return add_query_arg($redirect_params, $adjusted_redirect_url);
     }
     
     /**
@@ -1112,5 +1123,47 @@ class Alvobot_Quiz_Shortcode {
         $content = preg_replace('/\s*<br\s*\/?>\s*<\/p>/', '</p>', $content);
         
         return $content;
+    }
+
+    /**
+     * Adjust redirect URL for pre-article context
+     *
+     * @param string $redirect_url Original redirect URL
+     * @return string Adjusted redirect URL
+     */
+    private function adjust_redirect_url_for_pre_article($redirect_url) {
+        if (empty($redirect_url)) {
+            return $redirect_url;
+        }
+
+        // Detectar se estamos em pré-artigo via múltiplas formas
+        $is_pre_article = get_query_var('alvobot_pre_article') || 
+                          (get_query_var('quiz_step_suffix') && 
+                           get_query_var('pagename') && 
+                           strpos(get_query_var('pagename'), 'pre/') === 0) ||
+                          strpos($_SERVER['REQUEST_URI'], '/pre/') !== false;
+
+        // Se não estamos em pré-artigo, retornar URL original
+        if (!$is_pre_article) {
+            return $redirect_url;
+        }
+
+        // Se já tem /pre/ no início, não modificar
+        if (strpos($redirect_url, '/pre/') === 0) {
+            return $redirect_url;
+        }
+
+        // Se é URL externa (http/https), não modificar
+        if (strpos($redirect_url, 'http') === 0) {
+            return $redirect_url;
+        }
+
+        // Se começa com /, adicionar /pre antes
+        if (strpos($redirect_url, '/') === 0) {
+            return '/pre' . $redirect_url;
+        }
+
+        // Se é slug relativo, adicionar /pre/
+        return '/pre/' . $redirect_url;
     }
 }

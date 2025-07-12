@@ -134,20 +134,22 @@ class AlvoBotPro_MultiLanguages {
      * Inicializa controllers
      */
     public function init_controllers() {
-        if (self::$controllers_initialized || !self::$services_initialized) {
+        if (self::$controllers_initialized) {
             return;
         }
         self::$controllers_initialized = true;
 
         try {
-            // Inicializa controller AJAX
-            if (class_exists('AlvoBotPro_MultiLanguages_Ajax_Controller')) {
-                $this->ajax_controller = new AlvoBotPro_MultiLanguages_Ajax_Controller();
-            }
-            
-            // Inicializa controller Admin
+            // Inicializa controller Admin SEMPRE (para mostrar interface de instalação)
             if (class_exists('AlvoBotPro_MultiLanguages_Admin_Controller')) {
                 $this->admin_controller = new AlvoBotPro_MultiLanguages_Admin_Controller();
+                AlvoBotPro::debug_log('multi-languages', 'Admin Controller inicializado (independente do Polylang)');
+            }
+            
+            // Inicializa controller AJAX apenas se Polylang estiver ativo
+            if (self::$services_initialized && class_exists('AlvoBotPro_MultiLanguages_Ajax_Controller')) {
+                $this->ajax_controller = new AlvoBotPro_MultiLanguages_Ajax_Controller();
+                AlvoBotPro::debug_log('multi-languages', 'AJAX Controller inicializado (Polylang ativo)');
             }
             
         } catch (Exception $e) {
@@ -180,13 +182,15 @@ class AlvoBotPro_MultiLanguages {
             }
         }
         
-        // Conecta serviços ao Admin controller
+        // Conecta serviços ao Admin controller (se disponível)
         if ($this->admin_controller && $this->translation_service) {
             $translation_queue = $this->translation_service->get_translation_queue();
             if ($translation_queue) {
                 $this->admin_controller->set_translation_queue($translation_queue);
                 AlvoBotPro::debug_log('multi-languages', 'Translation Queue conectado ao Admin Controller');
             }
+        } else if ($this->admin_controller) {
+            AlvoBotPro::debug_log('multi-languages', 'Admin Controller ativo sem Translation Service (Polylang inativo)');
         }
     }
     

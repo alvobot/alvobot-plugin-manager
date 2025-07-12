@@ -2,6 +2,22 @@
 /vendor/
 composer.lock
 
+# Node.js (caso seja usado)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Variáveis de Ambiente
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+*.env
+
 # WordPress
 *.log
 wp-config.php
@@ -15,6 +31,15 @@ wp-content/uploads/
 wp-content/mu-plugins/
 wp-content/wp-cache-config.php
 wp-content/plugins/hello.php
+wp-content/debug.log
+error_log
+
+# PHP específico
+*.phar
+.php_cs.cache
+.php-cs-fixer.cache
+phpunit.xml.dist
+composer.phar
 
 # Arquivos de Teste de API
 test-api.php
@@ -25,7 +50,19 @@ API-TEST-RESULTS.md
 *test-report*.json
 *api-test*.log
 
-# Sistema
+# Resultados de testes
+/tests/results/
+/coverage/
+.phpunit.result.cache
+.phpunit.cache/
+
+# Build e distribuição
+/build/
+/dist/
+*.zip
+*.tar.gz
+
+# Sistema e IDEs
 .DS_Store
 Thumbs.db
 .idea/
@@ -34,3 +71,18 @@ Thumbs.db
 *.bak
 *.tmp
 *.sublime*
+*~
+
+# Credenciais e chaves
+*.key
+*.pem
+*.secrets
+auth.json
+credentials.json
+
+# Cache e temporários
+*.cache
+*.pid
+*.seed
+*.log
+*.out

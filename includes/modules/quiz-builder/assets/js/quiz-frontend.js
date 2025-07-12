@@ -114,6 +114,9 @@ function setupQuizNavigation() {
                 // Obter a URL base sem parâmetros nem fragmentos
                 const baseUrl = window.location.href.split('?')[0].split('#')[0];
                 
+                // Detectar se estamos em uma página de pré-artigo
+                const isPreArticle = window.location.pathname.startsWith('/pre/');
+                
                 // Verificar se o quiz_id obtido está vazio e tentar obtê-lo do elemento input se necessário
                 if (!quizId) {
                     const quizIdInput = form.querySelector('input[name="quiz_id"]');
@@ -140,6 +143,22 @@ function setupQuizNavigation() {
                 } else {
                     // Fallback: extrair URL base removendo apenas sufixos aquiz-e
                     urlBase = baseUrl.replace(/-aquiz-e\d+$/, '');
+                }
+                
+                // Se estamos em pré-artigo, garantir que a URL base mantenha o prefixo /pre/
+                if (isPreArticle) {
+                    // Extrair o slug do post da URL atual (remover sufixo -aquiz-e se existir)
+                    const pathParts = window.location.pathname.split('/');
+                    let postSlug = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+                    
+                    // Se o slug contém -aquiz-e, remover o sufixo
+                    if (postSlug.includes('-aquiz-e')) {
+                        postSlug = postSlug.replace(/-aquiz-e\d+$/, '');
+                    }
+                    
+                    if (postSlug) {
+                        urlBase = window.location.origin + '/pre/' + postSlug;
+                    }
                 }
                 
                 // Garantir que não há barra no final

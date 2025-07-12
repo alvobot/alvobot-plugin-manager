@@ -81,6 +81,9 @@ if (!class_exists('Alvobot_Pre_Article')) {
             if (defined('ALVOBOT_PRO_VERSION')) {
                 add_filter('alvobot_pro_modules', [$this, 'register_module']);
             }
+            
+            // Força flush das regras de rewrite se necessário
+            add_action('init', [$this, 'maybe_flush_rewrite_rules'], 20);
         }
 
         /**
@@ -392,6 +395,21 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 'alvobot-pre-artigo',
                 'alvobot_pre_artigo_script_section'
             );
+
+            add_settings_section(
+                'alvobot_pre_artigo_quiz_section',
+                __('Integração com Quiz', 'alvobot-pre-artigo'),
+                null,
+                'alvobot-pre-artigo'
+            );
+
+            add_settings_field(
+                'allow_quiz',
+                __('Permitir Quiz', 'alvobot-pre-artigo'),
+                [$this, 'allow_quiz_callback'],
+                'alvobot-pre-artigo',
+                'alvobot_pre_artigo_quiz_section'
+            );
         }
 
         /**
@@ -456,6 +474,21 @@ if (!class_exists('Alvobot_Pre_Article')) {
         }
 
         /**
+         * Callback para o campo de permitir quiz
+         */
+        public function allow_quiz_callback() {
+            $options = get_option('alvobot_pre_artigo_options');
+            $allow_quiz = isset($options['allow_quiz']) ? $options['allow_quiz'] : false;
+            ?>
+            <label>
+                <input type="checkbox" name="alvobot_pre_artigo_options[allow_quiz]" value="1" <?php checked($allow_quiz, true); ?> />
+                <?php _e('Permitir que quizzes sejam exibidos nas páginas de pré-artigo', 'alvobot-pre-artigo'); ?>
+            </label>
+            <p class="description"><?php _e('Quando ativado, os shortcodes de quiz funcionarão normalmente nas páginas de pré-artigo, preservando todos os scripts e estilos necessários.', 'alvobot-pre-artigo'); ?></p>
+            <?php
+        }
+
+        /**
          * Sanitiza as opções
          */
         public function sanitize_options($input) {
@@ -484,6 +517,9 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 $allowed_positions = ['after_first_paragraph', 'after_ctas', 'after_second_paragraph', 'before_footer'];
                 $sanitized_input['script_position'] = in_array($input['script_position'], $allowed_positions) ? $input['script_position'] : 'after_ctas';
             }
+            
+            // Sanitize allow_quiz checkbox
+            $sanitized_input['allow_quiz'] = isset($input['allow_quiz']) && $input['allow_quiz'] == '1' ? true : false;
 
             $num_ctas = $sanitized_input['num_ctas'];
             for ($i = 1; $i <= $num_ctas; $i++) {
@@ -508,6 +544,14 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 'index.php?name=$matches[1]&alvobot_pre_article=1',
                 'top'
             );
+            
+            // Adiciona regra para URLs com sufixo do quiz (-aquiz-e{número})
+            add_rewrite_rule(
+                '^pre/([^/]+)-aquiz-e([0-9]+)/?$',
+                'index.php?name=$matches[1]&alvobot_pre_article=1&quiz_step_suffix=$matches[2]',
+                'top'
+            );
+            
         }
         
         /**
@@ -515,11 +559,26 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Faz flush das regras de rewrite apenas quando necessário
          */
         public static function activate() {
-            if (!get_option('alvobot_pre_article_rewrite_flushed_v2')) {
+            if (!get_option('alvobot_pre_article_rewrite_flushed_v3')) {
                 flush_rewrite_rules(true);
-                update_option('alvobot_pre_article_rewrite_flushed_v2', true);
-                // Remove a versão antiga
+                update_option('alvobot_pre_article_rewrite_flushed_v3', true);
+                // Remove versões antigas
                 delete_option('alvobot_pre_article_rewrite_flushed');
+                delete_option('alvobot_pre_article_rewrite_flushed_v2');
+            }
+        }
+
+        /**
+         * Força flush das regras de rewrite se necessário
+         */
+        public function maybe_flush_rewrite_rules() {
+            if (!get_option('alvobot_pre_article_rewrite_flushed_v4')) {
+                flush_rewrite_rules(true);
+                update_option('alvobot_pre_article_rewrite_flushed_v4', true);
+                // Remove versões antigas
+                delete_option('alvobot_pre_article_rewrite_flushed');
+                delete_option('alvobot_pre_article_rewrite_flushed_v2');
+                delete_option('alvobot_pre_article_rewrite_flushed_v3');
             }
         }
 
@@ -528,6 +587,7 @@ if (!class_exists('Alvobot_Pre_Article')) {
          */
         public function add_query_vars($vars) {
             $vars[] = 'alvobot_pre_article';
+            $vars[] = 'quiz_step_suffix';
             return $vars;
         }
 
@@ -535,14 +595,43 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Modifica a consulta principal
          */
         public function modify_main_query($query) {
-            if (!is_admin() && $query->is_main_query() && get_query_var('alvobot_pre_article')) {
-                $query->set('post_type', 'post');
-                if (get_query_var('name')) {
-                    $pagename = preg_replace('/^pre\//', '', get_query_var('name'));
-                    $query->set('name', $pagename);
+            if (!is_admin() && $query->is_main_query()) {
+                $is_pre_article = get_query_var('alvobot_pre_article');
+                $has_quiz_suffix = get_query_var('quiz_step_suffix');
+                $pagename = get_query_var('pagename');
+                
+                // Detecta pré-artigo via query var OU:
+                // 1. URL com /pre/ e quiz_step_suffix OU
+                // 2. Qualquer URL que comece com /pre/
+                if (!$is_pre_article && (
+                    ($has_quiz_suffix && $pagename && strpos($pagename, 'pre/') === 0) ||
+                    (strpos($_SERVER['REQUEST_URI'], '/pre/') === 0)
+                )) {
+                    $is_pre_article = true;
+                    // Simula que estamos em pré-artigo para o resto do código funcionar
+                    set_query_var('alvobot_pre_article', '1');
                 }
-                $query->set('posts_per_page', 1);
-                $query->set('post_status', 'publish');
+                
+                if ($is_pre_article) {
+                    $query->set('post_type', 'post');
+                    
+                    // Determina o slug do post
+                    $post_slug = '';
+                    if (get_query_var('name')) {
+                        $post_slug = preg_replace('/^pre\//', '', get_query_var('name'));
+                        $post_slug = preg_replace('/-aquiz-e\d+$/', '', $post_slug);
+                    } elseif ($pagename && strpos($pagename, 'pre/') === 0) {
+                        $post_slug = preg_replace('/^pre\//', '', $pagename);
+                        $post_slug = preg_replace('/-aquiz-e\d+$/', '', $post_slug);
+                    }
+                    
+                    if ($post_slug) {
+                        $query->set('name', $post_slug);
+                    }
+                    
+                    $query->set('posts_per_page', 1);
+                    $query->set('post_status', 'publish');
+                }
             }
         }
 
@@ -550,7 +639,24 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Carrega o template do pré-artigo
          */
         public function load_pre_article_template($template) {
-            if (get_query_var('alvobot_pre_article')) {
+            // Detecta se estamos em pré-artigo via query var OU via URL com /pre/ e quiz_step_suffix
+            $is_pre_article = get_query_var('alvobot_pre_article');
+            $has_quiz_suffix = get_query_var('quiz_step_suffix');
+            $pagename = get_query_var('pagename');
+            
+            // Se não tem alvobot_pre_article mas:
+            // 1. Tem quiz_step_suffix e pagename começa com "pre/" OU
+            // 2. URL atual começa com "/pre/"
+            if (!$is_pre_article && (
+                ($has_quiz_suffix && $pagename && strpos($pagename, 'pre/') === 0) ||
+                (strpos($_SERVER['REQUEST_URI'], '/pre/') === 0)
+            )) {
+                $is_pre_article = true;
+                // Simula que estamos em pré-artigo para o resto do código funcionar
+                set_query_var('alvobot_pre_article', '1');
+            }
+            
+            if ($is_pre_article) {
                 $post = get_post();
                 if (!($post instanceof WP_Post)) {
                     return $template;
@@ -828,6 +934,47 @@ if (!class_exists('Alvobot_Pre_Article')) {
                                         <?php _e('Para máximo desempenho de anúncios, recomendamos a posição "Após os botões CTA".', 'alvobot-pre-artigo'); ?>
                                     </p>
                                 </fieldset>
+                            </div>
+                        </div>
+                        
+                        <div class="alvobot-card-footer">
+                            <div class="alvobot-btn-group alvobot-btn-group-right">
+                                <button type="submit" name="submit" class="alvobot-btn alvobot-btn-primary">
+                                    <span class="dashicons dashicons-saved" style="margin-right: var(--alvobot-space-xs);"></span>
+                                    <?php _e('Salvar Configurações', 'alvobot-pre-artigo'); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Integração com Quiz -->
+                    <div class="alvobot-card alvobot-mt-2xl">
+                        <div class="alvobot-card-header">
+                            <h2 class="alvobot-card-title">
+                                <span class="dashicons dashicons-format-status" style="margin-right: var(--alvobot-space-sm); color: var(--alvobot-primary);"></span>
+                                <?php _e('Integração com Quiz', 'alvobot-pre-artigo'); ?>
+                            </h2>
+                            <p class="alvobot-card-subtitle"><?php _e('Configure se deseja permitir que quizzes funcionem nas páginas de pré-artigo.', 'alvobot-pre-artigo'); ?></p>
+                        </div>
+                        
+                        <div class="alvobot-card-content">
+                            <div class="alvobot-form-field">
+                                <?php
+                                $options = get_option('alvobot_pre_artigo_options');
+                                $allow_quiz = isset($options['allow_quiz']) ? $options['allow_quiz'] : false;
+                                ?>
+                                <label class="alvobot-checkbox-label" style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" name="alvobot_pre_artigo_options[allow_quiz]" value="1" <?php checked($allow_quiz, true); ?> style="margin-right: var(--alvobot-space-sm);" />
+                                    <span style="font-weight: 500;"><?php _e('Permitir Quiz nas páginas de pré-artigo', 'alvobot-pre-artigo'); ?></span>
+                                </label>
+                                <p class="alvobot-description alvobot-mt-sm">
+                                    <span class="dashicons dashicons-info" style="color: var(--alvobot-info);"></span>
+                                    <?php _e('Quando ativado, os shortcodes [quiz] funcionarão normalmente nas páginas de pré-artigo. Os scripts e estilos necessários serão preservados para garantir o funcionamento completo do quiz, incluindo a navegação entre perguntas.', 'alvobot-pre-artigo'); ?>
+                                </p>
+                                <p class="alvobot-description alvobot-mt-sm">
+                                    <span class="dashicons dashicons-lightbulb" style="color: var(--alvobot-warning);"></span>
+                                    <?php _e('Nota: Esta opção só tem efeito se o módulo Quiz Builder estiver ativo.', 'alvobot-pre-artigo'); ?>
+                                </p>
                             </div>
                         </div>
                         
