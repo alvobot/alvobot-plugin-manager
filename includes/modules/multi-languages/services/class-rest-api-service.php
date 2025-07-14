@@ -605,8 +605,17 @@ class AlvoBotPro_Rest_Api_Service {
         // Obtém o idioma atual do post
         $current_language = pll_get_post_language($post_id);
         
+        // Se já está no idioma correto, retorna sucesso
         if ($current_language === $language_code) {
-            return new WP_Error('same_language', __('O post já está neste idioma.', 'alvobot-pro'), ['status' => 400]);
+            return new WP_REST_Response([
+                'success' => true,
+                'post_id' => $post_id,
+                'previous_language' => $current_language,
+                'new_language' => $language_code,
+                'translations_updated' => false,
+                'message' => __('O post já estava neste idioma.', 'alvobot-pro'),
+                'no_change_needed' => true
+            ], 200);
         }
         
         // Obtém traduções existentes antes da mudança
@@ -662,10 +671,49 @@ class AlvoBotPro_Rest_Api_Service {
     }
     
     /**
-     * Verifica permissões do usuário
+     * Verifica permissões do usuário - aceita Basic Auth
      */
     public function permissions_check() {
-        return current_user_can('edit_posts');
+        // Se o usuário já está logado
+        if (is_user_logged_in() && current_user_can('edit_posts')) {
+            return true;
+        }
+        
+        // Verifica autenticação Basic
+        if (!isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            return new WP_Error('missing_auth', __('Autorização necessária.', 'alvobot-pro'), ['status' => 401]);
+        }
+        
+        $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        
+        // Verifica se é Basic Auth
+        if (!preg_match('/^Basic\s+(.*)$/i', $auth_header, $matches)) {
+            return new WP_Error('invalid_auth', __('Tipo de autorização inválido.', 'alvobot-pro'), ['status' => 401]);
+        }
+        
+        $credentials = base64_decode($matches[1]);
+        if (!$credentials) {
+            return new WP_Error('invalid_credentials', __('Credenciais inválidas.', 'alvobot-pro'), ['status' => 401]);
+        }
+        
+        list($username, $password) = explode(':', $credentials, 2);
+        
+        // Autentica o usuário
+        $user = wp_authenticate($username, $password);
+        
+        if (is_wp_error($user)) {
+            return new WP_Error('auth_failed', __('Falha na autenticação.', 'alvobot-pro'), ['status' => 401]);
+        }
+        
+        // Verifica se o usuário pode editar posts
+        if (!user_can($user, 'edit_posts')) {
+            return new WP_Error('insufficient_permissions', __('Permissões insuficientes.', 'alvobot-pro'), ['status' => 403]);
+        }
+        
+        // Define o usuário atual para o contexto da requisição
+        wp_set_current_user($user->ID);
+        
+        return true;
     }
     
     /**
