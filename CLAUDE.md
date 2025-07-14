@@ -131,6 +131,17 @@ wp db query "DELETE FROM wp_options WHERE option_name LIKE '_transient_alvobot_t
 - **Quiz Builder**: ✅ Funcional (corrigido - usa conteúdo entre tags [quiz]...[/quiz], não atributo quiz_data)
 - **Temporary Login**: ✅ Funcional (oculto no admin)
 
+## Workflow de Desenvolvimento
+
+### ⚠️ REGRA OBRIGATÓRIA - Release Management:
+- **SEMPRE** que fizer um commit, deve criar um novo release
+- Incrementar a versão seguindo semantic versioning (MAJOR.MINOR.PATCH)
+- Commits de bug fixes: incrementar PATCH (ex: 2.4.0 → 2.4.1)
+- Commits de features: incrementar MINOR (ex: 2.4.1 → 2.5.0)
+- Commits breaking changes: incrementar MAJOR (ex: 2.5.0 → 3.0.0)
+- Sempre atualizar tanto o header do plugin quanto a constante ALVOBOT_PRO_VERSION
+- Usar `gh release create` com changelog detalhado
+
 ## Princípios de Código
 
 ### 0. Obrigatório - Princípios Orientadores para a IA:
