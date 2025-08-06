@@ -287,11 +287,13 @@ if (!defined('ABSPATH')) {
               'temporary-login' => 'Login Temporário',
               'quiz-builder' => 'Quiz Builder',
               'cta-cards' => 'CTA Cards',
-              'plugin-manager' => 'Plugin Manager'
+              'plugin-manager' => 'Plugin Manager',
+              'updater' => 'Sistema de Atualizações'
             );
             
             foreach ($module_names as $module_id => $module_name):
-              if (isset($active_modules[$module_id]) && $active_modules[$module_id]):
+              // Sempre mostrar updater e plugin-manager, outros só se ativos
+              if ($module_id === 'updater' || $module_id === 'plugin-manager' || (isset($active_modules[$module_id]) && $active_modules[$module_id])):
             ?>
             <tr>
               <th scope="row"><?php echo esc_html($module_name); ?></th>

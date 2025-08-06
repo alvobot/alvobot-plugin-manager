@@ -175,8 +175,8 @@ class AlvoBotPro {
             return;
         }
         
-        // Verifica se o módulo está ativo (exceto para core/plugin-manager que sempre deve logar)
-        if ($module_id !== 'core' && $module_id !== 'plugin-manager') {
+        // Verifica se o módulo está ativo (exceto para core/plugin-manager/updater que sempre devem logar)
+        if ($module_id !== 'core' && $module_id !== 'plugin-manager' && $module_id !== 'updater') {
             $active_modules = get_option('alvobot_pro_active_modules', array());
             if (!empty($active_modules) && (!isset($active_modules[$module_id]) || !$active_modules[$module_id])) {
                 return;

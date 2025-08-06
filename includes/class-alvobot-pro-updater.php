@@ -204,44 +204,82 @@ class AlvoBotPro_Updater {
     public function after_install($response, $hook_extra, $result) {
         global $wp_filesystem;
 
+        // Log inicial para debug
+        AlvoBotPro::debug_log('updater', 'after_install iniciado - hook_extra: ' . print_r($hook_extra, true));
+        AlvoBotPro::debug_log('updater', 'after_install result: ' . print_r($result, true));
+
         // Verifica se é nosso plugin
         if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->basename) {
+            AlvoBotPro::debug_log('updater', 'Não é nosso plugin, saindo - basename: ' . $this->basename);
             return $result;
         }
+
+        AlvoBotPro::debug_log('updater', 'É nosso plugin, processando update...');
 
         // Obtém o nome correto da pasta do plugin
         $plugin_folder_name = dirname($this->basename);
         $plugin_folder = WP_PLUGIN_DIR . '/' . $plugin_folder_name;
         
+        AlvoBotPro::debug_log('updater', 'Plugin folder: ' . $plugin_folder);
+        AlvoBotPro::debug_log('updater', 'Result destination: ' . $result['destination']);
+        
         // Se o destino já é a pasta correta, não precisa mover
         if ($result['destination'] === $plugin_folder) {
+            AlvoBotPro::debug_log('updater', 'Destino já é correto, não precisa mover');
             return $result;
         }
         
-        // Remove a pasta antiga se existir (com verificação de permissão)
+        // Verifica se a pasta antiga existe
         if ($wp_filesystem->exists($plugin_folder)) {
-            if (!$wp_filesystem->delete($plugin_folder, true)) {
+            AlvoBotPro::debug_log('updater', 'Pasta antiga existe, tentando deletar: ' . $plugin_folder);
+            
+            // Tenta deletar a pasta antiga
+            $delete_result = $wp_filesystem->delete($plugin_folder, true);
+            AlvoBotPro::debug_log('updater', 'Resultado da deleção: ' . ($delete_result ? 'SUCESSO' : 'FALHOU'));
+            
+            if (!$delete_result) {
                 // Se não conseguir deletar, tenta renomear temporariamente
                 $temp_folder = $plugin_folder . '_old_' . time();
-                $wp_filesystem->move($plugin_folder, $temp_folder);
+                AlvoBotPro::debug_log('updater', 'Tentando renomear para: ' . $temp_folder);
+                
+                $rename_result = $wp_filesystem->move($plugin_folder, $temp_folder);
+                AlvoBotPro::debug_log('updater', 'Resultado da renomeação: ' . ($rename_result ? 'SUCESSO' : 'FALHOU'));
+                
+                if (!$rename_result) {
+                    AlvoBotPro::debug_log('updater', 'ERRO: Não foi possível nem deletar nem renomear a pasta antiga');
+                    // Retorna erro para mostrar ao usuário
+                    return new WP_Error('delete_failed', 'Não foi possível remover o plugin antigo. Verifique permissões de arquivo.');
+                }
             }
+        } else {
+            AlvoBotPro::debug_log('updater', 'Pasta antiga não existe');
         }
         
         // Move para o local correto
+        AlvoBotPro::debug_log('updater', 'Movendo de ' . $result['destination'] . ' para ' . $plugin_folder);
         $move_result = $wp_filesystem->move($result['destination'], $plugin_folder);
+        AlvoBotPro::debug_log('updater', 'Resultado da movimentação: ' . ($move_result ? 'SUCESSO' : 'FALHOU'));
         
         if ($move_result) {
             $result['destination'] = $plugin_folder;
             
             // Remove pasta temporária se existir
             if (isset($temp_folder) && $wp_filesystem->exists($temp_folder)) {
-                $wp_filesystem->delete($temp_folder, true);
+                AlvoBotPro::debug_log('updater', 'Removendo pasta temporária: ' . $temp_folder);
+                $cleanup_result = $wp_filesystem->delete($temp_folder, true);
+                AlvoBotPro::debug_log('updater', 'Limpeza da pasta temporária: ' . ($cleanup_result ? 'SUCESSO' : 'FALHOU'));
             }
             
             // Reativa o plugin se estava ativo
             if ($this->active) {
+                AlvoBotPro::debug_log('updater', 'Reativando plugin: ' . $this->basename);
                 activate_plugin($this->basename);
             }
+            
+            AlvoBotPro::debug_log('updater', 'Update concluído com sucesso');
+        } else {
+            AlvoBotPro::debug_log('updater', 'ERRO: Falha ao mover para pasta final');
+            return new WP_Error('move_failed', 'Não foi possível mover o plugin para a pasta correta.');
         }
 
         return $result;
