@@ -143,6 +143,27 @@ if (!defined('ABSPATH')) {
           <?php endif; ?>
         </div>
       </div>
+
+      <!-- Módulo CTA Cards -->
+      <div class="alvobot-card <?php echo isset($active_modules['cta-cards']) && $active_modules['cta-cards'] ? 'module-enabled' : ''; ?>">
+        <div class="alvobot-card-header">
+          <div>
+            <h2 class="alvobot-card-title">CTA Cards</h2>
+            <p class="alvobot-card-subtitle">Crie cards de CTA (Call-to-Action) personalizados para aumentar conversões.</p>
+          </div>
+          <label class="alvobot-toggle">
+            <input type="checkbox" 
+                   data-module="cta-cards" 
+                   <?php echo isset($active_modules['cta-cards']) && $active_modules['cta-cards'] ? 'checked="checked"' : ''; ?>>
+            <span class="alvobot-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="alvobot-card-footer">
+          <?php if (isset($active_modules['cta-cards']) && $active_modules['cta-cards']): ?>
+            <a href="<?php echo admin_url('admin.php?page=alvobot-cta-cards'); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+          <?php endif; ?>
+        </div>
+      </div>
     </div>
 
     <!-- Seção Status do Sistema -->
@@ -265,6 +286,7 @@ if (!defined('ABSPATH')) {
               'multi-languages' => 'Multi Languages',
               'temporary-login' => 'Login Temporário',
               'quiz-builder' => 'Quiz Builder',
+              'cta-cards' => 'CTA Cards',
               'plugin-manager' => 'Plugin Manager'
             );
             

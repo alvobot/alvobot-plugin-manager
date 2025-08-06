@@ -31,7 +31,8 @@ class AlvoBotPro {
             'essential_pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
             'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php',
             'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php',
-            'quiz-builder' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php'
+            'quiz-builder' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php',
+            'cta-cards' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/cta-cards/class-cta-cards.php'
         );
 
         foreach ($module_files as $module => $file) {
@@ -65,7 +66,8 @@ class AlvoBotPro {
             'essential_pages' => true,
             'multi-languages' => true,
             'temporary-login' => true,
-            'quiz-builder' => true
+            'quiz-builder' => true,
+            'cta-cards' => true
         );
 
         // Obtém os módulos ativos do banco de dados
@@ -96,7 +98,8 @@ class AlvoBotPro {
             'essential_pages' => 'AlvoBotPro_EssentialPages',
             'multi-languages' => 'AlvoBotPro_MultiLanguages',
             'temporary-login' => 'AlvoBotPro_TemporaryLogin',
-            'quiz-builder' => 'AlvoBotPro_QuizBuilder'
+            'quiz-builder' => 'AlvoBotPro_QuizBuilder',
+            'cta-cards' => 'AlvoBotPro_CTACards'
         );
 
         // Instancia apenas os módulos ativos
@@ -137,7 +140,7 @@ class AlvoBotPro {
         
         // Converte para formato booleano
         $debug_settings = array();
-        $module_ids = array('logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder');
+        $module_ids = array('logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards');
         
         foreach ($module_ids as $module_id) {
             $debug_settings[$module_id] = isset($debug_modules[$module_id]) && $debug_modules[$module_id] == '1';
@@ -267,7 +270,9 @@ class AlvoBotPro {
 
         // 6. Quiz Builder - Menu é adicionado pelo próprio módulo
 
-        // 7. Configurações - Por último, configurações gerais (remove submenu duplicado)
+        // 7. CTA Cards - Menu é adicionado pelo próprio módulo
+
+        // 8. Configurações - Por último, configurações gerais (remove submenu duplicado)
         // O menu principal já aponta para render_dashboard_page
     }
 

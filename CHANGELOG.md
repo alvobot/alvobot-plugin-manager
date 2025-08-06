@@ -15,6 +15,76 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.0] - 2025-08-06
+
+### 🎉 **Novo Módulo: CTA Cards**
+
+#### **🎯 Sistema Completo de Call-to-Action Cards**
+- **8 templates profissionais** prontos para uso:
+  - **Vertical**: Layout centralizado com imagem opcional
+  - **Horizontal**: Imagem à esquerda, conteúdo à direita (responsivo)
+  - **Minimal**: Design limpo com badge/tag
+  - **Banner**: Grande destaque com imagem de fundo
+  - **Simple**: Ícone/emoji com link direto
+  - **Pulse**: Animação pulsante para conteúdo ao vivo
+  - **Multi-button**: Até 3 botões de ação diferentes
+  - **LED Border**: Efeito futurista com borda LED animada
+
+#### **🎨 Gerador Visual Interativo**
+- **Interface de 3 colunas**: Templates, configurações e preview ao vivo
+- **Preview em tempo real**: Atualização instantânea ao editar
+- **Modo Desktop/Mobile**: Visualização responsiva integrada
+- **Valores de exemplo**: Templates vêm pré-preenchidos com dados
+- **Shortcode automático**: Copia com um clique
+
+#### **⚙️ Funcionalidades Avançadas**
+- **Personalização completa**: Cores, textos, imagens, ícones
+- **Suporte a emojis e Dashicons**: 🌟 ou dashicons-star-filled
+- **Cores personalizadas**: Texto, fundo, botões, badges
+- **Múltiplas opções de link**: _self ou _blank
+- **Animações CSS**: Pulse, LED rotate, hover effects
+- **100% responsivo**: Adapta-se a qualquer tamanho de tela
+
+#### **🛠️ Características Técnicas**
+- **Shortcode flexível**: `[cta_card template="..." ...]`
+- **Carregamento condicional**: CSS só carrega onde necessário
+- **JavaScript otimizado**: Debounce para performance
+- **Preview estático**: Fallback sem necessidade de AJAX
+- **Sanitização completa**: Segurança em todos os inputs
+
+#### **📚 Documentação Completa**
+- **Aba Exemplos**: Todos os 8 templates com código pronto
+- **Aba Documentação**: Guia completo de uso
+- **Parâmetros detalhados**: Referência de todos os atributos
+- **Dicas e truques**: Melhores práticas de conversão
+- **Uso com IAs**: Shortcodes prontos para ChatGPT/Claude
+
+#### **🔧 Correções e Melhorias**
+- **Sanitização de ícones**: Preserva emojis e caracteres especiais
+- **Cores de fundo**: Aplicadas corretamente no preview
+- **Templates responsivos**: Horizontal adapta-se em mobile
+- **LED animation**: Keyframes CSS implementados
+- **Campo de imagem**: Adicionado ao template vertical
+- **Dashboard integração**: Card no painel principal do AlvoBot Pro
+
+### 🎯 Benefícios do CTA Cards
+- ✅ **Aumento de conversões**: CTAs visuais e atrativos
+- ✅ **Fácil implementação**: Interface intuitiva drag-and-drop
+- ✅ **Totalmente customizável**: Adapta-se a qualquer marca
+- ✅ **Performance otimizada**: Carregamento rápido e eficiente
+- ✅ **Mobile-first**: Funciona perfeitamente em dispositivos móveis
+
+---
+
+## [2.4.3] - 2025-07-15
+
+### 🔧 Corrigido
+- **Quiz Builder**: Correção de bugs menores
+- **Multi-Languages**: Ajustes de formatação
+- Atualizações gerais de estabilidade
+
+---
+
 ## [2.3.0] - 2025-01-12
 
 ### 🎉 **Sistema de Testes Completo**
@@ -291,13 +361,14 @@ tests/
 
 ## 📊 Estatísticas de Desenvolvimento
 
-### Versão 2.3.0 (Atual)
-- **Linhas de Código**: ~16,500 (+10% vs 2.2.3, incluindo testes)
-- **Arquivos**: 93 (+5% vs 2.2.3, incluindo estrutura de testes, após limpeza) 
-- **Módulos Ativos**: 8 (incluindo sistema de testes)
-- **APIs REST**: 12 endpoints
+### Versão 2.5.0 (Atual)
+- **Linhas de Código**: ~19,800 (+20% vs 2.3.0, incluindo CTA Cards)
+- **Arquivos**: 108 (+16% vs 2.3.0, com novo módulo completo) 
+- **Módulos Ativos**: 9 (incluindo CTA Cards)
+- **APIs REST**: 13 endpoints (+ preview CTA)
+- **Templates CTA**: 8 designs profissionais
 - **Cobertura de Testes**: 58 testes, 456+ assertions, 100% módulos principais
-- **Performance Score**: A+ (mantido, testes executam em < 0.02s)
+- **Performance Score**: A+ (mantido, CSS/JS condicional)
 
 ### Marcos do Projeto
 - **v1.0.0**: Lançamento inicial (Dez 2023)
@@ -305,7 +376,8 @@ tests/
 - **v2.0.0**: Arquitetura modular (Jan 2025)
 - **v2.2.0**: Multi-language support (Mar 2025)
 - **v2.2.3**: Author Box rewrite (Jan 2025)
-- **v2.3.0**: Sistema de testes completo (Jan 2025) 🎉
+- **v2.3.0**: Sistema de testes completo (Jan 2025)
+- **v2.5.0**: CTA Cards - Sistema completo de CTAs (Jan 2025) 🎉
 
 ---
 

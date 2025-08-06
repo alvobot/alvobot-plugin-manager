@@ -1,0 +1,835 @@
+/**
+ * AlvoBot CTA Cards Styles
+ * Frontend styles for CTA cards
+ */
+
+/* Base CTA Card Styles */
+.alvobot-cta-card {
+    margin: 20px auto;
+    max-width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+}
+
+.alvobot-cta-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Vertical Template */
+.alvobot-cta-vertical {
+    text-align: center;
+    padding: 30px 20px;
+    max-width: 500px;
+}
+
+.alvobot-cta-vertical .cta-image {
+    margin-bottom: 20px;
+}
+
+.alvobot-cta-vertical .cta-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.alvobot-cta-vertical .cta-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    color: #333333;
+}
+
+.alvobot-cta-vertical .cta-subtitle {
+    font-size: 16px;
+    color: #666666;
+    margin: 0 0 15px 0;
+    font-weight: 400;
+}
+
+.alvobot-cta-vertical .cta-description {
+    font-size: 14px;
+    color: #555555;
+    margin: 0 0 25px 0;
+    line-height: 1.5;
+}
+
+.alvobot-cta-vertical .cta-button-wrapper {
+    margin-top: 20px;
+}
+
+.alvobot-cta-vertical .cta-button {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.alvobot-cta-vertical .cta-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
+}
+
+/* Horizontal Template */
+.alvobot-cta-horizontal {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    max-width: 600px;
+    gap: 20px;
+}
+
+.alvobot-cta-horizontal .cta-image {
+    flex: 0 0 150px;
+}
+
+.alvobot-cta-horizontal .cta-image img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.alvobot-cta-horizontal .cta-content {
+    flex: 1;
+}
+
+.alvobot-cta-horizontal .cta-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    color: #333333;
+}
+
+.alvobot-cta-horizontal .cta-description {
+    font-size: 14px;
+    color: #555555;
+    margin: 0 0 15px 0;
+    line-height: 1.4;
+}
+
+.alvobot-cta-horizontal .cta-button {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.alvobot-cta-horizontal .cta-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* Minimal Template */
+.alvobot-cta-minimal {
+    padding: 20px;
+    border: 2px solid #e0e0e0;
+    background-color: #fafafa;
+    max-width: 400px;
+    position: relative;
+}
+
+.alvobot-cta-minimal .cta-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 15px;
+}
+
+.alvobot-cta-minimal .cta-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #333333;
+}
+
+.alvobot-cta-minimal .cta-subtitle {
+    font-size: 14px;
+    color: #666666;
+    margin: 0 0 15px 0;
+}
+
+.alvobot-cta-minimal .cta-button-minimal {
+    color: #2271b1;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: color 0.3s ease;
+}
+
+.alvobot-cta-minimal .cta-button-minimal:hover {
+    color: #135e96;
+    text-decoration: underline;
+}
+
+/* Banner Template */
+.alvobot-cta-banner {
+    position: relative;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+}
+
+.alvobot-cta-banner .cta-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alvobot-cta-banner .cta-content {
+    position: relative;
+    z-index: 2;
+    padding: 40px 20px;
+    max-width: 600px;
+}
+
+.alvobot-cta-banner .cta-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 15px 0;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.alvobot-cta-banner .cta-description {
+    font-size: 16px;
+    margin: 0 0 25px 0;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+}
+
+.alvobot-cta-banner .cta-button-large {
+    display: inline-block;
+    padding: 15px 30px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.alvobot-cta-banner .cta-button-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Simple Template */
+.alvobot-cta-simple {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    max-width: 300px;
+    transition: all 0.3s ease;
+}
+
+.alvobot-cta-simple:hover {
+    border-color: #2271b1;
+    background-color: #f8f9fa;
+}
+
+.alvobot-cta-simple .cta-link {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+}
+
+.alvobot-cta-simple .cta-icon {
+    font-size: 20px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.alvobot-cta-simple .cta-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #333333;
+}
+
+.alvobot-cta-simple .cta-arrow {
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+    color: #2271b1;
+}
+
+.alvobot-cta-simple:hover .cta-arrow {
+    transform: translateX(3px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .alvobot-cta-horizontal {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .alvobot-cta-horizontal .cta-image {
+        flex: none;
+        width: 100%;
+        max-width: 200px;
+        margin: 0 auto 15px auto;
+    }
+    
+    .alvobot-cta-banner .cta-title {
+        font-size: 24px;
+    }
+    
+    .alvobot-cta-banner .cta-description {
+        font-size: 14px;
+    }
+    
+    .alvobot-cta-banner .cta-button-large {
+        font-size: 16px;
+        padding: 12px 24px;
+    }
+    
+    .alvobot-cta-vertical .cta-title {
+        font-size: 20px;
+    }
+    
+    .alvobot-cta-card {
+        margin: 15px auto;
+    }
+    
+    .alvobot-cta-multi-button .cta-buttons-wrapper {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .alvobot-cta-multi-button .cta-button {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .alvobot-cta-pulse .cta-pulse-indicator {
+        position: static;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .alvobot-cta-vertical {
+        padding: 20px 15px;
+    }
+    
+    .alvobot-cta-horizontal {
+        padding: 15px;
+    }
+    
+    .alvobot-cta-minimal {
+        padding: 15px;
+    }
+    
+    .alvobot-cta-banner .cta-content {
+        padding: 30px 15px;
+    }
+}
+
+/* Pulse Template */
+.alvobot-cta-pulse {
+    position: relative;
+    padding: 30px 20px;
+    max-width: 500px;
+    text-align: center;
+}
+
+.alvobot-cta-pulse .cta-pulse-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+}
+
+.alvobot-cta-pulse .pulse-dot {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.alvobot-cta-pulse .pulse-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: inherit;
+    animation: pulseWave 2s infinite;
+}
+
+.alvobot-cta-pulse .pulse-text {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.alvobot-cta-pulse .cta-icon-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    text-align: center;
+}
+
+.alvobot-cta-pulse .cta-icon {
+    font-size: 48px;
+    display: block;
+    animation: iconPulse 3s infinite;
+    line-height: 1;
+    text-align: center;
+    width: 100%;
+}
+
+.alvobot-cta-pulse .cta-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    color: #333333;
+}
+
+.alvobot-cta-pulse .cta-subtitle {
+    font-size: 16px;
+    color: #666666;
+    margin: 0 0 15px 0;
+    font-weight: 400;
+}
+
+.alvobot-cta-pulse .cta-description {
+    font-size: 14px;
+    color: #555555;
+    margin: 0 0 25px 0;
+    line-height: 1.5;
+}
+
+.alvobot-cta-pulse .cta-button-wrapper {
+    margin-top: 20px;
+}
+
+.alvobot-cta-pulse .cta-button-pulse {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.alvobot-cta-pulse .cta-button-pulse::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.alvobot-cta-pulse .cta-button-pulse:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.alvobot-cta-pulse .cta-button-pulse:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Multi-Button Template */
+.alvobot-cta-multi-button {
+    padding: 30px 20px;
+    max-width: 600px;
+    text-align: center;
+}
+
+.alvobot-cta-multi-button .cta-image {
+    margin-bottom: 20px;
+}
+
+.alvobot-cta-multi-button .cta-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.alvobot-cta-multi-button .cta-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    color: #333333;
+}
+
+.alvobot-cta-multi-button .cta-subtitle {
+    font-size: 16px;
+    color: #666666;
+    margin: 0 0 15px 0;
+    font-weight: 400;
+}
+
+.alvobot-cta-multi-button .cta-description {
+    font-size: 14px;
+    color: #555555;
+    margin: 0 0 25px 0;
+    line-height: 1.5;
+}
+
+.alvobot-cta-multi-button .cta-buttons-wrapper {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.alvobot-cta-multi-button .cta-button {
+    margin: 0;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.alvobot-cta-multi-button .cta-button-primary {
+    font-weight: 700;
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+.alvobot-cta-multi-button .cta-button-secondary {
+    font-weight: 600;
+    padding: 12px 24px;
+    font-size: 15px;
+}
+
+.alvobot-cta-multi-button .cta-button-tertiary {
+    font-weight: 600;
+    padding: 10px 20px;
+    font-size: 14px;
+    background: transparent !important;
+    border: 2px solid currentColor !important;
+    transition: all 0.3s ease;
+}
+
+.alvobot-cta-multi-button .cta-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
+}
+
+.alvobot-cta-multi-button .cta-button-tertiary:hover {
+    background-color: currentColor !important;
+    color: white !important;
+}
+
+/* LED Border Template */
+.alvobot-cta-led-border {
+    --led-colors: #ff0080, #00ff80, #8000ff, #ff8000;
+    --led-speed: 2s;
+    padding: 30px 20px;
+    max-width: 500px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.alvobot-cta-led-border .cta-led-wrapper {
+    position: relative;
+    z-index: 2;
+}
+
+.alvobot-cta-led-border .cta-image {
+    margin-bottom: 20px;
+}
+
+.alvobot-cta-led-border .cta-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.alvobot-cta-led-border .cta-icon-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    text-align: center;
+}
+
+.alvobot-cta-led-border .cta-icon {
+    font-size: 48px;
+    display: block;
+    line-height: 1;
+    text-align: center;
+    width: 100%;
+    animation: iconGlow 3s infinite alternate;
+}
+
+.alvobot-cta-led-border .cta-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    color: #333333;
+}
+
+.alvobot-cta-led-border .cta-subtitle {
+    font-size: 16px;
+    color: #666666;
+    margin: 0 0 15px 0;
+    font-weight: 400;
+}
+
+.alvobot-cta-led-border .cta-description {
+    font-size: 14px;
+    color: #555555;
+    margin: 0 0 25px 0;
+    line-height: 1.5;
+}
+
+.alvobot-cta-led-border .cta-button-wrapper {
+    margin-top: 25px;
+}
+
+.alvobot-cta-led-border .cta-led-button-container {
+    position: relative;
+    display: inline-block;
+    padding: 4px;
+    border-radius: 10px;
+    background: linear-gradient(45deg, var(--led-colors));
+    background-size: 300% 300%;
+    animation: ledRotate var(--led-speed) linear infinite;
+}
+
+.alvobot-cta-led-border .cta-led-button {
+    position: relative;
+    display: block;
+    padding: 14px 28px;
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    z-index: 2;
+}
+
+.alvobot-cta-led-border .cta-led-button:hover {
+    background: #1a1a1a;
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.alvobot-cta-led-border .led-button-text {
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.alvobot-cta-led-border .led-border-animation {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: conic-gradient(from 0deg, var(--led-colors), var(--led-colors));
+    border-radius: 10px;
+    animation: ledSpin var(--led-speed) linear infinite;
+    z-index: 1;
+}
+
+.alvobot-cta-led-border .led-border-animation::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background: inherit;
+    border-radius: 6px;
+    z-index: -1;
+}
+
+/* Animation enhancements */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulseWave {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+    }
+}
+
+@keyframes iconPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes iconGlow {
+    0% {
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+        transform: scale(1);
+    }
+    100% {
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8));
+        transform: scale(1.02);
+    }
+}
+
+@keyframes ledRotate {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes ledSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.alvobot-cta-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Emoji support */
+.alvobot-cta-card .cta-emoji {
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    text-decoration: none;
+}
+
+/* Focus states for accessibility */
+.alvobot-cta-card a:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+.alvobot-cta-card .cta-button:focus,
+.alvobot-cta-card .cta-button-minimal:focus,
+.alvobot-cta-card .cta-link:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(34, 113, 177, 0.3);
+}
+
+/* Print styles */
+@media print {
+    .alvobot-cta-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .alvobot-cta-card:hover {
+        transform: none;
+    }
+}
