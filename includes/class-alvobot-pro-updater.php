@@ -204,11 +204,45 @@ class AlvoBotPro_Updater {
     public function after_install($response, $hook_extra, $result) {
         global $wp_filesystem;
 
-        $plugin_folder = WP_PLUGIN_DIR . '/' . dirname($this->basename);
-        $wp_filesystem->move($result['destination'], $plugin_folder);
-        $result['destination'] = $plugin_folder;
+        // Verifica se é nosso plugin
+        if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->basename) {
+            return $result;
+        }
 
-        $this->active && activate_plugin($this->basename);
+        // Obtém o nome correto da pasta do plugin
+        $plugin_folder_name = dirname($this->basename);
+        $plugin_folder = WP_PLUGIN_DIR . '/' . $plugin_folder_name;
+        
+        // Se o destino já é a pasta correta, não precisa mover
+        if ($result['destination'] === $plugin_folder) {
+            return $result;
+        }
+        
+        // Remove a pasta antiga se existir (com verificação de permissão)
+        if ($wp_filesystem->exists($plugin_folder)) {
+            if (!$wp_filesystem->delete($plugin_folder, true)) {
+                // Se não conseguir deletar, tenta renomear temporariamente
+                $temp_folder = $plugin_folder . '_old_' . time();
+                $wp_filesystem->move($plugin_folder, $temp_folder);
+            }
+        }
+        
+        // Move para o local correto
+        $move_result = $wp_filesystem->move($result['destination'], $plugin_folder);
+        
+        if ($move_result) {
+            $result['destination'] = $plugin_folder;
+            
+            // Remove pasta temporária se existir
+            if (isset($temp_folder) && $wp_filesystem->exists($temp_folder)) {
+                $wp_filesystem->delete($temp_folder, true);
+            }
+            
+            // Reativa o plugin se estava ativo
+            if ($this->active) {
+                activate_plugin($this->basename);
+            }
+        }
 
         return $result;
     }

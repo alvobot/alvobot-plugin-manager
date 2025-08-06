@@ -15,6 +15,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.1] - 2025-08-06
+
+### 🐛 Corrigido
+- **Sistema de Atualizações**: Corrigido erro "Não foi possível remover o plugin antigo" durante atualizações do WordPress
+  - Implementado sistema de fallback para renomeação temporária quando exclusão falha
+  - Melhorada verificação de permissões de arquivo durante processo de atualização
+  - Adicionada limpeza automática de pastas temporárias após atualização bem-sucedida
+  - Corrigido tratamento de erros de permissão no WordPress filesystem
+
+---
+
 ## [2.5.0] - 2025-08-06
 
 ### 🎉 **Novo Módulo: CTA Cards**
