@@ -64,17 +64,17 @@ jQuery(document).ready(function($) {
     }
 
     // Manipulador para toggles de módulos
-    $('.alvobot-pro-module-toggle input').on('change', function(e) {
+    $('.alvobot-toggle input[type="checkbox"]').on('change', function(e) {
         // Previne o comportamento padrão para controlar manualmente
         e.preventDefault();
         
         var $toggle = $(this);
         var moduleId = $toggle.data('module');
         
-        // Impede a desativação do Status do Sistema
-        if (moduleId === 'plugin-manager' || moduleId === 'plugin_manager') {
+        // Impede a desativação do Plugin Manager
+        if (moduleId === 'plugin-manager') {
             $toggle.prop('checked', true);
-            showNotice('O Status do Sistema é um módulo essencial e não pode ser desativado.', 'error');
+            showNotice('O Plugin Manager é um módulo essencial e não pode ser desativado.', 'error');
             return;
         }
         

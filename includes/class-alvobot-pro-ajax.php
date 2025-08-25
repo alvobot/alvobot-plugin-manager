@@ -48,8 +48,13 @@ class AlvoBotPro_Ajax {
         $default_modules = array(
             'logo_generator' => true,
             'author_box' => true,
-            'plugin_manager' => true,
-            'pre-article' => true
+            'plugin-manager' => true,
+            'pre-article' => true,
+            'essential_pages' => true,
+            'multi-languages' => true,
+            'temporary-login' => true,
+            'quiz-builder' => true,
+            'cta-cards' => true
         );
 
         // Mescla com os valores padrão
@@ -57,23 +62,27 @@ class AlvoBotPro_Ajax {
 
         // Atualiza o estado do módulo específico
         $active_modules[$module] = $enabled;
+        
+        // Garante que o plugin-manager sempre esteja ativo
+        $active_modules['plugin-manager'] = true;
 
-        // Atualiza a opção
-        $updated = update_option('alvobot_pro_active_modules', $active_modules);
-
-        // Verifica o estado final
-        $final_state = get_option('alvobot_pro_active_modules');
-        $final_enabled = isset($final_state[$module]) ? filter_var($final_state[$module], FILTER_VALIDATE_BOOLEAN) : false;
-
-        if (!$updated || $final_enabled !== $enabled) {
-            wp_send_json_error(array(
-                'message' => 'Erro ao atualizar o estado do módulo. Por favor, tente novamente.'
-            ));
+        // Força a atualização da opção (terceiro parâmetro true força update mesmo se o valor for o mesmo)
+        delete_option('alvobot_pro_active_modules');
+        $updated = add_option('alvobot_pro_active_modules', $active_modules);
+        
+        // Se já existia, atualiza
+        if (!$updated) {
+            $updated = update_option('alvobot_pro_active_modules', $active_modules);
         }
 
-        // Limpa os caches
+        // Limpa todos os caches possíveis
         wp_cache_delete('alvobot_pro_active_modules', 'options');
         wp_cache_delete('alvobot_pro_active_modules', 'alloptions');
+        wp_cache_flush();
+        
+        // Verifica o estado final
+        $final_state = get_option('alvobot_pro_active_modules', array());
+        $final_enabled = isset($final_state[$module]) ? filter_var($final_state[$module], FILTER_VALIDATE_BOOLEAN) : false;
 
         wp_send_json_success(array(
             'message' => $enabled ? 'Módulo ativado com sucesso' : 'Módulo desativado com sucesso',

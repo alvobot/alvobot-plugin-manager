@@ -19,6 +19,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.1] - 2025-01-25
+
+### 🐛 Correções
+- **Sistema de Toggles**: Corrigido problema onde módulos não persistiam estado após desativação
+  - Corrigido seletor JavaScript que não detectava os toggles corretamente
+  - Padronizado nome do módulo plugin-manager em todo o código
+  - Melhorada função AJAX para forçar atualização no banco de dados
+  - Adicionado cache flush completo para garantir persistência
+
+---
+
 ## [2.5.0] - 2025-08-06
 
 ### 🎉 **Novo Módulo: CTA Cards**
