@@ -881,14 +881,6 @@ if (!class_exists('Alvobot_Pre_Article')) {
                                 $lang_name = Alvobot_PreArticle_CTA_Translations::get_language_native_name($current_lang);
                                 $supported_count = count(Alvobot_PreArticle_CTA_Translations::get_supported_languages());
                             ?>
-                            <div class="alvobot-notice alvobot-notice-info" style="margin-top: 15px; padding: 12px; background: #e7f3ff; border-left: 4px solid #0073aa; border-radius: 4px;">
-                                <p style="margin: 0;">
-                                    <strong>🌐 Traduções Automáticas:</strong> 
-                                    Idioma detectado: <strong><?php echo esc_html($lang_name); ?> (<?php echo esc_html($current_lang); ?>)</strong> | 
-                                    <?php echo esc_html($supported_count); ?> idiomas suportados | 
-                                    CTAs vazias usarão traduções automáticas
-                                </p>
-                            </div>
                             <?php endif; ?>
                         </div>
                         <div class="alvobot-card-content">

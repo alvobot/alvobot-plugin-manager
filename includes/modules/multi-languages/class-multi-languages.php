@@ -107,8 +107,9 @@ class AlvoBotPro_MultiLanguages {
             return;
         }
 
-        // Verifica se o Polylang está disponível
-        if (!function_exists('PLL') || !PLL()->model) {
+        // Verifica se o Polylang oficial está disponível (evita conflito com AutoPoly)
+        if (!function_exists('PLL') || !PLL()->model || class_exists('Automatic_Polylang')) {
+            AlvoBotPro::debug_log('multi-languages', 'Polylang não disponível ou AutoPoly detectado - pulando inicialização');
             return;
         }
 
@@ -202,8 +203,8 @@ class AlvoBotPro_MultiLanguages {
      * Adiciona botão "Traduzir" nas ações das linhas de posts/páginas
      */
     public function add_translate_row_action($actions, $post) {
-        // Verifica se o Polylang está ativo
-        if (!function_exists('PLL') || !PLL()->model) {
+        // Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
+        if (!function_exists('PLL') || !PLL()->model || class_exists('Automatic_Polylang')) {
             return $actions;
         }
         

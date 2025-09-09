@@ -20,8 +20,10 @@ if (!defined('ABSPATH')) {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     $all_plugins = get_plugins();
     
-    // Verificando se o Polylang está ativo
-    $polylang_active = class_exists('Polylang') || function_exists('pll_the_languages');
+    // Verificando se o Polylang oficial está ativo (evita conflito com AutoPoly)
+    $polylang_active = (class_exists('Polylang') || function_exists('pll_the_languages')) && 
+                       !class_exists('Automatic_Polylang') && // Exclui AutoPoly especificamente
+                       (function_exists('PLL') || function_exists('pll_current_language'));
     
     if (!$polylang_active): // Se o Polylang não estiver ativo
     ?>
@@ -38,12 +40,36 @@ if (!defined('ABSPATH')) {
                 </div>
                 <div>
                     <?php
-                    // Verificar se o Polylang está instalado mas não ativo
+                    // Verificar se o Polylang oficial está instalado mas não ativo
                     $polylang_installed = false;
-                    foreach ($all_plugins as $plugin_path => $plugin_data) {
-                        if (strpos($plugin_path, 'polylang') !== false) {
+                    $polylang_plugin_path = '';
+                    
+                    // Lista de possíveis paths do Polylang oficial
+                    $polylang_paths = [
+                        'polylang/polylang.php',                    // Versão gratuita
+                        'polylang-pro/polylang.php',               // Versão Pro
+                        'polylang/polylang.php'                    // Fallback
+                    ];
+                    
+                    // Procura especificamente pelo Polylang oficial
+                    foreach ($polylang_paths as $path) {
+                        if (isset($all_plugins[$path])) {
                             $polylang_installed = true;
+                            $polylang_plugin_path = $path;
                             break;
+                        }
+                    }
+                    
+                    // Se não encontrou pelos paths específicos, procura por nome/descrição exatos
+                    if (!$polylang_installed) {
+                        foreach ($all_plugins as $plugin_path => $plugin_data) {
+                            if (($plugin_data['Name'] === 'Polylang' || $plugin_data['Name'] === 'Polylang Pro') && 
+                                strpos($plugin_data['Description'], 'Polylang') !== false &&
+                                strpos(strtolower($plugin_path), 'autopoly') === false) {
+                                $polylang_installed = true;
+                                $polylang_plugin_path = $plugin_path;
+                                break;
+                            }
                         }
                     }
                     
@@ -76,17 +102,9 @@ if (!defined('ABSPATH')) {
                             <?php echo esc_html__('Configurar Polylang', 'alvobot-pro'); ?>
                         </a>
                     <?php
-                    } elseif ($polylang_installed) {
+                    } elseif ($polylang_installed && !empty($polylang_plugin_path)) {
                         // Se instalado mas não ativo, mostrar botão para ativar
-                        // Encontrar o caminho correto do plugin
-                        $polylang_plugin_path = '';
-                        foreach ($all_plugins as $plugin_path => $plugin_data) {
-                            if (strpos($plugin_path, 'polylang') !== false) {
-                                $polylang_plugin_path = $plugin_path;
-                                break;
-                            }
-                        }
-                        
+                        // Usar o caminho já detectado acima
                         $activate_url = wp_nonce_url(
                             self_admin_url('plugins.php?action=activate&plugin=' . urlencode($polylang_plugin_path)),
                             'activate-plugin_' . $polylang_plugin_path

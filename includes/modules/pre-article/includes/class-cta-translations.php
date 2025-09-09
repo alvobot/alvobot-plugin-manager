@@ -252,8 +252,8 @@ if (!class_exists('Alvobot_PreArticle_CTA_Translations')) {
          * Detecta o idioma atual do site
          */
         public static function get_current_language() {
-            // Verifica se o Polylang está ativo
-            if (function_exists('pll_current_language')) {
+            // Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
+            if (function_exists('pll_current_language') && !class_exists('Automatic_Polylang')) {
                 $lang = pll_current_language();
                 if ($lang) {
                     return $lang;
@@ -377,9 +377,12 @@ if (!class_exists('Alvobot_PreArticle_CTA_Translations')) {
                 'language_name' => self::get_language_native_name($current_lang),
                 'is_supported' => self::is_language_supported($current_lang),
                 'supported_languages' => $supported_langs,
-                'polylang_active' => function_exists('pll_current_language'),
+                'polylang_active' => function_exists('pll_current_language') && !class_exists('Automatic_Polylang'),
+                'autopoly_detected' => class_exists('Automatic_Polylang'),
                 'wpml_active' => defined('ICL_LANGUAGE_CODE'),
-                'site_locale' => get_locale()
+                'site_locale' => get_locale(),
+                'pll_function_exists' => function_exists('pll_current_language'),
+                'PLL_function_exists' => function_exists('PLL')
             ];
         }
     }
