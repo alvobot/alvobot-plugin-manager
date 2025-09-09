@@ -191,13 +191,23 @@ class AlvoBotPro {
 
         // Adiciona menu principal
         add_menu_page(
-            'Configurações - AlvoBot Pro',
-            'Configurações',
+            'AlvoBot Pro - Dashboard',
+            'Alvobot',
             'manage_options',
             'alvobot-pro',
             array($this, 'render_dashboard_page'),
             ALVOBOT_PRO_PLUGIN_URL . 'assets/images/icon-alvobot-app.svg',
             2
+        );
+
+        // Adiciona submenu "Configurações" apontando para a página principal
+        add_submenu_page(
+            'alvobot-pro',
+            'AlvoBot Pro - Configurações',
+            'Configurações',
+            'manage_options',
+            'alvobot-pro',
+            array($this, 'render_dashboard_page')
         );
 
         // 1. Criador de Logos - Ferramenta principal e visual
