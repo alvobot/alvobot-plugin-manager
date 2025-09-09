@@ -15,9 +15,14 @@ if (empty($ctas)) {
     $ctas = [];
 }
 
-// Adiciona o link do post a cada CTA
+// Adiciona o link do post a cada CTA e aplica traduções automáticas
 foreach ($ctas as &$cta) {
     $cta['link'] = get_permalink();
+    
+    // Aplica tradução automática se disponível e se for texto padrão
+    if (class_exists('Alvobot_PreArticle_CTA_Translations') && !empty($cta['text'])) {
+        $cta['text'] = Alvobot_PreArticle_CTA_Translations::translate_default_cta($cta['text']);
+    }
 }
 unset($cta);
 

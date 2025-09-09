@@ -53,6 +53,19 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 $this->version = ALVOBOT_PRE_ARTICLE_VERSION;
                 $this->plugin_name = 'alvobot-pre-artigo';
             }
+
+            // Inclui a classe de traduções de CTAs
+            $this->load_cta_translations_class();
+        }
+
+        /**
+         * Carrega a classe de traduções de CTAs
+         */
+        private function load_cta_translations_class() {
+            $translations_file = dirname(__FILE__) . '/class-cta-translations.php';
+            if (file_exists($translations_file)) {
+                require_once $translations_file;
+            }
         }
 
         /**
@@ -117,12 +130,20 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 true
             );
 
+            // Obtém CTAs traduzidas para o idioma atual
+            $translated_ctas = class_exists('Alvobot_PreArticle_CTA_Translations') 
+                ? Alvobot_PreArticle_CTA_Translations::get_translated_ctas() 
+                : $this->default_cta_texts;
+
             // Localiza script
             wp_localize_script('alvobot-pre-article-admin-js', 'alvobotTranslations', [
                 'cta' => __('CTA', 'alvobot-pre-artigo'),
                 'buttonText' => __('Texto do Botão:', 'alvobot-pre-artigo'),
                 'buttonColor' => __('Cor do Botão:', 'alvobot-pre-artigo'),
-                'defaultTexts' => $this->default_cta_texts
+                'defaultTexts' => $translated_ctas,
+                'currentLanguage' => class_exists('Alvobot_PreArticle_CTA_Translations') 
+                    ? Alvobot_PreArticle_CTA_Translations::get_current_language() 
+                    : 'pt'
             ]);
 
             // Obtém os dados salvos
@@ -173,7 +194,21 @@ if (!class_exists('Alvobot_Pre_Article')) {
                             <?php
                             $num_ctas = $num_ctas ? intval($num_ctas) : 1;
                             for ($i = 0; $i < $num_ctas; $i++) {
-                                $cta_text = isset($ctas[$i]['text']) ? $ctas[$i]['text'] : ($this->default_cta_texts[$i] ?? '');
+                                // Usa traduções automáticas para CTAs vazias ou padrão
+                                $saved_text = isset($ctas[$i]['text']) ? $ctas[$i]['text'] : '';
+                                
+                                if (empty($saved_text)) {
+                                    // Se não há texto salvo, usa tradução automática
+                                    $cta_text = class_exists('Alvobot_PreArticle_CTA_Translations') 
+                                        ? Alvobot_PreArticle_CTA_Translations::get_translated_cta_by_index($i) 
+                                        : ($this->default_cta_texts[$i] ?? '');
+                                } else {
+                                    // Se há texto salvo, tenta traduzir se for um texto padrão
+                                    $cta_text = class_exists('Alvobot_PreArticle_CTA_Translations')
+                                        ? Alvobot_PreArticle_CTA_Translations::translate_default_cta($saved_text)
+                                        : $saved_text;
+                                }
+                                
                                 $cta_color = isset($ctas[$i]['color']) ? $ctas[$i]['color'] : '#1E73BE';
                                 ?>
                                 <div class="cta-box">
@@ -674,6 +709,17 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 } elseif ('1' === $use_custom) {
                     // Usa CTAs personalizadas do post
                     $ctas = get_post_meta($post->ID, '_alvobot_ctas', true);
+                    
+                    // Aplica traduções automáticas para CTAs vazias
+                    if (is_array($ctas) && class_exists('Alvobot_PreArticle_CTA_Translations')) {
+                        foreach ($ctas as $index => &$cta) {
+                            if (empty($cta['text'])) {
+                                $cta['text'] = Alvobot_PreArticle_CTA_Translations::get_translated_cta_by_index($index);
+                            }
+                        }
+                        unset($cta);
+                    }
+                    
                     set_query_var('alvobot_ctas', $ctas);
                 } else {
                     // Usa CTAs das configurações globais
@@ -681,8 +727,15 @@ if (!class_exists('Alvobot_Pre_Article')) {
                     $num_ctas = $options['num_ctas'] ?? 2;
                     $ctas = [];
                     for ($i = 1; $i <= $num_ctas; $i++) {
+                        $saved_text = $options["button_text_{$i}"] ?? '';
+                        
+                        // Se não há texto salvo, usa tradução automática
+                        if (empty($saved_text) && class_exists('Alvobot_PreArticle_CTA_Translations')) {
+                            $saved_text = Alvobot_PreArticle_CTA_Translations::get_translated_cta_by_index($i - 1);
+                        }
+                        
                         $ctas[] = [
-                            'text' => $options["button_text_{$i}"] ?? '',
+                            'text' => $saved_text,
                             'color' => $options["button_color_{$i}"] ?? '#1E73BE'
                         ];
                     }
@@ -771,11 +824,19 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 ALVOBOT_PRE_ARTICLE_VERSION,
                 true
             );
+            // Obtém CTAs traduzidas para o idioma atual
+            $translated_ctas = class_exists('Alvobot_PreArticle_CTA_Translations') 
+                ? Alvobot_PreArticle_CTA_Translations::get_translated_ctas() 
+                : $this->default_cta_texts;
+
             wp_localize_script('alvobot-pre-article-admin-js', 'alvobotTranslations', [
                 'cta' => __('CTA', 'alvobot-pre-artigo'),
                 'buttonText' => __('Texto do Botão:', 'alvobot-pre-artigo'),
                 'buttonColor' => __('Cor do Botão:', 'alvobot-pre-artigo'),
-                'defaultTexts' => $this->default_cta_texts
+                'defaultTexts' => $translated_ctas,
+                'currentLanguage' => class_exists('Alvobot_PreArticle_CTA_Translations') 
+                    ? Alvobot_PreArticle_CTA_Translations::get_current_language() 
+                    : 'pt'
             ]);
 
             $options = get_option('alvobot_pre_artigo_options');
@@ -787,8 +848,20 @@ if (!class_exists('Alvobot_Pre_Article')) {
             <div class="alvobot-admin-wrap alvobot-pre-article-wrap">
                 <div class="alvobot-admin-container">
                     <div class="alvobot-admin-header">
-                        <h1><?php _e('Páginas de Pré-Artigo', 'alvobot-pre-artigo'); ?></h1>
-                        <p><?php _e('Configure as opções do módulo de pré-artigo para melhorar a experiência dos seus leitores e aumentar o engajamento.', 'alvobot-pre-artigo'); ?></p>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <h1><?php _e('Páginas de Pré-Artigo', 'alvobot-pre-artigo'); ?></h1>
+                                <p><?php _e('Configure as opções do módulo de pré-artigo para melhorar a experiência dos seus leitores e aumentar o engajamento.', 'alvobot-pre-artigo'); ?></p>
+                            </div>
+                            <?php if (class_exists('Alvobot_PreArticle_CTA_Translations')): ?>
+                            <div>
+                                <a href="<?php echo esc_url(add_query_arg('debug_translations', '1')); ?>" class="alvobot-btn alvobot-btn-secondary" style="margin-top: 10px;">
+                                    <span class="dashicons dashicons-admin-tools" style="margin-right: 5px;"></span>
+                                    <?php _e('Debug Traduções', 'alvobot-pre-artigo'); ?>
+                                </a>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     
                     <div class="alvobot-notice-container">
@@ -802,6 +875,21 @@ if (!class_exists('Alvobot_Pre_Article')) {
                         <div class="alvobot-card-header">
                             <h2 class="alvobot-card-title"><?php _e('Configurações dos Botões CTA', 'alvobot-pre-artigo'); ?></h2>
                             <p class="alvobot-card-subtitle"><?php _e('Configure os botões de chamada para ação que aparecerão nas páginas de pré-artigo', 'alvobot-pre-artigo'); ?></p>
+                            <?php if (class_exists('Alvobot_PreArticle_CTA_Translations')): ?>
+                            <?php 
+                                $current_lang = Alvobot_PreArticle_CTA_Translations::get_current_language();
+                                $lang_name = Alvobot_PreArticle_CTA_Translations::get_language_native_name($current_lang);
+                                $supported_count = count(Alvobot_PreArticle_CTA_Translations::get_supported_languages());
+                            ?>
+                            <div class="alvobot-notice alvobot-notice-info" style="margin-top: 15px; padding: 12px; background: #e7f3ff; border-left: 4px solid #0073aa; border-radius: 4px;">
+                                <p style="margin: 0;">
+                                    <strong>🌐 Traduções Automáticas:</strong> 
+                                    Idioma detectado: <strong><?php echo esc_html($lang_name); ?> (<?php echo esc_html($current_lang); ?>)</strong> | 
+                                    <?php echo esc_html($supported_count); ?> idiomas suportados | 
+                                    CTAs vazias usarão traduções automáticas
+                                </p>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <div class="alvobot-card-content">
                             <!-- Campo Quantidade de CTAs -->
@@ -817,7 +905,21 @@ if (!class_exists('Alvobot_Pre_Article')) {
                             <div id="ctas_container" class="alvobot-mt-xl">
                                 <?php 
                                 for ($i = 1; $i <= $num_ctas; $i++) {
-                                    $button_text = $options["button_text_{$i}"] ?? ($this->default_cta_texts[$i - 1] ?? '');
+                                    // Usa traduções automáticas para CTAs vazias ou padrão
+                                    $saved_text = $options["button_text_{$i}"] ?? '';
+                                    
+                                    if (empty($saved_text)) {
+                                        // Se não há texto salvo, usa tradução automática
+                                        $button_text = class_exists('Alvobot_PreArticle_CTA_Translations') 
+                                            ? Alvobot_PreArticle_CTA_Translations::get_translated_cta_by_index($i - 1) 
+                                            : ($this->default_cta_texts[$i - 1] ?? '');
+                                    } else {
+                                        // Se há texto salvo, tenta traduzir se for um texto padrão
+                                        $button_text = class_exists('Alvobot_PreArticle_CTA_Translations')
+                                            ? Alvobot_PreArticle_CTA_Translations::translate_default_cta($saved_text)
+                                            : $saved_text;
+                                    }
+                                    
                                     $button_color = $options["button_color_{$i}"] ?? '#1E73BE';
                                     ?>
                                     <div class="alvobot-card alvobot-mt-lg" style="border: 1px solid var(--alvobot-gray-300); background: var(--alvobot-gray-50);">
@@ -1008,6 +1110,12 @@ if (!class_exists('Alvobot_Pre_Article')) {
             }
 
             AlvoBotPro::debug_log('pre-article', 'Permissões OK, renderizando página');
+
+            // Debug de traduções se solicitado
+            if (isset($_GET['debug_translations'])) {
+                include dirname(dirname(__FILE__)) . '/debug-translations.php';
+                return;
+            }
 
             // Renderiza a página de configurações
             $this->create_admin_page();
