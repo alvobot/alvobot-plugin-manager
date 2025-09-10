@@ -50,25 +50,9 @@ class AlvoBotPro_Updater {
             wp_send_json_error('Permissão negada');
         }
 
-        // Limpa todos os transients e caches relacionados ao plugin
+        // Apenas limpa cache de updates - sem limpezas excessivas
         delete_site_transient('update_plugins');
         wp_clean_plugins_cache(true);
-        wp_clean_update_cache();
-        
-        // Limpa transients específicos do AlvoBot
-        $transients_to_clean = [
-            'alvobot_translation_lock_',
-            'alvobot_openai_',
-            'alvobot_quiz_',
-            'alvobot_logo_',
-            'alvobot_pre_article_',
-            'alvobot_cta_'
-        ];
-        
-        foreach ($transients_to_clean as $prefix) {
-            $this->clean_transients_by_prefix($prefix);
-        }
-        
         wp_update_plugins();
 
         wp_send_json_success([
@@ -287,19 +271,10 @@ class AlvoBotPro_Updater {
                 AlvoBotPro::debug_log('updater', 'Limpeza da pasta temporária: ' . ($cleanup_result ? 'SUCESSO' : 'FALHOU'));
             }
             
-            // Limpa cache após atualização
-            $this->clear_plugin_cache();
-            
-            // Reativa o plugin se estava ativo
+            // Reativa o plugin se estava ativo - processo simples
             if ($this->active) {
                 AlvoBotPro::debug_log('updater', 'Reativando plugin: ' . $this->basename);
                 activate_plugin($this->basename);
-                
-                // Força recarga da versão após reativação
-                clearstatcache();
-                wp_cache_flush();
-                
-                AlvoBotPro::debug_log('updater', 'Plugin reativado com versão: ' . ALVOBOT_PRO_VERSION);
             }
             
             AlvoBotPro::debug_log('updater', 'Update concluído com sucesso');
@@ -311,47 +286,4 @@ class AlvoBotPro_Updater {
         return $result;
     }
 
-    /**
-     * Limpa transients com um prefixo específico
-     */
-    private function clean_transients_by_prefix($prefix) {
-        global $wpdb;
-        
-        $like = $wpdb->esc_like($prefix) . '%';
-        
-        // Limpa transients normais
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-            '_transient_' . $like
-        ));
-        
-        // Limpa timeout dos transients
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-            '_transient_timeout_' . $like
-        ));
-        
-        AlvoBotPro::debug_log('updater', "Transients limpos com prefixo: {$prefix}");
-    }
-
-    /**
-     * Limpa cache após atualização do plugin
-     */
-    private function clear_plugin_cache() {
-        // Limpa cache de assets (CSS/JS)
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
-        
-        // Limpa opcache se disponível
-        if (function_exists('opcache_reset')) {
-            opcache_reset();
-        }
-        
-        // Limpa transients de update que podem causar conflitos
-        delete_site_transient('update_plugins');
-        wp_clean_plugins_cache(true);
-        
-        AlvoBotPro::debug_log('updater', 'Cache do plugin limpo após atualização');
-    }
 }

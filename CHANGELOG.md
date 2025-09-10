@@ -15,6 +15,28 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.5] - 2025-09-10
+
+### 🔥 Correção Definitiva - Sistema de Updates
+- **Problema raiz identificado**: Constante `ALVOBOT_PRO_VERSION` não é recarregada após updates
+- **Removida complexidade desnecessária**: Eliminadas 30+ linhas de limpezas de cache excessivas
+- **Updater simplificado**: Processo limpo sem interferências que causavam conflitos
+- **Sistema robusto**: Updates agora funcionam corretamente mesmo em WordPress limpo
+
+### 🧹 Remoções de Código
+- **Função `clean_transients_by_prefix()`**: Removida - causava limpezas excessivas
+- **Função `clear_plugin_cache()`**: Removida - interferia no processo de update
+- **Limpezas desnecessárias**: Removido `wp_clean_update_cache()`, `clearstatcache()`, etc.
+- **Logs verbosos**: Simplificados para informações essenciais
+
+### ✅ Resultado
+- Sistema de updates minimalista e funcional
+- Sem loops infinitos de atualização
+- Compatível com instalações limpas do WordPress
+- Processo de update estável e previsível
+
+---
+
 ## [2.5.4] - 2025-09-10
 
 ### 🐛 Correções Críticas
