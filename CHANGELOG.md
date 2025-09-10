@@ -66,7 +66,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
-## [2.5.1] - 2025-01-25
+## [2.5.1] - 2025-09-08
 
 ### 🐛 Correções
 - **Sistema de Toggles**: Corrigido problema onde módulos não persistiam estado após desativação
