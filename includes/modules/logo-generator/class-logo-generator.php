@@ -30,6 +30,14 @@ class AlvoBotPro_LogoGenerator {
         // Filtros para SVG
         add_filter('upload_mimes', array($this, 'allow_svg_upload'));
         add_filter('wp_prepare_attachment_for_js', array($this, 'fix_svg_display'), 10, 3);
+        
+        // Inicializar API REST
+        $this->init_rest_api();
+    }
+    
+    private function init_rest_api() {
+        require_once plugin_dir_path(__FILE__) . 'includes/class-logo-generator-api.php';
+        new AlvoBotPro_LogoGenerator_API($this);
     }
 
     public function init() {

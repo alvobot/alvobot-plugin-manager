@@ -12,10 +12,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - Sistema de temas personalizado
 - Cache avançado para APIs
 - Dashboard analítico
-- **Sistema de Atualizações**: Debug melhorado para diagnóstico de problemas de update
-  - Logs detalhados do processo de atualização
-  - Debug específico para módulo updater
-  - Fallback para renomeação quando deleção falha
+
+---
+
+## [2.5.3] - 2025-09-10
+
+### 🐛 Correções
+- **Logo Generator API**: Corrigido erro 404 na rota REST `/wp-json/alvobot-pro/v1/logos`
+  - Removido conflito de inicialização duplicada entre sistema principal e módulo
+  - Integrada inicialização da API REST diretamente na classe principal
+  - Eliminado arquivo de inicialização redundante que causava conflitos
+  - API REST agora funciona corretamente para geração automática de logos
 
 ---
 
