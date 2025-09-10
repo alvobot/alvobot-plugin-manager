@@ -287,13 +287,19 @@ class AlvoBotPro_Updater {
                 AlvoBotPro::debug_log('updater', 'Limpeza da pasta temporária: ' . ($cleanup_result ? 'SUCESSO' : 'FALHOU'));
             }
             
-            // Reativa o plugin se estava ativo
             // Limpa cache após atualização
             $this->clear_plugin_cache();
             
+            // Reativa o plugin se estava ativo
             if ($this->active) {
                 AlvoBotPro::debug_log('updater', 'Reativando plugin: ' . $this->basename);
                 activate_plugin($this->basename);
+                
+                // Força recarga da versão após reativação
+                clearstatcache();
+                wp_cache_flush();
+                
+                AlvoBotPro::debug_log('updater', 'Plugin reativado com versão: ' . ALVOBOT_PRO_VERSION);
             }
             
             AlvoBotPro::debug_log('updater', 'Update concluído com sucesso');
@@ -342,8 +348,9 @@ class AlvoBotPro_Updater {
             opcache_reset();
         }
         
-        // Força recompilação de assets no próximo carregamento
-        delete_option('alvobot_assets_version');
+        // Limpa transients de update que podem causar conflitos
+        delete_site_transient('update_plugins');
+        wp_clean_plugins_cache(true);
         
         AlvoBotPro::debug_log('updater', 'Cache do plugin limpo após atualização');
     }

@@ -15,6 +15,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.4] - 2025-09-10
+
+### 🐛 Correções Críticas
+- **Sistema de Updates**: Corrigido loop infinito de atualizações v2.5.3 ↔ v2.5.2
+  - Identificada regressão de versão no commit d364b43 que reverteu versão incorretamente
+  - Corrigida função `clear_plugin_cache()` que causava conflitos na reativação
+  - Melhorado processo de reativação com limpeza de cache adequada
+  - Adicionada validação de versão pós-update com logs detalhados
+  - Removida limpeza excessiva de `alvobot_assets_version` que causava inconsistências
+  - Atualizada versão no README.md de 2.3.0 para 2.5.4
+
+### 🔧 Melhorias Técnicas
+- **Updater**: Processo de reativação mais robusto com `clearstatcache()` e `wp_cache_flush()`
+- **Debug**: Logs expandidos para monitoramento de versões durante updates
+- **Cache**: Limpeza focada apenas em transients de update essenciais
+
+---
+
 ## [2.5.3] - 2025-09-10
 
 ### 🐛 Correções

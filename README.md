@@ -1,6 +1,6 @@
 # AlvoBot Pro - Plugin Manager Suite
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
+[![Version](https://img.shields.io/badge/version-2.5.4-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-brightgreen.svg)](https://wordpress.org/)
 [![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
