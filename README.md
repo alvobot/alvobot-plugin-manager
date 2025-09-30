@@ -1,6 +1,6 @@
 # AlvoBot Pro - Plugin Manager Suite
 
-[![Version](https://img.shields.io/badge/version-2.5.5-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
+[![Version](https://img.shields.io/badge/version-2.5.6-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-brightgreen.svg)](https://wordpress.org/)
 [![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
@@ -389,7 +389,7 @@ tests/
 
 Veja o arquivo [CHANGELOG.md](CHANGELOG.md) para histórico completo de versões.
 
-### Versão Atual: 2.3.0
+### Versão Atual: 2.5.6
 
 **🎉 Novidades:**
 - **Sistema de Testes Completo**: 58 testes automatizados com 456+ assertions
@@ -430,7 +430,7 @@ Use nosso [sistema de issues](https://github.com/alvobot/alvobot-plugin-manager/
 **Template de Bug Report:**
 ```markdown
 **Descrição:** Breve descrição do bug
-**Versão:** 2.2.2
+**Versão:** 2.5.6
 **WordPress:** 6.x
 **PHP:** 8.x
 **Passos para reproduzir:**

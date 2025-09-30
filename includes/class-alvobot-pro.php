@@ -49,9 +49,12 @@ class AlvoBotPro {
     public function init() {
         // Adiciona menus administrativos
         add_action('admin_menu', array($this, 'add_admin_menu'));
-        
+
         // Adiciona scripts e estilos
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+
+        // Adiciona autenticação customizada para todas as rotas REST API
+        add_filter('determine_current_user', array($this, 'authenticate_rest_api_request'), 20);
     }
 
     private function init_modules() {
@@ -137,17 +140,17 @@ class AlvoBotPro {
      */
     private function save_debug_settings() {
         $debug_modules = isset($_POST['debug_modules']) ? $_POST['debug_modules'] : array();
-        
+
         // Converte para formato booleano
         $debug_settings = array();
-        $module_ids = array('logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards');
-        
+        $module_ids = array('logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards', 'auth');
+
         foreach ($module_ids as $module_id) {
             $debug_settings[$module_id] = isset($debug_modules[$module_id]) && $debug_modules[$module_id] == '1';
         }
-        
+
         update_option('alvobot_pro_debug_modules', $debug_settings);
-        
+
         add_action('admin_notices', function() {
             echo '<div class="notice notice-success"><p>Configurações de debug salvas com sucesso!</p></div>';
         });
@@ -175,8 +178,8 @@ class AlvoBotPro {
             return;
         }
         
-        // Verifica se o módulo está ativo (exceto para core/plugin-manager/updater que sempre devem logar)
-        if ($module_id !== 'core' && $module_id !== 'plugin-manager' && $module_id !== 'updater') {
+        // Verifica se o módulo está ativo (exceto para core/plugin-manager/updater/auth que sempre devem logar)
+        if ($module_id !== 'core' && $module_id !== 'plugin-manager' && $module_id !== 'updater' && $module_id !== 'auth') {
             $active_modules = get_option('alvobot_pro_active_modules', array());
             if (!empty($active_modules) && (!isset($active_modules[$module_id]) || !$active_modules[$module_id])) {
                 return;
@@ -184,6 +187,130 @@ class AlvoBotPro {
         }
         
         error_log("[AlvoBot Pro - {$module_id}] " . $message);
+    }
+
+    /**
+     * Autentica requisições REST API usando tokens customizados
+     * Permite usar tokens AlvoBot em TODAS as rotas REST (nativas e customizadas)
+     */
+    public function authenticate_rest_api_request($user_id) {
+        // Se já temos um usuário autenticado, não faz nada
+        if ($user_id) {
+            return $user_id;
+        }
+
+        // Verifica se é uma requisição REST API de forma mais robusta
+        $is_rest_request = false;
+
+        // Método 1: Verifica constante REST_REQUEST (pode não estar definida ainda)
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            $is_rest_request = true;
+        }
+
+        // Método 2: Verifica URL contém /wp-json/
+        if (!$is_rest_request && isset($_SERVER['REQUEST_URI'])) {
+            if (strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false) {
+                $is_rest_request = true;
+            }
+        }
+
+        // Método 3: Verifica query var rest_route
+        if (!$is_rest_request && !empty($GLOBALS['wp']->query_vars['rest_route'])) {
+            $is_rest_request = true;
+        }
+
+        if (!$is_rest_request) {
+            return $user_id;
+        }
+
+        // Verifica se existe header de autorização
+        $auth_header = null;
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
+
+        if (!$auth_header) {
+            return $user_id;
+        }
+
+        // Verifica se é Basic Auth
+        if (!preg_match('/^Basic\s+(.*)$/i', $auth_header, $matches)) {
+            return $user_id;
+        }
+
+        // Decodifica as credenciais
+        $credentials = base64_decode($matches[1]);
+        if (!$credentials || strpos($credentials, ':') === false) {
+            self::debug_log('auth', 'Falha ao decodificar credenciais Basic Auth');
+            return $user_id;
+        }
+
+        list($username, $token) = explode(':', $credentials, 2);
+
+        // Tenta autenticar com o token
+        $user = self::authenticate_with_token($username, $token);
+
+        if (is_wp_error($user)) {
+            self::debug_log('auth', sprintf('Falha na autenticação para usuário "%s": %s', $username, $user->get_error_message()));
+            return $user_id;
+        }
+
+        if ($user && $user->ID) {
+            self::debug_log('auth', sprintf('✓ Usuário %s (ID: %d) autenticado com sucesso via token customizado', $username, $user->ID));
+            // Define o usuário atual para esta requisição
+            wp_set_current_user($user->ID);
+            return $user->ID;
+        }
+
+        return $user_id;
+    }
+
+    /**
+     * Autentica um usuário usando o token do site (grp_site_token)
+     * Usa o MESMO token que já existe no sistema
+     */
+    public static function authenticate_with_token($username, $token) {
+        self::debug_log('auth', sprintf('Tentando autenticar com token: %s...', substr($token, 0, 10)));
+
+        // Obtém o token do site (o mesmo usado para comunicação com GRP)
+        $site_token = get_option('grp_site_token');
+
+        if (empty($site_token)) {
+            self::debug_log('auth', '✗ Token do site (grp_site_token) não existe');
+            return new WP_Error('no_site_token', __('Token do site não configurado.', 'alvobot-pro'));
+        }
+
+        self::debug_log('auth', sprintf('Token do site: %s...', substr($site_token, 0, 10)));
+
+        // Verifica se o token fornecido corresponde ao token do site
+        if ($token !== $site_token) {
+            self::debug_log('auth', sprintf('✗ Token inválido. Fornecido: %s... / Esperado: %s...',
+                substr($token, 0, 10),
+                substr($site_token, 0, 10)
+            ));
+            return new WP_Error('invalid_token', __('Token inválido.', 'alvobot-pro'));
+        }
+
+        self::debug_log('auth', '✓ Token validado com sucesso');
+
+        // Busca o usuário pelo nome (se fornecido) ou usa alvobot como padrão
+        $user = get_user_by('login', $username);
+
+        // Se o usuário não existe, tenta usar 'alvobot'
+        if (!$user && $username !== 'alvobot') {
+            self::debug_log('auth', sprintf('Usuário "%s" não encontrado, tentando usuário "alvobot"', $username));
+            $user = get_user_by('login', 'alvobot');
+        }
+
+        if (!$user) {
+            self::debug_log('auth', '✗ Nenhum usuário válido encontrado');
+            return new WP_Error('user_not_found', __('Usuário não encontrado.', 'alvobot-pro'));
+        }
+
+        self::debug_log('auth', sprintf('✓ Usuário %s (ID: %d) autenticado com sucesso', $user->user_login, $user->ID));
+        return $user;
     }
 
     public function add_admin_menu() {

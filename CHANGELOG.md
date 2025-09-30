@@ -5,13 +5,22 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
-## [Não Lançado]
 
-### 🎯 Em Desenvolvimento
-- Integração dinâmica de cores entre módulos
-- Sistema de temas personalizado
-- Cache avançado para APIs
-- Dashboard analítico
+---
+
+## [2.5.6] - 2025-09-30
+
+### ✨ Nova Feature - Autenticação Global REST API
+- **Sistema de autenticação universal**: Token do site agora funciona em TODAS as rotas REST API
+  - Rotas nativas do WordPress (`/wp-json/wp/v2/*`)
+  - Rotas customizadas do plugin (`/wp-json/alvobot-pro/v1/*`)
+  - Compatível com servidores que bloqueiam Application Passwords
+- **Token único**: Reutiliza token existente (`grp_site_token`) - sem duplicação de tokens
+- **Detecção robusta**: Múltiplos métodos de identificação de requisições REST
+- **Fallback inteligente**: Usa usuário especificado ou padrão 'alvobot'
+
+### 🔧 Melhorias Técnicas
+- **Filtro `determine_current_user`**: Intercepta autenticação antes de verificação de permissões
 
 ---
 

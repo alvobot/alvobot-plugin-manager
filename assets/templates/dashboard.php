@@ -288,12 +288,13 @@ if (!defined('ABSPATH')) {
               'quiz-builder' => 'Quiz Builder',
               'cta-cards' => 'CTA Cards',
               'plugin-manager' => 'Plugin Manager',
-              'updater' => 'Sistema de Atualizações'
+              'updater' => 'Sistema de Atualizações',
+              'auth' => 'Autenticação REST API'
             );
-            
+
             foreach ($module_names as $module_id => $module_name):
-              // Sempre mostrar updater e plugin-manager, outros só se ativos
-              if ($module_id === 'updater' || $module_id === 'plugin-manager' || (isset($active_modules[$module_id]) && $active_modules[$module_id])):
+              // Sempre mostrar updater, plugin-manager e auth, outros só se ativos
+              if ($module_id === 'updater' || $module_id === 'plugin-manager' || $module_id === 'auth' || (isset($active_modules[$module_id]) && $active_modules[$module_id])):
             ?>
             <tr>
               <th scope="row"><?php echo esc_html($module_name); ?></th>
