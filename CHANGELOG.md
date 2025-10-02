@@ -8,6 +8,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.8] - 2025-10-02
+
+### 🐛 Corrigido
+- Correções de bugs menores
+
+---
+
 ## [2.5.7] - 2025-10-02
 
 ### 🐛 Corrigido
