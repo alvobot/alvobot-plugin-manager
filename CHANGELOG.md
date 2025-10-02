@@ -8,6 +8,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.7] - 2025-10-02
+
+### 🐛 Corrigido
+- Correções de bugs menores
+
+---
+
 ## [2.5.6] - 2025-09-30
 
 ### ✨ Nova Feature - Autenticação Global REST API
