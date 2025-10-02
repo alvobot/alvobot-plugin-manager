@@ -49,24 +49,11 @@
     <!-- /wp:heading -->
 
     <!-- wp:paragraph -->
-    <p><strong>2.1</strong> <?php esc_html_e('Nossa plataforma oferece:', 'alvobot-pro'); ?></p>
-    <!-- /wp:paragraph -->
-
-    <!-- wp:list -->
-    <ul>
-        <li><?php esc_html_e('[service_description_1]', 'alvobot-pro'); ?></li>
-        <li><?php esc_html_e('[service_description_2]', 'alvobot-pro'); ?></li>
-        <li><?php esc_html_e('[service_description_3]', 'alvobot-pro'); ?></li>
-        <li><?php esc_html_e('[service_description_4]', 'alvobot-pro'); ?></li>
-    </ul>
-    <!-- /wp:list -->
-
-    <!-- wp:paragraph -->
-    <p><strong>2.2</strong> <?php esc_html_e('Nossa missão é fornecer conteúdo preciso e bem pesquisado para ajudar os usuários a tomar decisões informadas. A plataforma é voltada para usuários interessados em conteúdo de qualidade, garantindo acessibilidade e relevância em diversas regiões.', 'alvobot-pro'); ?></p>
+    <p><strong>2.1</strong> <?php esc_html_e('Nossa missão é fornecer conteúdo preciso e bem pesquisado para ajudar os usuários a tomar decisões informadas. A plataforma é voltada para usuários interessados em conteúdo de qualidade, garantindo acessibilidade e relevância em diversas regiões.', 'alvobot-pro'); ?></p>
     <!-- /wp:paragraph -->
 
     <!-- wp:paragraph -->
-    <p><strong>2.3</strong> <?php esc_html_e('Proteger a privacidade do usuário é uma prioridade máxima. Nossa Política de Privacidade, disponível em', 'alvobot-pro'); ?> <a href="nossa Política de Privacidade">nossa Política de Privacidade</a>, <?php esc_html_e('descreve como coletamos, armazenamos e processamos dados do usuário em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo a LGPD (Lei Geral de Proteção de Dados).', 'alvobot-pro'); ?></p>
+    <p><strong>2.2</strong> <?php esc_html_e('Proteger a privacidade do usuário é uma prioridade máxima. Nossa Política de Privacidade, disponível em', 'alvobot-pro'); ?> <a href="nossa Política de Privacidade">nossa Política de Privacidade</a>, <?php esc_html_e('descreve como coletamos, armazenamos e processamos dados do usuário em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo a LGPD (Lei Geral de Proteção de Dados).', 'alvobot-pro'); ?></p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2} -->
@@ -78,7 +65,7 @@
     <!-- /wp:paragraph -->
 
     <!-- wp:paragraph -->
-    <p><strong>3.2</strong> <?php esc_html_e('Se precisar de assistência ou desejar entrar em contato conosco, utilize o formulário de contato oficial disponível em', 'alvobot-pro'); ?> <a href="nossa página de contato">nossa página de contato</a> <?php esc_html_e('para receber suporte em tempo hábil.', 'alvobot-pro'); ?></p>
+    <p><strong>3.2</strong> <?php esc_html_e('Se precisar de assistência ou desejar entrar em contato conosco, utilize o formulário de contato oficial disponível em', 'alvobot-pro'); ?> <a href="/contato">nossa página de contato</a> <?php esc_html_e('para receber suporte em tempo hábil.', 'alvobot-pro'); ?></p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2} -->
