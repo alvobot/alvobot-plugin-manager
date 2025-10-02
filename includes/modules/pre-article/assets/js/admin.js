@@ -94,6 +94,11 @@ jQuery(document).ready(function($) {
     // Inicializar o estado do checkbox
     $('input[name="alvobot_use_custom"]').trigger('change');
 
+    // Garantir que as opções sejam exibidas se o checkbox estiver marcado por padrão
+    if ($('input[name="alvobot_use_custom"]').is(':checked')) {
+        $('#alvobot_custom_options').show();
+    }
+
     // Handler para os radio buttons de tipo de CTA
     $('input[name="alvobot_cta_type"]').on('change', function() {
         var type = $(this).val();

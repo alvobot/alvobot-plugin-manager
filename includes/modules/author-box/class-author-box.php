@@ -15,8 +15,22 @@ class AlvoBotPro_AuthorBox {
     public function __construct() {
         AlvoBotPro::debug_log('author_box', 'Inicializando módulo Author Box');
         $this->version = ALVOBOT_PRO_VERSION;
+        $this->load_translations_class();
         $this->init();
         AlvoBotPro::debug_log('author_box', 'Módulo Author Box inicializado com sucesso');
+    }
+
+    /**
+     * Carrega a classe de traduções
+     */
+    private function load_translations_class() {
+        $translations_file = dirname(__FILE__) . '/includes/class-author-box-translations.php';
+        if (file_exists($translations_file)) {
+            require_once $translations_file;
+            AlvoBotPro::debug_log('author_box', 'Classe de traduções carregada com sucesso');
+        } else {
+            AlvoBotPro::debug_log('author_box', 'Arquivo de traduções não encontrado: ' . $translations_file);
+        }
     }
 
     public function init() {
@@ -48,12 +62,17 @@ class AlvoBotPro_AuthorBox {
     }
 
     private function get_default_options() {
+        // Usa sistema de traduções se disponível
+        $default_title = class_exists('Alvobot_AuthorBox_Translations')
+            ? Alvobot_AuthorBox_Translations::get_translation('about_author')
+            : __('Sobre o Autor', 'alvobot-pro');
+
         return array(
             'display_on_posts' => 1,
             'display_on_pages' => 0,
             'show_description' => 1,
             'avatar_size' => 96,
-            'title_text' => __('Sobre o Autor', 'alvobot-pro')
+            'title_text' => $default_title
         );
     }
 
@@ -64,9 +83,13 @@ class AlvoBotPro_AuthorBox {
             array($this, 'sanitize_options')
         );
 
+        $section_title = class_exists('Alvobot_AuthorBox_Translations')
+            ? Alvobot_AuthorBox_Translations::get_translation('author_box_settings')
+            : __('Configurações do Author Box', 'alvobot-pro');
+
         add_settings_section(
             'author_box_section',
-            __('Configurações do Author Box', 'alvobot-pro'),
+            $section_title,
             null,
             $this->option_name
         );
@@ -75,25 +98,27 @@ class AlvoBotPro_AuthorBox {
     }
 
     private function add_settings_fields() {
+        // Obtém traduções
+        $t = class_exists('Alvobot_AuthorBox_Translations') ? 'Alvobot_AuthorBox_Translations' : null;
+
         // Título do Author Box
         add_settings_field(
             'title_text',
-            __('Título', 'alvobot-pro'),
+            $t ? $t::get_translation('title') : __('Título', 'alvobot-pro'),
             array($this, 'render_text_field'),
             $this->option_name,
             'author_box_section',
             array(
                 'label_for' => 'title_text',
                 'name' => 'title_text',
-                'description' => __('Título que será exibido acima do Author Box.', 'alvobot-pro')
+                'description' => $t ? $t::get_translation('title_description') : __('Título que será exibido acima do Author Box.', 'alvobot-pro')
             )
         );
-
 
         // Exibir em Posts
         add_settings_field(
             'display_on_posts',
-            __('Exibição', 'alvobot-pro'),
+            $t ? $t::get_translation('display') : __('Exibição', 'alvobot-pro'),
             array($this, 'render_display_options'),
             $this->option_name,
             'author_box_section',
@@ -105,14 +130,14 @@ class AlvoBotPro_AuthorBox {
         // Exibir Descrição
         add_settings_field(
             'show_description',
-            __('Biografia', 'alvobot-pro'),
+            $t ? $t::get_translation('biography') : __('Biografia', 'alvobot-pro'),
             array($this, 'render_checkbox_field'),
             $this->option_name,
             'author_box_section',
             array(
                 'label_for' => 'show_description',
                 'name' => 'show_description',
-                'description' => __('Exibir a biografia do autor.', 'alvobot-pro')
+                'description' => $t ? $t::get_translation('show_description') : __('Exibir a biografia do autor.', 'alvobot-pro')
             )
         );
     }
@@ -169,25 +194,26 @@ class AlvoBotPro_AuthorBox {
 
     public function render_display_options($args) {
         $options = get_option($this->option_name);
+        $t = class_exists('Alvobot_AuthorBox_Translations') ? 'Alvobot_AuthorBox_Translations' : null;
         ?>
         <div class="display-options">
             <label>
-                <input type="checkbox" 
-                       id="display_on_posts" 
-                       name="<?php echo esc_attr($this->option_name); ?>[display_on_posts]" 
+                <input type="checkbox"
+                       id="display_on_posts"
+                       name="<?php echo esc_attr($this->option_name); ?>[display_on_posts]"
                        <?php checked(!empty($options['display_on_posts'])); ?>>
-                <?php _e('Exibir em Posts', 'alvobot-pro'); ?>
+                <?php echo $t ? $t::get_translation('display_on_posts') : __('Exibir em Posts', 'alvobot-pro'); ?>
             </label>
             <br>
             <label>
-                <input type="checkbox" 
-                       id="display_on_pages" 
-                       name="<?php echo esc_attr($this->option_name); ?>[display_on_pages]" 
+                <input type="checkbox"
+                       id="display_on_pages"
+                       name="<?php echo esc_attr($this->option_name); ?>[display_on_pages]"
                        <?php checked(!empty($options['display_on_pages'])); ?>>
-                <?php _e('Exibir em Páginas', 'alvobot-pro'); ?>
+                <?php echo $t ? $t::get_translation('display_on_pages') : __('Exibir em Páginas', 'alvobot-pro'); ?>
             </label>
             <p class="description">
-                <?php _e('Selecione onde o Author Box será exibido.', 'alvobot-pro'); ?>
+                <?php echo $t ? $t::get_translation('select_display_location') : __('Selecione onde o Author Box será exibido.', 'alvobot-pro'); ?>
             </p>
         </div>
         <?php
@@ -222,18 +248,19 @@ class AlvoBotPro_AuthorBox {
             return;
         }
 
+        $t = class_exists('Alvobot_AuthorBox_Translations') ? 'Alvobot_AuthorBox_Translations' : null;
         ?>
         <div class="alvobot-pro-wrap">
             <div class="alvobot-pro-header">
-                <h1><?php _e('Configurações do Author Box', 'alvobot-pro'); ?></h1>
-                <p><?php _e('Personalize como suas informações de autor aparecem no Author Box.', 'alvobot-pro'); ?></p>
+                <h1><?php echo $t ? $t::get_translation('author_box_settings') : __('Configurações do Author Box', 'alvobot-pro'); ?></h1>
+                <p><?php echo $t ? $t::get_translation('personalize_info') : __('Personalize como suas informações de autor aparecem no Author Box.', 'alvobot-pro'); ?></p>
             </div>
 
             <!-- Preview Card -->
             <div class="alvobot-pro-preview-card">
-                <h3><?php _e('Preview em Tempo Real', 'alvobot-pro'); ?></h3>
+                <h3><?php echo $t ? $t::get_translation('live_preview') : __('Preview em Tempo Real', 'alvobot-pro'); ?></h3>
                 <div class="ab-avatar-preview" style="margin-bottom: 10px;">
-                    <?php 
+                    <?php
                     $custom_avatar_id = get_user_meta($user->ID, 'ab_custom_avatar_id', true);
                     $avatar_url = $custom_avatar_id ? wp_get_attachment_image_url($custom_avatar_id, 'thumbnail') : get_avatar_url($user->ID);
                     ?>
@@ -244,25 +271,25 @@ class AlvoBotPro_AuthorBox {
             <!-- Settings Card -->
             <div class="alvobot-pro-card">
                 <div class="alvobot-pro-card-header">
-                    <h2><?php _e('Configurações do Avatar', 'alvobot-pro'); ?></h2>
+                    <h2><?php echo $t ? $t::get_translation('avatar_settings') : __('Configurações do Avatar', 'alvobot-pro'); ?></h2>
                 </div>
 
                 <table class="form-table" role="presentation">
                     <tr>
                         <th>
-                            <label for="ab_custom_avatar"><?php _e('Avatar Personalizado', 'alvobot-pro'); ?></label>
+                            <label for="ab_custom_avatar"><?php echo $t ? $t::get_translation('custom_avatar') : __('Avatar Personalizado', 'alvobot-pro'); ?></label>
                         </th>
                         <td>
-                            <input type="hidden" name="ab_custom_avatar_id" id="ab_custom_avatar_id" 
+                            <input type="hidden" name="ab_custom_avatar_id" id="ab_custom_avatar_id"
                                    value="<?php echo esc_attr($custom_avatar_id); ?>" />
-                            <input type="button" class="button" id="ab_upload_avatar_button" 
-                                   value="<?php _e('Selecionar Imagem', 'alvobot-pro'); ?>" />
+                            <input type="button" class="button" id="ab_upload_avatar_button"
+                                   value="<?php echo $t ? $t::get_translation('select_image') : __('Selecionar Imagem', 'alvobot-pro'); ?>" />
                             <?php if ($custom_avatar_id) : ?>
-                                <input type="button" class="button" id="ab_remove_avatar_button" 
-                                       value="<?php _e('Remover Imagem', 'alvobot-pro'); ?>" />
+                                <input type="button" class="button" id="ab_remove_avatar_button"
+                                       value="<?php echo $t ? $t::get_translation('remove_image') : __('Remover Imagem', 'alvobot-pro'); ?>" />
                             <?php endif; ?>
                             <p class="description">
-                                <?php _e('Esta imagem será usada no Author Box em vez do seu Gravatar.', 'alvobot-pro'); ?>
+                                <?php echo $t ? $t::get_translation('avatar_description') : __('Esta imagem será usada no Author Box em vez do seu Gravatar.', 'alvobot-pro'); ?>
                             </p>
                         </td>
                     </tr>
@@ -402,12 +429,14 @@ class AlvoBotPro_AuthorBox {
         if (!current_user_can('manage_options')) {
             return;
         }
+
+        $t = class_exists('Alvobot_AuthorBox_Translations') ? 'Alvobot_AuthorBox_Translations' : null;
         ?>
         <div class="alvobot-admin-wrap">
             <div class="alvobot-admin-container">
                 <div class="alvobot-admin-header">
                     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-                    <p><?php _e('Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro'); ?></p>
+                    <p><?php echo $t ? $t::get_translation('display_settings') : __('Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro'); ?></p>
                 </div>
 
                 <div class="alvobot-notice-container">
@@ -418,7 +447,7 @@ class AlvoBotPro_AuthorBox {
                 <div class="alvobot-card">
                     <div class="alvobot-card-header">
                         <div>
-                            <h2 class="alvobot-card-title"><?php _e('Configurações', 'alvobot-pro'); ?></h2>
+                            <h2 class="alvobot-card-title"><?php echo $t ? $t::get_translation('settings') : __('Configurações', 'alvobot-pro'); ?></h2>
                         </div>
                     </div>
                     <div class="alvobot-card-body">
@@ -426,7 +455,10 @@ class AlvoBotPro_AuthorBox {
                             <?php
                             settings_fields($this->option_name);
                             do_settings_sections($this->option_name);
-                            submit_button(__('Salvar Alterações', 'alvobot-pro'), 'alvobot-btn alvobot-btn-primary');
+                            submit_button(
+                                $t ? $t::get_translation('save_changes') : __('Salvar Alterações', 'alvobot-pro'),
+                                'alvobot-btn alvobot-btn-primary'
+                            );
                             ?>
                         </form>
                     </div>
@@ -436,7 +468,7 @@ class AlvoBotPro_AuthorBox {
                 <div class="alvobot-card">
                     <div class="alvobot-card-header">
                         <div>
-                            <h2 class="alvobot-card-title"><?php _e('Preview do Author Box', 'alvobot-pro'); ?></h2>
+                            <h2 class="alvobot-card-title"><?php echo $t ? $t::get_translation('preview_author_box') : __('Preview do Author Box', 'alvobot-pro'); ?></h2>
                         </div>
                     </div>
                     <div class="alvobot-card-body">

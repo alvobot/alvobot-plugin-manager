@@ -163,6 +163,10 @@ class AlvoBotPro_EssentialPages {
         'contact' => [
             'title' => 'Contato',
             'slug'  => 'contato',
+        ],
+        'about' => [
+            'title' => 'Sobre Nós',
+            'slug'  => 'sobre-nos',
         ]
     ];
 
@@ -185,6 +189,8 @@ class AlvoBotPro_EssentialPages {
 
         // Debug para verificar o caminho dos templates
         AlvoBotPro::debug_log('essential_pages', 'base_dir: ' . $this->base_dir);
+
+        // Inicializar suporte multi-idioma
     }
 
     /**
@@ -238,7 +244,8 @@ class AlvoBotPro_EssentialPages {
                 'pageNames' => [
                     'terms' => __('Termos de Uso', 'alvobot-pro'),
                     'privacy' => __('Política de Privacidade', 'alvobot-pro'),
-                    'contact' => __('Contato', 'alvobot-pro')
+                    'contact' => __('Contato', 'alvobot-pro'),
+                    'about' => __('Sobre Nós', 'alvobot-pro')
                 ]
             ]
         );
@@ -513,53 +520,46 @@ class AlvoBotPro_EssentialPages {
     }
 
     /**
-     * Obtém as informações da empresa
+     * Obtém as informações básicas do site
      *
      * @return array
      */
     private function get_company_info(): array {
         $site_name = get_bloginfo('name');
-        $site_url = home_url();
         $admin_email = get_option('admin_email');
 
-        // Informações padrão da empresa (podem ser sobrescritas por opções salvas)
-        $default_info = [
+        // Informações mínimas baseadas apenas nos dados do WordPress
+        return [
             'name' => $site_name,
-            'legal_name' => $site_name . ' Tecnologia LTDA',
-            'document' => '12.345.678/0001-90',
-            'state_document' => '123.456.789.000',
-            'address' => 'Av. Paulista, 1000, 15º andar',
-            'neighborhood' => 'Bela Vista',
-            'city' => 'São Paulo',
-            'state' => 'SP',
-            'zip' => '01310-100',
-            'country' => 'Brasil',
-            'phone' => '+55 (11) 4858-9900',
-            'whatsapp' => '+55 (11) 98765-4321',
+            'legal_name' => $site_name,
             'email' => $admin_email,
-            'support_email' => 'suporte@' . parse_url($site_url, PHP_URL_HOST),
-            'sales_email' => 'vendas@' . parse_url($site_url, PHP_URL_HOST),
-            'working_hours' => 'Segunda a Sexta, das 9h às 18h',
-            'working_hours_extended' => 'Segunda a Sexta: 9h às 18h | Sábado: 9h às 13h',
+            'document' => '',
+            'address' => '',
+            'city' => '',
+            'state' => '',
+            'zip' => '',
+            'country' => '',
+            'phone' => '',
+            'whatsapp' => '',
+            'support_email' => '',
+            'sales_email' => '',
+            'working_hours' => '',
+            'working_hours_extended' => '',
+            'support_hours' => '',
+            'emergency_phone' => '',
+            'full_address' => '',
             'social_media' => [
-                'facebook' => 'https://facebook.com/' . sanitize_title($site_name),
-                'instagram' => 'https://instagram.com/' . sanitize_title($site_name),
-                'linkedin' => 'https://linkedin.com/company/' . sanitize_title($site_name),
-                'youtube' => 'https://youtube.com/@' . sanitize_title($site_name),
+                'facebook' => '',
+                'instagram' => '',
+                'linkedin' => '',
+                'youtube' => '',
             ],
             'legal_info' => [
-                'founded' => '2020',
-                'registration' => 'JUCESP nº 1234567890-1',
-                'legal_representative' => 'João Silva',
-                'technical_responsible' => 'Maria Santos - CRA-SP 123456',
+                'founded' => '',
+                'legal_representative' => '',
+                'technical_responsible' => '',
             ],
-            'support_hours' => 'Segunda a Sexta: 8h às 20h | Sábado: 9h às 15h',
-            'emergency_phone' => '+55 (11) 98888-7777',
         ];
-
-        // Obtém as opções salvas e mescla com as informações padrão
-        $saved_options = get_option('alvobot_company_info', []);
-        return wp_parse_args($saved_options, $default_info);
     }
 
     /**
@@ -580,54 +580,198 @@ class AlvoBotPro_EssentialPages {
             '[current_year]' => $current_year,
             '[terms_date]' => $current_date,
             '[privacy_date]' => $current_date,
-            
-            // Informações da empresa
+
+            // Informações da empresa (simplificadas)
             '[company_name]' => $company['name'],
             '[company_legal_name]' => $company['legal_name'],
-            '[company_document]' => $company['document'],
-            '[company_state_document]' => $company['state_document'],
-            '[company_address]' => $company['address'],
-            '[company_neighborhood]' => $company['neighborhood'],
-            '[company_city]' => $company['city'],
-            '[company_state]' => $company['state'],
-            '[company_zip]' => $company['zip'],
-            '[company_country]' => $company['country'],
-            '[company_full_address]' => sprintf('%s, %s - %s/%s, CEP %s, %s',
-                $company['address'],
-                $company['neighborhood'],
-                $company['city'],
-                $company['state'],
-                $company['zip'],
-                $company['country']
-            ),
-            
-            // Contatos
-            '[company_phone]' => $company['phone'],
-            '[company_whatsapp]' => $company['whatsapp'],
             '[contact_email]' => $company['email'],
-            '[support_email]' => $company['support_email'],
-            '[sales_email]' => $company['sales_email'],
-            
-            // Horários
-            '[working_hours]' => $company['working_hours'],
-            '[working_hours_extended]' => $company['working_hours_extended'],
-            '[support_hours]' => $company['support_hours'],
-            
-            // Redes sociais
-            '[facebook_url]' => $company['social_media']['facebook'],
-            '[instagram_url]' => $company['social_media']['instagram'],
-            '[linkedin_url]' => $company['social_media']['linkedin'],
-            '[youtube_url]' => $company['social_media']['youtube'],
-            
-            // Informações legais
-            '[company_founded]' => $company['legal_info']['founded'],
-            '[company_registration]' => $company['legal_info']['registration'],
-            '[legal_representative]' => $company['legal_info']['legal_representative'],
-            '[technical_responsible]' => $company['legal_info']['technical_responsible'],
-            '[emergency_phone]' => $company['emergency_phone'],
+
+            // Placeholders essenciais
+            '[site_description]' => get_bloginfo('description') ?: 'informações e serviços de qualidade',
+            '[minimum_age]' => '18',
+            '[privacy_policy_url]' => home_url('/politica-de-privacidade'),
+            '[contact_url]' => home_url('/contato'),
+            '[terms_url]' => home_url('/termos-de-uso'),
+            '[dpo_email]' => 'dpo@' . parse_url(home_url(), PHP_URL_HOST),
+
+            // Seção legal minimalista
+            '[legal_info_section]' => $this->get_legal_info_section($company),
+
+            // Mapa com cidade aleatória
+            '[random_city_map]' => $this->get_random_city_map(),
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
+
+    /**
+     * Gera seção de informações legais de forma completamente condicional
+     * Estilo minimalista como Dratune - só mostra o que for relevante
+     */
+    private function get_legal_info_section(array $company): string {
+        $has_any_legal_info = false;
+        $legal_parts = [];
+        $contact_parts = [];
+
+        // Verifica se há informações corporativas significativas
+        $document = preg_replace('/\D/', '', $company['document'] ?? '');
+        $has_company_info = !empty($document);
+        $has_address_info = !empty($company['address']) && !empty($company['city']);
+
+        // Se não tem nenhuma info corporativa, usa formato minimalista estilo Dratune
+        if (!$has_company_info && !$has_address_info) {
+            return '
+    <!-- wp:paragraph {"className":"simple-contact"} -->
+    <p class="simple-contact">
+        ' . __('Para dúvidas sobre estes Termos de Uso, entre em contato através do formulário disponível em', 'alvobot-pro') . ' <a href="[contact_url]">[contact_url]</a>.
+    </p>
+    <!-- /wp:paragraph -->';
+        }
+
+        // Seção minimalista - apenas responsável e site
+        $legal_parts[] = '<strong>' . __('Responsável:', 'alvobot-pro') . '</strong> ' . ($company['legal_name'] ?: $company['name']);
+        $legal_parts[] = '<strong>' . __('Site:', 'alvobot-pro') . '</strong> <a href="' . home_url() . '">' . home_url() . '</a>';
+        $has_any_legal_info = true;
+
+
+        $result = '
+    <!-- wp:paragraph {"className":"legal-info"} -->
+    <p class="legal-info">
+        ' . implode('<br>', $legal_parts) . '
+    </p>
+    <!-- /wp:paragraph -->';
+
+        // DPO apenas para empresas (CNPJ) com dados pessoais
+        if (strlen($document) === 14 && $has_any_legal_info) {
+            $dpo_email = 'dpo@' . parse_url(home_url(), PHP_URL_HOST);
+
+            $result .= '
+
+    <!-- wp:paragraph {"className":"dpo-info"} -->
+    <p class="dpo-info">
+        <strong>' . __('Encarregado de Proteção de Dados (DPO):', 'alvobot-pro') . '</strong> ' . $dpo_email . '
+    </p>
+    <!-- /wp:paragraph -->';
+        }
+
+        return $result;
+    }
+
+    /**
+     * Gera descrição do conteúdo baseada no tipo de site
+     */
+    private function get_content_description(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (empty($description)) {
+            return 'análises detalhadas, recomendações especializadas e conteúdo de qualidade';
+        }
+
+        return $description;
+    }
+
+    /**
+     * Gera seção de conteúdo de IA de forma condicional
+     */
+    private function get_ai_content_section(array $company): string {
+        // Verifica se o site usa IA (pode ser configurável no futuro)
+        $uses_ai = apply_filters('alvobot_site_uses_ai', false);
+
+        if (!$uses_ai) {
+            return '';
+        }
+
+        return '
+    <!-- wp:heading {"level":2} -->
+    <h2>' . __('Conteúdo Gerado por IA', 'alvobot-pro') . '</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('Para melhorar a experiência do usuário e agilizar a criação de conteúdo, utilizamos inteligência artificial para gerar algumas das imagens e elementos visuais que aparecem em nosso site. Essa tecnologia nos permite desenvolver conteúdo de forma mais dinâmica e eficiente, oferecendo uma apresentação visual inovadora e acessível.', 'alvobot-pro') . '</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('Embora a IA desempenhe um papel na geração de conteúdo, mantemos controles editoriais rigorosos para garantir que todo o material publicado atenda aos nossos padrões de qualidade, precisão e integridade. Estamos comprometidos com a transparência e acreditamos que a IA deve ser usada com responsabilidade.', 'alvobot-pro') . '</p>
+    <!-- /wp:paragraph -->';
+    }
+
+    /**
+     * Gera seções adicionais de compliance baseadas na localização
+     */
+    private function get_compliance_sections(array $company): string {
+        // Para empresas, pode incluir seções específicas por região
+        $document = preg_replace('/\D/', '', $company['document'] ?? '');
+        $is_company = strlen($document) === 14;
+
+        if (!$is_company) {
+            return '';
+        }
+
+        return '
+    <!-- wp:heading {"level":3} -->
+    <h3>' . __('Outras Regulamentações', 'alvobot-pro') . '</h3>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('Além da LGPD e GDPR, também cumprimos outras regulamentações de proteção de dados aplicáveis, incluindo leis estaduais e municipais que possam incidir sobre nossas atividades. Monitoramos continuamente as mudanças legislativas para garantir compliance contínuo.', 'alvobot-pro') . '</p>
+    <!-- /wp:paragraph -->';
+    }
+
+    /**
+     * Gera detalhes sobre transferências internacionais de dados
+     */
+    private function get_transfer_details(array $company): string {
+        return 'Utilizamos fornecedores de serviços confiáveis que podem estar localizados nos Estados Unidos, União Europeia ou outros países com adequado nível de proteção de dados. Todas as transferências são protegidas por cláusulas contratuais padrão aprovadas pela Autoridade Nacional de Proteção de Dados (ANPD).';
+    }
+
+    /**
+     * Gera seção legal específica para Política de Privacidade
+     */
+    private function get_privacy_legal_info_section(array $company): string {
+        $has_any_legal_info = false;
+        $legal_parts = [];
+
+        // Verifica se há informações corporativas significativas
+        $document = preg_replace('/\D/', '', $company['document'] ?? '');
+        $has_company_info = !empty($document);
+        $has_address_info = !empty($company['address']) && !empty($company['city']);
+
+        // Se não tem nenhuma info corporativa, usa formato minimalista
+        if (!$has_company_info && !$has_address_info) {
+            return '
+    <!-- wp:paragraph {"className":"simple-contact"} -->
+    <p class="simple-contact">
+        ' . __('Para exercer seus direitos de proteção de dados ou esclarecer dúvidas sobre esta política, entre em contato através do formulário disponível em', 'alvobot-pro') . ' <a href="[contact_url]">[contact_url]</a>.
+    </p>
+    <!-- /wp:paragraph -->';
+        }
+
+        // Seção minimalista - apenas responsável e site
+        $legal_parts[] = '<strong>' . __('Responsável pelo Tratamento:', 'alvobot-pro') . '</strong> ' . ($company['legal_name'] ?: $company['name']);
+        $legal_parts[] = '<strong>' . __('Site:', 'alvobot-pro') . '</strong> <a href="' . home_url() . '">' . home_url() . '</a>';
+        $has_any_legal_info = true;
+
+        $result = '
+    <!-- wp:paragraph {"className":"legal-info"} -->
+    <p class="legal-info">
+        ' . implode('<br>', $legal_parts) . '
+    </p>
+    <!-- /wp:paragraph -->';
+
+        // DPO sempre presente se há informações legais
+        if ($has_any_legal_info) {
+            $dpo_email = 'dpo@' . parse_url(home_url(), PHP_URL_HOST);
+
+            $result .= '
+
+    <!-- wp:paragraph {"className":"dpo-info"} -->
+    <p class="dpo-info">
+        <strong>' . __('Encarregado de Proteção de Dados (DPO):', 'alvobot-pro') . '</strong> ' . $dpo_email . '
+    </p>
+    <!-- /wp:paragraph -->';
+        }
+
+        return $result;
     }
 
     /**
@@ -892,6 +1036,918 @@ class AlvoBotPro_EssentialPages {
      */
     public function render_contact_form(): string {
         return alvobot_contact_form_shortcode();
+    }
+
+    /**
+     * About Us page placeholder methods
+     */
+    private function get_target_description(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (!empty($description)) {
+            return 'apaixonado por ' . $description;
+        }
+
+        return 'um entusiasta da área, um profissional experiente ou alguém que está começando a explorar este universo';
+    }
+
+    private function get_mission_statement(array $company): string {
+        return 'tomar decisões informadas e encontrar exatamente o que procura';
+    }
+
+    private function get_content_offerings(array $company): string {
+        return 'as melhores análises, comparações e recomendações';
+    }
+
+    private function get_business_sector(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (!empty($description)) {
+            return 'do ' . $description;
+        }
+
+        return 'em constante evolução';
+    }
+
+    private function get_team_description(array $company): string {
+        $document = preg_replace('/\D/', '', $company['document'] ?? '');
+        $is_company = strlen($document) === 14;
+
+        if ($is_company) {
+            return 'uma equipe de especialistas';
+        }
+
+        return 'um profissional especializado';
+    }
+
+    private function get_field_expertise(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (!empty($description)) {
+            return $description;
+        }
+
+        return 'as tendências e inovações do nosso setor';
+    }
+
+    private function get_content_approach(array $company): string {
+        return 'análises detalhadas';
+    }
+
+    private function get_content_type(array $company): string {
+        return 'guias práticos';
+    }
+
+    private function get_analysis_focus(array $company): string {
+        return 'as últimas tendências do mercado';
+    }
+
+    private function get_content_breakdown(array $company): string {
+        return 'explicando conceitos complexos de forma simples';
+    }
+
+    private function get_target_audience_detail(array $company): string {
+        return 'profissionais experientes';
+    }
+
+    private function get_journey_description(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (!empty($description)) {
+            return 'a explorar o mundo do ' . $description;
+        }
+
+        return 'sua jornada de aprendizado';
+    }
+
+    private function get_content_qualities(array $company): string {
+        return 'confiável, atualizado e relevante';
+    }
+
+    private function get_service_title(array $company, int $number): string {
+        $services = [
+            1 => 'Análises Detalhadas',
+            2 => 'Comparações Objetivas',
+            3 => 'Recomendações Personalizadas',
+            4 => 'Conteúdo Atualizado',
+            5 => 'Suporte Especializado'
+        ];
+
+        return $services[$number] ?? 'Serviço ' . $number;
+    }
+
+    private function get_service_description(array $company, int $number): string {
+        $descriptions = [
+            1 => 'Investigamos a fundo cada tópico para oferecer insights valiosos e bem fundamentados.',
+            2 => 'Apresentamos comparações imparciais para ajudar você a fazer a melhor escolha.',
+            3 => 'Sugestões personalizadas baseadas em suas necessidades específicas.',
+            4 => 'Mantemos nosso conteúdo sempre atual com as últimas tendências e mudanças.',
+            5 => 'Equipe especializada pronta para esclarecer dúvidas e oferecer orientação.'
+        ];
+
+        return $descriptions[$number] ?? 'Descrição do serviço ' . $number;
+    }
+
+    private function get_additional_sections(array $company): string {
+        return '';
+    }
+
+    private function get_mission_detailed(array $company): string {
+        return 'empoderar nossos leitores';
+    }
+
+    private function get_content_attributes(array $company): string {
+        return 'preciso, confiável e atualizado';
+    }
+
+    private function get_user_goal(array $company): string {
+        return 'navegar em suas escolhas';
+    }
+
+    private function get_team_section(array $company): string {
+        $document = preg_replace('/\D/', '', $company['document'] ?? '');
+        $is_company = strlen($document) === 14;
+
+        if (!$is_company) {
+            return '';
+        }
+
+        return '
+    <!-- wp:heading {"level":2} -->
+    <h2>' . __('Nossa Equipe', 'alvobot-pro') . '</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('Nossa equipe é composta por profissionais experientes e apaixonados pelo que fazem. Cada membro traz expertise única que contribui para a qualidade e diversidade do nosso conteúdo.', 'alvobot-pro') . '</p>
+    <!-- /wp:paragraph -->';
+    }
+
+    private function get_disclaimer_section(array $company): string {
+        return '
+    <!-- wp:heading {"level":2} -->
+    <h2>' . __('Aviso Legal', 'alvobot-pro') . '</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('As informações fornecidas neste site são apenas para fins informativos. Embora nos esforcemos para manter as informações atualizadas e corretas, não fazemos representações ou garantias de qualquer tipo, expressas ou implícitas, sobre a integridade, precisão, confiabilidade, adequação ou disponibilidade do site ou das informações.', 'alvobot-pro') . '</p>
+    <!-- /wp:paragraph -->';
+    }
+
+    private function get_user_journey(array $company): string {
+        $description = get_bloginfo('description');
+
+        if (!empty($description)) {
+            return 'sua jornada no ' . $description;
+        }
+
+        return 'sua experiência';
+    }
+
+    private function get_value_proposition(array $company): string {
+        return 'uma experiência';
+    }
+
+    private function get_social_links_section(array $company): string {
+        $social_links = [];
+
+        if (!empty($company['social_media']['facebook'])) {
+            $social_links[] = '<a href="' . esc_url($company['social_media']['facebook']) . '" target="_blank">Facebook</a>';
+        }
+
+        if (!empty($company['social_media']['instagram'])) {
+            $social_links[] = '<a href="' . esc_url($company['social_media']['instagram']) . '" target="_blank">Instagram</a>';
+        }
+
+        if (!empty($company['social_media']['linkedin'])) {
+            $social_links[] = '<a href="' . esc_url($company['social_media']['linkedin']) . '" target="_blank">LinkedIn</a>';
+        }
+
+        if (empty($social_links)) {
+            return '';
+        }
+
+        return '
+    <!-- wp:heading {"level":2} -->
+    <h2>' . __('Siga-nos', 'alvobot-pro') . '</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>' . __('Conecte-se conosco nas redes sociais: ', 'alvobot-pro') . implode(' | ', $social_links) . '</p>
+    <!-- /wp:paragraph -->';
+    }
+
+    private function get_about_legal_info_section(array $company): string {
+        $legal_parts = [];
+
+        // Sempre mostra pelo menos o responsável se há nome da empresa
+        if (!empty($company['name'])) {
+            $legal_parts[] = '<strong>' . __('Responsável:', 'alvobot-pro') . '</strong> ' . ($company['legal_name'] ?: $company['name']);
+        }
+
+        // Se não há nada para mostrar, retorna vazio
+        if (empty($legal_parts)) {
+            return '';
+        }
+
+        return '
+    <!-- wp:paragraph {"className":"about-legal-info"} -->
+    <p class="about-legal-info">
+        ' . implode('<br>', $legal_parts) . '
+    </p>
+    <!-- /wp:paragraph -->';
+    }
+
+    /**
+     * Gera um mapa com cidade aleatória do Brasil
+     *
+     * @return string HTML do iframe do Google Maps
+     */
+    private function get_random_city_map(): string {
+        $cities = [
+            'São Paulo' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.2!2d-46.6333!3d-23.5505!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59c8da0aa315%3A0xd59f9431f2c9776a!2sS%C3%A3o%20Paulo%2C%20SP!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Rio de Janeiro' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3675.3!2d-43.2075!3d-22.9068!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x997e58a085b7af%3A0x4d11c63a4c2e6b7e!2sRio%20de%20Janeiro%2C%20RJ!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Brasília' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3839.6!2d-47.8825!3d-15.7942!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935a3d18df9ae275%3A0x738470e469754a24!2sBras%C3%ADlia%2C%20DF!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Salvador' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3888.8!2d-38.5014!3d-12.9714!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7161b52f4200109b%3A0x1de415e4f8517d8a!2sSalvador%2C%20BA!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Belo Horizonte' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3751.9!2d-43.9378!3d-19.9167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa690cacacf2c33%3A0x1b7c6eece3a167!2sBelo%20Horizonte%2C%20MG!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Fortaleza' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3981.0!2d-38.5434!3d-3.7172!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7c748c0e415b6781%3A0xf6bdc9d6bb79ca89!2sFortaleza%2C%20CE!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Recife' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3950.5!2d-34.8813!3d-8.0476!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7ab196cdf682601%3A0x10c19eafeead67e8!2sRecife%2C%20PE!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Porto Alegre' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3454.1!2d-51.2177!3d-30.0346!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x951978567f17f28d%3A0x2c2c5272bacf4d3a!2sPorto%20Alegre%2C%20RS!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Curitiba' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3603.9!2d-49.2643!3d-25.4284!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94dce35351cdb3dd%3A0x6d2f6ba5bacbe809!2sCuritiba%2C%20PR!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr',
+            'Manaus' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3984.2!2d-60.0253!3d-3.1190!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x926c05173da87e17%3A0x459c79a96c89f72!2sManaus%2C%20AM!5e0!3m2!1spt!2sbr!4v1642692000000!5m2!1spt!2sbr'
+        ];
+
+        $city_names = array_keys($cities);
+        $random_city = $city_names[array_rand($city_names)];
+        $embed_url = $cities[$random_city];
+
+        return sprintf(
+            '<iframe src="%s" width="100%%" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de %s"></iframe>',
+            esc_url($embed_url),
+            esc_html($random_city)
+        );
+    }
+
+
+
+    /**
+     * Adiciona interface de tradução no admin
+     */
+    public function add_translation_interface() {
+        $screen = get_current_screen();
+
+        // Só adiciona na página do módulo Essential Pages
+        if (!$screen || strpos($screen->id, 'alvobot-essential-pages') === false) {
+            return;
+        }
+
+        // Verifica se Polylang está ativo
+        if (!function_exists('PLL') || !PLL()->model) {
+            return;
+        }
+
+        ?>
+        <div id="alvobot-translation-modal" style="display: none;">
+            <div class="alvobot-modal-content">
+                <div class="alvobot-modal-header">
+                    <h3><?php _e('Traduções Multi-idioma', 'alvobot-pro'); ?></h3>
+                    <button type="button" class="alvobot-modal-close">&times;</button>
+                </div>
+                <div class="alvobot-modal-body">
+                    <div class="translation-options">
+                        <h4><?php _e('O que você deseja fazer?', 'alvobot-pro'); ?></h4>
+
+                        <div class="option-card" data-option="translate-existing">
+                            <h5><?php _e('Traduzir Páginas Existentes', 'alvobot-pro'); ?></h5>
+                            <p><?php _e('Traduzir o conteúdo das páginas já criadas para outros idiomas usando IA.', 'alvobot-pro'); ?></p>
+                        </div>
+
+                        <div class="option-card" data-option="create-multilingual">
+                            <h5><?php _e('Criar Páginas Multi-idioma', 'alvobot-pro'); ?></h5>
+                            <p><?php _e('Criar páginas essenciais já traduzidas para vários idiomas de uma vez.', 'alvobot-pro'); ?></p>
+                        </div>
+                    </div>
+
+                    <div class="translation-step-2" style="display: none;">
+                        <h4><?php _e('Selecione os Idiomas', 'alvobot-pro'); ?></h4>
+                        <div class="languages-grid" id="languages-selection">
+                            <!-- Idiomas serão carregados via AJAX -->
+                        </div>
+
+                        <div class="pages-selection" style="display: none;">
+                            <h4><?php _e('Selecione as Páginas', 'alvobot-pro'); ?></h4>
+                            <div class="pages-grid">
+                                <?php foreach ($this->essential_pages as $key => $page): ?>
+                                    <label class="page-option">
+                                        <input type="checkbox" name="pages[]" value="<?php echo esc_attr($key); ?>">
+                                        <span><?php echo esc_html($page['title']); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="translation-progress" style="display: none;">
+                        <h4><?php _e('Progresso da Tradução', 'alvobot-pro'); ?></h4>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text">0% concluído</div>
+                        <div class="progress-details"></div>
+                    </div>
+
+                    <div class="translation-results" style="display: none;">
+                        <h4><?php _e('Resultados', 'alvobot-pro'); ?></h4>
+                        <div class="results-content">
+                            <!-- Resultados aparecerão aqui -->
+                        </div>
+                    </div>
+                </div>
+                <div class="alvobot-modal-footer">
+                    <button type="button" class="button cancel-btn"><?php _e('Cancelar', 'alvobot-pro'); ?></button>
+                    <button type="button" class="button button-secondary back-btn" style="display: none;"><?php _e('Voltar', 'alvobot-pro'); ?></button>
+                    <button type="button" class="button button-primary next-btn"><?php _e('Próximo', 'alvobot-pro'); ?></button>
+                    <button type="button" class="button button-primary start-translation-btn" style="display: none;"><?php _e('Iniciar Tradução', 'alvobot-pro'); ?></button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        #alvobot-translation-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .alvobot-modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .alvobot-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+        .alvobot-modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        .alvobot-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .alvobot-modal-close:hover {
+            color: #333;
+        }
+        .alvobot-modal-body {
+            padding: 30px;
+        }
+        .option-card {
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        .option-card:hover, .option-card.selected {
+            border-color: #0073aa;
+            background: #e3f2fd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,115,170,0.2);
+        }
+        .option-card h5 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        .option-card p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .languages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .language-option {
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            background: white;
+        }
+        .language-option:hover, .language-option.selected {
+            border-color: #0073aa;
+            background: #e3f2fd;
+        }
+        .language-option input {
+            margin-right: 8px;
+        }
+        .pages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .page-option {
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .page-option:hover {
+            border-color: #0073aa;
+            background: #e3f2fd;
+        }
+        .page-option input:checked + span {
+            font-weight: bold;
+            color: #0073aa;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e1e5e9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0073aa, #005177);
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            text-align: center;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .progress-details {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #0073aa;
+        }
+        .alvobot-modal-footer {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            text-align: right;
+            background: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+        .alvobot-modal-footer .button {
+            margin-left: 10px;
+        }
+        .results-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            background: #f8fff8;
+        }
+        .result-item.error {
+            border-left-color: #dc3545;
+            background: #fff8f8;
+        }
+        </style>
+        <?php
+    }
+
+    /**
+     * Enqueue assets para tradução
+     */
+    public function enqueue_translation_assets($hook) {
+        // Carrega em páginas do admin relevantes
+        if (strpos($hook, 'alvobot') === false && !in_array($hook, array('edit.php', 'post.php'))) {
+            return;
+        }
+
+        // Verifica se Polylang está ativo
+        if (!function_exists('PLL') || !PLL()->model) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'alvobot-essential-pages-translation',
+            plugin_dir_url(__FILE__) . 'assets/js/translation.js',
+            array('jquery'),
+            $this->plugin_version,
+            true
+        );
+
+        wp_localize_script('alvobot-essential-pages-translation', 'alvobotEssentialPagesTranslation', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('alvobot_essential_pages_translation'),
+            'strings' => array(
+                'translating' => __('Traduzindo...', 'alvobot-pro'),
+                'success' => __('Sucesso!', 'alvobot-pro'),
+                'error' => __('Erro:', 'alvobot-pro'),
+                'confirm_translate' => __('Tem certeza que deseja traduzir esta página?', 'alvobot-pro'),
+                'select_languages' => __('Selecione pelo menos um idioma.', 'alvobot-pro'),
+                'select_pages' => __('Selecione pelo menos uma página.', 'alvobot-pro'),
+                'creating_page' => __('Criando página', 'alvobot-pro'),
+                'translating_content' => __('Traduzindo conteúdo', 'alvobot-pro'),
+                'adding_to_menu' => __('Adicionando ao menu', 'alvobot-pro'),
+                'completed' => __('Concluído!', 'alvobot-pro'),
+                'pages_created' => __('páginas criadas com sucesso!', 'alvobot-pro')
+            )
+        ));
+    }
+
+    /**
+     * AJAX handler para traduzir páginas
+     */
+    public function ajax_translate_pages() {
+        // Verifica nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'alvobot_essential_pages_translation')) {
+            wp_send_json_error(__('Acesso negado.', 'alvobot-pro'));
+        }
+
+        // Verifica permissões
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(__('Permissões insuficientes.', 'alvobot-pro'));
+        }
+
+        $page_id = intval($_POST['page_id']);
+        $target_languages = array_map('sanitize_text_field', $_POST['target_languages']);
+
+        if (empty($page_id) || empty($target_languages)) {
+            wp_send_json_error(__('Parâmetros inválidos.', 'alvobot-pro'));
+        }
+
+        $post = get_post($page_id);
+        if (!$post) {
+            wp_send_json_error(__('Página não encontrada.', 'alvobot-pro'));
+        }
+
+        $page_type = get_post_meta($page_id, '_essential_page_type', true);
+        if (!$page_type) {
+            wp_send_json_error(__('Tipo de página não identificado.', 'alvobot-pro'));
+        }
+
+        $translated_pages = array();
+        $errors = array();
+
+        foreach ($target_languages as $lang_code) {
+            try {
+                // Traduz o conteúdo
+                $translated_content = $this->translate_page_content($post->post_content, $lang_code);
+                $translated_title = $this->translate_text($post->post_title, $lang_code);
+
+                // Cria a página traduzida
+                $translated_page = $this->create_translated_page($post, $translated_title, $translated_content, $lang_code, $page_type);
+
+                if (!is_wp_error($translated_page)) {
+                    $translated_pages[$lang_code] = $translated_page;
+                } else {
+                    $errors[$lang_code] = $translated_page->get_error_message();
+                }
+            } catch (Exception $e) {
+                $errors[$lang_code] = $e->getMessage();
+            }
+        }
+
+        wp_send_json_success(array(
+            'translated_pages' => $translated_pages,
+            'errors' => $errors,
+            'total' => count($target_languages),
+            'success_count' => count($translated_pages)
+        ));
+    }
+
+    /**
+     * AJAX handler para obter idiomas disponíveis
+     */
+    public function ajax_get_languages() {
+        // Verifica nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'alvobot_essential_pages_translation')) {
+            wp_send_json_error(__('Acesso negado.', 'alvobot-pro'));
+        }
+
+        $languages = array();
+
+        // Primeiro tenta Polylang
+        if (function_exists('PLL') && PLL()->model) {
+            $pll_languages = PLL()->model->get_languages_list();
+            foreach ($pll_languages as $lang) {
+                $languages[$lang->slug] = array(
+                    'name' => $lang->name,
+                    'native_name' => $this->get_language_native_name($lang->slug),
+                    'flag' => $this->get_language_flag($lang->slug)
+                );
+            }
+        }
+
+        // Remove o idioma atual
+        $current_lang = $this->get_current_language();
+        unset($languages[$current_lang]);
+
+        wp_send_json_success(array(
+            'languages' => $languages,
+            'current' => $current_lang
+        ));
+    }
+
+    /**
+     * AJAX handler para criar páginas traduzidas
+     */
+    public function ajax_create_translated_pages() {
+        // Verifica nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'alvobot_essential_pages_translation')) {
+            wp_send_json_error(__('Acesso negado.', 'alvobot-pro'));
+        }
+
+        // Verifica permissões
+        if (!current_user_can('edit_pages')) {
+            wp_send_json_error(__('Permissões insuficientes.', 'alvobot-pro'));
+        }
+
+        $target_languages = array_map('sanitize_text_field', $_POST['target_languages']);
+        $selected_pages = array_map('sanitize_text_field', $_POST['selected_pages']);
+
+        if (empty($target_languages) || empty($selected_pages)) {
+            wp_send_json_error(__('Parâmetros inválidos.', 'alvobot-pro'));
+        }
+
+        $results = array();
+        $total_operations = count($target_languages) * count($selected_pages);
+        $current_operation = 0;
+
+        foreach ($target_languages as $lang_code) {
+            $results[$lang_code] = array();
+
+            foreach ($selected_pages as $page_type) {
+                $current_operation++;
+
+                try {
+                    // Carrega o template da página
+                    $template_content = $this->get_template_content($page_type);
+
+                    // Traduz o conteúdo
+                    $translated_content = $this->translate_page_content($template_content, $lang_code);
+                    $translated_title = $this->translate_text($this->essential_pages[$page_type]['title'], $lang_code);
+
+                    // Cria a página
+                    $page_data = array(
+                        'post_title' => $translated_title,
+                        'post_content' => $translated_content,
+                        'post_status' => 'publish',
+                        'post_type' => 'page',
+                        'post_name' => $this->essential_pages[$page_type]['slug'] . '-' . $lang_code
+                    );
+
+                    $page_id = wp_insert_post($page_data);
+
+                    if (!is_wp_error($page_id)) {
+                        // Adiciona metadados
+                        update_post_meta($page_id, '_essential_page_type', $page_type);
+                        update_post_meta($page_id, '_essential_page_language', $lang_code);
+                        update_post_meta($page_id, '_essential_page_version', $this->plugin_version);
+
+                        // Se for Polylang, conecta as traduções
+                        if (function_exists('pll_set_post_language')) {
+                            pll_set_post_language($page_id, $lang_code);
+                        }
+
+                        $results[$lang_code][$page_type] = array(
+                            'success' => true,
+                            'page_id' => $page_id,
+                            'title' => $translated_title,
+                            'edit_link' => get_edit_post_link($page_id),
+                            'view_link' => get_permalink($page_id)
+                        );
+
+                        AlvoBotPro::debug_log('essential_pages', "Created translated page: {$page_type} in {$lang_code} (ID: {$page_id})");
+                    } else {
+                        $results[$lang_code][$page_type] = array(
+                            'success' => false,
+                            'error' => $page_id->get_error_message()
+                        );
+                    }
+                } catch (Exception $e) {
+                    $results[$lang_code][$page_type] = array(
+                        'success' => false,
+                        'error' => $e->getMessage()
+                    );
+                }
+
+                // Permite que o JavaScript atualize o progresso
+                if ($current_operation % 2 === 0) {
+                    $progress = ($current_operation / $total_operations) * 100;
+                    AlvoBotPro::debug_log('essential_pages', "Translation progress: {$progress}%");
+                }
+            }
+        }
+
+        wp_send_json_success(array(
+            'results' => $results,
+            'total_languages' => count($target_languages),
+            'total_pages' => count($selected_pages),
+            'total_created' => $this->count_successful_results($results)
+        ));
+    }
+
+    /**
+     * Traduz conteúdo da página
+     */
+    private function translate_page_content($content, $target_language) {
+        // Processa placeholders primeiro
+        $processed_content = $this->process_content($content);
+
+        // Se o módulo multi-languages está ativo, usa ele
+        if (class_exists('AlvoBotPro_MultiLanguages')) {
+            $multi_lang = AlvoBotPro_MultiLanguages::get_instance();
+
+            if (method_exists($multi_lang, 'translate_text_simple')) {
+                return $multi_lang->translate_text_simple($processed_content, $target_language);
+            }
+        }
+
+        // Fallback: traduz por partes (parágrafos)
+        return $this->translate_content_by_parts($processed_content, $target_language);
+    }
+
+    /**
+     * Traduz texto simples
+     */
+    private function translate_text($text, $target_language) {
+        if (class_exists('AlvoBotPro_MultiLanguages')) {
+            $multi_lang = AlvoBotPro_MultiLanguages::get_instance();
+
+            if (method_exists($multi_lang, 'translate_text_simple')) {
+                return $multi_lang->translate_text_simple($text, $target_language);
+            }
+        }
+
+        // Fallback: adiciona prefixo do idioma
+        return '[' . strtoupper($target_language) . '] ' . $text;
+    }
+
+    /**
+     * Traduz conteúdo por partes
+     */
+    private function translate_content_by_parts($content, $target_language) {
+        // Para fallback, simplesmente adiciona indicação do idioma
+        $lang_comment = "<!-- Traduzido para: " . strtoupper($target_language) . " -->\n";
+        return $lang_comment . $content;
+    }
+
+    /**
+     * Cria página traduzida
+     */
+    private function create_translated_page($original_post, $translated_title, $translated_content, $lang_code, $page_type) {
+        $page_data = array(
+            'post_title' => $translated_title,
+            'post_content' => $translated_content,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_name' => $original_post->post_name . '-' . $lang_code,
+            'post_author' => get_current_user_id()
+        );
+
+        $page_id = wp_insert_post($page_data);
+
+        if (!is_wp_error($page_id)) {
+            // Adiciona metadados
+            update_post_meta($page_id, '_essential_page_type', $page_type);
+            update_post_meta($page_id, '_essential_page_language', $lang_code);
+            update_post_meta($page_id, '_essential_page_version', $this->plugin_version);
+            update_post_meta($page_id, '_essential_page_original', $original_post->ID);
+
+            // Se for Polylang, conecta as traduções
+            if (function_exists('pll_set_post_language')) {
+                pll_set_post_language($page_id, $lang_code);
+
+                // Conecta com a página original se Polylang suportar
+                if (function_exists('pll_save_post_translations')) {
+                    $translations = pll_get_post_translations($original_post->ID);
+                    $translations[$lang_code] = $page_id;
+                    pll_save_post_translations($translations);
+                }
+            }
+
+            return array(
+                'page_id' => $page_id,
+                'title' => $translated_title,
+                'edit_link' => get_edit_post_link($page_id),
+                'view_link' => get_permalink($page_id)
+            );
+        }
+
+        return $page_id; // WP_Error
+    }
+
+    /**
+     * Obtém o idioma atual
+     */
+    private function get_current_language() {
+        if (function_exists('pll_current_language')) {
+            $lang = pll_current_language();
+            if ($lang) return $lang;
+        }
+
+        if (defined('ICL_LANGUAGE_CODE')) {
+            return ICL_LANGUAGE_CODE;
+        }
+
+        $locale = get_locale();
+        return substr($locale, 0, 2);
+    }
+
+    /**
+     * Obtém nome nativo do idioma
+     */
+    private function get_language_native_name($lang_code) {
+        $native_names = array(
+            'pt' => 'Português',
+            'en' => 'English',
+            'es' => 'Español',
+            'fr' => 'Français',
+            'de' => 'Deutsch',
+            'it' => 'Italiano',
+            'ru' => 'Русский',
+            'zh' => '中文',
+            'ja' => '日本語',
+            'ko' => '한국어',
+            'ar' => 'العربية',
+            'hi' => 'हिन्दी',
+            'nl' => 'Nederlands',
+            'tr' => 'Türkçe'
+        );
+
+        return isset($native_names[$lang_code]) ? $native_names[$lang_code] : $lang_code;
+    }
+
+    /**
+     * Obtém emoji da bandeira do país
+     */
+    private function get_language_flag($lang_code) {
+        $flags = array(
+            'pt' => '🇧🇷',
+            'en' => '🇺🇸',
+            'es' => '🇪🇸',
+            'fr' => '🇫🇷',
+            'de' => '🇩🇪',
+            'it' => '🇮🇹',
+            'ru' => '🇷🇺',
+            'zh' => '🇨🇳',
+            'ja' => '🇯🇵',
+            'ko' => '🇰🇷',
+            'ar' => '🇸🇦',
+            'hi' => '🇮🇳',
+            'nl' => '🇳🇱',
+            'tr' => '🇹🇷'
+        );
+
+        return isset($flags[$lang_code]) ? $flags[$lang_code] : '🌐';
+    }
+
+    /**
+     * Conta resultados bem-sucedidos
+     */
+    private function count_successful_results($results) {
+        $count = 0;
+        foreach ($results as $lang_results) {
+            foreach ($lang_results as $page_result) {
+                if ($page_result['success']) {
+                    $count++;
+                }
+            }
+        }
+        return $count;
     }
 }
 

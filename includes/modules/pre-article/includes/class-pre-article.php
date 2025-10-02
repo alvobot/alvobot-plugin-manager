@@ -83,7 +83,7 @@ if (!class_exists('Alvobot_Pre_Article')) {
             add_action('init', [$this, 'register_rewrite_rules']);
             add_action('init', [$this, 'load_plugin_textdomain']);
             add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
-            
+
             // Hooks de Template e Query
             add_filter('query_vars', [$this, 'add_query_vars']);
             add_action('pre_get_posts', [$this, 'modify_main_query']);
@@ -94,9 +94,12 @@ if (!class_exists('Alvobot_Pre_Article')) {
             if (defined('ALVOBOT_PRO_VERSION')) {
                 add_filter('alvobot_pro_modules', [$this, 'register_module']);
             }
-            
+
             // Força flush das regras de rewrite se necessário
             add_action('init', [$this, 'maybe_flush_rewrite_rules'], 20);
+
+            // Multi-language integration
+            $this->init_multilanguage_support();
         }
 
         /**
@@ -148,10 +151,25 @@ if (!class_exists('Alvobot_Pre_Article')) {
 
             // Obtém os dados salvos
             $use_custom = get_post_meta($post->ID, '_alvobot_use_custom', true);
+
+            // Se não há valor salvo (post novo ou nunca configurado), habilita por padrão
+            if ($use_custom === '' && !get_post_meta($post->ID, '_alvobot_use_custom_set', true)) {
+                $use_custom = '1';
+                // Log para debug
+                if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                    AlvoBotPro::debug_log('pre-article', "Página de pré-artigo habilitada por padrão para post ID: {$post->ID}");
+                }
+            }
+
             $num_ctas = get_post_meta($post->ID, '_alvobot_num_ctas', true);
             $ctas = get_post_meta($post->ID, '_alvobot_ctas', true);
             $use_shortcode = get_post_meta($post->ID, '_alvobot_use_shortcode', true);
             $shortcode = get_post_meta($post->ID, '_alvobot_shortcode', true);
+
+            // Define valores padrão se não estão definidos
+            if (empty($num_ctas)) {
+                $num_ctas = 3; // 3 CTAs por padrão
+            }
             $pre_article_url = home_url('/pre/' . $post->post_name);
             ?>
             <div class="alvobot-meta-box">
@@ -185,8 +203,8 @@ if (!class_exists('Alvobot_Pre_Article')) {
                         <div id="alvobot_default_cta_options" <?php echo ($use_shortcode !== '1') ? '' : 'style="display:none;"'; ?>>
                             <div class="form-field">
                                 <label for="alvobot_num_ctas"><?php _e('Número de CTAs:', 'alvobot-pre-artigo'); ?></label>
-                                <input type="number" name="alvobot_num_ctas" id="alvobot_num_ctas" 
-                                       value="<?php echo esc_attr($num_ctas ? $num_ctas : 1); ?>" 
+                                <input type="number" name="alvobot_num_ctas" id="alvobot_num_ctas"
+                                       value="<?php echo esc_attr($num_ctas); ?>"
                                        min="1" max="10" class="small-text" />
                             </div>
 
@@ -313,6 +331,9 @@ if (!class_exists('Alvobot_Pre_Article')) {
             // Salva o estado do checkbox
             $use_custom = isset($_POST['alvobot_use_custom']) ? '1' : '';
             update_post_meta($post_id, '_alvobot_use_custom', $use_custom);
+
+            // Marca que o valor foi definido explicitamente pelo usuário
+            update_post_meta($post_id, '_alvobot_use_custom_set', '1');
 
             // Se habilitado, salva as configurações das CTAs
             if ($use_custom === '1') {
@@ -1159,6 +1180,411 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 false,
                 dirname(plugin_basename(__FILE__)) . '/languages'
             );
+        }
+
+        /**
+         * Initialize multi-language support
+         */
+        private function init_multilanguage_support() {
+            // Hook para adicionar interface de tradução no metabox
+            add_action('admin_footer-post.php', [$this, 'add_translation_interface']);
+            add_action('admin_footer-post-new.php', [$this, 'add_translation_interface']);
+
+            // AJAX handlers para tradução dinâmica
+            add_action('wp_ajax_alvobot_translate_pre_article_ctas', [$this, 'ajax_translate_ctas']);
+            add_action('wp_ajax_alvobot_get_available_languages', [$this, 'ajax_get_available_languages']);
+
+            AlvoBotPro::debug_log('pre-article', 'Multi-language support initialized');
+        }
+
+        /**
+         * Add translation interface to the metabox
+         */
+        public function add_translation_interface() {
+            global $post;
+
+            // Só adiciona se o post tem pre-article ativo
+            $is_enabled = get_post_meta($post->ID, '_alvobot_pre_article_enabled', true);
+            if (!$is_enabled) {
+                return;
+            }
+
+            // Verifica se Polylang está ativo
+            if (!function_exists('PLL') || !PLL()->model) {
+                return;
+            }
+            ?>
+            <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Adiciona botão de tradução ao metabox
+                const metabox = $('#alvobot_pre_article_meta_box .inside');
+                if (metabox.length) {
+                    // Adiciona seção de tradução após as CTAs
+                    const translationSection = `
+                        <div class="alvobot-translation-section" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+                            <h4 style="margin-top: 0;">
+                                <span class="dashicons dashicons-translation"></span>
+                                <?php _e('Tradução Multi-idioma', 'alvobot-pre-artigo'); ?>
+                            </h4>
+                            <p><?php _e('Use esta funcionalidade para traduzir automaticamente os textos das CTAs para outros idiomas.', 'alvobot-pre-artigo'); ?></p>
+                            <div class="translation-controls">
+                                <button type="button" class="button button-secondary alvobot-translate-ctas">
+                                    <span class="dashicons dashicons-translation" style="margin-right: 5px;"></span>
+                                    <?php _e('Traduzir CTAs', 'alvobot-pre-artigo'); ?>
+                                </button>
+                                <button type="button" class="button alvobot-sync-translations" style="margin-left: 10px;">
+                                    <span class="dashicons dashicons-update" style="margin-right: 5px;"></span>
+                                    <?php _e('Sincronizar com Traduções', 'alvobot-pre-artigo'); ?>
+                                </button>
+                            </div>
+                            <div class="translation-status" style="margin-top: 10px; display: none;">
+                                <span class="spinner is-active" style="float: none;"></span>
+                                <span class="status-text"><?php _e('Traduzindo...', 'alvobot-pre-artigo'); ?></span>
+                            </div>
+                            <div class="translation-results" style="margin-top: 15px; display: none;">
+                                <!-- Resultados das traduções aparecerão aqui -->
+                            </div>
+                        </div>
+                    `;
+
+                    // Insere após as configurações das CTAs
+                    metabox.find('fieldset').last().after(translationSection);
+
+                    // Handler para tradução das CTAs
+                    $('.alvobot-translate-ctas').on('click', function() {
+                        const button = $(this);
+                        const statusDiv = $('.translation-status');
+                        const resultsDiv = $('.translation-results');
+
+                        // Coleta os textos atuais das CTAs
+                        const ctas = [];
+                        $('input[name^="alvobot_pre_article_ctas["][name$="[text]"]').each(function() {
+                            const value = $(this).val();
+                            if (value) {
+                                ctas.push({
+                                    index: $(this).attr('name').match(/\[(\d+)\]/)[1],
+                                    text: value
+                                });
+                            }
+                        });
+
+                        if (ctas.length === 0) {
+                            alert('<?php _e('Nenhuma CTA para traduzir. Configure pelo menos uma CTA primeiro.', 'alvobot-pre-artigo'); ?>');
+                            return;
+                        }
+
+                        // Mostra modal de seleção de idiomas
+                        showLanguageSelectionModal(ctas);
+                    });
+
+                    // Handler para sincronização com traduções existentes
+                    $('.alvobot-sync-translations').on('click', function() {
+                        syncWithExistingTranslations();
+                    });
+                }
+
+                // Função para mostrar modal de seleção de idiomas
+                function showLanguageSelectionModal(ctas) {
+                    // Busca idiomas disponíveis
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'alvobot_get_available_languages',
+                            nonce: '<?php echo wp_create_nonce('alvobot_pre_article_nonce'); ?>'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                createLanguageModal(response.data.languages, ctas);
+                            }
+                        }
+                    });
+                }
+
+                // Função para criar modal de idiomas
+                function createLanguageModal(languages, ctas) {
+                    const modalHtml = `
+                        <div id="alvobot-language-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; display: flex; align-items: center; justify-content: center;">
+                            <div style="background: white; border-radius: 8px; padding: 30px; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                                <h3><?php _e('Selecione os Idiomas de Destino', 'alvobot-pre-artigo'); ?></h3>
+                                <p><?php _e('As CTAs serão traduzidas para os idiomas selecionados:', 'alvobot-pre-artigo'); ?></p>
+                                <div class="language-checkboxes" style="margin: 20px 0;">
+                                    ${Object.entries(languages).map(([code, name]) => `
+                                        <label style="display: block; margin: 10px 0;">
+                                            <input type="checkbox" value="${code}" name="target_lang[]">
+                                            ${name}
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                <div class="modal-actions" style="text-align: right; margin-top: 20px;">
+                                    <button type="button" class="button cancel-modal"><?php _e('Cancelar', 'alvobot-pre-artigo'); ?></button>
+                                    <button type="button" class="button button-primary translate-now" style="margin-left: 10px;"><?php _e('Traduzir', 'alvobot-pre-artigo'); ?></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    $('body').append(modalHtml);
+
+                    // Handlers do modal
+                    $('#alvobot-language-modal .cancel-modal').on('click', function() {
+                        $('#alvobot-language-modal').remove();
+                    });
+
+                    $('#alvobot-language-modal .translate-now').on('click', function() {
+                        const selectedLangs = [];
+                        $('#alvobot-language-modal input:checked').each(function() {
+                            selectedLangs.push($(this).val());
+                        });
+
+                        if (selectedLangs.length === 0) {
+                            alert('<?php _e('Selecione pelo menos um idioma.', 'alvobot-pre-artigo'); ?>');
+                            return;
+                        }
+
+                        $('#alvobot-language-modal').remove();
+                        translateCTAs(ctas, selectedLangs);
+                    });
+                }
+
+                // Função para traduzir CTAs
+                function translateCTAs(ctas, languages) {
+                    const statusDiv = $('.translation-status');
+                    const resultsDiv = $('.translation-results');
+
+                    statusDiv.show();
+                    resultsDiv.hide();
+
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'alvobot_translate_pre_article_ctas',
+                            ctas: ctas,
+                            languages: languages,
+                            post_id: <?php echo isset($post->ID) ? $post->ID : '0'; ?>,
+                            nonce: '<?php echo wp_create_nonce('alvobot_pre_article_nonce'); ?>'
+                        },
+                        success: function(response) {
+                            statusDiv.hide();
+
+                            if (response.success) {
+                                displayTranslationResults(response.data);
+                            } else {
+                                alert('<?php _e('Erro ao traduzir:', 'alvobot-pre-artigo'); ?> ' + response.data);
+                            }
+                        },
+                        error: function() {
+                            statusDiv.hide();
+                            alert('<?php _e('Erro ao conectar com o servidor.', 'alvobot-pre-artigo'); ?>');
+                        }
+                    });
+                }
+
+                // Função para exibir resultados das traduções
+                function displayTranslationResults(data) {
+                    const resultsDiv = $('.translation-results');
+                    let html = '<h4><?php _e('Traduções Geradas:', 'alvobot-pre-artigo'); ?></h4>';
+
+                    Object.entries(data.translations).forEach(([lang, translations]) => {
+                        html += `<div style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">`;
+                        html += `<h5>${data.language_names[lang] || lang}</h5>`;
+                        html += '<ul>';
+                        translations.forEach(translation => {
+                            html += `<li>"${translation.original}" → "${translation.translated}"</li>`;
+                        });
+                        html += '</ul>';
+                        html += `<button type="button" class="button apply-translation" data-lang="${lang}" data-translations='${JSON.stringify(translations)}'>
+                                    <?php _e('Aplicar estas traduções', 'alvobot-pre-artigo'); ?>
+                                </button>`;
+                        html += '</div>';
+                    });
+
+                    resultsDiv.html(html).show();
+
+                    // Handler para aplicar traduções
+                    $('.apply-translation').on('click', function() {
+                        const lang = $(this).data('lang');
+                        const translations = $(this).data('translations');
+
+                        translations.forEach(translation => {
+                            const input = $(`input[name="alvobot_pre_article_ctas[${translation.index}][text]"]`);
+                            if (input.length) {
+                                input.val(translation.translated);
+                            }
+                        });
+
+                        alert(`<?php _e('Traduções aplicadas para', 'alvobot-pre-artigo'); ?> ${lang}`);
+                    });
+                }
+
+                // Função para sincronizar com traduções existentes
+                function syncWithExistingTranslations() {
+                    if (typeof Alvobot_PreArticle_CTA_Translations !== 'undefined') {
+                        alert('<?php _e('Sincronização com traduções pré-definidas disponível.', 'alvobot-pre-artigo'); ?>');
+                    } else {
+                        alert('<?php _e('Classe de traduções não encontrada.', 'alvobot-pre-artigo'); ?>');
+                    }
+                }
+            });
+            </script>
+            <?php
+        }
+
+        /**
+         * AJAX handler para traduzir CTAs
+         */
+        public function ajax_translate_ctas() {
+            // Verifica nonce
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'alvobot_pre_article_nonce')) {
+                wp_send_json_error('Nonce inválido');
+            }
+
+            // Verifica permissões
+            if (!current_user_can('edit_posts')) {
+                wp_send_json_error('Permissões insuficientes');
+            }
+
+            $ctas = isset($_POST['ctas']) ? $_POST['ctas'] : array();
+            $languages = isset($_POST['languages']) ? $_POST['languages'] : array();
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+
+            if (empty($ctas) || empty($languages)) {
+                wp_send_json_error('Parâmetros inválidos');
+            }
+
+            $translations = array();
+            $language_names = array();
+
+            // Se o módulo multi-languages está ativo, usa ele
+            if (class_exists('AlvoBotPro_MultiLanguages')) {
+                foreach ($languages as $lang) {
+                    $translations[$lang] = array();
+
+                    foreach ($ctas as $cta) {
+                        $translated_text = $this->translate_text_with_service($cta['text'], $lang);
+
+                        $translations[$lang][] = array(
+                            'index' => $cta['index'],
+                            'original' => $cta['text'],
+                            'translated' => $translated_text
+                        );
+                    }
+
+                    // Nome do idioma
+                    if (function_exists('PLL') && PLL()->model) {
+                        $pll_languages = PLL()->model->get_languages_list();
+                        foreach ($pll_languages as $pll_lang) {
+                            if ($pll_lang->slug === $lang) {
+                                $language_names[$lang] = $pll_lang->name;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback: usa traduções estáticas da classe CTA_Translations
+                if (class_exists('Alvobot_PreArticle_CTA_Translations')) {
+                    foreach ($languages as $lang) {
+                        $translations[$lang] = array();
+
+                        foreach ($ctas as $cta) {
+                            $translated_text = Alvobot_PreArticle_CTA_Translations::translate_default_cta($cta['text'], $lang);
+
+                            $translations[$lang][] = array(
+                                'index' => $cta['index'],
+                                'original' => $cta['text'],
+                                'translated' => $translated_text
+                            );
+                        }
+
+                        $language_names[$lang] = Alvobot_PreArticle_CTA_Translations::get_language_native_name($lang);
+                    }
+                }
+            }
+
+            wp_send_json_success(array(
+                'translations' => $translations,
+                'language_names' => $language_names
+            ));
+        }
+
+        /**
+         * AJAX handler para obter idiomas disponíveis
+         */
+        public function ajax_get_available_languages() {
+            // Verifica nonce
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'alvobot_pre_article_nonce')) {
+                wp_send_json_error('Nonce inválido');
+            }
+
+            $languages = array();
+
+            // Primeiro tenta Polylang
+            if (function_exists('PLL') && PLL()->model) {
+                $pll_languages = PLL()->model->get_languages_list();
+                foreach ($pll_languages as $lang) {
+                    $languages[$lang->slug] = $lang->name;
+                }
+            }
+            // Se não tem Polylang, usa as traduções estáticas disponíveis
+            elseif (class_exists('Alvobot_PreArticle_CTA_Translations')) {
+                $supported = Alvobot_PreArticle_CTA_Translations::get_supported_languages();
+                foreach ($supported as $code) {
+                    $languages[$code] = Alvobot_PreArticle_CTA_Translations::get_language_native_name($code);
+                }
+            }
+
+            // Remove o idioma atual da lista (não faz sentido traduzir para o mesmo idioma)
+            $current_lang = $this->get_current_language();
+            unset($languages[$current_lang]);
+
+            wp_send_json_success(array(
+                'languages' => $languages,
+                'current' => $current_lang
+            ));
+        }
+
+        /**
+         * Traduz texto usando o serviço de tradução
+         */
+        private function translate_text_with_service($text, $target_language) {
+            // Tenta usar o serviço do módulo multi-languages
+            if (class_exists('AlvoBotPro_MultiLanguages')) {
+                $multi_lang = AlvoBotPro_MultiLanguages::get_instance();
+
+                if (method_exists($multi_lang, 'translate_text_simple')) {
+                    return $multi_lang->translate_text_simple($text, $target_language);
+                }
+            }
+
+            // Fallback: usa traduções estáticas
+            if (class_exists('Alvobot_PreArticle_CTA_Translations')) {
+                return Alvobot_PreArticle_CTA_Translations::translate_default_cta($text, $target_language);
+            }
+
+            // Último fallback: retorna com prefixo do idioma
+            return '[' . strtoupper($target_language) . '] ' . $text;
+        }
+
+        /**
+         * Obtém o idioma atual
+         */
+        private function get_current_language() {
+            // Verifica Polylang
+            if (function_exists('pll_current_language')) {
+                $lang = pll_current_language();
+                if ($lang) return $lang;
+            }
+
+            // Verifica WPML
+            if (defined('ICL_LANGUAGE_CODE')) {
+                return ICL_LANGUAGE_CODE;
+            }
+
+            // Fallback: idioma do WordPress
+            $locale = get_locale();
+            return substr($locale, 0, 2);
         }
     }
 }

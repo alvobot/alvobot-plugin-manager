@@ -252,29 +252,91 @@ if (!class_exists('Alvobot_PreArticle_CTA_Translations')) {
          * Detecta o idioma atual do site
          */
         public static function get_current_language() {
-            // Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
+            // Prioridade 1: Verifica idioma forçado por sessão
+            if (session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+            $forced_lang = self::get_forced_language();
+            if ($forced_lang && isset(self::$cta_translations[$forced_lang])) {
+                return $forced_lang;
+            }
+
+            // Prioridade 2: Verifica parâmetro forçado (para debug)
+            if (isset($_GET['force_lang']) && isset(self::$cta_translations[$_GET['force_lang']])) {
+                return $_GET['force_lang'];
+            }
+
+            // Prioridade 3: Verifica URL para detectar idioma (padrão dominio.com/es/)
+            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (preg_match('/^\/([a-z]{2})(\/|$)/', $request_uri, $matches)) {
+                $url_lang = $matches[1];
+                if (isset(self::$cta_translations[$url_lang])) {
+                    // Log da detecção por URL
+                    if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                        AlvoBotPro::debug_log('pre-article', "Idioma detectado por URL: {$url_lang} (URI: {$request_uri})");
+                    }
+                    return $url_lang;
+                }
+            }
+
+            // Prioridade 4: Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
             if (function_exists('pll_current_language') && !class_exists('Automatic_Polylang')) {
                 $lang = pll_current_language();
-                if ($lang) {
+                if ($lang && isset(self::$cta_translations[$lang])) {
                     return $lang;
                 }
             }
 
-            // Fallback: verifica WPML
-            if (defined('ICL_LANGUAGE_CODE')) {
+            // Prioridade 5: Verifica WPML
+            if (defined('ICL_LANGUAGE_CODE') && isset(self::$cta_translations[ICL_LANGUAGE_CODE])) {
                 return ICL_LANGUAGE_CODE;
             }
 
-            // Fallback: idioma do WordPress
+            // Prioridade 6: Idioma do WordPress baseado em locale
             $locale = get_locale();
             $lang_code = substr($locale, 0, 2);
-            
+
             // Verifica se temos traduções para este idioma
             if (isset(self::$cta_translations[$lang_code])) {
+                // Log da detecção por locale
+                if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                    AlvoBotPro::debug_log('pre-article', "Idioma detectado por locale do WordPress: {$lang_code} (locale: {$locale})");
+                }
                 return $lang_code;
             }
 
+            // Prioridade 7: Detecta pelo domínio (ex: sitio.es, site.fr)
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            if (preg_match('/\.([a-z]{2})$/', $host, $matches)) {
+                $domain_lang = $matches[1];
+                if (isset(self::$cta_translations[$domain_lang])) {
+                    // Log da detecção por domínio
+                    if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                        AlvoBotPro::debug_log('pre-article', "Idioma detectado por domínio: {$domain_lang} (host: {$host})");
+                    }
+                    return $domain_lang;
+                }
+            }
+
+            // Prioridade 8: Detecta pelo Accept-Language do navegador
+            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+                $accept_languages = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+                foreach ($accept_languages as $lang_str) {
+                    $lang_code = substr(trim($lang_str), 0, 2);
+                    if (isset(self::$cta_translations[$lang_code])) {
+                        // Log da detecção por navegador
+                        if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                            AlvoBotPro::debug_log('pre-article', "Idioma detectado por navegador: {$lang_code} (Accept-Language: {$_SERVER['HTTP_ACCEPT_LANGUAGE']})");
+                        }
+                        return $lang_code;
+                    }
+                }
+            }
+
             // Fallback final: português
+            if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
+                AlvoBotPro::debug_log('pre-article', "Nenhum idioma detectado, usando fallback: pt");
+            }
             return 'pt';
         }
 
@@ -366,21 +428,108 @@ if (!class_exists('Alvobot_PreArticle_CTA_Translations')) {
         }
 
         /**
+         * Força um idioma específico (útil para debug e testes)
+         */
+        public static function force_language($lang_code) {
+            if (self::is_language_supported($lang_code)) {
+                $_SESSION['alvobot_forced_language'] = $lang_code;
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * Remove o idioma forçado
+         */
+        public static function clear_forced_language() {
+            unset($_SESSION['alvobot_forced_language']);
+        }
+
+        /**
+         * Obtém o idioma forçado se existir
+         */
+        public static function get_forced_language() {
+            return $_SESSION['alvobot_forced_language'] ?? null;
+        }
+
+        /**
          * Debug: retorna informações sobre o idioma detectado
          */
         public static function get_language_debug_info() {
             $current_lang = self::get_current_language();
             $supported_langs = self::get_supported_languages();
-            
+
+            // Testa cada método de detecção individualmente
+            $detection_methods = [];
+
+            // Força parâmetro
+            $force_lang = isset($_GET['force_lang']) && isset(self::$cta_translations[$_GET['force_lang']]) ? $_GET['force_lang'] : null;
+            $detection_methods['force_param'] = $force_lang;
+
+            // URL
+            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+            $url_lang = null;
+            if (preg_match('/^\/([a-z]{2})(\/|$)/', $request_uri, $matches)) {
+                $url_lang = isset(self::$cta_translations[$matches[1]]) ? $matches[1] : null;
+            }
+            $detection_methods['url_detection'] = $url_lang;
+
+            // Polylang
+            $pll_lang = null;
+            if (function_exists('pll_current_language') && !class_exists('Automatic_Polylang')) {
+                $lang = pll_current_language();
+                $pll_lang = ($lang && isset(self::$cta_translations[$lang])) ? $lang : null;
+            }
+            $detection_methods['polylang'] = $pll_lang;
+
+            // WPML
+            $wpml_lang = null;
+            if (defined('ICL_LANGUAGE_CODE') && isset(self::$cta_translations[ICL_LANGUAGE_CODE])) {
+                $wpml_lang = ICL_LANGUAGE_CODE;
+            }
+            $detection_methods['wpml'] = $wpml_lang;
+
+            // WordPress locale
+            $locale = get_locale();
+            $wp_lang = substr($locale, 0, 2);
+            $wp_lang = isset(self::$cta_translations[$wp_lang]) ? $wp_lang : null;
+            $detection_methods['wordpress_locale'] = $wp_lang;
+
+            // Domínio
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $domain_lang = null;
+            if (preg_match('/\.([a-z]{2})$/', $host, $matches)) {
+                $domain_lang = isset(self::$cta_translations[$matches[1]]) ? $matches[1] : null;
+            }
+            $detection_methods['domain'] = $domain_lang;
+
+            // Accept-Language
+            $browser_lang = null;
+            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+                $accept_languages = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+                foreach ($accept_languages as $lang_str) {
+                    $lang_code = substr(trim($lang_str), 0, 2);
+                    if (isset(self::$cta_translations[$lang_code])) {
+                        $browser_lang = $lang_code;
+                        break;
+                    }
+                }
+            }
+            $detection_methods['browser'] = $browser_lang;
+
             return [
                 'detected_language' => $current_lang,
                 'language_name' => self::get_language_native_name($current_lang),
                 'is_supported' => self::is_language_supported($current_lang),
                 'supported_languages' => $supported_langs,
+                'detection_methods' => $detection_methods,
+                'request_uri' => $request_uri,
+                'http_host' => $_SERVER['HTTP_HOST'] ?? '',
+                'accept_language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '',
+                'site_locale' => get_locale(),
                 'polylang_active' => function_exists('pll_current_language') && !class_exists('Automatic_Polylang'),
                 'autopoly_detected' => class_exists('Automatic_Polylang'),
                 'wpml_active' => defined('ICL_LANGUAGE_CODE'),
-                'site_locale' => get_locale(),
                 'pll_function_exists' => function_exists('pll_current_language'),
                 'PLL_function_exists' => function_exists('PLL')
             ];
