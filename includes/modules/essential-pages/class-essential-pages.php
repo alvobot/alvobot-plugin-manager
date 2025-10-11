@@ -972,6 +972,114 @@ class AlvoBotPro_EssentialPages {
     /**
      * Cria uma única página essencial
      *
+     * @param string $page_key Chave da página a ser criada (terms, privacy, contact, about)
+     * @param bool $force_recreate Se true, exclui a página existente antes de recriar
+     * @return bool Retorna true se a página foi criada com sucesso
+     */
+    public function create_essential_page( string $page_key, bool $force_recreate = false ): bool {
+        if ( ! isset( $this->essential_pages[$page_key] ) ) {
+            AlvoBotPro::debug_log('essential_pages', 'Invalid page key: ' . $page_key);
+            return false;
+        }
+
+        AlvoBotPro::debug_log('essential_pages', 'Creating page: ' . $page_key . ' (force_recreate: ' . ($force_recreate ? 'yes' : 'no') . ')');
+
+        $page_data = $this->essential_pages[$page_key];
+
+        // Se force_recreate, exclui a página existente
+        if ( $force_recreate ) {
+            $existing = get_page_by_path( $page_data['slug'] );
+            if ( $existing ) {
+                AlvoBotPro::debug_log('essential_pages', 'Deleting existing page ID: ' . $existing->ID);
+                wp_delete_post( $existing->ID, true );
+            }
+        }
+
+        // Verifica se a página já existe
+        $existing = get_page_by_path( $page_data['slug'] );
+        if ( $existing ) {
+            AlvoBotPro::debug_log('essential_pages', 'Page already exists ID: ' . $existing->ID);
+            return false;
+        }
+
+        // Carrega e processa o template
+        $content = $this->get_template_content( $page_key );
+
+        if ( empty( $content ) ) {
+            AlvoBotPro::debug_log('essential_pages', 'Empty content for page: ' . $page_key);
+            return false;
+        }
+
+        $content = $this->process_content( $content );
+
+        // Cria a página
+        $page_id = wp_insert_post( [
+            'post_title'    => $this->get_page_title( $page_key ),
+            'post_name'     => $page_data['slug'],
+            'post_content'  => $content,
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_author'   => get_current_user_id(),
+        ] );
+
+        if ( is_wp_error( $page_id ) ) {
+            AlvoBotPro::debug_log('essential_pages', 'Error creating page: ' . $page_id->get_error_message());
+            return false;
+        }
+
+        // Adiciona metadados
+        update_post_meta( $page_id, '_essential_page_type', $page_key );
+        update_post_meta( $page_id, '_essential_page_version', $this->plugin_version );
+
+        // Configura páginas especiais do WordPress
+        if ( 'privacy' === $page_key ) {
+            update_option( 'wp_page_for_privacy_policy', $page_id );
+        }
+        if ( 'terms' === $page_key ) {
+            update_option( 'wp_page_for_terms', $page_id );
+        }
+
+        // Adiciona ao menu do rodapé
+        $this->add_pages_to_footer_menu( [ $page_id ] );
+
+        AlvoBotPro::debug_log('essential_pages', 'Page created successfully ID: ' . $page_id);
+        return true;
+    }
+
+    /**
+     * Exclui uma única página essencial
+     *
+     * @param string $page_key Chave da página a ser excluída (terms, privacy, contact, about)
+     * @return bool Retorna true se a página foi excluída com sucesso
+     */
+    public function delete_essential_page( string $page_key ): bool {
+        if ( ! isset( $this->essential_pages[$page_key] ) ) {
+            AlvoBotPro::debug_log('essential_pages', 'Invalid page key for deletion: ' . $page_key);
+            return false;
+        }
+
+        $page_data = $this->essential_pages[$page_key];
+        $existing = get_page_by_path( $page_data['slug'] );
+
+        if ( ! $existing ) {
+            AlvoBotPro::debug_log('essential_pages', 'Page not found for deletion: ' . $page_key);
+            return false;
+        }
+
+        $result = wp_delete_post( $existing->ID, true );
+
+        if ( $result ) {
+            AlvoBotPro::debug_log('essential_pages', 'Page deleted successfully: ' . $page_key . ' (ID: ' . $existing->ID . ')');
+            return true;
+        }
+
+        AlvoBotPro::debug_log('essential_pages', 'Failed to delete page: ' . $page_key);
+        return false;
+    }
+
+    /**
+     * Cria uma única página essencial
+     *
      * @param string $key Chave da página a ser criada
      * @return void
      */

@@ -8,6 +8,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.9] - 2025-10-11
+
+### 🐛 Corrigido
+- **Essential Pages**: Corrigido erro fatal ao criar páginas individuais
+  - Adicionado método público `create_essential_page()` faltante
+  - Adicionado método público `delete_essential_page()` faltante
+  - Corrigida chamada a métodos inexistentes na linha 316 e 327
+  - Implementado retorno booleano adequado para controle de fluxo
+  - Adicionados logs de debug para rastreamento de criação/exclusão
+  - Páginas criadas individualmente agora são adicionadas automaticamente ao menu do rodapé
+  - Configuração automática de páginas especiais do WordPress (Privacy Policy, Terms)
+
+---
+
 ## [2.5.8] - 2025-10-02
 
 ### 🐛 Corrigido
