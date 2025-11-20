@@ -45,6 +45,52 @@ wp db query "DELETE FROM wp_options WHERE option_name LIKE '_transient_alvobot_t
 
 ### Problemas Conhecidos e Soluções
 
+#### ✅ Sistema de Avisos de Conexão - IMPLEMENTADO (2025-01-20)
+- **Funcionalidade**: Sistema completo de detecção e notificação de falhas na conexão
+- **Detecção Automática**:
+  - Falha na criação de Application Password (plugins de segurança bloqueando)
+  - Falha no registro com servidor central (conexão/firewall)
+  - Falha na criação do usuário alvobot
+  - Detecção de códigos HTTP específicos (404, 401, 400, etc.)
+- **Avisos Persistentes**:
+  - Aparecem em todas as páginas admin até ser resolvido
+  - Mensagens específicas por tipo de erro e código HTTP
+  - Instruções claras do que fazer para cada cenário
+  - Botão "Tentar Novamente" para retry manual
+- **Cenários Detectados**:
+  - **404 - Projeto não encontrado**: Avisa que domínio não está cadastrado no painel AlvoBot
+  - **401 - Autenticação falhou**: App Password inválido ou bloqueado
+  - **400 - Dados inválidos**: Problema com dados enviados
+  - **App Password Failed**: Plugins de segurança bloqueando (Wordfence, iThemes, etc.)
+- **Armazenamento**: Status salvo em `alvobot_connection_status` (wp_options)
+- **Estrutura do Status**:
+  ```php
+  array(
+      'status' => 'error' | 'connected',
+      'error_type' => 'app_password_failed' | 'registration_failed' | 'user_creation_failed',
+      'timestamp' => time(),
+      'http_status' => 404,  // Código HTTP (opcional)
+      'message' => 'Mensagem de erro',
+      'server_response' => 'Resposta completa do servidor'
+  )
+  ```
+- **Comandos Úteis**:
+  ```bash
+  # Verificar status da conexão
+  wp option get alvobot_connection_status
+
+  # Limpar status de erro
+  wp option delete alvobot_connection_status
+
+  # Forçar retry
+  wp eval 'do_action("admin_init");' --url=admin.php?page=alvobot-pro&retry_connection=1
+
+  # Testar bloqueio de App Password (Wordfence)
+  wp plugin install wordfence --activate
+  # Ativar: Wordfence → All Options → "Disable Application Passwords"
+  ```
+- **Status**: Sistema completo de monitoramento de conexão funcionando com detecção granular de erros
+
 #### ✅ Sistema de Fila de Traduções - RESOLVIDO
 - **Problema**: Itens não apareciam na página da fila mesmo sendo adicionados
 - **Causa**: Inconsistência de nonces entre interface (`alvobot_translation_nonce`) e backend (`alvobot_nonce`)

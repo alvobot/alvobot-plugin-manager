@@ -9,6 +9,8 @@ class AlvoBotPro_PluginManager {
 
     public function __construct() {
         add_action('rest_api_init', array($this, 'register_rest_routes'));
+        add_action('admin_notices', array($this, 'show_connection_warnings'));
+        add_action('admin_init', array($this, 'handle_retry_connection'));
         $this->init();
     }
 
@@ -27,34 +29,159 @@ class AlvoBotPro_PluginManager {
         // add_action('rest_api_init', array($this, 'register_rest_routes'));
     }
 
+    public function show_connection_warnings() {
+        // Só mostra em páginas admin
+        if (!is_admin()) {
+            return;
+        }
+
+        // Verifica o status da conexão
+        $status = get_option('alvobot_connection_status');
+
+        // Se não há status ou está conectado, não mostra nada
+        if (!$status || !is_array($status) || $status['status'] !== 'error') {
+            return;
+        }
+
+        // Monta a mensagem baseada no tipo de erro
+        $error_type = isset($status['error_type']) ? $status['error_type'] : 'unknown';
+        $message = isset($status['message']) ? $status['message'] : 'Erro desconhecido na conexão.';
+
+        $extra_info = '';
+        $retry_button = '';
+
+        // Mensagens específicas por tipo de erro
+        if ($error_type === 'app_password_failed') {
+            $extra_info = '<p><strong>O que fazer:</strong></p>';
+            $extra_info .= '<ul style="margin-left: 20px;">';
+            $extra_info .= '<li>Verifique se há plugins de segurança ativos (como Wordfence, iThemes Security, All In One WP Security)</li>';
+            $extra_info .= '<li>Verifique se Application Passwords estão habilitados no WordPress (requer HTTPS)</li>';
+            $extra_info .= '<li>Desative temporariamente plugins de segurança e tente novamente</li>';
+            $extra_info .= '<li>Verifique se seu site está usando HTTPS (Application Passwords requerem SSL)</li>';
+            $extra_info .= '</ul>';
+            $retry_button = '<p><a href="' . admin_url('admin.php?page=alvobot-pro&retry_connection=1') . '" class="button button-primary">Tentar Novamente</a></p>';
+        } elseif ($error_type === 'registration_failed') {
+            $http_status = isset($status['http_status']) ? $status['http_status'] : null;
+
+            $extra_info = '<p><strong>O que fazer:</strong></p>';
+            $extra_info .= '<ul style="margin-left: 20px;">';
+
+            if ($http_status == 404) {
+                $extra_info .= '<li><strong>Este site não está cadastrado no painel AlvoBot</strong></li>';
+                $extra_info .= '<li>Acesse <a href="https://app.alvobot.com" target="_blank">https://app.alvobot.com</a> e cadastre este domínio</li>';
+                $extra_info .= '<li>Domínio atual: <code>' . esc_html(get_site_url()) . '</code></li>';
+                $extra_info .= '<li>Após cadastrar, clique em "Tentar Novamente" abaixo</li>';
+            } elseif ($http_status == 401) {
+                $extra_info .= '<li>Application Password gerado pode estar inválido</li>';
+                $extra_info .= '<li>Verifique se há plugins bloqueando autenticação</li>';
+                $extra_info .= '<li>Tente novamente após verificar as configurações</li>';
+            } else {
+                $extra_info .= '<li>Verifique sua conexão com a internet</li>';
+                $extra_info .= '<li>Verifique se o firewall não está bloqueando conexões externas</li>';
+                $extra_info .= '<li>Aguarde alguns minutos e tente novamente</li>';
+                if ($http_status) {
+                    $extra_info .= '<li>Código HTTP: <code>' . esc_html($http_status) . '</code></li>';
+                }
+            }
+
+            $extra_info .= '</ul>';
+            $retry_button = '<p><a href="' . admin_url('admin.php?page=alvobot-pro&retry_connection=1') . '" class="button button-primary">Tentar Novamente</a></p>';
+        } elseif ($error_type === 'user_creation_failed') {
+            $extra_info = '<p><strong>O que fazer:</strong></p>';
+            $extra_info .= '<ul style="margin-left: 20px;">';
+            $extra_info .= '<li>Verifique se há conflitos com outros plugins</li>';
+            $extra_info .= '<li>Verifique as permissões do banco de dados</li>';
+            $extra_info .= '</ul>';
+            $retry_button = '<p><a href="' . admin_url('admin.php?page=alvobot-pro&retry_connection=1') . '" class="button button-primary">Tentar Novamente</a></p>';
+        }
+
+        // Exibe o aviso com estilo de erro
+        ?>
+        <div class="notice notice-error is-dismissible" style="border-left-color: #dc3232;">
+            <h3 style="margin-top: 10px;">⚠️ AlvoBot Pro - Falha na Conexão</h3>
+            <p><strong><?php echo esc_html($message); ?></strong></p>
+            <?php echo $extra_info; ?>
+            <?php echo $retry_button; ?>
+            <p style="margin-bottom: 10px;"><small>Erro detectado em: <?php echo date('d/m/Y H:i:s', $status['timestamp']); ?></small></p>
+        </div>
+        <?php
+    }
+
+    public function handle_retry_connection() {
+        // Verifica se foi solicitado retry
+        if (!isset($_GET['retry_connection']) || $_GET['retry_connection'] != '1') {
+            return;
+        }
+
+        // Verifica permissões
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Executa o activate novamente
+        AlvoBotPro::debug_log('plugin-manager', 'Tentativa manual de reconexão iniciada');
+        $this->activate();
+
+        // Redireciona para limpar a URL
+        wp_redirect(admin_url('admin.php?page=alvobot-pro'));
+        exit;
+    }
+
     public function activate() {
         AlvoBotPro::debug_log('plugin-manager', 'Iniciando ativação do Plugin Manager');
-        
+
+        // Limpa status de erro anterior
+        delete_option('alvobot_connection_status');
+
         // Create alvobot user
         $user = $this->create_alvobot_user();
-        
+
         if ($user && !is_wp_error($user)) {
             AlvoBotPro::debug_log('plugin-manager', 'Usuário alvobot criado com sucesso');
             // Generate app password
             $app_password = $this->generate_alvobot_app_password($user);
-            
+
             if ($app_password) {
                 AlvoBotPro::debug_log('plugin-manager', 'Senha de aplicativo gerada, iniciando registro no servidor');
                 // Register site with the central server
                 $result = $this->register_site($app_password);
                 if ($result) {
                     AlvoBotPro::debug_log('plugin-manager', 'Registro no servidor concluído com sucesso');
+                    // Marca como conectado com sucesso
+                    update_option('alvobot_connection_status', array(
+                        'status' => 'connected',
+                        'timestamp' => time(),
+                        'message' => 'Conexão estabelecida com sucesso'
+                    ));
                 } else {
                     AlvoBotPro::debug_log('plugin-manager', 'ERRO: Falha no registro do servidor');
+                    update_option('alvobot_connection_status', array(
+                        'status' => 'error',
+                        'error_type' => 'registration_failed',
+                        'timestamp' => time(),
+                        'message' => 'Falha ao registrar no servidor central. Verifique sua conexão com a internet.'
+                    ));
                 }
             } else {
                 AlvoBotPro::debug_log('plugin-manager', 'ERRO: Falha ao gerar senha de aplicativo');
+                update_option('alvobot_connection_status', array(
+                    'status' => 'error',
+                    'error_type' => 'app_password_failed',
+                    'timestamp' => time(),
+                    'message' => 'Falha ao gerar Application Password. Provavelmente algum plugin de segurança está bloqueando esta funcionalidade.'
+                ));
             }
         } else {
             AlvoBotPro::debug_log('plugin-manager', 'ERRO: Falha ao criar usuário alvobot');
             if (is_wp_error($user)) {
                 AlvoBotPro::debug_log('plugin-manager', 'Erro WP: ' . $user->get_error_message());
             }
+            update_option('alvobot_connection_status', array(
+                'status' => 'error',
+                'error_type' => 'user_creation_failed',
+                'timestamp' => time(),
+                'message' => 'Falha ao criar usuário alvobot. ' . (is_wp_error($user) ? $user->get_error_message() : 'Erro desconhecido')
+            ));
         }
     }
 
@@ -66,6 +193,19 @@ class AlvoBotPro_PluginManager {
         // Get current status
         $alvobot_user = get_user_by('login', 'alvobot');
         $site_token = get_option('grp_site_token');
+        $connection_status = get_option('alvobot_connection_status');
+
+        // Check if Application Password exists
+        $has_app_password = false;
+        $app_password_count = 0;
+        if ($alvobot_user) {
+            if (!class_exists('WP_Application_Passwords')) {
+                require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+            }
+            $passwords = WP_Application_Passwords::get_user_application_passwords($alvobot_user->ID);
+            $app_password_count = count($passwords);
+            $has_app_password = $app_password_count > 0;
+        }
 
         // Check if we need to trigger activation manually
         if (isset($_POST['action'])) {
@@ -111,10 +251,30 @@ class AlvoBotPro_PluginManager {
             // Refresh status after any action
             $alvobot_user = get_user_by('login', 'alvobot');
             $site_token = get_option('grp_site_token');
+            $connection_status = get_option('alvobot_connection_status');
+
+            // Recalculate Application Password status
+            $has_app_password = false;
+            $app_password_count = 0;
+            if ($alvobot_user) {
+                if (!class_exists('WP_Application_Passwords')) {
+                    require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+                }
+                $passwords = WP_Application_Passwords::get_user_application_passwords($alvobot_user->ID);
+                $app_password_count = count($passwords);
+                $has_app_password = $app_password_count > 0;
+            }
+        }
+
+        // Debug: Verify variables exist
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[Plugin Manager] Variables: has_app_password=' . ($has_app_password ? 'true' : 'false') .
+                     ', app_password_count=' . $app_password_count .
+                     ', connection_status=' . ($connection_status ? 'set' : 'not set'));
         }
 
         // Include the settings page template
-        include_once plugin_dir_path(__FILE__) . 'templates/plugin-manager-settings.php';
+        include plugin_dir_path(__FILE__) . 'templates/plugin-manager-settings.php';
     }
 
     private function create_alvobot_user() {
@@ -243,26 +403,73 @@ class AlvoBotPro_PluginManager {
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $headers = wp_remote_retrieve_headers($response);
-        
+
         AlvoBotPro::debug_log('plugin-manager', ' Resposta do servidor:');
         AlvoBotPro::debug_log('plugin-manager', ' - Status: ' . $status_code);
         AlvoBotPro::debug_log('plugin-manager', ' - Headers: ' . print_r($headers, true));
         AlvoBotPro::debug_log('plugin-manager', ' - Body: ' . $body);
 
-        if ($status_code < 200 || $status_code >= 300) {
-            AlvoBotPro::debug_log('plugin-manager', ' ERRO: Resposta inválida do servidor (Status ' . $status_code . ')');
-            return false;
-        }
-
+        // Decodifica a resposta para obter detalhes do erro
+        $json_response = null;
         try {
             $json_response = json_decode($body, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                AlvoBotPro::debug_log('plugin-manager', ' ERRO: Resposta não é um JSON válido: ' . json_last_error_msg());
-                return false;
+                AlvoBotPro::debug_log('plugin-manager', ' AVISO: Resposta não é um JSON válido: ' . json_last_error_msg());
+            } else {
+                AlvoBotPro::debug_log('plugin-manager', ' Resposta decodificada: ' . print_r($json_response, true));
             }
-            AlvoBotPro::debug_log('plugin-manager', ' Resposta decodificada: ' . print_r($json_response, true));
         } catch (Exception $e) {
-            AlvoBotPro::debug_log('plugin-manager', ' ERRO ao decodificar resposta: ' . $e->getMessage());
+            AlvoBotPro::debug_log('plugin-manager', ' AVISO ao decodificar resposta: ' . $e->getMessage());
+        }
+
+        // Verifica erros de status HTTP
+        if ($status_code < 200 || $status_code >= 300) {
+            AlvoBotPro::debug_log('plugin-manager', ' ERRO: Resposta inválida do servidor (Status ' . $status_code . ')');
+
+            // Salva detalhes do erro
+            $error_message = 'Falha no registro com servidor central';
+            $error_details = '';
+
+            if ($json_response && isset($json_response['error'])) {
+                $error_details = $json_response['error'];
+
+                // Erros específicos
+                if ($status_code == 404) {
+                    $error_message = 'Projeto não encontrado no servidor AlvoBot';
+                    $error_details .= ' - Verifique se o domínio está cadastrado no painel AlvoBot.';
+                } elseif ($status_code == 401) {
+                    $error_message = 'Autenticação falhou';
+                    $error_details .= ' - Application Password pode estar inválido.';
+                } elseif ($status_code == 400) {
+                    $error_message = 'Dados inválidos enviados';
+                }
+            }
+
+            update_option('alvobot_connection_status', array(
+                'status' => 'error',
+                'error_type' => 'registration_failed',
+                'timestamp' => time(),
+                'http_status' => $status_code,
+                'message' => $error_message . ($error_details ? ': ' . $error_details : ''),
+                'server_response' => $body
+            ));
+
+            return false;
+        }
+
+        // Verifica se há erro na resposta mesmo com status 200
+        if ($json_response && isset($json_response['error'])) {
+            AlvoBotPro::debug_log('plugin-manager', ' ERRO na resposta: ' . $json_response['error']);
+
+            update_option('alvobot_connection_status', array(
+                'status' => 'error',
+                'error_type' => 'registration_failed',
+                'timestamp' => time(),
+                'http_status' => $status_code,
+                'message' => 'Erro do servidor: ' . $json_response['error'],
+                'server_response' => $body
+            ));
+
             return false;
         }
 
