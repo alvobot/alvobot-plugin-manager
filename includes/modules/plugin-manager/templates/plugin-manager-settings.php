@@ -29,14 +29,14 @@ if (!defined('ABSPATH')) {
         </div>
         
         <div class="alvobot-card-content">
+            <!-- VERSÃO 2.6.0 - ARQUIVO ATUALIZADO -->
             <?php
-            // DEBUG - Remover depois
-            if (!isset($has_app_password)) {
-                echo '<div style="background: #ff0000; color: #fff; padding: 10px; margin-bottom: 10px;">ERRO: Variável $has_app_password não definida!</div>';
-            }
-            if (!isset($connection_status)) {
-                echo '<div style="background: #ff0000; color: #fff; padding: 10px; margin-bottom: 10px;">ERRO: Variável $connection_status não definida!</div>';
-            }
+            // DEBUG - Mostra versão do arquivo
+            echo '<div style="background: #0073aa; color: #fff; padding: 10px; margin-bottom: 10px; font-weight: bold;">';
+            echo '✓ ARQUIVO ATUALIZADO v2.6.0 - ' . date('Y-m-d H:i:s');
+            echo '<br>has_app_password: ' . (isset($has_app_password) ? ($has_app_password ? 'SIM' : 'NÃO') : 'UNDEFINED');
+            echo '<br>connection_status: ' . (isset($connection_status) ? 'SET' : 'UNDEFINED');
+            echo '</div>';
             ?>
             <table class="alvobot-form-table" role="presentation">
                 <tr>

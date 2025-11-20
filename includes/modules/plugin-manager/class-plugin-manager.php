@@ -76,9 +76,11 @@ class AlvoBotPro_PluginManager {
                 $extra_info .= '<li>Verifique se há plugins bloqueando autenticação</li>';
                 $extra_info .= '<li>Tente novamente após verificar as configurações</li>';
             } else {
+                $extra_info .= '<li><strong>⚠️ Plugins de segurança podem estar bloqueando a conexão</strong></li>';
+                $extra_info .= '<li>Verifique se há plugins como Wordfence Security, iThemes Security ou similar ativos</li>';
+                $extra_info .= '<li>Desative temporariamente plugins de segurança e tente novamente</li>';
                 $extra_info .= '<li>Verifique sua conexão com a internet</li>';
                 $extra_info .= '<li>Verifique se o firewall não está bloqueando conexões externas</li>';
-                $extra_info .= '<li>Aguarde alguns minutos e tente novamente</li>';
                 if ($http_status) {
                     $extra_info .= '<li>Código HTTP: <code>' . esc_html($http_status) . '</code></li>';
                 }
