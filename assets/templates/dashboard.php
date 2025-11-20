@@ -194,6 +194,28 @@ if (!defined('ABSPATH')) {
             </td>
           </tr>
           <tr>
+            <th scope="row"><?php _e('Application Password', 'alvobot-pro'); ?></th>
+            <td>
+              <?php if ($has_app_password): ?>
+                <span class="alvobot-badge alvobot-badge-success">
+                  <span class="alvobot-status-indicator success"></span>
+                  <?php printf(_n('1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro'), $app_password_count); ?>
+                </span>
+                <p class="description" style="margin-top: 8px;">
+                  <?php _e('Application Password ativo para autenticação API', 'alvobot-pro'); ?>
+                </p>
+              <?php else: ?>
+                <span class="alvobot-badge alvobot-badge-error">
+                  <span class="alvobot-status-indicator error"></span>
+                  <?php _e('Não Criado', 'alvobot-pro'); ?>
+                </span>
+                <p class="description" style="margin-top: 8px; color: #d63638;">
+                  <?php _e('⚠️ Sem Application Password - verifique se plugins de segurança não estão bloqueando', 'alvobot-pro'); ?>
+                </p>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <tr>
             <th scope="row"><?php _e('Token do Site', 'alvobot-pro'); ?></th>
             <td>
               <?php if ($site_token): ?>
@@ -217,6 +239,60 @@ if (!defined('ABSPATH')) {
                 <span class="alvobot-badge alvobot-badge-error">
                   <span class="alvobot-status-indicator error"></span>
                   <?php _e('Não Gerado', 'alvobot-pro'); ?>
+                </span>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row"><?php _e('Status da Conexão', 'alvobot-pro'); ?></th>
+            <td>
+              <?php
+              if ($connection_status && is_array($connection_status)):
+                $status = $connection_status['status'];
+                $error_type = isset($connection_status['error_type']) ? $connection_status['error_type'] : '';
+                $http_status = isset($connection_status['http_status']) ? $connection_status['http_status'] : '';
+                $message = isset($connection_status['message']) ? $connection_status['message'] : '';
+
+                if ($status === 'connected'): ?>
+                  <span class="alvobot-badge alvobot-badge-success">
+                    <span class="alvobot-status-indicator success"></span>
+                    <?php _e('Conectado', 'alvobot-pro'); ?>
+                  </span>
+                  <p class="description" style="margin-top: 8px;">
+                    <?php echo esc_html($message); ?>
+                  </p>
+                <?php else: ?>
+                  <span class="alvobot-badge alvobot-badge-error">
+                    <span class="alvobot-status-indicator error"></span>
+                    <?php _e('Erro de Conexão', 'alvobot-pro'); ?>
+                    <?php if ($http_status): ?>
+                      <code style="margin-left: 5px;">HTTP <?php echo esc_html($http_status); ?></code>
+                    <?php endif; ?>
+                  </span>
+                  <div style="margin-top: 8px; padding: 10px; background: #fff8e5; border-left: 3px solid #f0b849; border-radius: 3px;">
+                    <p style="margin: 0; color: #8a6d3b; font-weight: 500;">
+                      <?php echo esc_html($message); ?>
+                    </p>
+                    <?php if ($error_type === 'app_password_failed'): ?>
+                      <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">
+                        <strong>Tipo:</strong> Falha na criação de Application Password<br>
+                        <strong>Causa comum:</strong> Plugin de segurança bloqueando
+                      </p>
+                    <?php elseif ($error_type === 'registration_failed'): ?>
+                      <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">
+                        <strong>Tipo:</strong> Falha no registro com servidor AlvoBot<br>
+                        <?php if ($http_status == 404): ?>
+                          <strong>Causa:</strong> Domínio não cadastrado no painel AlvoBot<br>
+                          <strong>Solução:</strong> Cadastre <code><?php echo esc_html(get_site_url()); ?></code> em <a href="https://app.alvobot.com" target="_blank">app.alvobot.com</a>
+                        <?php endif; ?>
+                      </p>
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
+              <?php else: ?>
+                <span class="alvobot-badge alvobot-badge-warning">
+                  <span class="alvobot-status-indicator warning"></span>
+                  <?php _e('Aguardando Inicialização', 'alvobot-pro'); ?>
                 </span>
               <?php endif; ?>
             </td>

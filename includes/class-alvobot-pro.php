@@ -445,11 +445,24 @@ class AlvoBotPro {
 
         // Obtém o estado atual dos módulos
         $active_modules = $this->get_active_modules();
-        
+
         // Obtém o usuário e token do AlvoBot
         $alvobot_user = get_user_by('login', 'alvobot');
         $site_token = get_option('grp_site_token');
-        
+        $connection_status = get_option('alvobot_connection_status');
+
+        // Check if Application Password exists
+        $has_app_password = false;
+        $app_password_count = 0;
+        if ($alvobot_user) {
+            if (!class_exists('WP_Application_Passwords')) {
+                require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+            }
+            $passwords = WP_Application_Passwords::get_user_application_passwords($alvobot_user->ID);
+            $app_password_count = count($passwords);
+            $has_app_password = $app_password_count > 0;
+        }
+
         // Inclui o template
         include ALVOBOT_PRO_PLUGIN_DIR . 'assets/templates/dashboard.php';
     }
