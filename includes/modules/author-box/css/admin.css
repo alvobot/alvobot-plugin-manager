@@ -1,6 +1,6 @@
 /* ====================================
    AlvoBot Author Box - Admin Styles
-   Interface otimizada para administração
+   Interface limpa e sóbria
    ==================================== */
 
 /* Wrapper principal */
@@ -10,93 +10,85 @@
     margin: 20px auto;
 }
 
-/* Header melhorado */
+/* Header simplificado */
 .alvobot-pro-header {
-    background: linear-gradient(135deg, var(--alvobot-primary, #CD9042) 0%, var(--alvobot-primary-dark, #B8803A) 100%);
-    color: white;
-    padding: var(--alvobot-space-2xl, 24px);
-    border-radius: var(--alvobot-radius-lg, 12px);
-    margin-bottom: var(--alvobot-space-xl, 20px);
-    box-shadow: var(--alvobot-shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
+    background: #f8f9fa;
+    border: 1px solid #e5e5e5;
+    color: #1a1a1a;
+    padding: 20px 24px;
+    border-radius: 8px;
+    margin-bottom: 20px;
 }
 
 .alvobot-pro-header h1 {
-    margin: 0 0 var(--alvobot-space-sm, 8px) 0;
-    font-size: var(--alvobot-font-size-2xl, 24px);
+    margin: 0 0 4px 0;
+    font-size: 20px;
     font-weight: 600;
-    color: white;
+    color: #1a1a1a;
 }
 
 .alvobot-pro-header p {
     margin: 0;
-    opacity: 0.9;
-    font-size: var(--alvobot-font-size-base, 14px);
+    color: #666;
+    font-size: 14px;
 }
 
-/* Cards modernos */
+/* Cards modernos e limpos */
 .alvobot-pro-card,
 .alvobot-pro-preview-card {
-    background: var(--alvobot-white, #ffffff);
-    border: 1px solid var(--alvobot-gray-200, #f0f0f1);
-    border-radius: var(--alvobot-radius-lg, 12px);
-    box-shadow: var(--alvobot-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
-    margin-bottom: var(--alvobot-space-xl, 20px);
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    margin-bottom: 20px;
     overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.alvobot-pro-card:hover,
-.alvobot-pro-preview-card:hover {
-    box-shadow: var(--alvobot-shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
-    transform: translateY(-1px);
 }
 
 .alvobot-pro-card-header {
-    padding: var(--alvobot-space-2xl, 24px) var(--alvobot-space-2xl, 24px) var(--alvobot-space-lg, 16px);
-    border-bottom: 1px solid var(--alvobot-gray-200, #f0f0f1);
-    background: var(--alvobot-gray-50, #f9f9f9);
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e5e5;
+    background: #fafafa;
 }
 
 .alvobot-pro-card-header h2 {
     margin: 0;
-    font-size: var(--alvobot-font-size-lg, 16px);
+    font-size: 14px;
     font-weight: 600;
-    color: var(--alvobot-gray-800, #2c3338);
+    color: #1a1a1a;
     display: flex;
     align-items: center;
-    gap: var(--alvobot-space-sm, 8px);
+    gap: 8px;
 }
 
 .alvobot-pro-card-header h2::before {
     content: '⚙️';
-    font-size: var(--alvobot-font-size-lg, 16px);
+    font-size: 14px;
 }
 
 /* Preview card específico */
 .alvobot-pro-preview-card {
-    background: linear-gradient(135deg, var(--alvobot-gray-50, #f9f9f9) 0%, var(--alvobot-white, #ffffff) 100%);
-    border: 2px solid var(--alvobot-primary, #CD9042);
-    padding: var(--alvobot-space-xl, 20px);
+    background: #fafafa;
+    border: 1px solid #e5e5e5;
+    padding: 20px;
 }
 
 .alvobot-pro-preview-card h3 {
-    margin: 0 0 var(--alvobot-space-lg, 16px) 0;
-    font-size: var(--alvobot-font-size-lg, 16px);
+    margin: 0 0 16px 0;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--alvobot-gray-800, #2c3338);
+    color: #1a1a1a;
     display: flex;
     align-items: center;
-    gap: var(--alvobot-space-sm, 8px);
+    gap: 8px;
 }
 
 .alvobot-pro-preview-card h3::before {
     content: '👁️';
-    font-size: var(--alvobot-font-size-base, 14px);
+    font-size: 14px;
 }
 
 /* Formulários otimizados */
 .alvobot-pro-card form {
-    padding: var(--alvobot-space-2xl, 24px);
+    padding: 20px;
 }
 
 .form-table {
@@ -109,9 +101,9 @@
 .form-table tr {
     display: flex;
     align-items: flex-start;
-    margin-bottom: var(--alvobot-space-lg, 16px);
-    padding-bottom: var(--alvobot-space-lg, 16px);
-    border-bottom: 1px solid var(--alvobot-gray-100, #f6f7f7);
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .form-table tr:last-child {
@@ -122,16 +114,16 @@
 
 .form-table th {
     flex: 0 0 200px;
-    padding: var(--alvobot-space-sm, 8px) var(--alvobot-space-lg, 16px) var(--alvobot-space-sm, 8px) 0;
+    padding: 8px 16px 8px 0;
     font-weight: 600;
-    color: var(--alvobot-gray-800, #2c3338);
+    color: #1a1a1a;
     text-align: left;
     vertical-align: top;
 }
 
 .form-table td {
     flex: 1;
-    padding: var(--alvobot-space-sm, 8px) 0;
+    padding: 8px 0;
 }
 
 /* Campos de entrada modernos */
@@ -140,43 +132,43 @@ input[type="number"],
 input[type="url"] {
     width: 100%;
     max-width: 400px;
-    padding: var(--alvobot-space-sm, 8px) var(--alvobot-space-md, 12px);
-    border: 1px solid var(--alvobot-gray-300, #e5e5e5);
-    border-radius: var(--alvobot-radius-sm, 4px);
-    font-size: var(--alvobot-font-size-base, 14px);
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 14px;
     line-height: 1.5;
-    color: var(--alvobot-gray-800, #2c3338);
-    background: var(--alvobot-white, #ffffff);
-    transition: all 0.2s ease;
+    color: #1a1a1a;
+    background: #fff;
+    transition: border-color 0.2s ease;
 }
 
 input[type="text"]:focus,
 input[type="number"]:focus,
 input[type="url"]:focus {
-    border-color: var(--alvobot-primary, #CD9042);
-    box-shadow: 0 0 0 2px rgba(205, 144, 66, 0.2);
+    border-color: #0066cc;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
     outline: none;
 }
 
 /* Checkboxes melhorados */
 .display-options {
-    margin: calc(-1 * var(--alvobot-space-xs, 4px)) 0;
+    margin: -4px 0;
 }
 
 .display-options label {
     display: flex;
     align-items: center;
-    gap: var(--alvobot-space-sm, 8px);
-    margin: var(--alvobot-space-sm, 8px) 0;
-    padding: var(--alvobot-space-sm, 8px) var(--alvobot-space-md, 12px);
-    color: var(--alvobot-gray-800, #2c3338);
+    gap: 8px;
+    margin: 8px 0;
+    padding: 8px 12px;
+    color: #1a1a1a;
     cursor: pointer;
-    border-radius: var(--alvobot-radius-sm, 4px);
+    border-radius: 4px;
     transition: background-color 0.2s ease;
 }
 
 .display-options label:hover {
-    background-color: var(--alvobot-gray-50, #f9f9f9);
+    background-color: #f5f5f5;
 }
 
 .display-options input[type="checkbox"] {
@@ -188,104 +180,89 @@ input[type="url"]:focus {
 
 /* Descrições */
 .description {
-    margin: var(--alvobot-space-sm, 8px) 0 0;
-    color: var(--alvobot-gray-600, #646970);
-    font-size: var(--alvobot-font-size-sm, 13px);
+    margin: 8px 0 0;
+    color: #666;
+    font-size: 13px;
     font-style: italic;
     line-height: 1.4;
 }
 
-/* Avatar preview melhorado */
+/* Avatar preview */
 .ab-avatar-preview-wrapper {
-    margin-bottom: var(--alvobot-space-lg, 16px);
+    margin-bottom: 16px;
 }
 
 .ab-avatar-preview {
     display: inline-block;
-    padding: var(--alvobot-space-sm, 8px);
-    background: var(--alvobot-white, #ffffff);
-    border: 2px solid var(--alvobot-primary, #CD9042);
-    border-radius: var(--alvobot-radius-full, 50%);
-    box-shadow: var(--alvobot-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
-    transition: all 0.3s ease;
-}
-
-.ab-avatar-preview:hover {
-    transform: scale(1.05);
-    box-shadow: var(--alvobot-shadow-md, 0 2px 4px rgba(0, 0, 0, 0.1));
+    padding: 4px;
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 50%;
 }
 
 .ab-avatar-preview img {
     display: block;
-    width: 96px;
-    height: 96px;
-    border-radius: var(--alvobot-radius-full, 50%);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
     object-fit: cover;
 }
 
-/* Botões modernos */
+/* Botões */
 .button {
-    margin-right: var(--alvobot-space-sm, 8px);
-    padding: var(--alvobot-space-xs, 4px) var(--alvobot-space-md, 12px);
-    border-radius: var(--alvobot-radius-sm, 4px);
-    font-size: var(--alvobot-font-size-sm, 13px);
+    margin-right: 8px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
     font-weight: 500;
     transition: all 0.2s ease;
 }
 
 .button-primary {
-    background: var(--alvobot-primary, #CD9042);
-    border-color: var(--alvobot-primary, #CD9042);
-    color: var(--alvobot-white, #ffffff);
+    background: #0066cc;
+    border-color: #0066cc;
+    color: #fff;
     min-height: 36px;
     line-height: 34px;
     font-weight: 600;
 }
 
 .button-primary:hover {
-    background: var(--alvobot-primary-dark, #B8803A);
-    border-color: var(--alvobot-primary-dark, #B8803A);
-    transform: translateY(-1px);
-    box-shadow: var(--alvobot-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    background: #0052a3;
+    border-color: #0052a3;
 }
 
 /* Submit area */
 .submit {
-    margin: var(--alvobot-space-2xl, 24px) 0 0;
+    margin: 20px 0 0;
     padding: 0;
-    border-top: 1px solid var(--alvobot-gray-200, #f0f0f1);
-    padding-top: var(--alvobot-space-xl, 20px);
+    border-top: 1px solid #e5e5e5;
+    padding-top: 20px;
 }
 
 /* Preview do Author Box no admin */
 .alvobot-card .alvobot-author-box {
     margin: 0;
-    /* Herda os estilos do public.css mas com ajustes para admin */
 }
 
-/* Ajustes específicos para o preview no admin */
 .alvobot-card-body .alvobot-author-box {
-    animation: none; /* Remove animação no admin */
-    transform: none; /* Remove transformações no admin */
-}
-
-.alvobot-card-body .alvobot-author-box:hover {
-    transform: none; /* Remove hover transform no admin */
+    animation: none;
+    transform: none;
 }
 
 /* Responsividade */
 @media screen and (max-width: 782px) {
     .alvobot-pro-wrap,
     .alvobot-pro-author-box-wrap {
-        margin: var(--alvobot-space-lg, 16px);
+        margin: 16px;
     }
 
     .alvobot-pro-header {
-        padding: var(--alvobot-space-xl, 20px);
+        padding: 16px;
     }
 
     .alvobot-pro-card form {
-        padding: var(--alvobot-space-lg, 16px);
+        padding: 16px;
     }
 
     .form-table tr {
@@ -295,7 +272,7 @@ input[type="url"]:focus {
 
     .form-table th {
         flex: none;
-        padding-bottom: var(--alvobot-space-xs, 4px);
+        padding-bottom: 4px;
         width: auto;
     }
 
@@ -311,17 +288,17 @@ input[type="url"]:focus {
 
     .ab-avatar-preview {
         text-align: center;
-        margin: 0 auto var(--alvobot-space-lg, 16px);
+        margin: 0 auto 16px;
     }
 }
 
 @media screen and (max-width: 600px) {
     .alvobot-pro-header h1 {
-        font-size: var(--alvobot-font-size-xl, 18px);
+        font-size: 18px;
     }
 
     .button {
-        margin-bottom: var(--alvobot-space-sm, 8px);
+        margin-bottom: 8px;
         display: inline-block;
     }
 }
@@ -331,12 +308,11 @@ input[type="url"]:focus {
 .button[disabled] {
     opacity: 0.6;
     cursor: not-allowed;
-    transform: none !important;
 }
 
 input:disabled,
 input[disabled] {
-    background-color: var(--alvobot-gray-100, #f6f7f7);
+    background-color: #f5f5f5;
     cursor: not-allowed;
 }
 
@@ -347,23 +323,6 @@ input[disabled] {
 
 .button:focus,
 input:focus {
-    outline: 2px solid var(--alvobot-primary, #CD9042);
+    outline: 2px solid #0066cc;
     outline-offset: 2px;
-}
-
-/* Animações suaves */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.alvobot-pro-card,
-.alvobot-pro-preview-card {
-    animation: fadeInUp 0.4s ease-out;
 }

@@ -55,6 +55,13 @@ class Alvobot_Quiz_Main {
     private $ajax;
     
     /**
+     * Submissions handler instance
+     *
+     * @var Alvobot_Quiz_Submissions
+     */
+    private $submissions;
+    
+    /**
      * Get plugin instance (Singleton pattern)
      *
      * @return Alvobot_Quiz_Main
@@ -94,6 +101,9 @@ class Alvobot_Quiz_Main {
         
         // Initialize shortcode with shared assets instance
         $this->shortcode = new Alvobot_Quiz_Shortcode($this->assets);
+        
+        // Initialize submissions handler
+        $this->submissions = new Alvobot_Quiz_Submissions();
         
         // Initialize admin components if in admin area
         if (is_admin()) {
@@ -220,6 +230,10 @@ class Alvobot_Quiz_Main {
             );
             add_option('alvobot_quiz_options', $defaults);
         }
+        
+        // Create submissions table
+        $this->submissions = new Alvobot_Quiz_Submissions();
+        // Table creation moved to activation check
         
         // Add rewrite rules first
         $this->add_rewrite_rules();

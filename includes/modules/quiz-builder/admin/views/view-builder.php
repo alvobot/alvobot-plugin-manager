@@ -28,6 +28,17 @@ if (!defined('ABSPATH')) {
                     <i class="dashicons dashicons-move"></i>
                 </div>
             </div>
+            
+            <div class="component-item component-card" draggable="true" data-type="lead-capture">
+                <div class="component-icon">📋</div>
+                <div class="component-info">
+                    <strong><?php _e('Captura de Leads', 'alvobot-quiz'); ?></strong>
+                    <small><?php _e('Formulário de contato (Nome, Email, Tel)', 'alvobot-quiz'); ?></small>
+                </div>
+                <div class="drag-indicator">
+                    <i class="dashicons dashicons-move"></i>
+                </div>
+            </div>
         </div>
         
         <!-- Configurações Globais -->
@@ -227,6 +238,124 @@ if (!defined('ABSPATH')) {
                 <i class="dashicons dashicons-admin-page"></i>
             </button>
             <button type="button" class="btn btn--ghost btn--sm btn--danger" title="<?php _e('Remover', 'alvobot-quiz'); ?>">×</button>
+        </div>
+    </div>
+</template>
+
+<template id="lead-capture-template">
+    <div class="question-item lead-capture-item" data-question-id="">
+        <div class="question-header">
+            <div class="question-number">
+                <span class="message message--warning">Lead</span>
+                <div class="drag-handle">
+                    <i class="dashicons dashicons-menu"></i>
+                </div>
+            </div>
+            
+            <div class="question-main">
+                <input type="text" 
+                       class="question-text" 
+                       placeholder="<?php _e('Título do formulário (ex: Preencha seus dados)', 'alvobot-quiz'); ?>"
+                       value="<?php _e('Preencha seus dados para continuar', 'alvobot-quiz'); ?>">
+            </div>
+            
+            <div class="question-actions">
+                <button type="button" class="btn btn--ghost btn--sm" title="<?php _e('Alterar visual', 'alvobot-quiz'); ?>">
+                    <i class="dashicons dashicons-admin-appearance"></i>
+                </button>
+                <button type="button" class="btn btn--ghost btn--sm btn--danger" title="<?php _e('Excluir', 'alvobot-quiz'); ?>">
+                    <i class="dashicons dashicons-trash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="question-content">
+            <div class="lead-capture-settings">
+                <div class="setting-row">
+                    <label><strong><?php _e('Campos do formulário:', 'alvobot-quiz'); ?></strong></label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-modern">
+                            <input type="checkbox" class="field-name" checked>
+                            <span class="checkmark"></span>
+                            <?php _e('Nome', 'alvobot-quiz'); ?>
+                        </label>
+                        <label class="checkbox-modern">
+                            <input type="checkbox" class="field-email" checked>
+                            <span class="checkmark"></span>
+                            <?php _e('Email', 'alvobot-quiz'); ?>
+                        </label>
+                        <label class="checkbox-modern">
+                            <input type="checkbox" class="field-phone">
+                            <span class="checkmark"></span>
+                            <?php _e('Telefone / WhatsApp', 'alvobot-quiz'); ?>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <label><strong><?php _e('Plataforma de Integração:', 'alvobot-quiz'); ?></strong></label>
+                    <select class="webhook-platform select-modern" style="width: 100%;">
+                        <option value="generic"><?php _e('Webhook Genérico', 'alvobot-quiz'); ?></option>
+                        <option value="gohighlevel"><?php _e('GoHighLevel (GHL)', 'alvobot-quiz'); ?></option>
+                        <option value="sendpulse"><?php _e('SendPulse', 'alvobot-quiz'); ?></option>
+                    </select>
+                    <small><?php _e('Selecione a plataforma para formatação correta dos dados', 'alvobot-quiz'); ?></small>
+                </div>
+
+                <div class="setting-row">
+                    <label><strong><?php _e('URL do Webhook:', 'alvobot-quiz'); ?></strong></label>
+                    <input type="url" class="webhook-url input-modern" placeholder="https://services.leadconnectorhq.com/hooks/..." style="width: 100%;">
+                    <small class="webhook-help-text"><?php _e('URL do Webhook para enviar os dados (POST JSON)', 'alvobot-quiz'); ?></small>
+                </div>
+
+                <div class="setting-row">
+                    <label><strong><?php _e('URL de Redirecionamento:', 'alvobot-quiz'); ?></strong></label>
+                    <input type="url" class="redirect-after-submit input-modern" placeholder="/obrigado ou https://..." style="width: 100%;">
+                    <small><?php _e('Para onde redirecionar após enviar. Vazio = continua no quiz.', 'alvobot-quiz'); ?></small>
+                </div>
+
+                <div class="setting-row">
+                    <label><strong><?php _e('Botão de Envio:', 'alvobot-quiz'); ?></strong></label>
+                    <input type="text" class="submit-text input-modern" value="<?php _e('Continuar', 'alvobot-quiz'); ?>" placeholder="<?php _e('Texto do botão', 'alvobot-quiz'); ?>">
+                </div>
+
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+                <div class="setting-row">
+                    <label><strong><?php _e('Textos dos Campos (i18n):', 'alvobot-quiz'); ?></strong></label>
+                    <small style="display: block; margin-bottom: 10px; color: #666;"><?php _e('Personalize os textos para diferentes idiomas', 'alvobot-quiz'); ?></small>
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Label do Nome:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="label-name input-modern" value="<?php _e('Nome completo', 'alvobot-quiz'); ?>" placeholder="<?php _e('Nome completo', 'alvobot-quiz'); ?>">
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Placeholder do Nome:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="placeholder-name input-modern" value="<?php _e('Digite seu nome', 'alvobot-quiz'); ?>" placeholder="<?php _e('Digite seu nome', 'alvobot-quiz'); ?>">
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Label do Email:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="label-email input-modern" value="<?php _e('E-mail', 'alvobot-quiz'); ?>" placeholder="<?php _e('E-mail', 'alvobot-quiz'); ?>">
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Placeholder do Email:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="placeholder-email input-modern" value="<?php _e('seu@email.com', 'alvobot-quiz'); ?>" placeholder="<?php _e('seu@email.com', 'alvobot-quiz'); ?>">
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Label do Telefone:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="label-phone input-modern" value="<?php _e('Telefone / WhatsApp', 'alvobot-quiz'); ?>" placeholder="<?php _e('Telefone / WhatsApp', 'alvobot-quiz'); ?>">
+                </div>
+
+                <div class="setting-row">
+                    <label><?php _e('Placeholder do Telefone:', 'alvobot-quiz'); ?></label>
+                    <input type="text" class="placeholder-phone input-modern" value="<?php _e('Seu número', 'alvobot-quiz'); ?>" placeholder="<?php _e('Seu número', 'alvobot-quiz'); ?>">
+                </div>
+            </div>
         </div>
     </div>
 </template>

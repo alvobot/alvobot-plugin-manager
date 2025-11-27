@@ -79,6 +79,7 @@ class AlvoBotPro_QuizBuilder {
             'includes/class-assets.php',
             'includes/class-shortcode.php',
             'includes/class-content-handler.php',
+            'includes/class-submissions.php',
             'admin/class-admin.php',
             'admin/class-ajax.php'
         );
@@ -160,6 +161,12 @@ class AlvoBotPro_QuizBuilder {
         // Check if rewrite rules need to be flushed
         $version = get_option('alvobot_quiz_version');
         if ($version !== ALVOBOT_PRO_VERSION) {
+            // Create/Update submissions table
+            if (class_exists('Alvobot_Quiz_Submissions')) {
+                $submissions = new Alvobot_Quiz_Submissions();
+                $submissions->create_table();
+            }
+            
             flush_rewrite_rules();
             update_option('alvobot_quiz_version', ALVOBOT_PRO_VERSION);
         }

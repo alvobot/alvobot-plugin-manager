@@ -567,3 +567,413 @@
         font-size: 12px;
     }
 }
+
+/* =====================================================
+   Lead Capture Form - Matching Quiz Style
+   ===================================================== */
+
+/* Lead Form Header */
+.lead-form-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.lead-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.lead-subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Form Layout */
+.quiz-lead-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.lead-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Form Group */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Field Labels - Subtle, matches quiz style */
+.field-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 2px;
+}
+
+/* Input with Icon */
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 15px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.input-with-icon .input-modern,
+.quiz-lead-form .input-with-icon .input-modern,
+.input-with-icon input.input-modern {
+    padding-left: 40px !important;
+}
+
+/* Input Styling - Matches quiz-answer style */
+.input-modern,
+.quiz-lead-form .input-modern,
+.quiz-lead-form input.input-modern,
+input[type="text"].input-modern,
+input[type="email"].input-modern,
+input[type="tel"].input-modern {
+    display: block;
+    background-color: white !important;
+    border: 2px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 12px 15px !important;
+    font-size: 16px !important;
+    color: #333 !important;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+}
+
+.input-modern::placeholder,
+.quiz-lead-form .input-modern::placeholder {
+    color: #999 !important;
+}
+
+.input-modern:hover,
+.quiz-lead-form .input-modern:hover,
+input.input-modern:hover {
+    border-color: #4CAF50 !important;
+    background-color: #f5f5f5 !important;
+}
+
+.input-modern:focus,
+.quiz-lead-form .input-modern:focus,
+input.input-modern:focus {
+    border-color: #4CAF50 !important;
+    background-color: #e8f5e9 !important;
+    outline: none !important;
+}
+
+/* Submit Button - Matches quiz button style */
+.quiz-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 15px 30px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quiz-submit-btn:hover {
+    background-color: #45a049;
+}
+
+.btn-text {
+    display: inline-block;
+}
+
+.btn-icon {
+    font-size: 18px;
+    transition: transform 0.2s ease;
+}
+
+.quiz-submit-btn:hover .btn-icon {
+    transform: translateX(3px);
+}
+
+/* Legacy button support */
+.quiz-lead-form .btn.btn--primary,
+.quiz-lead-form .quiz-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 15px 30px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quiz-lead-form .btn.btn--primary:hover,
+.quiz-lead-form .quiz-btn:hover {
+    background-color: #45a049;
+}
+
+/* =====================================================
+   Phone Field with Country Selector
+   ===================================================== */
+
+.phone-field-group {
+    margin-bottom: 0;
+}
+
+.phone-input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+/* Country Select - Matches input-modern style exactly */
+.phone-country-select,
+.quiz-lead-form .phone-country-select,
+select.phone-country-select {
+    flex: 0 0 auto;
+    min-width: 110px;
+    max-width: 120px;
+    padding: 12px 15px !important;
+    padding-right: 32px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    background-color: white !important;
+    color: #333;
+    cursor: pointer;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23666' d='M5 7L0 2h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    transition: all 0.2s ease;
+    text-align: left;
+    line-height: 1.5;
+    height: auto;
+    box-sizing: border-box;
+}
+
+.phone-country-select:hover,
+.quiz-lead-form .phone-country-select:hover,
+select.phone-country-select:hover {
+    border-color: #4CAF50 !important;
+    background-color: #f5f5f5 !important;
+}
+
+.phone-country-select:focus,
+.quiz-lead-form .phone-country-select:focus,
+select.phone-country-select:focus {
+    border-color: #4CAF50 !important;
+    background-color: #e8f5e9 !important;
+    outline: none !important;
+}
+
+.phone-input-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.phone-input-wrapper .phone-input {
+    width: 100%;
+    height: 100%;
+}
+
+.phone-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #888;
+    padding-left: 2px;
+}
+
+/* =====================================================
+   Modern Style Variations
+   ===================================================== */
+
+.wp-quiz-style-modern .quiz-lead-container {
+    background: linear-gradient(135deg, #f5f5f5, #fafafa);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.wp-quiz-style-modern .input-modern {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.wp-quiz-style-modern .input-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.wp-quiz-style-modern .phone-country-select {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.wp-quiz-style-modern .phone-country-select:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.wp-quiz-style-modern .quiz-submit-btn,
+.wp-quiz-style-modern .quiz-lead-form .btn.btn--primary {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.wp-quiz-style-modern .quiz-submit-btn:hover,
+.wp-quiz-style-modern .quiz-lead-form .btn.btn--primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* =====================================================
+   Minimal Style Variations
+   ===================================================== */
+
+.wp-quiz-style-minimal .quiz-lead-container {
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.wp-quiz-style-minimal .input-modern {
+    background-color: transparent;
+    border: 1px solid #ddd;
+    border-radius: 0;
+}
+
+.wp-quiz-style-minimal .input-modern:hover,
+.wp-quiz-style-minimal .input-modern:focus {
+    background-color: #fafafa;
+    border-color: #333;
+}
+
+.wp-quiz-style-minimal .phone-country-select {
+    border-radius: 0;
+    background-color: transparent;
+    border: 1px solid #ddd;
+}
+
+.wp-quiz-style-minimal .phone-country-select:hover,
+.wp-quiz-style-minimal .phone-country-select:focus {
+    background-color: #fafafa;
+    border-color: #333;
+}
+
+.wp-quiz-style-minimal .quiz-submit-btn,
+.wp-quiz-style-minimal .quiz-lead-form .btn.btn--primary {
+    background-color: transparent;
+    color: #333;
+    border: 1px solid #333;
+    border-radius: 0;
+}
+
+.wp-quiz-style-minimal .quiz-submit-btn:hover,
+.wp-quiz-style-minimal .quiz-lead-form .btn.btn--primary:hover {
+    background-color: #333;
+    color: white;
+}
+
+/* =====================================================
+   Responsive Design
+   ===================================================== */
+
+@media (max-width: 768px) {
+    .lead-title {
+        font-size: 18px;
+    }
+
+    .lead-subtitle {
+        font-size: 13px;
+    }
+
+    .input-modern {
+        padding: 11px 14px;
+    }
+
+    .input-with-icon .input-modern {
+        padding-left: 36px;
+    }
+
+    .input-icon {
+        font-size: 14px;
+        left: 11px;
+    }
+
+    .phone-country-select {
+        padding: 11px 12px;
+        padding-right: 28px;
+        font-size: 15px;
+        min-width: 100px;
+        max-width: 110px;
+    }
+
+    .quiz-submit-btn,
+    .quiz-lead-form .btn.btn--primary {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lead-form-header {
+        margin-bottom: 20px;
+    }
+
+    .lead-title {
+        font-size: 16px;
+    }
+
+    .lead-form-fields {
+        gap: 12px;
+    }
+
+    .phone-input-wrapper {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .phone-country-select {
+        max-width: 100%;
+        width: 100%;
+        text-align: left;
+        padding: 11px 12px;
+        padding-right: 28px;
+    }
+
+    .field-label {
+        font-size: 12px;
+    }
+}

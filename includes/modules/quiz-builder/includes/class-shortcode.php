@@ -39,16 +39,171 @@ class Alvobot_Quiz_Shortcode {
 
     /**
      * Constructor
+     *
+     * @param Alvobot_Quiz_Assets|null $assets Optional assets instance
      */
-    public function __construct() {
-        $this->assets = new Alvobot_Quiz_Assets();
+    public function __construct($assets = null) {
+        $this->assets = $assets ?? new Alvobot_Quiz_Assets();
         add_shortcode('quiz', array($this, 'render_quiz_content_shortcode'));
-        
+
         // Add filter to preserve content structure around shortcodes
         add_filter('no_texturize_shortcodes', array($this, 'preserve_quiz_shortcode'));
-        
+
         // Add high priority filter to ensure proper content formatting
         add_filter('the_content', array($this, 'ensure_content_formatting'), 1);
+
+        // Handle lead form submission early (before any output)
+        add_action('template_redirect', array($this, 'handle_early_lead_submission'));
+    }
+
+    /**
+     * Handle lead submission early before any output
+     * This prevents "headers already sent" errors
+     */
+    public function handle_early_lead_submission() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return;
+        }
+
+        if (!isset($_POST['alvobot_quiz_action']) || $_POST['alvobot_quiz_action'] !== 'submit_lead') {
+            return;
+        }
+
+        if (!isset($_POST['alvobot_quiz_nonce']) || !wp_verify_nonce($_POST['alvobot_quiz_nonce'], 'alvobot_quiz_lead_submit')) {
+            if (method_exists('AlvoBotPro', 'debug_log')) {
+                AlvoBotPro::debug_log('quiz-builder', 'Lead submission: Nonce verification failed');
+            }
+            return;
+        }
+
+        // Get the quiz data from the post content
+        global $post;
+
+        // If $post is not set, try to get it from the queried object
+        if (!$post) {
+            $post = get_queried_object();
+        }
+
+        if (!$post || !isset($post->post_content)) {
+            if (method_exists('AlvoBotPro', 'debug_log')) {
+                AlvoBotPro::debug_log('quiz-builder', 'Lead submission: Post not found');
+            }
+            return;
+        }
+
+        // Extract quiz JSON from post content
+        $content = $post->post_content;
+        if (preg_match('/\[quiz[^\]]*\](.*?)\[\/quiz\]/s', $content, $matches)) {
+            $json_content = trim($matches[1]);
+            $questions = json_decode($json_content, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($questions)) {
+                $quiz_step = isset($_POST['quiz_step']) ? intval($_POST['quiz_step']) : 0;
+                $quiz_id = isset($_POST['quiz_id']) ? sanitize_text_field($_POST['quiz_id']) : '';
+
+                if (method_exists('AlvoBotPro', 'debug_log')) {
+                    AlvoBotPro::debug_log('quiz-builder', 'Lead submission: Processing step ' . $quiz_step . ' for quiz ' . $quiz_id);
+                }
+
+                if (isset($questions[$quiz_step])) {
+                    $this->process_lead_submission($questions, $quiz_step, $quiz_id);
+                }
+            } else {
+                if (method_exists('AlvoBotPro', 'debug_log')) {
+                    AlvoBotPro::debug_log('quiz-builder', 'Lead submission: JSON decode failed - ' . json_last_error_msg());
+                }
+            }
+        } else {
+            if (method_exists('AlvoBotPro', 'debug_log')) {
+                AlvoBotPro::debug_log('quiz-builder', 'Lead submission: Quiz shortcode not found in post content');
+            }
+        }
+    }
+
+    /**
+     * Process lead submission and redirect
+     */
+    private function process_lead_submission($questions, $quiz_step, $quiz_id) {
+        $current_question = $questions[$quiz_step];
+
+        if (!isset($current_question['type']) || $current_question['type'] !== 'lead_capture') {
+            return;
+        }
+
+        // Process phone number with country code
+        $phone = '';
+        if (isset($_POST['lead_phone']) && !empty($_POST['lead_phone'])) {
+            $phone = sanitize_text_field($_POST['lead_phone']);
+
+            // Get country code and prepend to phone number
+            if (isset($_POST['lead_phone_country']) && !empty($_POST['lead_phone_country'])) {
+                $country_code = sanitize_text_field($_POST['lead_phone_country']);
+                $countries = $this->get_country_phone_data();
+
+                if (isset($countries[$country_code]) && !empty($countries[$country_code]['dial_code'])) {
+                    $dial_code = $countries[$country_code]['dial_code'];
+                    // Format: +55 (11) 99999-9999
+                    $phone = $dial_code . ' ' . $phone;
+                }
+            }
+        }
+
+        $data = array(
+            'quiz_id' => $quiz_id,
+            'name' => isset($_POST['lead_name']) ? sanitize_text_field($_POST['lead_name']) : '',
+            'email' => isset($_POST['lead_email']) ? sanitize_email($_POST['lead_email']) : '',
+            'phone' => $phone,
+            'answers' => isset($_POST['answers']) ? sanitize_text_field($_POST['answers']) : '',
+            'page_url' => isset($_POST['page_url']) ? esc_url_raw($_POST['page_url']) : $this->get_current_url(),
+            'created_at' => current_time('mysql')
+        );
+
+        // Save to DB
+        $submissions = new Alvobot_Quiz_Submissions();
+        // Ensure table exists before saving
+        $submissions->create_table();
+
+        $insert_id = $submissions->save_submission($data);
+
+        // Debug logging
+        if (method_exists('AlvoBotPro', 'debug_log')) {
+            AlvoBotPro::debug_log('quiz-builder', 'Lead submission save attempt - Insert ID: ' . ($insert_id ? $insert_id : 'FAILED'));
+            AlvoBotPro::debug_log('quiz-builder', 'Lead data: ' . json_encode($data));
+        }
+
+        // Send Webhook with platform-specific formatting
+        if (!empty($current_question['webhookUrl'])) {
+            $platform = !empty($current_question['webhookPlatform']) ? $current_question['webhookPlatform'] : 'generic';
+            $submissions->send_webhook($current_question['webhookUrl'], $data, $platform);
+        }
+
+        // Check for custom redirect URL after submit
+        if (!empty($current_question['redirectAfterSubmit'])) {
+            $redirect_url = $current_question['redirectAfterSubmit'];
+            // Handle relative URLs
+            if (strpos($redirect_url, 'http') !== 0 && strpos($redirect_url, '/') === 0) {
+                $redirect_url = home_url($redirect_url);
+            }
+            // Add quiz data to redirect URL
+            $redirect_url = add_query_arg(array(
+                'quiz_id' => $quiz_id,
+                'lead_submitted' => 1
+            ), $redirect_url);
+            // Use wp_redirect for external URLs (wp_safe_redirect only allows same-host)
+            wp_redirect($redirect_url);
+            exit;
+        }
+
+        // Default: Redirect to next step in quiz
+        $next_step = $quiz_step + 1;
+        $redirect_url = add_query_arg(array(
+            'quiz_display_step' => $next_step,
+            'quiz_id' => $quiz_id,
+            'answers' => $data['answers']
+        ), $this->get_current_url());
+
+        wp_safe_redirect($redirect_url);
+        exit;
     }
     
     /**
@@ -410,29 +565,38 @@ class Alvobot_Quiz_Shortcode {
         if (!is_array($questions)) {
             return 'Questions data must be an array.';
         }
-        
+
         foreach ($questions as $index => $question) {
-            // Check required fields
+            // Check if it's a lead capture type
+            if (isset($question['type']) && $question['type'] === 'lead_capture') {
+                // Lead capture only requires title
+                if (!isset($question['title']) || empty($question['title'])) {
+                    return "Lead Capture #" . ($index + 1) . " is missing a title.";
+                }
+                continue; // Skip regular question validation
+            }
+
+            // Check required fields for regular questions
             if (!isset($question['question']) || !isset($question['answers']) || !is_array($question['answers'])) {
                 return "Question #" . ($index + 1) . " is missing required fields (question or answers).";
             }
-            
+
             // Validate answer count
             if (count($question['answers']) < 1) {
                 return "Question #" . ($index + 1) . " must have at least one answer option.";
             }
-            
+
             // Validate correct answer index if present
-            if (isset($question['correct']) && 
+            if (isset($question['correct']) &&
                 (
-                    !is_numeric($question['correct']) || 
-                    $question['correct'] < 0 || 
+                    !is_numeric($question['correct']) ||
+                    $question['correct'] < 0 ||
                     $question['correct'] >= count($question['answers'])
                 )) {
                 return "Question #" . ($index + 1) . " has an invalid 'correct' index.";
             }
         }
-        
+
         return null; // No errors
     }
     
@@ -535,9 +699,12 @@ class Alvobot_Quiz_Shortcode {
         if ($quiz_step >= count($questions)) {
             return $this->generate_results_html($questions, $answers, $atts, $quiz_mode, $quiz_id);
         }
-        
-        // Generate current question HTML
-        return $this->generate_question_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string);
+
+        // Note: Lead submission is now handled early in handle_early_lead_submission()
+        // to prevent "headers already sent" errors
+
+        // Generate current step HTML (question or lead capture)
+        return $this->generate_step_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string);
     }
     
     /**
@@ -632,6 +799,398 @@ class Alvobot_Quiz_Shortcode {
         return $output;
     }
     
+    /**
+     * Get current URL
+     */
+    private function get_current_url() {
+        global $wp;
+        return home_url(add_query_arg(array(), $wp->request));
+    }
+
+    /**
+     * Generate step HTML (Question or Lead Capture)
+     */
+    private function generate_step_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string) {
+        $current_question = $questions[$quiz_step];
+
+        if (isset($current_question['type']) && $current_question['type'] === 'lead_capture') {
+            return $this->generate_lead_capture_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string);
+        }
+
+        return $this->generate_question_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string);
+    }
+
+    /**
+     * Generate Lead Capture HTML
+     */
+    private function generate_lead_capture_html($questions, $quiz_step, $answers, $atts, $quiz_id, $answer_string) {
+        $question = $questions[$quiz_step];
+        $total_questions = count($questions);
+
+        // Get i18n customizations or use defaults
+        $i18n = isset($question['i18n']) ? $question['i18n'] : array();
+        $label_name = !empty($i18n['labelName']) ? $i18n['labelName'] : __('Nome completo', 'alvobot-quiz');
+        $placeholder_name = !empty($i18n['placeholderName']) ? $i18n['placeholderName'] : __('Digite seu nome', 'alvobot-quiz');
+        $label_email = !empty($i18n['labelEmail']) ? $i18n['labelEmail'] : __('E-mail', 'alvobot-quiz');
+        $placeholder_email = !empty($i18n['placeholderEmail']) ? $i18n['placeholderEmail'] : __('seu@email.com', 'alvobot-quiz');
+        $label_phone = !empty($i18n['labelPhone']) ? $i18n['labelPhone'] : __('Telefone / WhatsApp', 'alvobot-quiz');
+        $placeholder_phone = !empty($i18n['placeholderPhone']) ? $i18n['placeholderPhone'] : __('Seu número', 'alvobot-quiz');
+
+        $output = '<div id="wp-quiz-' . esc_attr($quiz_id) . '" class="wp-quiz-container wp-quiz-style-' . esc_attr($atts['style']) . '">';
+
+        // Progress bar
+        if ($atts['show_progress'] === 'true') {
+            $progress = ($quiz_step / $total_questions) * 100;
+            $output .= '<div class="quiz-progress-bar">';
+            $output .= '<div class="progress-fill" style="width: ' . $progress . '%"></div>';
+            $output .= '<span class="progress-text">' . ($quiz_step + 1) . '/' . $total_questions . '</span>';
+            $output .= '</div>';
+        }
+
+        $output .= '<div class="quiz-question-container quiz-lead-container">';
+        $output .= '<div class="lead-form-header">';
+        $output .= '<h3 class="quiz-question lead-title">' . esc_html($question['title']) . '</h3>';
+        if (!empty($question['subtitle'])) {
+            $output .= '<p class="lead-subtitle">' . esc_html($question['subtitle']) . '</p>';
+        }
+        $output .= '</div>';
+
+        $output .= '<form method="post" class="quiz-lead-form" id="quiz-lead-form-' . esc_attr($quiz_id) . '">';
+        $output .= wp_nonce_field('alvobot_quiz_lead_submit', 'alvobot_quiz_nonce', true, false);
+        $output .= '<input type="hidden" name="alvobot_quiz_action" value="submit_lead">';
+        $output .= '<input type="hidden" name="quiz_id" value="' . esc_attr($quiz_id) . '">';
+        $output .= '<input type="hidden" name="quiz_step" value="' . esc_attr($quiz_step) . '">';
+        $output .= '<input type="hidden" name="answers" value="' . esc_attr($answer_string) . '">';
+        $output .= '<input type="hidden" name="page_url" value="' . esc_attr($this->get_current_url()) . '">';
+
+        $output .= '<div class="lead-form-fields">';
+
+        if (!empty($question['fields']['name'])) {
+            $output .= '<div class="form-group">';
+            $output .= '<label class="field-label">' . esc_html($label_name) . '</label>';
+            $output .= '<div class="input-with-icon">';
+            $output .= '<span class="input-icon">👤</span>';
+            $output .= '<input type="text" name="lead_name" class="input-modern" placeholder="' . esc_attr($placeholder_name) . '" required>';
+            $output .= '</div>';
+            $output .= '</div>';
+        }
+
+        if (!empty($question['fields']['email'])) {
+            $output .= '<div class="form-group">';
+            $output .= '<label class="field-label">' . esc_html($label_email) . '</label>';
+            $output .= '<div class="input-with-icon">';
+            $output .= '<span class="input-icon">✉️</span>';
+            $output .= '<input type="email" name="lead_email" class="input-modern" placeholder="' . esc_attr($placeholder_email) . '" required>';
+            $output .= '</div>';
+            $output .= '</div>';
+        }
+
+        if (!empty($question['fields']['phone'])) {
+            $output .= $this->generate_phone_field_with_country($label_phone, $placeholder_phone);
+        }
+
+        $output .= '</div>'; // .lead-form-fields
+
+        $submit_text = !empty($question['submitText']) ? $question['submitText'] : __('Continuar', 'alvobot-quiz');
+        $output .= '<button type="submit" class="quiz-submit-btn">';
+        $output .= '<span class="btn-text">' . esc_html($submit_text) . '</span>';
+        $output .= '<span class="btn-icon">→</span>';
+        $output .= '</button>';
+
+        $output .= '</form>';
+        $output .= '</div>'; // .quiz-question-container
+        $output .= '</div>'; // .wp-quiz-container
+
+        // Add phone validation script
+        $output .= $this->get_phone_validation_script();
+
+        return $output;
+    }
+
+    /**
+     * Generate phone field with country selector
+     *
+     * @param string $label Custom label for the phone field
+     * @param string $placeholder Custom placeholder for the phone input
+     */
+    private function generate_phone_field_with_country($label = '', $placeholder = '') {
+        $countries = $this->get_country_phone_data();
+
+        // Use defaults if not provided
+        if (empty($label)) {
+            $label = __('Telefone / WhatsApp', 'alvobot-quiz');
+        }
+        if (empty($placeholder)) {
+            $placeholder = __('Seu número', 'alvobot-quiz');
+        }
+
+        $output = '<div class="form-group phone-field-group">';
+        $output .= '<label class="field-label">' . esc_html($label) . '</label>';
+        $output .= '<div class="phone-input-wrapper">';
+
+        // Country selector with flags
+        $output .= '<select name="lead_phone_country" id="lead_phone_country" class="phone-country-select">';
+        foreach ($countries as $code => $country) {
+            $selected = ($code === 'BR') ? ' selected' : ''; // Default to Brazil
+            $flag = isset($country['flag']) ? $country['flag'] : '';
+            $output .= '<option value="' . esc_attr($code) . '" data-code="' . esc_attr($country['dial_code']) . '" data-mask="' . esc_attr($country['mask']) . '" data-digits="' . esc_attr($country['digits']) . '" data-flag="' . esc_attr($flag) . '"' . $selected . '>';
+            $output .= $flag . ' ' . esc_html($country['dial_code']);
+            $output .= '</option>';
+        }
+        $output .= '</select>';
+
+        // Phone input with icon
+        $output .= '<div class="phone-input-container">';
+        $output .= '<input type="tel" name="lead_phone" id="lead_phone_input" class="input-modern phone-input" placeholder="' . esc_attr($placeholder) . '" required>';
+        $output .= '</div>';
+
+        $output .= '</div>'; // .phone-input-wrapper
+        $output .= '<small class="phone-hint" id="phone-hint"></small>';
+        $output .= '</div>'; // .form-group
+
+        return $output;
+    }
+
+    /**
+     * Get country phone data with flags
+     * Comprehensive list of countries with dial codes, masks, and flag emojis
+     */
+    private function get_country_phone_data() {
+        return array(
+            // América do Sul
+            'BR' => array('name' => 'Brasil', 'flag' => '🇧🇷', 'dial_code' => '+55', 'mask' => '(99) 99999-9999', 'digits' => '11', 'example' => '(11) 99999-9999'),
+            'AR' => array('name' => 'Argentina', 'flag' => '🇦🇷', 'dial_code' => '+54', 'mask' => '99 9999-9999', 'digits' => '10', 'example' => '11 1234-5678'),
+            'CL' => array('name' => 'Chile', 'flag' => '🇨🇱', 'dial_code' => '+56', 'mask' => '9 9999 9999', 'digits' => '9', 'example' => '9 1234 5678'),
+            'CO' => array('name' => 'Colômbia', 'flag' => '🇨🇴', 'dial_code' => '+57', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '301 234 5678'),
+            'PE' => array('name' => 'Peru', 'flag' => '🇵🇪', 'dial_code' => '+51', 'mask' => '999 999 999', 'digits' => '9', 'example' => '999 123 456'),
+            'VE' => array('name' => 'Venezuela', 'flag' => '🇻🇪', 'dial_code' => '+58', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '412 123 4567'),
+            'EC' => array('name' => 'Equador', 'flag' => '🇪🇨', 'dial_code' => '+593', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '99 123 4567'),
+            'BO' => array('name' => 'Bolívia', 'flag' => '🇧🇴', 'dial_code' => '+591', 'mask' => '9999 9999', 'digits' => '8', 'example' => '7123 4567'),
+            'PY' => array('name' => 'Paraguai', 'flag' => '🇵🇾', 'dial_code' => '+595', 'mask' => '999 999 999', 'digits' => '9', 'example' => '981 123 456'),
+            'UY' => array('name' => 'Uruguai', 'flag' => '🇺🇾', 'dial_code' => '+598', 'mask' => '99 999 999', 'digits' => '8', 'example' => '99 123 456'),
+
+            // América Central e Caribe
+            'MX' => array('name' => 'México', 'flag' => '🇲🇽', 'dial_code' => '+52', 'mask' => '99 9999 9999', 'digits' => '10', 'example' => '55 1234 5678'),
+            'GT' => array('name' => 'Guatemala', 'flag' => '🇬🇹', 'dial_code' => '+502', 'mask' => '9999 9999', 'digits' => '8', 'example' => '5123 4567'),
+            'HN' => array('name' => 'Honduras', 'flag' => '🇭🇳', 'dial_code' => '+504', 'mask' => '9999 9999', 'digits' => '8', 'example' => '9123 4567'),
+            'SV' => array('name' => 'El Salvador', 'flag' => '🇸🇻', 'dial_code' => '+503', 'mask' => '9999 9999', 'digits' => '8', 'example' => '7123 4567'),
+            'NI' => array('name' => 'Nicarágua', 'flag' => '🇳🇮', 'dial_code' => '+505', 'mask' => '9999 9999', 'digits' => '8', 'example' => '8123 4567'),
+            'CR' => array('name' => 'Costa Rica', 'flag' => '🇨🇷', 'dial_code' => '+506', 'mask' => '9999 9999', 'digits' => '8', 'example' => '8123 4567'),
+            'PA' => array('name' => 'Panamá', 'flag' => '🇵🇦', 'dial_code' => '+507', 'mask' => '9999 9999', 'digits' => '8', 'example' => '6123 4567'),
+            'CU' => array('name' => 'Cuba', 'flag' => '🇨🇺', 'dial_code' => '+53', 'mask' => '9 999 9999', 'digits' => '8', 'example' => '5 123 4567'),
+            'DO' => array('name' => 'Rep. Dominicana', 'flag' => '🇩🇴', 'dial_code' => '+1', 'mask' => '(999) 999-9999', 'digits' => '10', 'example' => '(809) 123-4567'),
+            'PR' => array('name' => 'Porto Rico', 'flag' => '🇵🇷', 'dial_code' => '+1', 'mask' => '(999) 999-9999', 'digits' => '10', 'example' => '(787) 123-4567'),
+
+            // América do Norte
+            'US' => array('name' => 'Estados Unidos', 'flag' => '🇺🇸', 'dial_code' => '+1', 'mask' => '(999) 999-9999', 'digits' => '10', 'example' => '(555) 123-4567'),
+            'CA' => array('name' => 'Canadá', 'flag' => '🇨🇦', 'dial_code' => '+1', 'mask' => '(999) 999-9999', 'digits' => '10', 'example' => '(416) 123-4567'),
+
+            // Europa
+            'PT' => array('name' => 'Portugal', 'flag' => '🇵🇹', 'dial_code' => '+351', 'mask' => '999 999 999', 'digits' => '9', 'example' => '912 345 678'),
+            'ES' => array('name' => 'Espanha', 'flag' => '🇪🇸', 'dial_code' => '+34', 'mask' => '999 999 999', 'digits' => '9', 'example' => '612 345 678'),
+            'FR' => array('name' => 'França', 'flag' => '🇫🇷', 'dial_code' => '+33', 'mask' => '9 99 99 99 99', 'digits' => '9', 'example' => '6 12 34 56 78'),
+            'IT' => array('name' => 'Itália', 'flag' => '🇮🇹', 'dial_code' => '+39', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '312 345 6789'),
+            'DE' => array('name' => 'Alemanha', 'flag' => '🇩🇪', 'dial_code' => '+49', 'mask' => '999 99999999', 'digits' => '11', 'example' => '151 12345678'),
+            'GB' => array('name' => 'Reino Unido', 'flag' => '🇬🇧', 'dial_code' => '+44', 'mask' => '9999 999999', 'digits' => '10', 'example' => '7911 123456'),
+            'IE' => array('name' => 'Irlanda', 'flag' => '🇮🇪', 'dial_code' => '+353', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '85 123 4567'),
+            'NL' => array('name' => 'Holanda', 'flag' => '🇳🇱', 'dial_code' => '+31', 'mask' => '9 99999999', 'digits' => '9', 'example' => '6 12345678'),
+            'BE' => array('name' => 'Bélgica', 'flag' => '🇧🇪', 'dial_code' => '+32', 'mask' => '999 99 99 99', 'digits' => '9', 'example' => '470 12 34 56'),
+            'CH' => array('name' => 'Suíça', 'flag' => '🇨🇭', 'dial_code' => '+41', 'mask' => '99 999 99 99', 'digits' => '9', 'example' => '78 123 45 67'),
+            'AT' => array('name' => 'Áustria', 'flag' => '🇦🇹', 'dial_code' => '+43', 'mask' => '999 9999999', 'digits' => '10', 'example' => '664 1234567'),
+            'PL' => array('name' => 'Polônia', 'flag' => '🇵🇱', 'dial_code' => '+48', 'mask' => '999 999 999', 'digits' => '9', 'example' => '512 345 678'),
+            'SE' => array('name' => 'Suécia', 'flag' => '🇸🇪', 'dial_code' => '+46', 'mask' => '99 999 99 99', 'digits' => '9', 'example' => '70 123 45 67'),
+            'NO' => array('name' => 'Noruega', 'flag' => '🇳🇴', 'dial_code' => '+47', 'mask' => '999 99 999', 'digits' => '8', 'example' => '412 34 567'),
+            'DK' => array('name' => 'Dinamarca', 'flag' => '🇩🇰', 'dial_code' => '+45', 'mask' => '99 99 99 99', 'digits' => '8', 'example' => '20 12 34 56'),
+            'FI' => array('name' => 'Finlândia', 'flag' => '🇫🇮', 'dial_code' => '+358', 'mask' => '99 9999999', 'digits' => '9', 'example' => '40 1234567'),
+            'GR' => array('name' => 'Grécia', 'flag' => '🇬🇷', 'dial_code' => '+30', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '691 234 5678'),
+            'RU' => array('name' => 'Rússia', 'flag' => '🇷🇺', 'dial_code' => '+7', 'mask' => '999 999-99-99', 'digits' => '10', 'example' => '912 345-67-89'),
+            'UA' => array('name' => 'Ucrânia', 'flag' => '🇺🇦', 'dial_code' => '+380', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '50 123 4567'),
+            'RO' => array('name' => 'Romênia', 'flag' => '🇷🇴', 'dial_code' => '+40', 'mask' => '999 999 999', 'digits' => '9', 'example' => '712 345 678'),
+            'CZ' => array('name' => 'Tchéquia', 'flag' => '🇨🇿', 'dial_code' => '+420', 'mask' => '999 999 999', 'digits' => '9', 'example' => '601 123 456'),
+            'HU' => array('name' => 'Hungria', 'flag' => '🇭🇺', 'dial_code' => '+36', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '20 123 4567'),
+
+            // Ásia
+            'JP' => array('name' => 'Japão', 'flag' => '🇯🇵', 'dial_code' => '+81', 'mask' => '99 9999 9999', 'digits' => '10', 'example' => '90 1234 5678'),
+            'CN' => array('name' => 'China', 'flag' => '🇨🇳', 'dial_code' => '+86', 'mask' => '999 9999 9999', 'digits' => '11', 'example' => '139 1234 5678'),
+            'IN' => array('name' => 'Índia', 'flag' => '🇮🇳', 'dial_code' => '+91', 'mask' => '99999 99999', 'digits' => '10', 'example' => '98765 43210'),
+            'KR' => array('name' => 'Coreia do Sul', 'flag' => '🇰🇷', 'dial_code' => '+82', 'mask' => '99 9999 9999', 'digits' => '10', 'example' => '10 1234 5678'),
+            'TH' => array('name' => 'Tailândia', 'flag' => '🇹🇭', 'dial_code' => '+66', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '81 234 5678'),
+            'VN' => array('name' => 'Vietnã', 'flag' => '🇻🇳', 'dial_code' => '+84', 'mask' => '99 999 99 99', 'digits' => '9', 'example' => '91 234 56 78'),
+            'PH' => array('name' => 'Filipinas', 'flag' => '🇵🇭', 'dial_code' => '+63', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '917 123 4567'),
+            'ID' => array('name' => 'Indonésia', 'flag' => '🇮🇩', 'dial_code' => '+62', 'mask' => '999 9999 9999', 'digits' => '11', 'example' => '812 3456 7890'),
+            'MY' => array('name' => 'Malásia', 'flag' => '🇲🇾', 'dial_code' => '+60', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '12 345 6789'),
+            'SG' => array('name' => 'Singapura', 'flag' => '🇸🇬', 'dial_code' => '+65', 'mask' => '9999 9999', 'digits' => '8', 'example' => '9123 4567'),
+            'AE' => array('name' => 'Emirados Árabes', 'flag' => '🇦🇪', 'dial_code' => '+971', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '50 123 4567'),
+            'SA' => array('name' => 'Arábia Saudita', 'flag' => '🇸🇦', 'dial_code' => '+966', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '50 123 4567'),
+            'IL' => array('name' => 'Israel', 'flag' => '🇮🇱', 'dial_code' => '+972', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '50 123 4567'),
+            'TR' => array('name' => 'Turquia', 'flag' => '🇹🇷', 'dial_code' => '+90', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '532 123 4567'),
+
+            // África
+            'ZA' => array('name' => 'África do Sul', 'flag' => '🇿🇦', 'dial_code' => '+27', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '71 234 5678'),
+            'EG' => array('name' => 'Egito', 'flag' => '🇪🇬', 'dial_code' => '+20', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '100 123 4567'),
+            'NG' => array('name' => 'Nigéria', 'flag' => '🇳🇬', 'dial_code' => '+234', 'mask' => '999 999 9999', 'digits' => '10', 'example' => '802 123 4567'),
+            'KE' => array('name' => 'Quênia', 'flag' => '🇰🇪', 'dial_code' => '+254', 'mask' => '999 999999', 'digits' => '9', 'example' => '712 345678'),
+            'MA' => array('name' => 'Marrocos', 'flag' => '🇲🇦', 'dial_code' => '+212', 'mask' => '999 999999', 'digits' => '9', 'example' => '661 234567'),
+            'AO' => array('name' => 'Angola', 'flag' => '🇦🇴', 'dial_code' => '+244', 'mask' => '999 999 999', 'digits' => '9', 'example' => '923 456 789'),
+            'MZ' => array('name' => 'Moçambique', 'flag' => '🇲🇿', 'dial_code' => '+258', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '84 123 4567'),
+            'CV' => array('name' => 'Cabo Verde', 'flag' => '🇨🇻', 'dial_code' => '+238', 'mask' => '999 9999', 'digits' => '7', 'example' => '991 2345'),
+
+            // Oceania
+            'AU' => array('name' => 'Austrália', 'flag' => '🇦🇺', 'dial_code' => '+61', 'mask' => '999 999 999', 'digits' => '9', 'example' => '412 345 678'),
+            'NZ' => array('name' => 'Nova Zelândia', 'flag' => '🇳🇿', 'dial_code' => '+64', 'mask' => '99 999 9999', 'digits' => '9', 'example' => '21 123 4567'),
+
+            // Outros
+            'OTHER' => array('name' => 'Outro país', 'flag' => '🌍', 'dial_code' => '', 'mask' => '', 'digits' => '0', 'example' => '')
+        );
+    }
+
+    /**
+     * Get phone validation script
+     */
+    private function get_phone_validation_script() {
+        $countries_json = json_encode($this->get_country_phone_data());
+
+        return <<<SCRIPT
+<script>
+(function() {
+    const countries = {$countries_json};
+
+    // Auto-detect country from browser
+    function detectCountry() {
+        const lang = navigator.language || navigator.userLanguage;
+        const langMap = {
+            'pt-BR': 'BR',
+            'pt-PT': 'PT',
+            'pt': 'BR',
+            'en-US': 'US',
+            'en': 'US',
+            'es-AR': 'AR',
+            'es-MX': 'MX',
+            'es-ES': 'ES',
+            'es-CO': 'CO',
+            'es-CL': 'CL',
+            'es': 'ES'
+        };
+
+        // Try exact match first
+        if (langMap[lang]) {
+            return langMap[lang];
+        }
+
+        // Try language prefix
+        const prefix = lang.split('-')[0];
+        if (langMap[prefix]) {
+            return langMap[prefix];
+        }
+
+        return 'BR'; // Default
+    }
+
+    // Format phone number based on mask
+    function formatPhone(value, mask) {
+        if (!mask) return value;
+
+        let digits = value.replace(/\D/g, '');
+        let result = '';
+        let digitIndex = 0;
+
+        for (let i = 0; i < mask.length && digitIndex < digits.length; i++) {
+            if (mask[i] === '9') {
+                result += digits[digitIndex];
+                digitIndex++;
+            } else {
+                result += mask[i];
+            }
+        }
+
+        return result;
+    }
+
+    // Validate phone number
+    function validatePhone(value, expectedDigits) {
+        if (expectedDigits === '0') return true; // "Other" country
+
+        const digits = value.replace(/\D/g, '');
+        const expected = parseInt(expectedDigits);
+
+        // Allow some flexibility (±1 digit)
+        return digits.length >= expected - 1 && digits.length <= expected + 1;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        const countrySelect = document.getElementById('lead_phone_country');
+        const phoneInput = document.getElementById('lead_phone_input');
+        const phoneHint = document.getElementById('phone-hint');
+
+        if (!countrySelect || !phoneInput) return;
+
+        // Set detected country
+        const detectedCountry = detectCountry();
+        countrySelect.value = detectedCountry;
+
+        // Update hint
+        function updateHint() {
+            const option = countrySelect.selectedOptions[0];
+            const countryCode = option.value;
+            const country = countries[countryCode];
+
+            if (country && country.example) {
+                phoneHint.textContent = 'Ex: ' + country.example;
+            } else {
+                phoneHint.textContent = '';
+            }
+        }
+
+        // Format on input
+        phoneInput.addEventListener('input', function(e) {
+            const option = countrySelect.selectedOptions[0];
+            const mask = option.dataset.mask;
+
+            if (mask) {
+                const cursorPos = this.selectionStart;
+                const oldLength = this.value.length;
+                this.value = formatPhone(this.value, mask);
+                const newLength = this.value.length;
+
+                // Adjust cursor position
+                const newCursorPos = cursorPos + (newLength - oldLength);
+                this.setSelectionRange(newCursorPos, newCursorPos);
+            }
+        });
+
+        // Update on country change
+        countrySelect.addEventListener('change', function() {
+            phoneInput.value = '';
+            updateHint();
+            phoneInput.focus();
+        });
+
+        // Validate on submit
+        const form = phoneInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const option = countrySelect.selectedOptions[0];
+                const expectedDigits = option.dataset.digits;
+
+                if (!validatePhone(phoneInput.value, expectedDigits)) {
+                    e.preventDefault();
+                    const country = countries[countrySelect.value];
+                    alert('Por favor, insira um número de telefone válido.' + (country.example ? ' Ex: ' + country.example : ''));
+                    phoneInput.focus();
+                    return false;
+                }
+            });
+        }
+
+        // Initial hint
+        updateHint();
+    });
+})();
+</script>
+SCRIPT;
+    }
+
     /**
      * Generate question HTML
      *

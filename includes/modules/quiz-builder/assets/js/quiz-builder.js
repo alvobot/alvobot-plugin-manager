@@ -19,11 +19,11 @@ function getRelativeLuminance(rgb) {
     const rsRGB = rgb.r / 255;
     const gsRGB = rgb.g / 255;
     const bsRGB = rgb.b / 255;
-    
+
     const r = (rsRGB <= 0.03928) ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
     const g = (gsRGB <= 0.03928) ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
     const b = (bsRGB <= 0.03928) ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
-    
+
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -31,13 +31,13 @@ function getRelativeLuminance(rgb) {
 function getContrastRatio(color1, color2) {
     const rgb1 = hexToRgb(color1);
     const rgb2 = hexToRgb(color2);
-    
+
     const l1 = getRelativeLuminance(rgb1);
     const l2 = getRelativeLuminance(rgb2);
-    
+
     const lighter = Math.max(l1, l2);
     const darker = Math.min(l1, l2);
-    
+
     return (lighter + 0.05) / (darker + 0.05);
 }
 
@@ -47,7 +47,7 @@ function checkContrast(bgColor, textColor, element) {
     if (!bgColor || bgColor.toLowerCase() === 'transparent' || bgColor === '') {
         bgColor = '#ffffff';
     }
-    
+
     // NEVER allow transparent text
     if (!textColor || textColor.toLowerCase() === 'transparent' || textColor === '') {
         textColor = '#000000';
@@ -57,12 +57,12 @@ function checkContrast(bgColor, textColor, element) {
         console.warn('Text color was transparent, forcing to black');
         return;
     }
-    
+
     // If background is transparent, ensure text is dark enough for light backgrounds
     if (!bgColor || bgColor.toLowerCase() === 'transparent' || bgColor === '') {
         const rgb = hexToRgb(textColor);
         const luminance = getRelativeLuminance(rgb);
-        
+
         // If text is too light (luminance > 0.5), make it darker
         if (luminance > 0.5) {
             textColor = '#000000';
@@ -72,21 +72,21 @@ function checkContrast(bgColor, textColor, element) {
             console.warn('Text too light for transparent background, forcing to black');
         }
     }
-    
+
     // Calculate contrast ratio
     const ratio = getContrastRatio(bgColor, textColor);
-    
+
     // Log if contrast is too low (WCAG AA requires 4.5:1)
     if (ratio < 4.5) {
         console.warn(`Low contrast detected: ${textColor} on ${bgColor} (${ratio.toFixed(2)}:1). Recommended: 4.5:1 or higher`);
     }
-    
+
     return ratio;
 }
 
 function applyStylesToElement(element, styles) {
     if (!element || !styles) return;
-    
+
     if (styles.backgroundColor) element.style.backgroundColor = styles.backgroundColor + ' !important';
     if (styles.color) {
         // Prevent transparent text
@@ -97,7 +97,7 @@ function applyStylesToElement(element, styles) {
     }
     if (styles.fontWeight) element.style.fontWeight = styles.fontWeight + ' !important';
     if (styles.fontSize) element.style.fontSize = styles.fontSize + ' !important';
-    
+
     // Check contrast if both colors are set
     if (styles.backgroundColor && styles.color) {
         checkContrast(styles.backgroundColor, styles.color, element);
@@ -108,10 +108,10 @@ function getAnswerText(answer, defaultText = '') {
     return typeof answer === 'string' ? answer : (answer?.text || defaultText);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const questionsContainer = document.getElementById('questions-container');
     const shortcodeField = document.getElementById('generated-shortcode');
-    
+
     // Check if required elements exist
     if (!questionsContainer || !shortcodeField) {
         console.warn('Quiz Builder: Required elements not found');
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </label>
             </div>
         ` : '';
-        
+
         return `
             <div class="answer-item">
                 ${correctIndicator}
@@ -157,10 +157,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionDiv = document.createElement('div');
         questionDiv.className = 'question-item';
         questionDiv.dataset.questionId = Date.now();
-        
+
         const hasCorrect = questionData && typeof questionData.correct !== 'undefined';
         const correctChecked = hasCorrect ? 'checked' : '';
-        
+
         questionDiv.innerHTML = `
             <div class="question-header">
                 <div class="question-number">
@@ -203,8 +203,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         return questionDiv;
+    }
+
+    function createLeadCaptureElement(data = null) {
+        const template = document.getElementById('lead-capture-template');
+        const clone = template.content.cloneNode(true);
+        const div = clone.querySelector('.lead-capture-item');
+        div.dataset.questionId = Date.now();
+
+        if (data) {
+            div.querySelector('.question-text').value = data.title || 'Preencha seus dados para continuar';
+            div.querySelector('.field-name').checked = data.fields?.name !== false;
+            div.querySelector('.field-email').checked = data.fields?.email !== false;
+            div.querySelector('.field-phone').checked = data.fields?.phone === true;
+            div.querySelector('.webhook-url').value = data.webhookUrl || '';
+            div.querySelector('.submit-text').value = data.submitText || 'Continuar';
+            // New fields
+            if (div.querySelector('.webhook-platform')) {
+                div.querySelector('.webhook-platform').value = data.webhookPlatform || 'generic';
+            }
+            if (div.querySelector('.redirect-after-submit')) {
+                div.querySelector('.redirect-after-submit').value = data.redirectAfterSubmit || '';
+            }
+            // i18n label/placeholder fields
+            if (data.i18n) {
+                if (div.querySelector('.label-name')) {
+                    div.querySelector('.label-name').value = data.i18n.labelName || 'Nome completo';
+                }
+                if (div.querySelector('.placeholder-name')) {
+                    div.querySelector('.placeholder-name').value = data.i18n.placeholderName || 'Digite seu nome';
+                }
+                if (div.querySelector('.label-email')) {
+                    div.querySelector('.label-email').value = data.i18n.labelEmail || 'E-mail';
+                }
+                if (div.querySelector('.placeholder-email')) {
+                    div.querySelector('.placeholder-email').value = data.i18n.placeholderEmail || 'seu@email.com';
+                }
+                if (div.querySelector('.label-phone')) {
+                    div.querySelector('.label-phone').value = data.i18n.labelPhone || 'Telefone / WhatsApp';
+                }
+                if (div.querySelector('.placeholder-phone')) {
+                    div.querySelector('.placeholder-phone').value = data.i18n.placeholderPhone || 'Seu número';
+                }
+            }
+        }
+
+        // Add event listeners
+        div.querySelector('.btn--danger').addEventListener('click', function () {
+            div.remove();
+            updateQuestionNumbers();
+            updateQuestionCounts();
+            generateShortcode();
+        });
+
+        div.querySelectorAll('input, select').forEach(input => {
+            input.addEventListener('change', generateShortcode);
+            input.addEventListener('input', generateShortcode);
+        });
+
+        return div;
+    }
+
+    function addLeadCapture(data = null) {
+        const emptyState = questionsContainer.querySelector('.drop-zone-empty');
+        if (emptyState) emptyState.remove();
+
+        const element = createLeadCaptureElement(data);
+        questionsContainer.appendChild(element);
+
+        updateQuestionNumbers();
+        updateQuestionCounts();
+        generateShortcode();
     }
 
     function generateAnswersHTML(answers, questionId) {
@@ -220,14 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const questionDiv = createQuestionElement(questionData);
         questionsContainer.appendChild(questionDiv);
-        
+
         // Apply question styles if they exist
         if (questionData && questionData.styles) {
             questionDiv.dataset.styles = JSON.stringify(questionData.styles);
             const questionTextElement = questionDiv.querySelector('.question-text');
             applyStylesToElement(questionTextElement, questionData.styles);
         }
-        
+
         // Apply answer styles if they exist
         if (questionData && questionData.answers) {
             const answerItems = questionDiv.querySelectorAll('.answer-item');
@@ -239,30 +310,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         if (questionData && questionData.correct !== undefined) {
             const checkbox = questionDiv.querySelector('.has-correct-answer');
             toggleCorrectMode(checkbox);
-            
+
             const answers = questionDiv.querySelectorAll('.answer-item');
-            
+
             // Lidar com resposta única (number) ou múltiplas (array)
-            const correctAnswers = Array.isArray(questionData.correct) ? 
+            const correctAnswers = Array.isArray(questionData.correct) ?
                 questionData.correct : [questionData.correct];
-            
+
             correctAnswers.forEach(correctIndex => {
                 const checkbox = answers[correctIndex]?.querySelector('.correct-answer');
                 if (checkbox) checkbox.checked = true;
             });
         }
-        
+
         updateQuestionNumbers();
         updateQuestionCounts();
         generateShortcode();
     }
 
-    // Make addQuestion globally accessible
+    // Make addQuestion and addLeadCapture globally accessible
     window.addQuestion = addQuestion;
+    window.addLeadCapture = addLeadCapture;
 
     function updateQuestionNumbers() {
         questionsContainer.querySelectorAll('.question-item').forEach((question, index) => {
@@ -275,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionsCount = document.querySelectorAll('.question-item').length;
         const statsQuestions = document.getElementById('stats-questions');
         const statsTime = document.getElementById('stats-time');
-        
+
         if (statsQuestions) statsQuestions.textContent = questionsCount;
         if (statsTime) {
             const estimatedTime = Math.max(1, Math.ceil(questionsCount * 0.5));
@@ -285,53 +357,99 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function buildQuestionData() {
         const questions = [];
-        
-        document.querySelectorAll('.question-item').forEach(questionDiv => {
-            const questionText = questionDiv.querySelector('.question-text').value.trim();
-            if (!questionText) return;
-            
-            const answers = [];
-            questionDiv.querySelectorAll('.answer-item').forEach(answerDiv => {
-                const answerInput = answerDiv.querySelector('.answer-text');
-                const answerText = answerInput.value.trim();
-                if (answerText) {
-                    const answerData = answerDiv.dataset.styles ? 
-                        { text: answerText, styles: JSON.parse(answerDiv.dataset.styles) } : 
-                        answerText;
-                    answers.push(answerData);
-                }
-            });
-            
-            if (answers.length >= 1) {
-                const questionData = { question: questionText, answers };
-                
-                if (questionDiv.dataset.styles) {
-                    questionData.styles = JSON.parse(questionDiv.dataset.styles);
-                }
-                
-                const hasCorrect = questionDiv.querySelector('.has-correct-answer').checked;
-                if (hasCorrect) {
-                    const correctCheckboxes = questionDiv.querySelectorAll('.correct-answer:checked');
-                    if (correctCheckboxes.length > 0) {
-                        const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
-                        // Se só tem uma resposta correta, usar o formato antigo para compatibilidade
-                        questionData.correct = correctAnswers.length === 1 ? correctAnswers[0] : correctAnswers;
+
+        if (!questionsContainer) return questions;
+
+        Array.from(questionsContainer.children).forEach(child => {
+            if (child.classList.contains('question-item') && !child.classList.contains('lead-capture-item')) {
+                // It's a question
+                const questionText = child.querySelector('.question-text').value.trim();
+                if (!questionText) return;
+
+                const answers = [];
+                child.querySelectorAll('.answer-item').forEach(answerDiv => {
+                    const answerInput = answerDiv.querySelector('.answer-text');
+                    const answerText = answerInput.value.trim();
+                    if (answerText) {
+                        const answerData = answerDiv.dataset.styles ?
+                            { text: answerText, styles: JSON.parse(answerDiv.dataset.styles) } :
+                            answerText;
+                        answers.push(answerData);
                     }
-                    
-                    const explanation = questionDiv.querySelector('.explanation').value.trim();
-                    if (explanation) questionData.explanation = explanation;
+                });
+
+                if (answers.length >= 1) {
+                    const questionData = { type: 'question', question: questionText, answers };
+
+                    if (child.dataset.styles) {
+                        questionData.styles = JSON.parse(child.dataset.styles);
+                    }
+
+                    const hasCorrect = child.querySelector('.has-correct-answer').checked;
+                    if (hasCorrect) {
+                        const correctCheckboxes = child.querySelectorAll('.correct-answer:checked');
+                        if (correctCheckboxes.length > 0) {
+                            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+                            questionData.correct = correctAnswers.length === 1 ? correctAnswers[0] : correctAnswers;
+                        }
+
+                        const explanation = child.querySelector('.explanation').value.trim();
+                        if (explanation) questionData.explanation = explanation;
+                    }
+
+                    questions.push(questionData);
                 }
-                
-                questions.push(questionData);
+            } else if (child.classList.contains('lead-capture-item')) {
+                // It's a lead capture
+                const leadData = {
+                    type: 'lead_capture',
+                    title: child.querySelector('.question-text').value.trim(),
+                    fields: {
+                        name: child.querySelector('.field-name').checked,
+                        email: child.querySelector('.field-email').checked,
+                        phone: child.querySelector('.field-phone').checked
+                    },
+                    webhookUrl: child.querySelector('.webhook-url').value.trim(),
+                    submitText: child.querySelector('.submit-text').value.trim()
+                };
+                // Add new fields
+                const platformSelect = child.querySelector('.webhook-platform');
+                if (platformSelect) {
+                    leadData.webhookPlatform = platformSelect.value;
+                }
+                const redirectInput = child.querySelector('.redirect-after-submit');
+                if (redirectInput && redirectInput.value.trim()) {
+                    leadData.redirectAfterSubmit = redirectInput.value.trim();
+                }
+                // Collect i18n label/placeholder values
+                const i18n = {};
+                const labelName = child.querySelector('.label-name');
+                const placeholderName = child.querySelector('.placeholder-name');
+                const labelEmail = child.querySelector('.label-email');
+                const placeholderEmail = child.querySelector('.placeholder-email');
+                const labelPhone = child.querySelector('.label-phone');
+                const placeholderPhone = child.querySelector('.placeholder-phone');
+
+                if (labelName && labelName.value.trim()) i18n.labelName = labelName.value.trim();
+                if (placeholderName && placeholderName.value.trim()) i18n.placeholderName = placeholderName.value.trim();
+                if (labelEmail && labelEmail.value.trim()) i18n.labelEmail = labelEmail.value.trim();
+                if (placeholderEmail && placeholderEmail.value.trim()) i18n.placeholderEmail = placeholderEmail.value.trim();
+                if (labelPhone && labelPhone.value.trim()) i18n.labelPhone = labelPhone.value.trim();
+                if (placeholderPhone && placeholderPhone.value.trim()) i18n.placeholderPhone = placeholderPhone.value.trim();
+
+                if (Object.keys(i18n).length > 0) {
+                    leadData.i18n = i18n;
+                }
+                questions.push(leadData);
             }
         });
-        
+
         return questions;
     }
 
     window.generateShortcode = function generateShortcode() {
         const questions = buildQuestionData();
-        
+
         const settings = {
             redirectUrl: document.getElementById('redirect_url')?.value || '',
             style: document.getElementById('quiz_style')?.value || 'default',
@@ -339,23 +457,23 @@ document.addEventListener('DOMContentLoaded', function() {
             showScore: document.getElementById('show_score')?.checked || false,
             randomize: document.getElementById('randomize')?.checked || false
         };
-        
+
         let shortcode = '[quiz';
-        
+
         if (settings.redirectUrl) shortcode += ` redirect_url="${settings.redirectUrl}"`;
         if (settings.style !== 'default') shortcode += ` style="${settings.style}"`;
         if (settings.showProgress) shortcode += ` show_progress="true"`;
         if (!settings.showScore) shortcode += ` show_score="false"`;
         if (settings.randomize) shortcode += ` randomize="true"`;
-        
+
         shortcode += ']\n';
-        
+
         if (questions.length > 0) {
             shortcode += JSON.stringify(questions, null, 2);
         }
-        
+
         shortcode += '\n[/quiz]';
-        
+
         if (shortcodeField) shortcodeField.value = shortcode;
         updatePreview();
     }
@@ -376,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         const addButton = questionsContainer.querySelector('#btn--add-question');
         if (addButton) {
             addButton.addEventListener('click', () => addQuestion());
@@ -384,51 +502,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Global functions
-    window.removeQuestion = function(btn) {
+    window.removeQuestion = function (btn) {
         btn.closest('.question-item').remove();
-        
+
         if (questionsContainer.querySelectorAll('.question-item').length === 0) {
             restoreEmptyState();
         }
-        
+
         updateQuestionNumbers();
         updateQuestionCounts();
         generateShortcode();
     };
 
-    window.duplicateQuestion = function(btn) {
+    window.duplicateQuestion = function (btn) {
         const questionItem = btn.closest('.question-item');
         const clone = questionItem.cloneNode(true);
         const newQuestionId = Date.now();
-        
+
         clone.dataset.questionId = newQuestionId;
         clone.querySelector('.question-text').value += ' (cópia)';
-        
+
         resetRadioButtons(clone, newQuestionId);
-        
+
         const originalCheckedRadio = questionItem.querySelector('.correct-answer:checked');
         if (originalCheckedRadio) {
             const cloneRadio = clone.querySelectorAll('.correct-answer')[parseInt(originalCheckedRadio.value)];
             if (cloneRadio) cloneRadio.checked = true;
         }
-        
+
         questionItem.insertAdjacentElement('afterend', clone);
         updateQuestionNumbers();
         updateQuestionCounts();
         generateShortcode();
     };
 
-    window.addAnswer = function(btn) {
+    window.addAnswer = function (btn) {
         const answersContainer = btn.closest('.answers-section').querySelector('.answers-list');
         const answerCount = answersContainer.children.length + 1;
-        
+
         const answerDiv = document.createElement('div');
         answerDiv.innerHTML = createAnswerItemHTML(`Opção ${answerCount}`, answerCount - 1);
         answersContainer.appendChild(answerDiv.firstElementChild);
         generateShortcode();
     };
 
-    window.removeAnswer = function(btn) {
+    window.removeAnswer = function (btn) {
         const answersContainer = btn.closest('.answers-list');
         if (answersContainer.children.length > 1) {
             btn.closest('.answer-item').remove();
@@ -436,28 +554,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    window.duplicateAnswer = function(btn) {
+    window.duplicateAnswer = function (btn) {
         const answerItem = btn.closest('.answer-item');
         const clone = answerItem.cloneNode(true);
-        
+
         clone.querySelector('.answer-text').value += ' (cópia)';
-        
+
         const radioInput = clone.querySelector('.correct-answer');
         if (radioInput) radioInput.checked = false;
-        
+
         answerItem.insertAdjacentElement('afterend', clone);
         generateShortcode();
     };
 
-    window.toggleCorrectMode = function(checkbox) {
+    window.toggleCorrectMode = function (checkbox) {
         const questionItem = checkbox.closest('.question-item');
         const answers = questionItem.querySelectorAll('.answer-item');
-        
+
         if (checkbox.checked) {
             answers.forEach((answer, index) => {
                 const questionId = questionItem.dataset.questionId || Date.now();
                 let correctLabel = answer.querySelector('.checkbox-modern');
-                
+
                 if (!correctLabel) {
                     const controls = answer.querySelector('.answer-controls');
                     if (controls) {
@@ -467,19 +585,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="checkbox" class="correct-answer" name="correct-answer-${questionId}-${index}" value="${index}">
                             <span class="checkmark"></span>
                         `;
-                        
+
                         const checkboxInput = correctLabel.querySelector('.correct-answer');
                         checkboxInput.addEventListener('change', generateShortcode);
-                        
+
                         controls.insertBefore(correctLabel, controls.firstChild);
                     }
                 }
-                
+
                 if (correctLabel) {
                     correctLabel.style.display = 'flex';
                 }
             });
-            
+
             let settingsAdvanced = questionItem.querySelector('.settings-advanced');
             if (!settingsAdvanced) {
                 settingsAdvanced = document.createElement('div');
@@ -490,31 +608,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         <textarea class="explanation" placeholder="Explicação opcional que aparece após responder..."></textarea>
                     </div>
                 `;
-                
+
                 const quizModeToggle = questionItem.querySelector('.quiz-mode-toggle');
                 quizModeToggle.insertAdjacentElement('afterend', settingsAdvanced);
             }
-            
+
             settingsAdvanced.style.display = 'block';
         } else {
             questionItem.querySelectorAll('.checkbox-modern').forEach(checkboxLabel => {
                 checkboxLabel.style.display = 'none';
             });
-            
+
             const settingsAdvanced = questionItem.querySelector('.settings-advanced');
             if (settingsAdvanced) settingsAdvanced.style.display = 'none';
         }
-        
+
         generateShortcode();
     };
 
-    window.openStylePopup = function(btn, type) {
+    window.openStylePopup = function (btn, type) {
         const existingPopup = document.querySelector('.style-popup.active');
         if (existingPopup) existingPopup.remove();
-        
+
         const target = type === 'question' ? btn.closest('.question-item') : btn.closest('.answer-item');
         const currentStyles = target.dataset.styles ? JSON.parse(target.dataset.styles) : {};
-        
+
         const popup = document.createElement('div');
         popup.className = 'style-popup active';
         popup.innerHTML = `
@@ -554,15 +672,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="btn btn--clear" onclick="clearStyles(this, '${type}')">Limpar</button>
             </div>
         `;
-        
+
         btn.parentElement.appendChild(popup);
-        
+
         popup.addEventListener('click', e => e.stopPropagation());
-        
+
         popup.querySelectorAll('input, select').forEach(input => {
             input.addEventListener('change', () => applyStyles(target, type));
         });
-        
+
         document.addEventListener('click', function closePopupOnClickOutside(e) {
             if (!popup.contains(e.target) && !btn.contains(e.target)) {
                 popup.remove();
@@ -571,22 +689,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    window.closeStylePopup = function(btn) {
+    window.closeStylePopup = function (btn) {
         btn.closest('.style-popup').remove();
     };
 
-    window.clearStyles = function(btn, type) {
+    window.clearStyles = function (btn, type) {
         const popup = btn.closest('.style-popup');
         const target = type === 'question' ? popup.closest('.question-item') : popup.closest('.answer-item');
-        
+
         delete target.dataset.styles;
-        
+
         const element = target.querySelector(type === 'question' ? '.question-text' : '.answer-text');
         element.style.removeProperty('background-color');
         element.style.removeProperty('color');
         element.style.removeProperty('font-weight');
         element.style.removeProperty('font-size');
-        
+
         popup.remove();
         generateShortcode();
     };
@@ -594,28 +712,28 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyStyles(target, type) {
         const popup = target.querySelector('.style-popup.active');
         if (!popup) return;
-        
+
         const styles = {
             backgroundColor: popup.querySelector('.style-bg-color').value,
             color: popup.querySelector('.style-text-color').value,
             fontWeight: popup.querySelector('.style-font-weight').value,
             fontSize: popup.querySelector('.style-font-size').value + 'px'
         };
-        
+
         target.dataset.styles = JSON.stringify(styles);
-        
+
         const element = target.querySelector(type === 'question' ? '.question-text' : '.answer-text');
         applyStylesToElement(element, styles);
-        
+
         generateShortcode();
     }
 
     function updatePreview() {
         const previewContent = document.getElementById('preview-content');
         if (!previewContent) return;
-        
+
         const questions = buildQuestionData();
-        
+
         if (questions.length === 0) {
             previewContent.innerHTML = `
                 <div class="preview-placeholder">
@@ -625,61 +743,103 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             return;
         }
-        
+
         const style = document.getElementById('quiz_style')?.value || 'default';
         const showProgress = document.getElementById('show_progress')?.checked !== false;
-        
+
         let html = `<div class="wp-quiz-container wp-quiz-style-${style}">`;
-        
-        // Render each question with progress bar
-        questions.forEach((question, questionIndex) => {
+
+        questions.forEach((item, index) => {
             if (showProgress) {
-                const progressPercent = ((questionIndex + 1) / questions.length) * 100;
+                const progressPercent = ((index + 1) / questions.length) * 100;
                 html += `
                     <div class="quiz-progress-bar">
                         <div class="progress-fill" style="width: ${progressPercent}%"></div>
-                        <span class="progress-text">${questionIndex + 1}/${questions.length}</span>
+                        <span class="progress-text">${index + 1}/${questions.length}</span>
                     </div>
                 `;
             }
-            
-            const questionTextStyles = question.styles ? 
-                `style="color: ${question.styles.color} !important; font-size: ${question.styles.fontSize} !important; font-weight: ${question.styles.fontWeight} !important;"` : 
-                '';
-                
-            const questionContainerStyles = question.styles?.backgroundColor ? 
-                `style="background-color: ${question.styles.backgroundColor} !important;"` : 
-                '';
-                
-            html += `
-                <div class="quiz-question-container" ${questionContainerStyles}>
-                    <h3 class="quiz-question" ${questionTextStyles}>${escapeHtml(question.question)}</h3>
-                    <div class="quiz-answers">
-            `;
-            
-            question.answers.forEach((answer, index) => {
-                const answerText = getAnswerText(answer);
-                const answerStyles = answer.styles ? 
-                    `style="background-color: ${answer.styles.backgroundColor} !important; color: ${answer.styles.color} !important; font-size: ${answer.styles.fontSize} !important; font-weight: ${answer.styles.fontWeight} !important;"` : 
-                    '';
-                    
-                const answerTextStyles = answer.styles ? 
-                    `style="color: ${answer.styles.color} !important; font-size: ${answer.styles.fontSize} !important; font-weight: ${answer.styles.fontWeight} !important;"` : 
-                    '';
-                    
+
+            if (item.type === 'lead_capture') {
+                const platformLabel = {
+                    'generic': 'Webhook Genérico',
+                    'gohighlevel': 'GoHighLevel',
+                    'sendpulse': 'SendPulse'
+                }[item.webhookPlatform] || 'Webhook';
+
+                // Get i18n values or use defaults
+                const i18n = item.i18n || {};
+                const placeholderName = i18n.placeholderName || 'Nome completo';
+                const placeholderEmail = i18n.placeholderEmail || 'Seu melhor email';
+                const placeholderPhone = i18n.placeholderPhone || '(XX) XXXXX-XXXX';
+
                 html += `
-                    <label class="quiz-answer" ${answerStyles}>
-                        <input type="radio" name="preview_answer_${questionIndex}" value="${index}" disabled>
-                        <span class="answer-text" ${answerTextStyles}>${escapeHtml(answerText)}</span>
-                    </label>
+                    <div class="quiz-question-container">
+                        <h3 class="quiz-question">${escapeHtml(item.title)}</h3>
+                        <div class="quiz-lead-form">
+                            ${item.fields.name ? `
+                            <div class="form-group">
+                                <input type="text" placeholder="${escapeHtml(placeholderName)}" class="input-modern" disabled>
+                            </div>` : ''}
+
+                            ${item.fields.email ? `
+                            <div class="form-group">
+                                <input type="email" placeholder="${escapeHtml(placeholderEmail)}" class="input-modern" disabled>
+                            </div>` : ''}
+
+                            ${item.fields.phone ? `
+                            <div class="form-group">
+                                <input type="tel" placeholder="${escapeHtml(placeholderPhone)}" class="input-modern" disabled>
+                            </div>` : ''}
+
+                            <button class="quiz-btn" disabled>${escapeHtml(item.submitText || 'Continuar')}</button>
+
+                            ${item.webhookUrl ? `<small style="color: #666; margin-top: 8px; display: block;">📡 ${platformLabel}</small>` : ''}
+                            ${item.redirectAfterSubmit ? `<small style="color: #666;">🔗 Redireciona para: ${escapeHtml(item.redirectAfterSubmit)}</small>` : ''}
+                        </div>
+                    </div>
                 `;
-            });
-            
-            html += `</div></div>`;
+            } else {
+                // It's a question (default or explicit type)
+                const question = item;
+                const questionTextStyles = question.styles ?
+                    `style="color: ${question.styles.color} !important; font-size: ${question.styles.fontSize} !important; font-weight: ${question.styles.fontWeight} !important;"` :
+                    '';
+
+                const questionContainerStyles = question.styles?.backgroundColor ?
+                    `style="background-color: ${question.styles.backgroundColor} !important;"` :
+                    '';
+
+                html += `
+                    <div class="quiz-question-container" ${questionContainerStyles}>
+                        <h3 class="quiz-question" ${questionTextStyles}>${escapeHtml(question.question)}</h3>
+                        <div class="quiz-answers">
+                `;
+
+                question.answers.forEach((answer, ansIndex) => {
+                    const answerText = answer.text || answer; // Handle object or string
+                    const answerStyles = answer.styles ?
+                        `style="background-color: ${answer.styles.backgroundColor} !important; color: ${answer.styles.color} !important; font-size: ${answer.styles.fontSize} !important; font-weight: ${answer.styles.fontWeight} !important;"` :
+                        '';
+
+                    const answerTextStyles = answer.styles ?
+                        `style="color: ${answer.styles.color} !important; font-size: ${answer.styles.fontSize} !important; font-weight: ${answer.styles.fontWeight} !important;"` :
+                        '';
+
+                    html += `
+                        <label class="quiz-answer" ${answerStyles}>
+                            <input type="radio" name="preview_answer_${index}" value="${ansIndex}" disabled>
+                            <span class="answer-text" ${answerTextStyles}>${escapeHtml(answerText)}</span>
+                        </label>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
         });
-        
+
         html += '</div>';
-        
+
         const cssStyles = `
             <style>
                 .wp-quiz-container { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 100%; margin: 0; padding: 10px; }
@@ -694,15 +854,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 .quiz-answer input[type="radio"] { margin-right: 8px; }
                 .answer-text { font-size: 12px; color: #333; }
                 .quiz-navigation { display: flex; justify-content: flex-end; margin: 15px 0; }
-                .quiz-btn { padding: 8px 16px; font-size: 12px; font-weight: 500; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; background-color: #4CAF50; color: white; }
+                .quiz-btn { padding: 8px 16px; font-size: 12px; font-weight: 500; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; background-color: #4CAF50; color: white; width: 100%; margin-top: 10px; }
                 .quiz-btn:hover { background-color: #45a049; }
                 .quiz-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+                
+                /* Form Styles */
+                .quiz-lead-form { display: flex; flex-direction: column; gap: 10px; }
+                .form-group { display: flex; flex-direction: column; }
+                .input-modern { padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
+                
                 .wp-quiz-style-modern .quiz-question-container { border-color: #3b82f6; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
+                .wp-quiz-style-modern .input-modern { background-color: rgba(255,255,255,0.8); border-color: #bfdbfe; }
+                
                 .wp-quiz-style-minimal .quiz-question-container { border: 1px solid #e5e7eb; background: #ffffff; }
+                .wp-quiz-style-minimal .input-modern { border-radius: 0; border-color: #9ca3af; background: transparent; }
+                .wp-quiz-style-minimal .quiz-btn { border-radius: 0; background: #333; }
             </style>
             ${html}
         `;
-        
+
         previewContent.innerHTML = cssStyles;
     }
 
@@ -715,14 +885,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listeners
     const componentItems = document.querySelectorAll('.component-item');
     componentItems.forEach(item => {
-        item.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', 'question'));
+        item.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', item.dataset.type || 'question');
+        });
     });
 
     if (questionsContainer) {
         questionsContainer.addEventListener('dragover', e => e.preventDefault());
         questionsContainer.addEventListener('drop', e => {
             e.preventDefault();
-            if (e.dataTransfer.getData('text/plain') === 'question') addQuestion();
+            const type = e.dataTransfer.getData('text/plain');
+            if (type === 'question') {
+                addQuestion();
+            } else if (type === 'lead-capture') {
+                addLeadCapture();
+            }
         });
     }
 
@@ -737,15 +914,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const copyButton = document.getElementById('btn--copy');
     if (copyButton) {
-        copyButton.addEventListener('click', function() {
+        copyButton.addEventListener('click', function () {
             if (shortcodeField) {
                 shortcodeField.select();
                 document.execCommand('copy');
-                
+
                 const originalText = copyButton.innerHTML;
                 copyButton.innerHTML = '✅ Copiado!';
                 copyButton.style.backgroundColor = '#28a745';
-                
+
                 setTimeout(() => {
                     copyButton.innerHTML = originalText;
                     copyButton.style.backgroundColor = '';
@@ -758,11 +935,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Template and Import buttons
     const templateButton = document.getElementById('btn--template');
     const importButton = document.getElementById('btn--import');
-    
+
     if (templateButton) {
         templateButton.addEventListener('click', openTemplatesModal);
     }
-    
+
     if (importButton) {
         importButton.addEventListener('click', openImportModal);
     }
@@ -1025,7 +1202,7 @@ const templates = {
                     "Sim, mas foi cassada/suspensa",
                     {
                         text: "Já possuo CNH válida",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -1042,15 +1219,15 @@ const templates = {
                     },
                     {
                         text: "De 2 a 3 salários mínimos",
-                        styles: {"backgroundColor": "#8BC34A", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#8BC34A", "color": "#ffffff" }
                     },
                     {
                         text: "De 3 a 5 salários mínimos",
-                        styles: {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
+                        styles: { "backgroundColor": "#FFEB3B", "color": "#F57C00" }
                     },
                     {
                         text: "Mais de 5 salários mínimos",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -1141,7 +1318,7 @@ const templates = {
             }
         ]
     },
-    
+
     'cartao-negativado': {
         settings: {
             redirect_url: '/solicitar-cartao',
@@ -1172,7 +1349,7 @@ const templates = {
                     "Já estive, mas quitei as dívidas",
                     {
                         text: "Não, meu nome está limpo",
-                        styles: {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#4CAF50", "color": "#ffffff" }
                     }
                 ]
             },
@@ -1945,7 +2122,7 @@ const templates = {
                     },
                     {
                         text: "Mais de 5 salários mínimos",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Não sei informar"
                 ]
@@ -2089,7 +2266,7 @@ const templates = {
                     },
                     {
                         text: "Mais de R$ 210 por pessoa",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Não sei calcular"
                 ]
@@ -2233,7 +2410,7 @@ const templates = {
                     },
                     {
                         text: "Menos de 6 meses",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Não sei ao certo"
                 ]
@@ -2361,7 +2538,7 @@ const templates = {
                     },
                     {
                         text: "Já sou MEI regular",
-                        styles: {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#4CAF50", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2636,7 +2813,7 @@ const templates = {
             }
         ]
     },
-    
+
     'minha-casa-minha-vida': {
         settings: {
             redirect_url: '/pre-cadastro-mcmv',
@@ -2673,11 +2850,11 @@ const templates = {
                     },
                     {
                         text: "R$ 4.400 a R$ 8.000 (Faixa 3)",
-                        styles: {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
+                        styles: { "backgroundColor": "#FFEB3B", "color": "#F57C00" }
                     },
                     {
                         text: "Mais de R$ 8.000",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2695,11 +2872,11 @@ const templates = {
                     "Não, mas já tive no passado",
                     {
                         text: "Sim, mas pretendo trocar",
-                        styles: {"backgroundColor": "#FF9800", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#FF9800", "color": "#ffffff" }
                     },
                     {
                         text: "Sim, já tenho casa própria",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2716,13 +2893,13 @@ const templates = {
                     },
                     {
                         text: "Entre 1 e 2 anos",
-                        styles: {"backgroundColor": "#8BC34A", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#8BC34A", "color": "#ffffff" }
                     },
                     "Menos de 1 ano",
                     "Sou autônomo/MEI",
                     {
                         text: "Estou desempregado",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2797,7 +2974,7 @@ const templates = {
             }
         ]
     },
-    
+
     'prouni-bolsa': {
         settings: {
             redirect_url: '/inscricao-prouni',
@@ -2828,7 +3005,7 @@ const templates = {
                     "Fiz, mas não atingi 450 pontos",
                     {
                         text: "Não fiz o ENEM",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2854,7 +3031,7 @@ const templates = {
                     },
                     {
                         text: "Mais de 3 salários mínimos por pessoa",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Não sei calcular"
                 ]
@@ -2881,7 +3058,7 @@ const templates = {
                     "Parte em pública, parte em privada",
                     {
                         text: "Integralmente em escola privada",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     }
                 ]
             },
@@ -2965,7 +3142,7 @@ const templates = {
             }
         ]
     },
-    
+
     'auxilio-emergencial': {
         settings: {
             redirect_url: '/solicitar-auxilio',
@@ -3010,7 +3187,7 @@ const templates = {
                     },
                     {
                         text: "Tenho emprego formal",
-                        styles: {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#4CAF50", "color": "#ffffff" }
                     }
                 ]
             },
@@ -3094,7 +3271,7 @@ const templates = {
                     "1 salário mínimo",
                     {
                         text: "Mais de 1 salário mínimo",
-                        styles: {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#4CAF50", "color": "#ffffff" }
                     }
                 ]
             },
@@ -3184,7 +3361,7 @@ const templates = {
                     },
                     {
                         text: "Menos de 60 anos",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Tenho deficiência"
                 ]
@@ -3232,7 +3409,7 @@ const templates = {
                     },
                     {
                         text: "Mais de 1/4 de salário mínimo",
-                        styles: {"backgroundColor": "#F44336", "color": "#ffffff"}
+                        styles: { "backgroundColor": "#F44336", "color": "#ffffff" }
                     },
                     "Não sei calcular",
                     "Moro sozinho"
@@ -3611,7 +3788,7 @@ const templates = {
 function createModal(title, content, buttons) {
     const modal = document.createElement('div');
     modal.className = 'alvobot-modal';
-    
+
     modal.innerHTML = `
         <div class="alvobot-modal-content">
             <div class="alvobot-modal-header">
@@ -3622,32 +3799,32 @@ function createModal(title, content, buttons) {
                 ${content}
             </div>
             <div class="alvobot-modal-footer">
-                ${buttons.map(btn => 
-                    `<button type="button" class="${btn.class}" onclick="${btn.onclick.name}()">${btn.text}</button>`
-                ).join('')}
+                ${buttons.map(btn =>
+        `<button type="button" class="${btn.class}" onclick="${btn.onclick.name}()">${btn.text}</button>`
+    ).join('')}
             </div>
         </div>
     `;
-    
+
     // Add event listeners for template selection
-    modal.addEventListener('click', function(e) {
+    modal.addEventListener('click', function (e) {
         if (e.target.closest('.template-card')) {
             const cards = modal.querySelectorAll('.template-card');
             cards.forEach(card => card.classList.remove('selected'));
             e.target.closest('.template-card').classList.add('selected');
         }
-        
+
         if (e.target === modal) {
             closeModal();
         }
     });
-    
+
     // Add text input listener
     const textInput = modal.querySelector('#json-text-input');
     if (textInput) {
         textInput.addEventListener('input', handleTextImport);
     }
-    
+
     return modal;
 }
 
@@ -3664,14 +3841,14 @@ function applySelectedTemplate() {
         alert('Por favor, selecione um template.');
         return;
     }
-    
+
     const templateType = selectedCard.getAttribute('data-template');
     const template = templates[templateType];
-    
+
     // Clear current questions
     const questionsContainer = document.getElementById('questions-container');
     questionsContainer.innerHTML = '';
-    
+
     // Apply settings
     Object.keys(template.settings).forEach(key => {
         const element = document.getElementById(key);
@@ -3683,12 +3860,12 @@ function applySelectedTemplate() {
             }
         }
     });
-    
+
     // Add questions
     template.questions.forEach(questionData => {
         addQuestion(questionData);
     });
-    
+
     closeModal();
     window.generateShortcode();
 }
@@ -3699,12 +3876,12 @@ function handleTextImport(event) {
         hideImportPreview();
         return;
     }
-    
+
     try {
         // Try to parse as JSON first
         let data;
         let shortcodeParams = {};
-        
+
         if (content.startsWith('[quiz')) {
             // Extract JSON from shortcode - improved regex to handle multiline JSON
             const jsonMatch = content.match(/\[quiz([^\]]*)\]\s*([\s\S]*?)\s*\[\/quiz\]/);
@@ -3712,17 +3889,17 @@ function handleTextImport(event) {
                 // Extract parameters from shortcode
                 const paramsString = jsonMatch[1];
                 const jsonString = jsonMatch[2].trim();
-                
+
                 // Parse shortcode parameters
                 const paramRegex = /(\w+)="([^"]*)"/g;
                 let match;
                 while ((match = paramRegex.exec(paramsString)) !== null) {
                     shortcodeParams[match[1]] = match[2];
                 }
-                
+
                 // Store parameters for later use
                 window.importedParams = shortcodeParams;
-                
+
                 data = JSON.parse(jsonString);
             } else {
                 console.error('Shortcode inválido - regex não encontrou match');
@@ -3732,7 +3909,7 @@ function handleTextImport(event) {
             // Direct JSON
             data = JSON.parse(content);
         }
-        
+
         displayImportPreview(data);
     } catch (error) {
         console.error('Erro na importação:', error.message);
@@ -3743,25 +3920,46 @@ function handleTextImport(event) {
 function displayImportPreview(questions) {
     const preview = document.getElementById('import-preview');
     const container = document.getElementById('questions-preview');
-    
+
     if (!Array.isArray(questions) || questions.length === 0) {
         hideImportPreview();
         return;
     }
-    
-    container.innerHTML = questions.map((q, index) => `
-        <div class="question-preview">
-            <strong>Questão ${index + 1}:</strong> ${q.question}
-            <div class="answers-preview">
-                ${q.answers.map((answer, answerIndex) => {
-                    const answerText = getAnswerText(answer);
-                    const isCorrect = q.correct === answerIndex;
-                    return `<span class="answer-preview ${isCorrect ? 'correct' : ''}">${answerText}</span>`;
-                }).join('')}
+
+    container.innerHTML = questions.map((q, index) => {
+        // Check if it's a lead_capture type
+        if (q.type === 'lead_capture') {
+            const fields = [];
+            if (q.fields?.name) fields.push('Nome');
+            if (q.fields?.email) fields.push('Email');
+            if (q.fields?.phone) fields.push('Telefone');
+            return `
+                <div class="question-preview lead-capture-preview">
+                    <strong>📋 Lead Capture ${index + 1}:</strong> ${q.title || 'Captura de Leads'}
+                    <div class="answers-preview">
+                        <span class="answer-preview">Campos: ${fields.join(', ') || 'Nenhum'}</span>
+                        ${q.webhookUrl ? `<span class="answer-preview">Webhook: ✓</span>` : ''}
+                        ${q.redirectAfterSubmit ? `<span class="answer-preview">Redirect: ${q.redirectAfterSubmit}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Regular question
+        return `
+            <div class="question-preview">
+                <strong>Questão ${index + 1}:</strong> ${q.question || 'Sem título'}
+                <div class="answers-preview">
+                    ${(q.answers || []).map((answer, answerIndex) => {
+                        const answerText = getAnswerText(answer);
+                        const isCorrect = q.correct === answerIndex;
+                        return `<span class="answer-preview ${isCorrect ? 'correct' : ''}">${answerText}</span>`;
+                    }).join('')}
+                </div>
             </div>
-        </div>
-    `).join('');
-    
+        `;
+    }).join('');
+
     preview.style.display = 'block';
     window.importData = questions;
 }
@@ -3779,7 +3977,7 @@ function processImport() {
         alert('Nenhum dado válido para importar.');
         return;
     }
-    
+
     // Apply imported shortcode parameters if available
     if (window.importedParams) {
         // Apply redirect_url
@@ -3787,13 +3985,13 @@ function processImport() {
             const redirectInput = document.getElementById('redirect_url');
             if (redirectInput) redirectInput.value = window.importedParams.redirect_url;
         }
-        
+
         // Apply style
         if (window.importedParams.style) {
             const styleSelect = document.getElementById('quiz_style');
             if (styleSelect) styleSelect.value = window.importedParams.style;
         }
-        
+
         // Apply checkboxes
         const checkboxParams = ['show_progress', 'show_score', 'randomize'];
         checkboxParams.forEach(param => {
@@ -3802,18 +4000,22 @@ function processImport() {
                 if (checkbox) checkbox.checked = window.importedParams[param] === 'true';
             }
         });
-        
+
     }
-    
+
     // Clear current questions
     const questionsContainer = document.getElementById('questions-container');
     questionsContainer.innerHTML = '';
-    
-    // Add imported questions
-    window.importData.forEach(questionData => {
-        addQuestion(questionData);
+
+    // Add imported questions/lead captures
+    window.importData.forEach(itemData => {
+        if (itemData.type === 'lead_capture') {
+            addLeadCapture(itemData);
+        } else {
+            addQuestion(itemData);
+        }
     });
-    
+
     closeModal();
     generateShortcode();
 }
