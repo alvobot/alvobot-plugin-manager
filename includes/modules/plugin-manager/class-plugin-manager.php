@@ -485,6 +485,20 @@ class AlvoBotPro_PluginManager {
             'callback' => array($this, 'handle_command'),
             'permission_callback' => array($this, 'verify_token'),
         ));
+
+        // Endpoint para toggle de módulos
+        register_rest_route($this->namespace, '/modules/toggle', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_module_toggle'),
+            'permission_callback' => array($this, 'verify_token'),
+        ));
+
+        // Endpoint para listar módulos
+        register_rest_route($this->namespace, '/modules', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'handle_get_modules'),
+            'permission_callback' => array($this, 'verify_token'),
+        ));
     }
 
     public function verify_token($request) {
@@ -846,5 +860,195 @@ class AlvoBotPro_PluginManager {
         }
 
         return false;
+    }
+
+    /**
+     * Manipula requisições para ativar/desativar módulos via REST API
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function handle_module_toggle($request) {
+        $params = $request->get_json_params();
+
+        $module = isset($params['module']) ? sanitize_text_field($params['module']) : '';
+        $enabled = isset($params['enabled']) ? filter_var($params['enabled'], FILTER_VALIDATE_BOOLEAN) : null;
+
+        AlvoBotPro::debug_log('plugin-manager', '[REST API] Toggle module request - Module: ' . $module . ', Enabled: ' . ($enabled ? 'true' : 'false'));
+
+        if (empty($module)) {
+            return new WP_Error('missing_module', 'Módulo não especificado', array('status' => 400));
+        }
+
+        if ($enabled === null) {
+            return new WP_Error('missing_enabled', 'Estado (enabled) não especificado', array('status' => 400));
+        }
+
+        // Módulos válidos
+        $valid_modules = array(
+            'logo_generator',
+            'author_box',
+            'plugin-manager',
+            'pre-article',
+            'essential_pages',
+            'multi-languages',
+            'temporary-login',
+            'quiz-builder',
+            'cta-cards'
+        );
+
+        if (!in_array($module, $valid_modules)) {
+            return new WP_Error('invalid_module', 'Módulo inválido: ' . $module, array('status' => 400));
+        }
+
+        // Plugin-manager não pode ser desativado
+        if ($module === 'plugin-manager' && !$enabled) {
+            return new WP_Error('cannot_disable', 'O módulo plugin-manager não pode ser desativado', array('status' => 400));
+        }
+
+        // Obtém o estado atual
+        $current_modules = get_option('alvobot_pro_active_modules', array());
+
+        // Converte os valores atuais para booleano
+        $active_modules = array();
+        foreach ($current_modules as $key => $value) {
+            $active_modules[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        // Define os valores padrão se necessário
+        $default_modules = array(
+            'logo_generator' => true,
+            'author_box' => true,
+            'plugin-manager' => true,
+            'pre-article' => true,
+            'essential_pages' => true,
+            'multi-languages' => false,
+            'temporary-login' => true,
+            'quiz-builder' => true,
+            'cta-cards' => true
+        );
+
+        // Mescla com os valores padrão
+        $active_modules = wp_parse_args($active_modules, $default_modules);
+
+        // Atualiza o estado do módulo específico
+        $active_modules[$module] = $enabled;
+
+        // Garante que o plugin-manager sempre esteja ativo
+        $active_modules['plugin-manager'] = true;
+
+        // Força a atualização da opção
+        delete_option('alvobot_pro_active_modules');
+        $updated = add_option('alvobot_pro_active_modules', $active_modules);
+
+        // Se já existia, atualiza
+        if (!$updated) {
+            $updated = update_option('alvobot_pro_active_modules', $active_modules);
+        }
+
+        // Limpa caches
+        wp_cache_delete('alvobot_pro_active_modules', 'options');
+        wp_cache_delete('alvobot_pro_active_modules', 'alloptions');
+        wp_cache_flush();
+
+        // Verifica o estado final
+        $final_state = get_option('alvobot_pro_active_modules', array());
+        $final_enabled = isset($final_state[$module]) ? filter_var($final_state[$module], FILTER_VALIDATE_BOOLEAN) : false;
+
+        AlvoBotPro::debug_log('plugin-manager', '[REST API] Module toggle result - Module: ' . $module . ', Final state: ' . ($final_enabled ? 'enabled' : 'disabled'));
+
+        return new WP_REST_Response(array(
+            'success' => true,
+            'message' => $enabled ? 'Módulo ativado com sucesso' : 'Módulo desativado com sucesso',
+            'module' => $module,
+            'enabled' => $final_enabled,
+            'all_modules' => $final_state
+        ), 200);
+    }
+
+    /**
+     * Retorna lista de todos os módulos e seus estados
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public function handle_get_modules($request) {
+        AlvoBotPro::debug_log('plugin-manager', '[REST API] Get modules request');
+
+        // Módulos disponíveis com informações
+        $available_modules = array(
+            'logo_generator' => array(
+                'name' => 'Logo Generator',
+                'description' => 'Gerador de logos para o site'
+            ),
+            'author_box' => array(
+                'name' => 'Author Box',
+                'description' => 'Caixa de autor para posts'
+            ),
+            'plugin-manager' => array(
+                'name' => 'Plugin Manager',
+                'description' => 'Gerenciador de plugins (sempre ativo)',
+                'always_active' => true
+            ),
+            'pre-article' => array(
+                'name' => 'Pre Article',
+                'description' => 'Conteúdo pré-artigo'
+            ),
+            'essential_pages' => array(
+                'name' => 'Essential Pages',
+                'description' => 'Páginas essenciais do site'
+            ),
+            'multi-languages' => array(
+                'name' => 'Multi Languages',
+                'description' => 'Sistema de tradução multilíngue'
+            ),
+            'temporary-login' => array(
+                'name' => 'Temporary Login',
+                'description' => 'Login temporário para suporte'
+            ),
+            'quiz-builder' => array(
+                'name' => 'Quiz Builder',
+                'description' => 'Construtor de quizzes'
+            ),
+            'cta-cards' => array(
+                'name' => 'CTA Cards',
+                'description' => 'Cards de Call-to-Action'
+            )
+        );
+
+        // Obtém estados atuais
+        $active_modules = get_option('alvobot_pro_active_modules', array());
+
+        // Define os valores padrão
+        $default_modules = array(
+            'logo_generator' => true,
+            'author_box' => true,
+            'plugin-manager' => true,
+            'pre-article' => true,
+            'essential_pages' => true,
+            'multi-languages' => false,
+            'temporary-login' => true,
+            'quiz-builder' => true,
+            'cta-cards' => true
+        );
+
+        $active_modules = wp_parse_args($active_modules, $default_modules);
+
+        // Monta resposta com informações completas
+        $modules_response = array();
+        foreach ($available_modules as $module_id => $module_info) {
+            $modules_response[] = array(
+                'id' => $module_id,
+                'name' => $module_info['name'],
+                'description' => $module_info['description'],
+                'enabled' => filter_var($active_modules[$module_id], FILTER_VALIDATE_BOOLEAN),
+                'always_active' => isset($module_info['always_active']) ? $module_info['always_active'] : false
+            );
+        }
+
+        return new WP_REST_Response(array(
+            'success' => true,
+            'modules' => $modules_response
+        ), 200);
     }
 }
