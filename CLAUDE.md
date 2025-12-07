@@ -168,71 +168,14 @@ wp db query "DELETE FROM wp_options WHERE option_name LIKE '_transient_alvobot_t
 - **Status**: Traduções agora preservam formatação original de parágrafos
 
 ### Estado Atual dos Módulos
-- **Multi-Languages**: ✅ Totalmente funcional com fila de traduções e sistema avançado de logs (DESATIVADO por padrão na instalação)
-- **Author Box**: ✅ Funcional
+- **Multi-Languages**: ✅ Totalmente funcional com fila de traduções e sistema avançado de logs
+- **Author Box**: ✅ Funcional  
 - **Essential Pages**: ✅ Funcional
 - **Logo Generator**: ✅ Funcional
 - **Plugin Manager**: ✅ Funcional
 - **Pre Article**: ✅ Funcional
 - **Quiz Builder**: ✅ Funcional (corrigido - usa conteúdo entre tags [quiz]...[/quiz], não atributo quiz_data)
 - **Temporary Login**: ✅ Funcional (oculto no admin)
-- **CTA Cards**: ✅ Funcional
-
-### REST API para Gerenciamento de Módulos (v2.8.0)
-
-#### Listar Módulos
-```
-GET /wp-json/alvobot-pro/v1/modules
-Header: Token: {grp_site_token}
-```
-
-**Resposta:**
-```json
-{
-  "success": true,
-  "modules": [
-    {
-      "id": "logo_generator",
-      "name": "Logo Generator",
-      "description": "Gerador de logos para o site",
-      "enabled": true,
-      "always_active": false
-    }
-  ]
-}
-```
-
-#### Ativar/Desativar Módulo
-```
-POST /wp-json/alvobot-pro/v1/modules/toggle
-Header: Content-Type: application/json
-Header: Token: {grp_site_token}
-Body: {"module": "multi-languages", "enabled": true}
-```
-
-**Resposta:**
-```json
-{
-  "success": true,
-  "message": "Módulo ativado com sucesso",
-  "module": "multi-languages",
-  "enabled": true,
-  "all_modules": {...}
-}
-```
-
-**Módulos disponíveis:**
-| ID | Pode desativar? |
-|----|-----------------|
-| `logo_generator` | ✅ |
-| `author_box` | ✅ |
-| `plugin-manager` | ❌ (sempre ativo) |
-| `pre-article` | ✅ |
-| `essential_pages` | ✅ |
-| `multi-languages` | ✅ |
-| `temporary-login` | ✅ |
-| `quiz-builder` | ✅ |
-| `cta-cards` | ✅ |
 
 ## Workflow de Desenvolvimento
 

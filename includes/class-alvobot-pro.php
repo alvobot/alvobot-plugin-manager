@@ -67,7 +67,7 @@ class AlvoBotPro {
             'plugin-manager' => true,
             'pre-article' => true,
             'essential_pages' => true,
-            'multi-languages' => false,
+            'multi-languages' => true,
             'temporary-login' => true,
             'quiz-builder' => true,
             'cta-cards' => true
@@ -513,10 +513,8 @@ class AlvoBotPro {
                 'plugin-manager' => true,
                 'pre-article' => true,
                 'essential_pages' => true,
-                'multi-languages' => false,
-                'temporary-login' => true,
-                'quiz-builder' => true,
-                'cta-cards' => true
+                'multi-languages' => true,
+                'temporary-login' => true
             ));
         }
 

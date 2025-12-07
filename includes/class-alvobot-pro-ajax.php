@@ -51,7 +51,7 @@ class AlvoBotPro_Ajax {
             'plugin-manager' => true,
             'pre-article' => true,
             'essential_pages' => true,
-            'multi-languages' => false,
+            'multi-languages' => true,
             'temporary-login' => true,
             'quiz-builder' => true,
             'cta-cards' => true
