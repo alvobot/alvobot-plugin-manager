@@ -554,6 +554,38 @@ class AlvoBotPro_PluginManager {
                     // Instalação a partir do repositório WordPress
                     AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Installing from WordPress repository: ' . $plugin_slug);
 
+                    // Check if plugin is already installed
+                    $existing_plugin_file = $this->find_plugin_file_by_slug($plugin_slug);
+                    if ($existing_plugin_file) {
+                        AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Plugin already installed: ' . $existing_plugin_file);
+
+                        // Check if already active
+                        if (is_plugin_active($existing_plugin_file)) {
+                            AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Plugin already active');
+                            return new WP_REST_Response(array(
+                                'success' => true,
+                                'message' => 'Plugin já está instalado e ativo',
+                                'plugin_file' => $existing_plugin_file,
+                                'data' => array('status' => 'already_active')
+                            ));
+                        }
+
+                        // Activate existing plugin
+                        $activate = activate_plugin($existing_plugin_file);
+                        if (is_wp_error($activate)) {
+                            AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Activation Error: ' . $activate->get_error_message());
+                            return $activate;
+                        }
+
+                        AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Existing plugin activated: ' . $existing_plugin_file);
+                        return new WP_REST_Response(array(
+                            'success' => true,
+                            'message' => 'Plugin ativado com sucesso',
+                            'plugin_file' => $existing_plugin_file,
+                            'data' => array('status' => 'already_active')
+                        ));
+                    }
+
                     $api = plugins_api('plugin_information', array(
                         'slug' => $plugin_slug,
                         'fields' => array(
@@ -586,6 +618,12 @@ class AlvoBotPro_PluginManager {
                     }
 
                     $plugin_file = $upgrader->plugin_info();
+
+                    // If plugin_info() returns null, try to find the plugin file manually
+                    if (!$plugin_file) {
+                        AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] plugin_info() returned null, trying to find plugin file manually');
+                        $plugin_file = $this->find_plugin_file_by_slug($plugin_slug);
+                    }
 
                     if (!$plugin_file) {
                         AlvoBotPro::debug_log('plugin-manager', '[GRP Debug] Error: Could not determine plugin file after installation');
