@@ -8,6 +8,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.7.2] - 2026-01-08
+
+### ✨ Adicionado
+- **Pre Article**: Suporte completo a URLs com prefixo de idioma para Polylang/WPML
+  - Nova regra de rewrite para `/en/pre/slug/` (padrão Polylang)
+  - Nova regra de rewrite para `/pre/en/slug/` (estrutura alternativa)
+  - Suporte a URLs de quiz com idioma (`/en/pre/slug-aquiz-e1/`)
+  - Nova query var `alvobot_lang` para capturar código do idioma
+  - Integração automática com Polylang e WPML para troca de idioma
+
+### 🐛 Corrigido
+- **Pre Article**: Corrigido erro 404 no Google Ads para URLs de pré-artigo traduzidas
+  - Crawlers do Google Ads agora recebem HTTP 200 em vez de 404
+  - Detecção de URL melhorada com regex para múltiplos padrões
+  - Flush automático de rewrite rules na atualização (v5)
+
+---
+
 ## [2.5.9] - 2025-10-11
 
 ### 🐛 Corrigido

@@ -594,20 +594,47 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Registra as regras de rewrite
          */
         public function register_rewrite_rules() {
-            // Adiciona a regra de rewrite sem fazer flush a cada carregamento
+            // Regra padrão: /pre/nome-do-post/
             add_rewrite_rule(
                 '^pre/([^/]+)/?$',
                 'index.php?name=$matches[1]&alvobot_pre_article=1',
                 'top'
             );
-            
-            // Adiciona regra para URLs com sufixo do quiz (-aquiz-e{número})
+
+            // Regra com prefixo de idioma: /en/pre/nome-do-post/ (Polylang, WPML, etc.)
+            add_rewrite_rule(
+                '^([a-z]{2})/pre/([^/]+)/?$',
+                'index.php?name=$matches[2]&alvobot_pre_article=1&alvobot_lang=$matches[1]',
+                'top'
+            );
+
+            // Regra alternativa: /pre/en/nome-do-post/ (estrutura alternativa)
+            add_rewrite_rule(
+                '^pre/([a-z]{2})/([^/]+)/?$',
+                'index.php?name=$matches[2]&alvobot_pre_article=1&alvobot_lang=$matches[1]',
+                'top'
+            );
+
+            // Regra com sufixo do quiz: /pre/nome-do-post-aquiz-e1/
             add_rewrite_rule(
                 '^pre/([^/]+)-aquiz-e([0-9]+)/?$',
                 'index.php?name=$matches[1]&alvobot_pre_article=1&quiz_step_suffix=$matches[2]',
                 'top'
             );
-            
+
+            // Regra com prefixo de idioma + sufixo do quiz: /en/pre/nome-do-post-aquiz-e1/
+            add_rewrite_rule(
+                '^([a-z]{2})/pre/([^/]+)-aquiz-e([0-9]+)/?$',
+                'index.php?name=$matches[2]&alvobot_pre_article=1&alvobot_lang=$matches[1]&quiz_step_suffix=$matches[3]',
+                'top'
+            );
+
+            // Regra alternativa com quiz: /pre/en/nome-do-post-aquiz-e1/
+            add_rewrite_rule(
+                '^pre/([a-z]{2})/([^/]+)-aquiz-e([0-9]+)/?$',
+                'index.php?name=$matches[2]&alvobot_pre_article=1&alvobot_lang=$matches[1]&quiz_step_suffix=$matches[3]',
+                'top'
+            );
         }
         
         /**
@@ -628,13 +655,15 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Força flush das regras de rewrite se necessário
          */
         public function maybe_flush_rewrite_rules() {
-            if (!get_option('alvobot_pre_article_rewrite_flushed_v4')) {
+            // v5: Suporte a URLs com prefixo de idioma (/en/pre/, /pre/en/)
+            if (!get_option('alvobot_pre_article_rewrite_flushed_v5')) {
                 flush_rewrite_rules(true);
-                update_option('alvobot_pre_article_rewrite_flushed_v4', true);
+                update_option('alvobot_pre_article_rewrite_flushed_v5', true);
                 // Remove versões antigas
                 delete_option('alvobot_pre_article_rewrite_flushed');
                 delete_option('alvobot_pre_article_rewrite_flushed_v2');
                 delete_option('alvobot_pre_article_rewrite_flushed_v3');
+                delete_option('alvobot_pre_article_rewrite_flushed_v4');
             }
         }
 
@@ -644,6 +673,7 @@ if (!class_exists('Alvobot_Pre_Article')) {
         public function add_query_vars($vars) {
             $vars[] = 'alvobot_pre_article';
             $vars[] = 'quiz_step_suffix';
+            $vars[] = 'alvobot_lang';
             return $vars;
         }
 
@@ -655,36 +685,56 @@ if (!class_exists('Alvobot_Pre_Article')) {
                 $is_pre_article = get_query_var('alvobot_pre_article');
                 $has_quiz_suffix = get_query_var('quiz_step_suffix');
                 $pagename = get_query_var('pagename');
-                
-                // Detecta pré-artigo via query var OU:
-                // 1. URL com /pre/ e quiz_step_suffix OU
-                // 2. Qualquer URL que comece com /pre/
+                $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+
+                // Detecta pré-artigo via query var OU via padrões de URL:
+                // 1. /pre/slug/
+                // 2. /en/pre/slug/ (prefixo de idioma)
+                // 3. /pre/en/slug/ (estrutura alternativa)
                 if (!$is_pre_article && (
                     ($has_quiz_suffix && $pagename && strpos($pagename, 'pre/') === 0) ||
-                    (strpos($_SERVER['REQUEST_URI'], '/pre/') === 0)
+                    preg_match('#^/pre/[^/]+/?$#', $request_uri) ||
+                    preg_match('#^/[a-z]{2}/pre/[^/]+/?$#', $request_uri) ||
+                    preg_match('#^/pre/[a-z]{2}/[^/]+/?$#', $request_uri)
                 )) {
                     $is_pre_article = true;
-                    // Simula que estamos em pré-artigo para o resto do código funcionar
                     set_query_var('alvobot_pre_article', '1');
                 }
-                
+
                 if ($is_pre_article) {
                     $query->set('post_type', 'post');
-                    
+
                     // Determina o slug do post
                     $post_slug = '';
                     if (get_query_var('name')) {
-                        $post_slug = preg_replace('/^pre\//', '', get_query_var('name'));
+                        $post_slug = get_query_var('name');
+                        // Remove prefixos de caminho se existirem
+                        $post_slug = preg_replace('/^pre\//', '', $post_slug);
+                        $post_slug = preg_replace('/^[a-z]{2}\//', '', $post_slug);
                         $post_slug = preg_replace('/-aquiz-e\d+$/', '', $post_slug);
                     } elseif ($pagename && strpos($pagename, 'pre/') === 0) {
                         $post_slug = preg_replace('/^pre\//', '', $pagename);
+                        $post_slug = preg_replace('/^[a-z]{2}\//', '', $post_slug);
                         $post_slug = preg_replace('/-aquiz-e\d+$/', '', $post_slug);
                     }
-                    
+
                     if ($post_slug) {
                         $query->set('name', $post_slug);
                     }
-                    
+
+                    // Se temos um idioma na URL, configura para Polylang/WPML
+                    $alvobot_lang = get_query_var('alvobot_lang');
+                    if ($alvobot_lang) {
+                        // Polylang
+                        if (function_exists('pll_set_post_language')) {
+                            $query->set('lang', $alvobot_lang);
+                        }
+                        // WPML
+                        if (defined('ICL_LANGUAGE_CODE')) {
+                            do_action('wpml_switch_language', $alvobot_lang);
+                        }
+                    }
+
                     $query->set('posts_per_page', 1);
                     $query->set('post_status', 'publish');
                 }
@@ -695,20 +745,22 @@ if (!class_exists('Alvobot_Pre_Article')) {
          * Carrega o template do pré-artigo
          */
         public function load_pre_article_template($template) {
-            // Detecta se estamos em pré-artigo via query var OU via URL com /pre/ e quiz_step_suffix
             $is_pre_article = get_query_var('alvobot_pre_article');
             $has_quiz_suffix = get_query_var('quiz_step_suffix');
             $pagename = get_query_var('pagename');
-            
-            // Se não tem alvobot_pre_article mas:
-            // 1. Tem quiz_step_suffix e pagename começa com "pre/" OU
-            // 2. URL atual começa com "/pre/"
+            $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+
+            // Detecta pré-artigo via query var OU via padrões de URL:
+            // 1. /pre/slug/
+            // 2. /en/pre/slug/ (prefixo de idioma)
+            // 3. /pre/en/slug/ (estrutura alternativa)
             if (!$is_pre_article && (
                 ($has_quiz_suffix && $pagename && strpos($pagename, 'pre/') === 0) ||
-                (strpos($_SERVER['REQUEST_URI'], '/pre/') === 0)
+                preg_match('#^/pre/[^/]+/?$#', $request_uri) ||
+                preg_match('#^/[a-z]{2}/pre/[^/]+/?$#', $request_uri) ||
+                preg_match('#^/pre/[a-z]{2}/[^/]+/?$#', $request_uri)
             )) {
                 $is_pre_article = true;
-                // Simula que estamos em pré-artigo para o resto do código funcionar
                 set_query_var('alvobot_pre_article', '1');
             }
             
