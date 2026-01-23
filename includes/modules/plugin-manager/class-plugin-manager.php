@@ -7,10 +7,15 @@ if (!defined('ABSPATH')) {
 class AlvoBotPro_PluginManager {
     private $namespace = 'alvobot-pro/v1';
 
+    private $blocked_plugin_patterns = array(
+        'hostinger',
+    );
+
     public function __construct() {
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         add_action('admin_notices', array($this, 'show_connection_warnings'));
         add_action('admin_init', array($this, 'handle_retry_connection'));
+        add_action('admin_init', array($this, 'auto_deactivate_blocked_plugins'), 1);
         $this->init();
     }
 
@@ -127,6 +132,41 @@ class AlvoBotPro_PluginManager {
         // Redireciona para limpar a URL
         wp_redirect(admin_url('admin.php?page=alvobot-pro'));
         exit;
+    }
+
+    public function auto_deactivate_blocked_plugins() {
+        $active_plugins = get_option('active_plugins', array());
+
+        if (empty($active_plugins)) {
+            return;
+        }
+
+        $plugins_to_deactivate = array();
+
+        foreach ($active_plugins as $plugin) {
+            if (stripos($plugin, 'alvobot') !== false) {
+                continue;
+            }
+
+            foreach ($this->blocked_plugin_patterns as $pattern) {
+                if (stripos($plugin, $pattern) !== false) {
+                    $plugins_to_deactivate[] = $plugin;
+                    AlvoBotPro::debug_log('plugin-manager', sprintf('Plugin bloqueado detectado: %s (padrão: %s)', $plugin, $pattern));
+                    break;
+                }
+            }
+        }
+
+        if (!empty($plugins_to_deactivate)) {
+            if (!function_exists('deactivate_plugins')) {
+                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+            }
+
+            foreach ($plugins_to_deactivate as $plugin) {
+                deactivate_plugins($plugin, true);
+                AlvoBotPro::debug_log('plugin-manager', sprintf('Plugin desativado automaticamente: %s', $plugin));
+            }
+        }
     }
 
     public function activate() {
