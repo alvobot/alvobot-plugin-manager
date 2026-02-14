@@ -1,176 +1,177 @@
 /**
  * Interface de Tradução para Listas de Posts/Páginas
- * 
+ *
  * Gerencia o botão "Traduzir" nas listas administrativas
  */
 
-(function($) {
-    'use strict';
+(function ($) {
+	// Estado global
+	let currentTranslationModal = null;
+	let isTranslating = false;
 
-    // Estado global
-    let currentTranslationModal = null;
-    let isTranslating = false;
+	/**
+	 * Inicialização
+	 */
+	$(document).ready(function () {
+		initTranslateButtons();
+		setupEventListeners();
+	});
 
-    /**
-     * Inicialização
-     */
-    $(document).ready(function() {
-        initTranslateButtons();
-        setupEventListeners();
-    });
+	/**
+	 * Inicializa os botões de tradução
+	 */
+	function initTranslateButtons() {
+		$('.alvobot-translate-link').each(function () {
+			const $link = $(this);
+			const postId = $link.data('post-id');
+			const postTitle = $link.data('post-title');
 
-    /**
-     * Inicializa os botões de tradução
-     */
-    function initTranslateButtons() {
-        $('.alvobot-translate-link').each(function() {
-            const $link = $(this);
-            const postId = $link.data('post-id');
-            const postTitle = $link.data('post-title');
-            
-            // Adiciona ícone
-            $link.html('<span class="dashicons dashicons-translation"></span> ' + alvobotTranslation.strings.translate);
-            
-            // Adiciona data attributes
-            $link.attr({
-                'data-post-id': postId,
-                'data-post-title': postTitle
-            });
-        });
-    }
+			// Adiciona ícone
+			$link.html('<i data-lucide="languages" class="alvobot-icon"></i> ' + alvobotTranslation.strings.translate);
+			if(typeof lucide!=='undefined') lucide.createIcons({nodes: [$link[0]]});
 
-    /**
-     * Configura event listeners
-     */
-    function setupEventListeners() {
-        // Clique no botão "Traduzir" - agora usa o novo modal avançado
-        $(document).on('click', '.alvobot-translate-link', function(e) {
-            e.preventDefault();
-            
-            if (isTranslating) {
-                return;
-            }
-            
-            const postId = $(this).data('post-id');
-            
-            // Usa o novo modal avançado se disponível
-            if (window.AlvoBotTranslationModal) {
-                console.log('AlvoBot Translation List: Usando novo modal para post ID:', postId);
-                window.AlvoBotTranslationModal.openModal(postId);
-                return;
-            }
-            
-            console.log('AlvoBot Translation List: Modal avançado não disponível, usando fallback');
-            
-            // Fallback para o modal simples
-            const postTitle = $(this).data('post-title');
-            showLanguageSelectionModal(postId, postTitle);
-        });
-        
-        // Fechar modal
-        $(document).on('click', '.alvobot-translation-modal-close, .alvobot-translation-backdrop', function(e) {
-            e.preventDefault();
-            closeTranslationModal();
-        });
-        
-        // Tecla ESC
-        $(document).on('keydown', function(e) {
-            if (e.keyCode === 27 && currentTranslationModal) { // ESC
-                closeTranslationModal();
-            }
-        });
-        
-        // Seleção de idioma
-        $(document).on('change', 'input[name="target_language"]', function() {
-            updateLanguageSelection();
-        });
-        
-        // Iniciar tradução
-        $(document).on('click', '.alvobot-start-translation', function(e) {
-            e.preventDefault();
-            startTranslation();
-        });
-        
-        // Gerenciar opção de sobrescrever
-        $(document).on('change', '#force-overwrite', function() {
-            toggleExistingLanguages($(this).is(':checked'));
-        });
-    }
+			// Adiciona data attributes
+			$link.attr({
+				'data-post-id': postId,
+				'data-post-title': postTitle,
+			});
+		});
+	}
 
-    /**
-     * Mostra modal de seleção de idioma
-     */
-    function showLanguageSelectionModal(postId, postTitle) {
-        // Verifica se há idiomas configurados
-        if (!alvobotTranslation.languages || alvobotTranslation.languages.length < 2) {
-            showNotification('error', alvobotTranslation.strings.noLanguagesConfigured);
-            return;
-        }
-        
-        // Cria o modal
-        const modal = createLanguageSelectionModal(postId, postTitle);
-        
-        // Adiciona ao DOM
-        $('body').append(modal);
-        currentTranslationModal = modal;
-        
-        // Anima entrada
-        setTimeout(() => {
-            modal.addClass('show');
-        }, 10);
-    }
+	/**
+	 * Configura event listeners
+	 */
+	function setupEventListeners() {
+		// Clique no botão "Traduzir" - agora usa o novo modal avançado
+		$(document).on('click', '.alvobot-translate-link', function (e) {
+			e.preventDefault();
 
-    /**
-     * Cria o modal de seleção de idioma
-     */
-    function createLanguageSelectionModal(postId, postTitle) {
-        // Busca informações do post de forma assíncrona
-        let postInfo = null;
-        
-        $.ajax({
-            url: alvobotTranslation.ajaxUrl,
-            type: 'POST',
-            async: false,
-            data: {
-                action: 'alvobot_get_post_language',
-                post_id: postId,
-                nonce: alvobotTranslation.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    postInfo = response.data;
-                }
-            }
-        });
-        
-        if (!postInfo) {
-            showNotification('error', 'Erro ao carregar informações do post');
-            return null;
-        }
-        
-        const currentLang = postInfo.language;
-        const existingTranslations = postInfo.existing_translations || [];
-        // Inicialmente mostra apenas idiomas sem tradução
-        let availableLanguages = alvobotTranslation.languages.filter(lang => 
-            lang.slug !== currentLang && !existingTranslations.includes(lang.slug)
-        );
-        
-        // Se existem traduções, também inclui elas como opções para sobrescrever
-        const languagesWithTranslations = alvobotTranslation.languages.filter(lang => 
-            lang.slug !== currentLang && existingTranslations.includes(lang.slug)
-        );
-        
-        // Busca informações do idioma atual
-        const currentLanguageInfo = alvobotTranslation.languages.find(lang => lang.slug === currentLang);
-        
-        // Se há traduções existentes, mostra quais são
-        let existingTranslationsInfo = '';
-        if (existingTranslations.length > 0) {
-            const existingLangNames = existingTranslations.map(slug => {
-                const lang = alvobotTranslation.languages.find(l => l.slug === slug);
-                return lang ? lang.native_name : slug;
-            });
-            existingTranslationsInfo = `
+			if (isTranslating) {
+				return;
+			}
+
+			const postId = $(this).data('post-id');
+
+			// Usa o novo modal avançado se disponível
+			if (window.AlvoBotTranslationModal) {
+				console.log('AlvoBot Translation List: Usando novo modal para post ID:', postId);
+				window.AlvoBotTranslationModal.openModal(postId);
+				return;
+			}
+
+			console.log('AlvoBot Translation List: Modal avançado não disponível, usando fallback');
+
+			// Fallback para o modal simples
+			const postTitle = $(this).data('post-title');
+			showLanguageSelectionModal(postId, postTitle);
+		});
+
+		// Fechar modal
+		$(document).on('click', '.alvobot-translation-modal-close, .alvobot-translation-backdrop', function (e) {
+			e.preventDefault();
+			closeTranslationModal();
+		});
+
+		// Tecla ESC
+		$(document).on('keydown', function (e) {
+			if (e.keyCode === 27 && currentTranslationModal) {
+				// ESC
+				closeTranslationModal();
+			}
+		});
+
+		// Seleção de idioma
+		$(document).on('change', 'input[name="target_language"]', function () {
+			updateLanguageSelection();
+		});
+
+		// Iniciar tradução
+		$(document).on('click', '.alvobot-start-translation', function (e) {
+			e.preventDefault();
+			startTranslation();
+		});
+
+		// Gerenciar opção de sobrescrever
+		$(document).on('change', '#force-overwrite', function () {
+			toggleExistingLanguages($(this).is(':checked'));
+		});
+	}
+
+	/**
+	 * Mostra modal de seleção de idioma
+	 */
+	function showLanguageSelectionModal(postId, postTitle) {
+		// Verifica se há idiomas configurados
+		if (!alvobotTranslation.languages || alvobotTranslation.languages.length < 2) {
+			showNotification('error', alvobotTranslation.strings.noLanguagesConfigured);
+			return;
+		}
+
+		// Cria o modal
+		const modal = createLanguageSelectionModal(postId, postTitle);
+
+		// Adiciona ao DOM
+		$('body').append(modal);
+		currentTranslationModal = modal;
+		if(typeof lucide!=='undefined') lucide.createIcons();
+
+		// Anima entrada
+		setTimeout(() => {
+			modal.addClass('show');
+		}, 10);
+	}
+
+	/**
+	 * Cria o modal de seleção de idioma
+	 */
+	function createLanguageSelectionModal(postId, postTitle) {
+		// Busca informações do post de forma assíncrona
+		let postInfo = null;
+
+		$.ajax({
+			url: alvobotTranslation.ajaxUrl,
+			type: 'POST',
+			async: false,
+			data: {
+				action: 'alvobot_get_post_language',
+				post_id: postId,
+				nonce: alvobotTranslation.nonce,
+			},
+			success: function (response) {
+				if (response.success) {
+					postInfo = response.data;
+				}
+			},
+		});
+
+		if (!postInfo) {
+			showNotification('error', 'Erro ao carregar informações do post');
+			return null;
+		}
+
+		const currentLang = postInfo.language;
+		const existingTranslations = postInfo.existing_translations || [];
+		// Inicialmente mostra apenas idiomas sem tradução
+		let availableLanguages = alvobotTranslation.languages.filter(
+			(lang) => lang.slug !== currentLang && !existingTranslations.includes(lang.slug),
+		);
+
+		// Se existem traduções, também inclui elas como opções para sobrescrever
+		const languagesWithTranslations = alvobotTranslation.languages.filter(
+			(lang) => lang.slug !== currentLang && existingTranslations.includes(lang.slug),
+		);
+
+		// Busca informações do idioma atual
+		const currentLanguageInfo = alvobotTranslation.languages.find((lang) => lang.slug === currentLang);
+
+		// Se há traduções existentes, mostra quais são
+		let existingTranslationsInfo = '';
+		if (existingTranslations.length > 0) {
+			const existingLangNames = existingTranslations.map((slug) => {
+				const lang = alvobotTranslation.languages.find((l) => l.slug === slug);
+				return lang ? lang.native_name : slug;
+			});
+			existingTranslationsInfo = `
                 <div style="margin-bottom: 16px; padding: 12px; background: var(--alvobot-warning-bg); border-left: 3px solid var(--alvobot-warning); border-radius: 6px;">
                     <div style="color: var(--alvobot-gray-700); font-size: 14px; margin-bottom: 4px;">
                         <strong>Traduções existentes:</strong>
@@ -180,18 +181,18 @@
                     </div>
                 </div>
             `;
-        }
-        
-        if (availableLanguages.length === 0 && languagesWithTranslations.length === 0) {
-            showNotification('error', 'Nenhum idioma disponível para tradução.');
-            return null;
-        }
-        
-        let languageOptionsHtml = '';
-        
-        // Adiciona idiomas disponíveis (sem tradução)
-        availableLanguages.forEach(language => {
-            languageOptionsHtml += `
+		}
+
+		if (availableLanguages.length === 0 && languagesWithTranslations.length === 0) {
+			showNotification('error', 'Nenhum idioma disponível para tradução.');
+			return null;
+		}
+
+		let languageOptionsHtml = '';
+
+		// Adiciona idiomas disponíveis (sem tradução)
+		availableLanguages.forEach((language) => {
+			languageOptionsHtml += `
                 <label class="alvobot-language-option">
                     <input type="radio" name="target_language" value="${language.slug}">
                     ${language.flag ? `<img src="${language.flag}" alt="${language.name}" class="alvobot-language-flag">` : ''}
@@ -202,11 +203,11 @@
                     <div class="alvobot-language-check"></div>
                 </label>
             `;
-        });
-        
-        // Adiciona idiomas com traduções existentes (desabilitados inicialmente)
-        languagesWithTranslations.forEach(language => {
-            languageOptionsHtml += `
+		});
+
+		// Adiciona idiomas com traduções existentes (desabilitados inicialmente)
+		languagesWithTranslations.forEach((language) => {
+			languageOptionsHtml += `
                 <label class="alvobot-language-option alvobot-language-existing" data-existing="true">
                     <input type="radio" name="target_language" value="${language.slug}" disabled>
                     ${language.flag ? `<img src="${language.flag}" alt="${language.name}" class="alvobot-language-flag">` : ''}
@@ -217,15 +218,15 @@
                     <div class="alvobot-language-check"></div>
                 </label>
             `;
-        });
+		});
 
-        const modalHtml = `
+		const modalHtml = `
             <div class="alvobot-translation-modal">
                 <div class="alvobot-translation-backdrop"></div>
                 <div class="alvobot-translation-modal-content">
                     <div class="alvobot-translation-modal-header">
                         <h2 class="alvobot-translation-modal-title">
-                            <span class="dashicons dashicons-translation"></span>
+                            <i data-lucide="languages" class="alvobot-icon"></i>
                             ${alvobotTranslation.strings.translateTo}
                         </h2>
                         <button class="alvobot-translation-modal-close" type="button">&times;</button>
@@ -271,12 +272,16 @@
                                     <input type="checkbox" id="translate-links">
                                     <label for="translate-links">${alvobotTranslation.strings.translateLinks}</label>
                                 </div>
-                                ${existingTranslations.length > 0 ? `
+                                ${
+									existingTranslations.length > 0
+										? `
                                 <div class="alvobot-checkbox-option">
                                     <input type="checkbox" id="force-overwrite">
                                     <label for="force-overwrite">Sobrescrever traduções existentes</label>
                                 </div>
-                                ` : ''}
+                                `
+										: ''
+								}
                             </div>
                         </div>
                         
@@ -297,7 +302,7 @@
                             ${alvobotTranslation.strings.cancel}
                         </button>
                         <button type="button" class="alvobot-btn alvobot-btn-primary alvobot-start-translation" disabled data-post-id="${postId}">
-                            <span class="dashicons dashicons-translation"></span>
+                            <i data-lucide="languages" class="alvobot-icon"></i>
                             ${alvobotTranslation.strings.translate}
                         </button>
                     </div>
@@ -305,137 +310,136 @@
             </div>
         `;
 
-        return $(modalHtml);
-    }
+		return $(modalHtml);
+	}
 
-    /**
-     * Alterna disponibilidade de idiomas com traduções existentes
-     */
-    function toggleExistingLanguages(enabled) {
-        const existingLanguages = $('.alvobot-language-existing');
-        
-        if (enabled) {
-            existingLanguages.addClass('enabled');
-            existingLanguages.find('input[type="radio"]').prop('disabled', false);
-        } else {
-            existingLanguages.removeClass('enabled selected');
-            existingLanguages.find('input[type="radio"]').prop('disabled', true).prop('checked', false);
-            updateLanguageSelection(); // Atualiza seleção após desabilitar
-        }
-    }
-    
-    /**
-     * Atualiza seleção de idioma
-     */
-    function updateLanguageSelection() {
-        const selectedLang = $('input[name="target_language"]:checked').val();
-        const $startButton = $('.alvobot-start-translation');
-        
-        // Remove seleção anterior
-        $('.alvobot-language-option').removeClass('selected');
-        
-        if (selectedLang) {
-            // Marca como selecionado
-            $('input[name="target_language"]:checked').closest('.alvobot-language-option').addClass('selected');
-            
-            // Habilita botão
-            $startButton.prop('disabled', false);
-            $startButton.attr('data-target-lang', selectedLang);
-        } else {
-            // Desabilita botão
-            $startButton.prop('disabled', true);
-            $startButton.removeAttr('data-target-lang');
-        }
-    }
+	/**
+	 * Alterna disponibilidade de idiomas com traduções existentes
+	 */
+	function toggleExistingLanguages(enabled) {
+		const existingLanguages = $('.alvobot-language-existing');
 
-    /**
-     * Inicia o processo de tradução
-     */
-    async function startTranslation() {
-        if (isTranslating) {
-            return;
-        }
+		if (enabled) {
+			existingLanguages.addClass('enabled');
+			existingLanguages.find('input[type="radio"]').prop('disabled', false);
+		} else {
+			existingLanguages.removeClass('enabled selected');
+			existingLanguages.find('input[type="radio"]').prop('disabled', true).prop('checked', false);
+			updateLanguageSelection(); // Atualiza seleção após desabilitar
+		}
+	}
 
-        const postId = $('.alvobot-start-translation').data('post-id');
-        const targetLang = $('.alvobot-start-translation').data('target-lang');
-        
-        if (!postId || !targetLang) {
-            showNotification('error', 'Dados de tradução inválidos');
-            return;
-        }
+	/**
+	 * Atualiza seleção de idioma
+	 */
+	function updateLanguageSelection() {
+		const selectedLang = $('input[name="target_language"]:checked').val();
+		const $startButton = $('.alvobot-start-translation');
 
-        // Coleta opções
-        const options = {
-            preserveFormatting: $('#preserve-formatting').is(':checked'),
-            translateMetaFields: $('#translate-meta-fields').is(':checked'),
-            translateLinks: $('#translate-links').is(':checked'),
-            force_overwrite: $('#force-overwrite').is(':checked')
-        };
+		// Remove seleção anterior
+		$('.alvobot-language-option').removeClass('selected');
 
-        isTranslating = true;
-        
-        try {
-            // Mostra progresso
-            showTranslationProgress();
-            updateProgress(10, 'Analisando conteúdo...');
+		if (selectedLang) {
+			// Marca como selecionado
+			$('input[name="target_language"]:checked').closest('.alvobot-language-option').addClass('selected');
 
-            // Adiciona à fila de tradução
-            const result = await $.ajax({
-                url: alvobotTranslation.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'alvobot_add_to_translation_queue',
-                    post_id: postId,
-                    target_langs: [targetLang],
-                    options: options,
-                    nonce: alvobotTranslation.nonce
-                }
-            });
+			// Habilita botão
+			$startButton.prop('disabled', false);
+			$startButton.attr('data-target-lang', selectedLang);
+		} else {
+			// Desabilita botão
+			$startButton.prop('disabled', true);
+			$startButton.removeAttr('data-target-lang');
+		}
+	}
 
-            if (result.success) {
-                updateProgress(100, 'Adicionado à fila de tradução');
-                
-                setTimeout(() => {
-                    showQueueSuccess(result.data);
-                }, 1000);
-            } else {
-                throw new Error(result.data.message || result.data || 'Erro desconhecido ao adicionar à fila');
-            }
+	/**
+	 * Inicia o processo de tradução
+	 */
+	async function startTranslation() {
+		if (isTranslating) {
+			return;
+		}
 
-        } catch (error) {
-            console.error('Erro na tradução:', error);
-            showTranslationError(error.message || error.responseText || 'Erro na conexão');
-        } finally {
-            isTranslating = false;
-        }
-    }
+		const postId = $('.alvobot-start-translation').data('post-id');
+		const targetLang = $('.alvobot-start-translation').data('target-lang');
 
-    /**
-     * Mostra progresso da tradução
-     */
-    function showTranslationProgress() {
-        $('.alvobot-translation-modal-footer').hide();
-        $('.alvobot-translation-progress').show();
-    }
+		if (!postId || !targetLang) {
+			showNotification('error', 'Dados de tradução inválidos');
+			return;
+		}
 
-    /**
-     * Atualiza progresso
-     */
-    function updateProgress(percentage, message) {
-        $('.alvobot-progress-fill').css('width', percentage + '%');
-        $('.alvobot-progress-percentage').text(percentage + '%');
-        $('.alvobot-progress-text').text(message);
-    }
+		// Coleta opções
+		const options = {
+			preserveFormatting: $('#preserve-formatting').is(':checked'),
+			translateMetaFields: $('#translate-meta-fields').is(':checked'),
+			translateLinks: $('#translate-links').is(':checked'),
+			force_overwrite: $('#force-overwrite').is(':checked'),
+		};
 
-    /**
-     * Mostra sucesso ao adicionar à fila
-     */
-    function showQueueSuccess(data) {
-        const queueUrl = alvobotTranslation.adminUrl + 'admin.php?page=alvobot-pro-multi-languages&tab=queue';
-        const message = `
+		isTranslating = true;
+
+		try {
+			// Mostra progresso
+			showTranslationProgress();
+			updateProgress(10, 'Analisando conteúdo...');
+
+			// Adiciona à fila de tradução
+			const result = await $.ajax({
+				url: alvobotTranslation.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'alvobot_add_to_translation_queue',
+					post_id: postId,
+					target_langs: [targetLang],
+					options: options,
+					nonce: alvobotTranslation.nonce,
+				},
+			});
+
+			if (result.success) {
+				updateProgress(100, 'Adicionado à fila de tradução');
+
+				setTimeout(() => {
+					showQueueSuccess(result.data);
+				}, 1000);
+			} else {
+				throw new Error(result.data.message || result.data || 'Erro desconhecido ao adicionar à fila');
+			}
+		} catch (error) {
+			console.error('Erro na tradução:', error);
+			showTranslationError(error.message || error.responseText || 'Erro na conexão');
+		} finally {
+			isTranslating = false;
+		}
+	}
+
+	/**
+	 * Mostra progresso da tradução
+	 */
+	function showTranslationProgress() {
+		$('.alvobot-translation-modal-footer').hide();
+		$('.alvobot-translation-progress').show();
+	}
+
+	/**
+	 * Atualiza progresso
+	 */
+	function updateProgress(percentage, message) {
+		$('.alvobot-progress-fill').css('width', percentage + '%');
+		$('.alvobot-progress-percentage').text(percentage + '%');
+		$('.alvobot-progress-text').text(message);
+	}
+
+	/**
+	 * Mostra sucesso ao adicionar à fila
+	 */
+	function showQueueSuccess(data) {
+		const queueUrl = alvobotTranslation.adminUrl + 'admin.php?page=alvobot-pro-multi-languages&tab=queue';
+		const message = `
             <div style="text-align: center; padding: 20px;">
                 <div style="color: var(--alvobot-success); font-size: 48px; margin-bottom: 16px;">
-                    <span class="dashicons dashicons-yes-alt"></span>
+                    <i data-lucide="check-circle" class="alvobot-icon"></i>
                 </div>
                 <h3 style="margin: 0 0 16px; color: var(--alvobot-gray-800);">
                     Adicionado à Fila de Tradução
@@ -445,7 +449,7 @@
                 </p>
                 <div class="alvobot-btn-group">
                     <a href="${queueUrl}" class="alvobot-btn alvobot-btn-primary">
-                        <span class="dashicons dashicons-list-view"></span>
+                        <i data-lucide="list" class="alvobot-icon"></i>
                         Ver Fila de Tradução
                     </a>
                     <button type="button" class="alvobot-btn alvobot-btn-outline" onclick="closeTranslationModal()">
@@ -454,85 +458,87 @@
                 </div>
             </div>
         `;
-        
-        $('.alvobot-translation-modal-body').html(message);
-    }
 
-    /**
-     * Mostra erro da tradução
-     */
-    function showTranslationError(message) {
-        $('.alvobot-translation-progress').hide();
-        $('.alvobot-translation-modal-footer').show();
-        
-        showNotification('error', alvobotTranslation.strings.translationError + ' ' + message);
-    }
+		$('.alvobot-translation-modal-body').html(message);
+		if(typeof lucide!=='undefined') lucide.createIcons();
+	}
 
-    /**
-     * Fecha modal de tradução
-     */
-    function closeTranslationModal() {
-        if (currentTranslationModal) {
-            currentTranslationModal.removeClass('show');
-            
-            setTimeout(() => {
-                currentTranslationModal.remove();
-                currentTranslationModal = null;
-                isTranslating = false;
-            }, 300);
-        }
-    }
+	/**
+	 * Mostra erro da tradução
+	 */
+	function showTranslationError(message) {
+		$('.alvobot-translation-progress').hide();
+		$('.alvobot-translation-modal-footer').show();
 
-    /**
-     * Mostra notificação
-     */
-    function showNotification(type, message) {
-        const notification = $(`
+		showNotification('error', alvobotTranslation.strings.translationError + ' ' + message);
+	}
+
+	/**
+	 * Fecha modal de tradução
+	 */
+	function closeTranslationModal() {
+		if (currentTranslationModal) {
+			currentTranslationModal.removeClass('show');
+
+			setTimeout(() => {
+				currentTranslationModal.remove();
+				currentTranslationModal = null;
+				isTranslating = false;
+			}, 300);
+		}
+	}
+
+	/**
+	 * Mostra notificação
+	 */
+	function showNotification(type, message) {
+		const iconName = type === 'success' ? 'check-circle' : 'alert-triangle';
+		const notification = $(`
             <div class="alvobot-notification alvobot-notification-${type}">
                 <div class="alvobot-notification-content">
-                    <span class="dashicons dashicons-${type === 'success' ? 'yes-alt' : 'warning'}"></span>
+                    <i data-lucide="${iconName}" class="alvobot-icon"></i>
                     <span>${message}</span>
                 </div>
             </div>
         `);
-        
-        $('body').append(notification);
-        
-        // Remove após 5 segundos
-        setTimeout(() => {
-            notification.fadeOut(300, function() {
-                $(this).remove();
-            });
-        }, 5000);
-    }
 
-    /**
-     * Detecta idioma atual do post via AJAX
-     */
-    function getCurrentPostLanguage(postId) {
-        // Faz requisição AJAX para detectar idioma do post
-        let currentLang = 'auto'; // Default fallback
-        
-        $.ajax({
-            url: alvobotTranslation.ajaxUrl,
-            type: 'POST',
-            async: false, // Síncono para ter o resultado imediato
-            data: {
-                action: 'alvobot_get_post_language',
-                post_id: postId,
-                nonce: alvobotTranslation.nonce
-            },
-            success: function(response) {
-                if (response.success && response.data.language) {
-                    currentLang = response.data.language;
-                }
-            }
-        });
-        
-        return currentLang;
-    }
+		$('body').append(notification);
+		if(typeof lucide!=='undefined') lucide.createIcons();
 
-    // Expõe funções globais
-    window.closeTranslationModal = closeTranslationModal;
+		// Remove após 5 segundos
+		setTimeout(() => {
+			notification.fadeOut(300, function () {
+				$(this).remove();
+			});
+		}, 5000);
+	}
 
+	/**
+	 * Detecta idioma atual do post via AJAX
+	 */
+	function getCurrentPostLanguage(postId) {
+		// Faz requisição AJAX para detectar idioma do post
+		let currentLang = 'auto'; // Default fallback
+
+		$.ajax({
+			url: alvobotTranslation.ajaxUrl,
+			type: 'POST',
+			async: false, // Síncono para ter o resultado imediato
+			data: {
+				action: 'alvobot_get_post_language',
+				post_id: postId,
+				nonce: alvobotTranslation.nonce,
+			},
+			success: function (response) {
+				if (response.success && response.data.language) {
+					currentLang = response.data.language;
+				}
+			},
+		});
+
+		return currentLang;
+	}
+
+	// Expõe funções globais
+	window.closeTranslationModal = closeTranslationModal;
 })(jQuery);

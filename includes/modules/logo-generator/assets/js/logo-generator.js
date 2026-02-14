@@ -1,286 +1,406 @@
-jQuery(document).ready(function($) {
-    // Initialize color pickers
-    $('.color-picker').wpColorPicker({
-        change: function() {
-            updatePreview();
-        }
-    });
-    
-    // Event handlers para inputs
-    $('#blog_name, #font_choice').on('change input', function() {
-        updatePreview();
-    });
+jQuery(document).ready(function ($) {
+	// Debounce helper
+	var debounceTimer = null;
+	function debouncedPreview() {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(updatePreview, 300);
+	}
 
-    // Atualiza quando um ícone é selecionado
-    $('input[name="icon_choice"]').on('change', function() {
-        updatePreview();
-    });
-    
-    // Função unificada para atualizar previews
-    function updatePreview() {
-        const formData = new FormData();
-        formData.append('action', 'generate_logo');
-        formData.append('_wpnonce', logoGeneratorParams.nonce);
-        formData.append('blog_name', $('#blog_name').val());
-        formData.append('font_color', $('#font_color').wpColorPicker('color'));
-        formData.append('background_color', $('#background_color').wpColorPicker('color'));
-        formData.append('icon_choice', $('input[name="icon_choice"]:checked').val());
-        formData.append('font_choice', $('#font_choice').val());
-        
-        // Atualiza preview do logo
-        $.ajax({
-            url: logoGeneratorParams.ajaxurl,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    $('#logo-preview-content').html(response.data);
-                    // Após sucesso do logo, atualiza o favicon
-                    updateFavicon();
-                } else {
-                    showNotice('error', 'Erro ao gerar o logo: ' + (response.data || 'Erro desconhecido'));
-                }
-            },
-            error: function(xhr, status, error) {
-                showNotice('error', 'Erro ao comunicar com o servidor: ' + error);
-            }
-        });
-    }
-    
-    // Função para atualizar apenas o favicon
-    function updateFavicon() {
-        const formData = new FormData();
-        formData.append('action', 'generate_favicon');
-        formData.append('_wpnonce', logoGeneratorParams.nonce);
-        formData.append('icon_choice', $('input[name="icon_choice"]:checked').val());
-        formData.append('font_color', $('#font_color').wpColorPicker('color'));
-        formData.append('background_color', $('#background_color').wpColorPicker('color'));
-        
-        $.ajax({
-            url: logoGeneratorParams.ajaxurl,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    $('#favicon-preview-content').html(response.data);
-                } else {
-                    showNotice('error', 'Erro ao gerar o favicon: ' + (response.data || 'Erro desconhecido'));
-                }
-            },
-            error: function(xhr, status, error) {
-                showNotice('error', 'Erro ao comunicar com o servidor: ' + error);
-            }
-        });
-    }
+	// Initialize color pickers
+	$('.color-picker').wpColorPicker({
+		change: function () {
+			debouncedPreview();
+		},
+	});
 
-    // Variáveis para controle de busca e filtro
-    let currentCategory = 'all';
-    let currentSearch = '';
-    
-    // Função para filtrar ícones
-    function filterIcons() {
-        const searchTerm = currentSearch.toLowerCase();
-        let found = false;
-        
-        $('.icon-option').each(function() {
-            const $icon = $(this);
-            const name = $icon.data('name').toLowerCase();
-            const keywords = $icon.data('keywords').toLowerCase();
-            const category = $icon.data('category');
-            
-            // Verifica se o ícone corresponde à categoria e à busca
-            const matchesCategory = currentCategory === 'all' || category === currentCategory;
-            const matchesSearch = !searchTerm || 
-                                name.includes(searchTerm) || 
-                                keywords.includes(searchTerm);
-            
-            const shouldShow = matchesCategory && matchesSearch;
-            $icon.toggle(shouldShow);
-            
-            if (shouldShow) found = true;
-        });
-        
-        // Mostra/esconde mensagem de "nenhum ícone encontrado"
-        $('.no-icons-found').toggle(!found);
-        
-        // Se não houver ícones visíveis, desmarca o radio selecionado
-        if (!found) {
-            $('input[name="icon_choice"]:checked').prop('checked', false);
-        }
-    }
-    
-    // Handler para busca de ícones
-    $('#icon-search').on('input', function() {
-        currentSearch = $(this).val();
-        filterIcons();
-    });
-    
-    // Handler para filtro por categoria
-    $('.icon-category').on('click', function() {
-        const $this = $(this);
-        
-        // Remove classe active de todas as categorias
-        $('.icon-category').removeClass('active');
-        
-        // Adiciona classe active na categoria clicada
-        $this.addClass('active');
-        
-        // Atualiza categoria atual
-        currentCategory = $this.data('category');
-        
-        // Filtra os ícones
-        filterIcons();
-    });
-    
-    // Handler para seleção de ícone
-    $('.icon-option').on('click', function() {
-        const $radio = $(this).find('input[type="radio"]');
-        $radio.prop('checked', true);
-        updatePreview();
-    });
-    
-    // Handler para o formulário
-    $('#logo-generator-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        const $button = $('input[type="submit"]', this);
-        const originalText = $button.val();
-        
-        // Verifica se um ícone foi selecionado
-        const selectedIcon = $('input[name="icon_choice"]:checked').val();
-        if (!selectedIcon) {
-            showNotice('error', 'Por favor, selecione um ícone primeiro.');
-            return;
-        }
-        
-        // Desabilita o botão durante o salvamento
-        $button.prop('disabled', true).val('Salvando...');
-        
-        // Primeiro salva o logo se a opção estiver marcada
-        const saveLogo = $('#set_as_logo').prop('checked') ? new Promise((resolve, reject) => {
-            const logoData = new FormData();
-            logoData.append('action', 'save_logo');
-            logoData.append('_wpnonce', logoGeneratorParams.nonce);
-            logoData.append('blog_name', $('#blog_name').val());
-            logoData.append('font_color', $('#font_color').wpColorPicker('color'));
-            logoData.append('background_color', $('#background_color').wpColorPicker('color'));
-            logoData.append('icon_choice', selectedIcon);
-            logoData.append('font_choice', $('#font_choice').val());
-            logoData.append('set_as_logo', '1');
+	// Event handlers para inputs
+	$('#blog_name, #font_choice').on('change input', function () {
+		debouncedPreview();
+	});
 
-            $.ajax({
-                url: logoGeneratorParams.ajaxurl,
-                type: 'POST',
-                data: logoData,
-                processData: false,
-                contentType: false
-            }).then(resolve, reject);
-        }) : Promise.resolve(null);
+	// =========================================================================
+	// Lucide Icon Grid - Build from CDN
+	// =========================================================================
 
-        // Depois salva o favicon se a opção estiver marcada
-        const saveFavicon = $('#set_as_favicon').prop('checked') ? new Promise((resolve, reject) => {
-            const faviconData = new FormData();
-            faviconData.append('action', 'save_favicon');
-            faviconData.append('_wpnonce', logoGeneratorParams.nonce);
-            faviconData.append('icon_choice', selectedIcon);
-            faviconData.append('font_color', $('#font_color').wpColorPicker('color'));
-            faviconData.append('background_color', $('#background_color').wpColorPicker('color'));
+	var allIconNames = [];
+	var currentSearch = '';
+	var selectedIconName = '';
+	var selectedIconSvg = '';
 
-            $.ajax({
-                url: logoGeneratorParams.ajaxurl,
-                type: 'POST',
-                data: faviconData,
-                processData: false,
-                contentType: false
-            }).then(resolve, reject);
-        }) : Promise.resolve(null);
+	/**
+	 * Convert PascalCase icon name to kebab-case for display
+	 */
+	function toKebab(str) {
+		return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+	}
 
-        // Executa as promessas em sequência
-        Promise.all([saveLogo, saveFavicon])
-            .then(([logoResponse, faviconResponse]) => {
-                let messages = [];
-                
-                if (logoResponse && logoResponse.success) {
-                    messages.push(logoResponse.data.message);
-                    
-                    // Atualiza o logo no site
-                    if (logoResponse.data.logo) {
-                        const customLogoImg = $('.custom-logo');
-                        if (customLogoImg.length) {
-                            customLogoImg.attr('src', logoResponse.data.logo.url + '?t=' + new Date().getTime());
-                        }
-                    }
-                }
-                
-                if (faviconResponse && faviconResponse.success) {
-                    messages.push(faviconResponse.data.message);
-                    
-                    // Atualiza o favicon
-                    if (faviconResponse.data.favicon) {
-                        const faviconUrl = faviconResponse.data.favicon.url + '?t=' + new Date().getTime();
-                        
-                        // Atualiza favicons existentes
-                        $('link[rel*="icon"]').each(function() {
-                            $(this).attr('href', faviconUrl);
-                        });
-                        
-                        // Adiciona favicon se não existir
-                        if (!$('link[rel="icon"]').length) {
-                            $('head').append('<link rel="icon" type="image/svg+xml" href="' + faviconUrl + '">');
-                        }
-                        
-                        // Atualiza ícone da Apple
-                        if (!$('link[rel="apple-touch-icon"]').length) {
-                            $('head').append('<link rel="apple-touch-icon" href="' + faviconUrl + '">');
-                        } else {
-                            $('link[rel="apple-touch-icon"]').attr('href', faviconUrl);
-                        }
-                    }
-                }
-                
-                if (messages.length > 0) {
-                    showNotice('success', messages.join(' '));
-                }
-            })
-            .catch(error => {
-                showNotice('error', 'Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
-            })
-            .finally(() => {
-                // Reabilita o botão
-                $button.prop('disabled', false).val(originalText);
-            });
-    });
-    
-    function showNotice(type, message) {
-        // Remove notificações anteriores
-        $('.notice').remove();
-        
-        // Cria nova notificação no estilo WordPress
-        const notice = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
-        
-        // Insere a notificação após o header
-        $('.alvobot-pro-header').after(notice);
-        
-        // Adiciona botão de fechar
-        notice.append('<button type="button" class="notice-dismiss"><span class="screen-reader-text">Fechar</span></button>');
-        
-        // Handler para fechar a notificação
-        notice.find('.notice-dismiss').on('click', function() {
-            notice.fadeOut(function() {
-                $(this).remove();
-            });
-        });
-    }
-    
-    // Seleciona primeiro ícone por padrão e inicia preview
-    if (!$('input[name="icon_choice"]:checked').length) {
-        $('input[name="icon_choice"]').first().prop('checked', true);
-    }
-    
-    // Inicia o preview ao carregar a página
-    updatePreview();
+	/**
+	 * Build SVG string from Lucide icon data array
+	 */
+	function buildIconSvg(iconName, attrs) {
+		attrs = attrs || {};
+		var iconData = lucide.icons[iconName];
+		if (!iconData) return null;
+
+		// iconData is [attrs, children] where children are [elementName, elAttrs] tuples
+		var iconAttrs = iconData[0] || {};
+		var iconChildren = iconData[1] || [];
+
+		// If old format (array of tuples directly), handle it
+		if (Array.isArray(iconData[0]) && typeof iconData[0][0] === 'string') {
+			iconChildren = iconData;
+			iconAttrs = {};
+		}
+
+		var svgAttrs = {
+			xmlns: 'http://www.w3.org/2000/svg',
+			width: attrs.width || 24,
+			height: attrs.height || 24,
+			viewBox: '0 0 24 24',
+			fill: 'none',
+			stroke: attrs.stroke || 'currentColor',
+			'stroke-width': attrs['stroke-width'] || 2,
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+		};
+
+		var svgAttrsStr = '';
+		for (var k in svgAttrs) {
+			svgAttrsStr += ' ' + k + '="' + svgAttrs[k] + '"';
+		}
+
+		var children = '';
+		for (var i = 0; i < iconChildren.length; i++) {
+			var element = iconChildren[i];
+			if (Array.isArray(element) && element.length >= 2) {
+				var tag = element[0];
+				var elAttrs = element[1] || {};
+				var attrStr = '';
+				for (var a in elAttrs) {
+					attrStr += ' ' + a + '="' + elAttrs[a] + '"';
+				}
+				children += '<' + tag + attrStr + '/>';
+			}
+		}
+
+		return '<svg' + svgAttrsStr + '>' + children + '</svg>';
+	}
+
+	/**
+	 * Initialize icon grid from Lucide CDN data
+	 */
+	function initIconGrid() {
+		if (typeof lucide === 'undefined' || !lucide.icons) {
+			$('#icon-grid').html(
+				'<p style="grid-column:1/-1;text-align:center;color:#c00;">Erro ao carregar ícones Lucide.</p>',
+			);
+			return;
+		}
+
+		// Collect all icon names
+		allIconNames = Object.keys(lucide.icons).sort();
+
+		var gridEl = document.getElementById('icon-grid');
+		var html = '';
+
+		for (var i = 0; i < allIconNames.length; i++) {
+			var name = allIconNames[i];
+			var kebab = toKebab(name);
+			var svg = buildIconSvg(name);
+			if (svg) {
+				html +=
+					'<div class="icon-option" data-name="' +
+					name +
+					'" data-kebab="' +
+					kebab +
+					'">' +
+					'<input type="radio" name="icon_choice" id="icon_' +
+					name +
+					'" value="' +
+					name +
+					'">' +
+					'<label for="icon_' +
+					name +
+					'">' +
+					'<div class="icon-preview">' +
+					svg +
+					'</div>' +
+					'<span class="icon-name">' +
+					kebab +
+					'</span>' +
+					'</label></div>';
+			}
+		}
+
+		gridEl.innerHTML = html;
+
+		// Enable search
+		var searchEl = document.getElementById('icon-search');
+		searchEl.disabled = false;
+		searchEl.placeholder = 'Buscar entre ' + allIconNames.length + ' ícones...';
+
+		// Bind events on dynamically created elements
+		bindIconEvents();
+
+		// Select first icon by default
+		var firstRadio = $('input[name="icon_choice"]').first();
+		if (firstRadio.length) {
+			firstRadio.prop('checked', true);
+			firstRadio.closest('.icon-option').find('label').trigger('click');
+		}
+	}
+
+	/**
+	 * Bind click events to icon grid items
+	 */
+	function bindIconEvents() {
+		$('#icon-grid').on('click', '.icon-option', function () {
+			var $this = $(this);
+			var $radio = $this.find('input[type="radio"]');
+			$radio.prop('checked', true);
+
+			selectedIconName = $this.data('name');
+			selectedIconSvg = buildIconSvg(selectedIconName);
+
+			// Store SVG in hidden field
+			$('#selected_icon_svg').val(selectedIconSvg);
+
+			updatePreview();
+		});
+	}
+
+	/**
+	 * Filter icons by search term
+	 */
+	function filterIcons() {
+		var searchTerm = currentSearch.toLowerCase().trim();
+		var found = false;
+
+		$('#icon-grid .icon-option').each(function () {
+			var $icon = $(this);
+			var kebab = ($icon.data('kebab') || '').toLowerCase();
+			var matches = !searchTerm || kebab.indexOf(searchTerm) !== -1;
+			$icon.toggle(matches);
+			if (matches) found = true;
+		});
+
+		$('.no-icons-found').toggle(!found);
+	}
+
+	// Search handler
+	$('#icon-search').on('input', function () {
+		currentSearch = $(this).val();
+		filterIcons();
+	});
+
+	// Initialize the grid
+	initIconGrid();
+
+	// =========================================================================
+	// Preview & Save (AJAX)
+	// =========================================================================
+
+	/**
+	 * Get current icon SVG content for AJAX calls
+	 */
+	function getIconSvg() {
+		if (selectedIconSvg) return selectedIconSvg;
+		// Fallback: try to get from hidden field
+		return $('#selected_icon_svg').val() || '';
+	}
+
+	/**
+	 * Unified preview update function
+	 */
+	function updatePreview() {
+		var iconSvg = getIconSvg();
+		if (!iconSvg) return;
+
+		var formData = new FormData();
+		formData.append('action', 'generate_logo');
+		formData.append('_wpnonce', logoGeneratorParams.nonce);
+		formData.append('blog_name', $('#blog_name').val());
+		formData.append('font_color', $('#font_color').wpColorPicker('color'));
+		formData.append('background_color', $('#background_color').wpColorPicker('color'));
+		formData.append('icon_svg', iconSvg);
+		formData.append('font_choice', $('#font_choice').val());
+
+		// Atualiza preview do logo
+		$.ajax({
+			url: logoGeneratorParams.ajaxurl,
+			type: 'POST',
+			data: formData,
+			processData: false,
+			contentType: false,
+			success: function (response) {
+				if (response.success) {
+					$('#logo-preview-content').html(response.data);
+					updateFavicon();
+				} else {
+					showNotice('error', 'Erro ao gerar o logo: ' + (response.data || 'Erro desconhecido'));
+				}
+			},
+			error: function (xhr, status, error) {
+				showNotice('error', 'Erro ao comunicar com o servidor: ' + error);
+			},
+		});
+	}
+
+	/**
+	 * Update favicon preview
+	 */
+	function updateFavicon() {
+		var iconSvg = getIconSvg();
+		if (!iconSvg) return;
+
+		var formData = new FormData();
+		formData.append('action', 'generate_favicon');
+		formData.append('_wpnonce', logoGeneratorParams.nonce);
+		formData.append('icon_svg', iconSvg);
+		formData.append('font_color', $('#font_color').wpColorPicker('color'));
+		formData.append('background_color', $('#background_color').wpColorPicker('color'));
+
+		$.ajax({
+			url: logoGeneratorParams.ajaxurl,
+			type: 'POST',
+			data: formData,
+			processData: false,
+			contentType: false,
+			success: function (response) {
+				if (response.success) {
+					$('#favicon-preview-content').html(response.data);
+				} else {
+					showNotice('error', 'Erro ao gerar o favicon: ' + (response.data || 'Erro desconhecido'));
+				}
+			},
+			error: function (xhr, status, error) {
+				showNotice('error', 'Erro ao comunicar com o servidor: ' + error);
+			},
+		});
+	}
+
+	// =========================================================================
+	// Form Submission (Save)
+	// =========================================================================
+
+	$('#logo-generator-form').on('submit', function (e) {
+		e.preventDefault();
+
+		var $button = $('input[type="submit"], button[type="submit"]', this);
+		var originalText = $button.val() || $button.text();
+
+		var iconSvg = getIconSvg();
+		if (!iconSvg) {
+			showNotice('error', 'Por favor, selecione um ícone primeiro.');
+			return;
+		}
+
+		$button.prop('disabled', true).val('Salvando...').text('Salvando...');
+
+		// Save logo if checked
+		var saveLogo = $('#set_as_logo').prop('checked')
+			? new Promise(function (resolve, reject) {
+					var logoData = new FormData();
+					logoData.append('action', 'save_logo');
+					logoData.append('_wpnonce', logoGeneratorParams.nonce);
+					logoData.append('blog_name', $('#blog_name').val());
+					logoData.append('font_color', $('#font_color').wpColorPicker('color'));
+					logoData.append('background_color', $('#background_color').wpColorPicker('color'));
+					logoData.append('icon_svg', iconSvg);
+					logoData.append('font_choice', $('#font_choice').val());
+					logoData.append('set_as_logo', '1');
+
+					$.ajax({
+						url: logoGeneratorParams.ajaxurl,
+						type: 'POST',
+						data: logoData,
+						processData: false,
+						contentType: false,
+					}).then(resolve, reject);
+				})
+			: Promise.resolve(null);
+
+		// Save favicon if checked
+		var saveFavicon = $('#set_as_favicon').prop('checked')
+			? new Promise(function (resolve, reject) {
+					var faviconData = new FormData();
+					faviconData.append('action', 'save_favicon');
+					faviconData.append('_wpnonce', logoGeneratorParams.nonce);
+					faviconData.append('icon_svg', iconSvg);
+					faviconData.append('font_color', $('#font_color').wpColorPicker('color'));
+					faviconData.append('background_color', $('#background_color').wpColorPicker('color'));
+
+					$.ajax({
+						url: logoGeneratorParams.ajaxurl,
+						type: 'POST',
+						data: faviconData,
+						processData: false,
+						contentType: false,
+					}).then(resolve, reject);
+				})
+			: Promise.resolve(null);
+
+		Promise.all([saveLogo, saveFavicon])
+			.then(function (results) {
+				var logoResponse = results[0];
+				var faviconResponse = results[1];
+				var messages = [];
+
+				if (logoResponse && logoResponse.success) {
+					messages.push(logoResponse.data.message);
+					if (logoResponse.data.logo) {
+						var customLogoImg = $('.custom-logo');
+						if (customLogoImg.length) {
+							customLogoImg.attr('src', logoResponse.data.logo.url + '?t=' + new Date().getTime());
+						}
+					}
+				}
+
+				if (faviconResponse && faviconResponse.success) {
+					messages.push(faviconResponse.data.message);
+					if (faviconResponse.data.favicon) {
+						var faviconUrl = faviconResponse.data.favicon.url + '?t=' + new Date().getTime();
+						$('link[rel*="icon"]').each(function () {
+							$(this).attr('href', faviconUrl);
+						});
+						if (!$('link[rel="icon"]').length) {
+							$('head').append('<link rel="icon" type="image/svg+xml" href="' + faviconUrl + '">');
+						}
+						if (!$('link[rel="apple-touch-icon"]').length) {
+							$('head').append('<link rel="apple-touch-icon" href="' + faviconUrl + '">');
+						} else {
+							$('link[rel="apple-touch-icon"]').attr('href', faviconUrl);
+						}
+					}
+				}
+
+				if (messages.length > 0) {
+					showNotice('success', messages.join(' '));
+				}
+			})
+			.catch(function (error) {
+				showNotice('error', 'Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
+			})
+			.finally(function () {
+				$button.prop('disabled', false).val(originalText).text(originalText);
+			});
+	});
+
+	// =========================================================================
+	// Notifications
+	// =========================================================================
+
+	function showNotice(type, message) {
+		$('.notice').remove();
+		var notice = $('<div class="notice notice-' + type + ' is-dismissible"><p>' + message + '</p></div>');
+		$('.alvobot-pro-header').after(notice);
+		notice.append(
+			'<button type="button" class="notice-dismiss"><span class="screen-reader-text">Fechar</span></button>',
+		);
+		notice.find('.notice-dismiss').on('click', function () {
+			notice.fadeOut(function () {
+				$(this).remove();
+			});
+		});
+	}
 });

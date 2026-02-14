@@ -7,37 +7,43 @@
    VARIÁVEIS CSS
    ==================================== */
 :root {
-    /* Cores principais */
-    --alvobot-primary: #CD9042;
-    --alvobot-primary-dark: #B8803A;
+    /* Cores principais — alinhadas com o App Design System */
+    --alvobot-primary: #fbbf24;
+    --alvobot-primary-dark: #d4970a;
+    --alvobot-primary-light: #FFFBEC;
     --alvobot-secondary: #0E100D;
-    --alvobot-accent: #2271b1;
-    --alvobot-accent-dark: #135e96;
-    
-    /* Cores de estado */
-    --alvobot-success: #46b450;
-    --alvobot-success-bg: #edfaef;
-    --alvobot-error: #dc3232;
-    --alvobot-error-bg: #fcf0f1;
-    --alvobot-warning: #ffb900;
-    --alvobot-warning-bg: #fcf9e8;
-    --alvobot-info: #2271b1;
-    --alvobot-info-bg: #f0f6fc;
-    
-    /* Cores neutras */
+    --alvobot-accent: #269AFF;
+    --alvobot-accent-dark: #146ae1;
+
+    /* Cores de estado — alinhadas com o App */
+    --alvobot-success: #12B76A;
+    --alvobot-success-dark: #0D9456;
+    --alvobot-success-bg: #ECFDF3;
+    --alvobot-error: #F63D68;
+    --alvobot-error-dark: #D42F59;
+    --alvobot-error-bg: #FEE2E2;
+    --alvobot-warning: #FDB022;
+    --alvobot-warning-dark: #E09B0E;
+    --alvobot-warning-bg: #FFFAEB;
+    --alvobot-info: #269AFF;
+    --alvobot-info-dark: #146ae1;
+    --alvobot-info-bg: #EFF6FF;
+
+    /* Cores neutras — Zinc scale (alinhadas com o App) */
     --alvobot-white: #ffffff;
-    --alvobot-gray-50: #f9f9f9;
-    --alvobot-gray-100: #f6f7f7;
-    --alvobot-gray-200: #f0f0f1;
-    --alvobot-gray-300: #e5e5e5;
-    --alvobot-gray-400: #dcdcde;
-    --alvobot-gray-500: #c3c4c7;
-    --alvobot-gray-600: #646970;
-    --alvobot-gray-700: #50575e;
-    --alvobot-gray-800: #2c3338;
-    --alvobot-gray-900: #1d2327;
-    
-    /* Tipografia */
+    --alvobot-gray-50: #FCFCFD;
+    --alvobot-gray-100: #F9FAFB;
+    --alvobot-gray-200: #F2F4F7;
+    --alvobot-gray-300: #E4E4E7;
+    --alvobot-gray-400: #D4D4D8;
+    --alvobot-gray-500: #A1A1AA;
+    --alvobot-gray-600: #6B7280;
+    --alvobot-gray-700: #52525B;
+    --alvobot-gray-800: #344054;
+    --alvobot-gray-900: #18181B;
+
+    /* Tipografia — alinhada com o App (Inter) */
+    --alvobot-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --alvobot-font-size-xs: 12px;
     --alvobot-font-size-sm: 13px;
     --alvobot-font-size-base: 14px;
@@ -45,7 +51,7 @@
     --alvobot-font-size-xl: 18px;
     --alvobot-font-size-2xl: 20px;
     --alvobot-font-size-3xl: 24px;
-    
+
     /* Espaçamentos */
     --alvobot-space-xs: 4px;
     --alvobot-space-sm: 8px;
@@ -54,23 +60,45 @@
     --alvobot-space-xl: 20px;
     --alvobot-space-2xl: 24px;
     --alvobot-space-3xl: 32px;
-    
-    /* Bordas e raios */
+
+    /* Bordas e raios — alinhados com o App */
     --alvobot-radius-sm: 4px;
     --alvobot-radius-md: 8px;
     --alvobot-radius-lg: 12px;
-    --alvobot-radius-full: 50%;
-    
-    /* Sombras */
+    --alvobot-radius-xl: 16px;
+    --alvobot-radius-2xl: 20px;
+    --alvobot-radius-full: 9999px;
+
+    /* Sombras — alinhadas com o App */
     --alvobot-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --alvobot-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --alvobot-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
-    
+    --alvobot-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --alvobot-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --alvobot-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+    /* Transições — alinhadas com o App */
+    --alvobot-transition-fast: 150ms ease;
+    --alvobot-transition-normal: 200ms ease;
+    --alvobot-transition-slow: 300ms ease;
+
+    /* Touch targets — Apple HIG (alinhados com o App) */
+    --alvobot-touch-target-min: 44px;
+    --alvobot-touch-target-comfortable: 48px;
+
     /* Breakpoints */
     --alvobot-bp-sm: 480px;
     --alvobot-bp-md: 782px;
     --alvobot-bp-lg: 960px;
     --alvobot-bp-xl: 1200px;
+}
+
+/* ====================================
+   FONT — Inter (alinhada com o App)
+   ==================================== */
+.alvobot-admin-wrap,
+.alvobot-admin-wrap *,
+.alvobot-pro-wrap,
+.alvobot-pro-wrap * {
+    font-family: var(--alvobot-font-family);
 }
 
 /* ====================================
@@ -96,7 +124,7 @@
     margin: 0;
     padding: 0;
     min-height: 0;
-    transition: all 0.3s ease;
+    transition: all var(--alvobot-transition-slow);
 }
 
 /* Oculta quando completamente vazio */
@@ -133,22 +161,47 @@
 }
 
 /* ====================================
-   HEADER PADRONIZADO
+   HEADER PADRONIZADO — alinhado com o App
    ==================================== */
 .alvobot-admin-header {
-    background: var(--alvobot-white);
-    padding: var(--alvobot-space-2xl);
-    border-radius: var(--alvobot-radius-md);
-    box-shadow: var(--alvobot-shadow-md);
-    border-left: 4px solid var(--alvobot-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-lg);
+    padding: var(--alvobot-space-lg) 0;
+    min-height: var(--alvobot-touch-target-comfortable);
+}
+
+/* Ícone do header — caixa com gradiente (como no App) */
+.alvobot-header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--alvobot-touch-target-comfortable);
+    height: var(--alvobot-touch-target-comfortable);
+    background: linear-gradient(135deg, var(--alvobot-primary), var(--alvobot-primary-dark));
+    border-radius: var(--alvobot-radius-lg);
+    color: var(--alvobot-white);
+}
+
+.alvobot-header-icon .alvobot-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.alvobot-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
 .alvobot-admin-header h1 {
-    margin: 0 0 var(--alvobot-space-sm);
+    margin: 0;
     color: var(--alvobot-gray-900);
     font-size: var(--alvobot-font-size-3xl);
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 .alvobot-admin-header p {
@@ -161,38 +214,153 @@
 .alvobot-admin-header .subtitle {
     font-size: var(--alvobot-font-size-lg);
     color: var(--alvobot-gray-700);
-    margin-top: var(--alvobot-space-sm);
+}
+
+/* Ícone SVG inline (Lucide-style) */
+.alvobot-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 /* ====================================
-   CARDS/MÓDULOS PADRONIZADOS
+   TABS/ABAS PADRONIZADAS — alinhadas com o App (pills style)
+   ==================================== */
+.alvobot-admin-wrap .nav-tab-wrapper,
+.alvobot-admin-wrap .nav-tab-wrapper {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background-color: var(--alvobot-gray-100);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-lg);
+    width: fit-content;
+    margin-bottom: var(--alvobot-space-xl);
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-radius: var(--alvobot-radius-md);
+    font-family: var(--alvobot-font-family);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--alvobot-gray-600);
+    cursor: pointer;
+    transition: all var(--alvobot-transition-fast);
+    white-space: nowrap;
+    text-decoration: none;
+    margin: 0;
+    float: none;
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab:hover {
+    color: var(--alvobot-gray-900);
+    background-color: var(--alvobot-gray-200);
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab:focus {
+    box-shadow: none;
+    outline: 2px solid var(--alvobot-primary);
+    outline-offset: -2px;
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab-active,
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab-active:hover,
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab-active:focus {
+    background-color: var(--alvobot-white);
+    color: var(--alvobot-gray-900);
+    box-shadow: var(--alvobot-shadow-sm);
+    border: none;
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab .alvobot-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background-color: var(--alvobot-gray-200);
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--alvobot-gray-600);
+}
+
+.alvobot-admin-wrap .nav-tab-wrapper .nav-tab-active .count-badge {
+    background-color: rgba(251, 191, 36, 0.2);
+    color: var(--alvobot-primary-dark);
+}
+
+@media (max-width: 768px) {
+    .alvobot-admin-wrap .nav-tab-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+
+    .alvobot-admin-wrap .nav-tab-wrapper .nav-tab {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}
+
+/* ====================================
+   CARDS/MÓDULOS PADRONIZADOS — alinhados com o App
    ==================================== */
 .alvobot-card {
     background: var(--alvobot-white);
-    border-radius: var(--alvobot-radius-md);
+    border-radius: var(--alvobot-radius-lg);
     padding: var(--alvobot-space-2xl);
-    box-shadow: var(--alvobot-shadow-md);
     border: 1px solid var(--alvobot-gray-300);
-    transition: all 0.3s ease;
+    transition: box-shadow var(--alvobot-transition-normal), transform var(--alvobot-transition-normal);
 }
 
-.alvobot-card:hover {
+/* Hover lift apenas para cards interativos (módulos na grid) */
+.alvobot-grid .alvobot-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--alvobot-shadow-lg);
+}
+
+/* Remove divisores nos cards de módulo dentro do grid */
+.alvobot-grid .alvobot-card-header {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.alvobot-grid .alvobot-card-footer {
+    border-top: none;
 }
 
 .alvobot-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: var(--alvobot-space-lg);
     padding-bottom: var(--alvobot-space-lg);
+    border-bottom: 1px solid var(--alvobot-gray-300);
+    margin-bottom: var(--alvobot-space-lg);
 }
 
 .alvobot-card-title {
     margin: 0;
     color: var(--alvobot-gray-900);
-    font-size: var(--alvobot-font-size-xl);
-    font-weight: 600;
+    font-size: var(--alvobot-font-size-lg);
+    font-weight: 500;
 }
 
 .alvobot-card-subtitle {
@@ -205,11 +373,16 @@
 .alvobot-card-content {
     color: var(--alvobot-gray-700);
     line-height: 1.6;
+    flex: 1;
 }
 
 .alvobot-card-footer {
-    margin-top: var(--alvobot-space-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+    margin-top: var(--alvobot-space-lg);
     padding-top: var(--alvobot-space-lg);
+    border-top: 1px solid var(--alvobot-gray-300);
 }
 
 /* ====================================
@@ -240,22 +413,21 @@
 }
 
 .alvobot-collapse-toggle:focus {
-    outline: 1px solid var(--alvobot-accent);
-    box-shadow: 0 0 0 1px var(--alvobot-accent);
+    outline: 1px solid var(--alvobot-primary);
+    box-shadow: 0 0 0 1px var(--alvobot-primary);
 }
 
-.alvobot-collapse-toggle .dashicons {
-    font-size: 20px;
-    transition: transform 0.2s ease-in-out;
-    display: inline-block;
-    vertical-align: middle;
+.alvobot-collapse-toggle .alvobot-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform var(--alvobot-transition-normal);
 }
 
-.alvobot-collapse-toggle[aria-expanded="true"] .dashicons {
+.alvobot-collapse-toggle[aria-expanded="true"] .alvobot-icon {
     transform: rotate(0deg);
 }
 
-.alvobot-collapse-toggle[aria-expanded="false"] .dashicons {
+.alvobot-collapse-toggle[aria-expanded="false"] .alvobot-icon {
     transform: rotate(-90deg);
 }
 
@@ -300,7 +472,7 @@
 }
 
 .alvobot-form-table tr {
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-form-table tr:last-child {
@@ -323,7 +495,7 @@
 }
 
 /* ====================================
-   CAMPOS DE ENTRADA
+   CAMPOS DE ENTRADA — alinhados com o App
    ==================================== */
 .alvobot-input,
 .alvobot-input[type="text"],
@@ -335,21 +507,42 @@
 .alvobot-select {
     width: 100%;
     max-width: 400px;
+    height: var(--alvobot-touch-target-comfortable);
     padding: var(--alvobot-space-sm) var(--alvobot-space-md);
-    border: 1px solid var(--alvobot-gray-400);
-    border-radius: var(--alvobot-radius-sm);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    font-family: var(--alvobot-font-family);
     font-size: var(--alvobot-font-size-base);
-    line-height: 1.5;
-    color: var(--alvobot-gray-800);
+    line-height: 20px;
+    color: var(--alvobot-gray-900);
     background: var(--alvobot-white);
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-fast);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.alvobot-textarea {
+    height: auto;
+    min-height: 96px;
+    resize: vertical;
+}
+
+.alvobot-input::placeholder,
+.alvobot-textarea::placeholder {
+    color: var(--alvobot-gray-500);
+}
+
+.alvobot-input:hover:not(:disabled):not(:focus),
+.alvobot-textarea:hover:not(:disabled):not(:focus),
+.alvobot-select:hover:not(:disabled):not(:focus) {
+    border-color: var(--alvobot-gray-500);
 }
 
 .alvobot-input:focus,
 .alvobot-textarea:focus,
 .alvobot-select:focus {
-    border-color: var(--alvobot-accent);
-    box-shadow: 0 0 0 1px var(--alvobot-accent);
+    border-color: var(--alvobot-primary);
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light);
     outline: none;
 }
 
@@ -359,18 +552,202 @@
     background: var(--alvobot-gray-100);
     color: var(--alvobot-gray-600);
     cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.alvobot-input.has-error,
+.alvobot-textarea.has-error,
+.alvobot-select.has-error {
+    border-color: var(--alvobot-error);
+}
+
+.alvobot-input.has-error:focus,
+.alvobot-textarea.has-error:focus,
+.alvobot-select.has-error:focus {
+    box-shadow: 0 0 0 3px rgba(246, 61, 104, 0.1);
 }
 
 .alvobot-input-sm {
     max-width: 150px;
-    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
-    font-size: var(--alvobot-font-size-sm);
+    height: 32px;
+    padding: 6px var(--alvobot-space-sm);
+    font-size: 12px;
 }
 
 .alvobot-input-lg {
     max-width: 600px;
+    height: var(--alvobot-touch-target-comfortable);
     padding: var(--alvobot-space-md) var(--alvobot-space-lg);
     font-size: var(--alvobot-font-size-lg);
+}
+
+/* Labels de formulário */
+.alvobot-form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    color: var(--alvobot-gray-900);
+    margin-bottom: var(--alvobot-space-xs);
+}
+
+/* Texto auxiliar / descrição */
+.alvobot-form-hint {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--alvobot-gray-500);
+    margin-top: var(--alvobot-space-xs);
+}
+
+/* Mensagem de erro */
+.alvobot-form-error {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--alvobot-error);
+    margin-top: var(--alvobot-space-xs);
+}
+
+/* Override WordPress native inputs dentro das páginas do plugin */
+.alvobot-admin-wrap input[type="text"],
+.alvobot-admin-wrap input[type="email"],
+.alvobot-admin-wrap input[type="number"],
+.alvobot-admin-wrap input[type="password"],
+.alvobot-admin-wrap input[type="url"],
+.alvobot-admin-wrap input[type="search"],
+.alvobot-admin-wrap input[type="tel"],
+.alvobot-admin-container input[type="text"],
+.alvobot-admin-container input[type="email"],
+.alvobot-admin-container input[type="number"],
+.alvobot-admin-container input[type="password"],
+.alvobot-admin-container input[type="url"],
+.alvobot-admin-container input[type="search"],
+.alvobot-admin-container input[type="tel"] {
+    height: var(--alvobot-touch-target-comfortable) !important;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md) !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-base) !important;
+    line-height: 20px !important;
+    color: var(--alvobot-gray-900) !important;
+    background: var(--alvobot-white) !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+}
+
+.alvobot-admin-wrap textarea,
+.alvobot-admin-container textarea {
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md) !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-base) !important;
+    line-height: 20px !important;
+    color: var(--alvobot-gray-900) !important;
+    background: var(--alvobot-white) !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    resize: vertical;
+}
+
+.alvobot-admin-wrap select,
+.alvobot-admin-container select {
+    height: var(--alvobot-touch-target-comfortable) !important;
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md) !important;
+    padding-right: 32px !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-base) !important;
+    line-height: 20px !important;
+    color: var(--alvobot-gray-900) !important;
+    background: var(--alvobot-white) !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 16px !important;
+}
+
+.alvobot-admin-wrap input[type="text"]::placeholder,
+.alvobot-admin-wrap input[type="email"]::placeholder,
+.alvobot-admin-wrap input[type="number"]::placeholder,
+.alvobot-admin-wrap input[type="password"]::placeholder,
+.alvobot-admin-wrap input[type="url"]::placeholder,
+.alvobot-admin-wrap input[type="search"]::placeholder,
+.alvobot-admin-wrap textarea::placeholder,
+.alvobot-admin-container input[type="text"]::placeholder,
+.alvobot-admin-container textarea::placeholder {
+    color: var(--alvobot-gray-500);
+}
+
+.alvobot-admin-wrap input[type="text"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap input[type="email"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap input[type="number"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap input[type="password"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap input[type="url"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap textarea:hover:not(:disabled):not(:focus),
+.alvobot-admin-wrap select:hover:not(:disabled):not(:focus),
+.alvobot-admin-container input[type="text"]:hover:not(:disabled):not(:focus),
+.alvobot-admin-container textarea:hover:not(:disabled):not(:focus),
+.alvobot-admin-container select:hover:not(:disabled):not(:focus) {
+    border-color: var(--alvobot-gray-500) !important;
+}
+
+.alvobot-admin-wrap input[type="text"]:focus,
+.alvobot-admin-wrap input[type="email"]:focus,
+.alvobot-admin-wrap input[type="number"]:focus,
+.alvobot-admin-wrap input[type="password"]:focus,
+.alvobot-admin-wrap input[type="url"]:focus,
+.alvobot-admin-wrap textarea:focus,
+.alvobot-admin-wrap select:focus,
+.alvobot-admin-container input[type="text"]:focus,
+.alvobot-admin-container textarea:focus,
+.alvobot-admin-container select:focus {
+    border-color: var(--alvobot-primary) !important;
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light) !important;
+    outline: none !important;
+}
+
+.alvobot-admin-wrap input:disabled,
+.alvobot-admin-wrap textarea:disabled,
+.alvobot-admin-wrap select:disabled,
+.alvobot-admin-container input:disabled,
+.alvobot-admin-container textarea:disabled,
+.alvobot-admin-container select:disabled {
+    background: var(--alvobot-gray-100) !important;
+    color: var(--alvobot-gray-600) !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+}
+
+/* Form table labels — alinhado com o App */
+.alvobot-form-table th {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    color: var(--alvobot-gray-900);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* Description text dentro de form tables */
+.alvobot-form-table .description,
+.alvobot-admin-wrap .description {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--alvobot-gray-500);
+    margin-top: var(--alvobot-space-xs);
 }
 
 /* ====================================
@@ -384,35 +761,41 @@
     justify-content: center !important;
     padding: var(--alvobot-space-sm) var(--alvobot-space-lg) !important;
     font-size: var(--alvobot-font-size-base) !important;
-    font-weight: 500 !important;
-    line-height: 1.5 !important;
+    font-weight: 600 !important;
+    line-height: 22px !important;
     text-decoration: none !important;
-    border-radius: var(--alvobot-radius-sm) !important;
+    border-radius: var(--alvobot-radius-md) !important;
     border: 1px solid transparent !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    gap: var(--alvobot-space-xs) !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    gap: var(--alvobot-space-sm) !important;
     min-height: 36px !important;
     box-sizing: border-box !important;
+    white-space: nowrap !important;
+    transform: translateY(0);
 }
 
-.alvobot-btn:focus {
-    outline: 2px solid var(--alvobot-accent);
-    outline-offset: 2px;
+.alvobot-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--alvobot-white), 0 0 0 4px var(--alvobot-primary);
+    outline: none;
+}
+
+.alvobot-btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
 }
 
 .alvobot-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-/* Variações de botão */
+/* Variações de botão — alinhadas com o App */
 .alvobot-btn-primary,
 .alvobot-admin-wrap .alvobot-btn-primary,
 .alvobot-admin-container .alvobot-btn-primary {
     background: var(--alvobot-primary) !important;
     border-color: var(--alvobot-primary) !important;
-    color: var(--alvobot-white) !important;
+    color: var(--alvobot-gray-900) !important;
 }
 
 .alvobot-btn-primary:hover:not(:disabled),
@@ -420,42 +803,41 @@
 .alvobot-admin-container .alvobot-btn-primary:hover:not(:disabled) {
     background: var(--alvobot-primary-dark) !important;
     border-color: var(--alvobot-primary-dark) !important;
-    color: var(--alvobot-white) !important;
+    color: var(--alvobot-gray-900) !important;
 }
 
 .alvobot-btn-secondary {
-    background: var(--alvobot-accent);
-    border-color: var(--alvobot-accent);
-    color: var(--alvobot-white);
+    background: var(--alvobot-gray-200);
+    border-color: transparent;
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-secondary:hover:not(:disabled) {
-    background: var(--alvobot-accent-dark);
-    border-color: var(--alvobot-accent-dark);
-    color: var(--alvobot-white);
+    background: var(--alvobot-gray-100);
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-outline {
     background: transparent;
-    border-color: var(--alvobot-gray-400);
-    color: var(--alvobot-gray-700);
+    border-color: var(--alvobot-gray-300);
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-outline:hover:not(:disabled) {
     background: var(--alvobot-gray-100);
-    border-color: var(--alvobot-gray-500);
-    color: var(--alvobot-gray-800);
+    border-color: var(--alvobot-gray-300);
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-ghost {
     background: transparent;
     border-color: transparent;
-    color: var(--alvobot-gray-700);
+    color: var(--alvobot-gray-600);
 }
 
 .alvobot-btn-ghost:hover:not(:disabled) {
     background: var(--alvobot-gray-100);
-    color: var(--alvobot-gray-800);
+    color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-danger {
@@ -465,8 +847,8 @@
 }
 
 .alvobot-btn-danger:hover:not(:disabled) {
-    background: #b32d2e;
-    border-color: #b32d2e;
+    background: var(--alvobot-error-dark);
+    border-color: var(--alvobot-error-dark);
     color: var(--alvobot-white);
 }
 
@@ -477,8 +859,8 @@
 }
 
 .alvobot-btn-success:hover:not(:disabled) {
-    background: #419446;
-    border-color: #419446;
+    background: var(--alvobot-success-dark);
+    border-color: var(--alvobot-success-dark);
     color: var(--alvobot-white);
 }
 
@@ -489,22 +871,24 @@
 }
 
 .alvobot-btn-warning:hover:not(:disabled) {
-    background: #e6a700;
-    border-color: #e6a700;
+    background: var(--alvobot-warning-dark);
+    border-color: var(--alvobot-warning-dark);
     color: var(--alvobot-gray-900);
 }
 
-/* Tamanhos de botão */
+/* Tamanhos de botão — alinhados com o App */
 .alvobot-btn-sm {
-    padding: var(--alvobot-space-xs) var(--alvobot-space-md);
-    font-size: var(--alvobot-font-size-sm);
-    min-height: 28px;
+    padding: var(--alvobot-space-xs) var(--alvobot-space-md) !important;
+    font-size: 12px !important;
+    line-height: 18px !important;
+    min-height: 32px !important;
 }
 
 .alvobot-btn-lg {
-    padding: var(--alvobot-space-md) var(--alvobot-space-2xl);
-    font-size: var(--alvobot-font-size-lg);
-    min-height: 44px;
+    padding: var(--alvobot-space-md) var(--alvobot-space-2xl) !important;
+    font-size: var(--alvobot-font-size-lg) !important;
+    line-height: 24px !important;
+    min-height: 44px !important;
 }
 
 /* Grupos de botões */
@@ -522,33 +906,104 @@
     justify-content: flex-end;
 }
 
+/* Override WordPress native buttons inside plugin pages */
+.alvobot-admin-wrap .button,
+.alvobot-admin-container .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--alvobot-space-sm);
+    padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
+    font-size: var(--alvobot-font-size-base);
+    font-weight: 600;
+    line-height: 22px;
+    border-radius: var(--alvobot-radius-md);
+    border: 1px solid var(--alvobot-gray-300);
+    background: var(--alvobot-white);
+    color: var(--alvobot-gray-900);
+    cursor: pointer;
+    transition: all var(--alvobot-transition-fast);
+    min-height: 36px;
+    white-space: nowrap;
+    transform: translateY(0);
+    text-decoration: none;
+    box-shadow: none;
+}
+
+.alvobot-admin-wrap .button:hover,
+.alvobot-admin-container .button:hover {
+    background: var(--alvobot-gray-100);
+    border-color: var(--alvobot-gray-300);
+    color: var(--alvobot-gray-900);
+}
+
+.alvobot-admin-wrap .button:active:not(:disabled),
+.alvobot-admin-container .button:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+}
+
+.alvobot-admin-wrap .button:focus-visible,
+.alvobot-admin-container .button:focus-visible {
+    box-shadow: 0 0 0 2px var(--alvobot-white), 0 0 0 4px var(--alvobot-primary);
+    outline: none;
+}
+
+.alvobot-admin-wrap .button.button-primary,
+.alvobot-admin-container .button.button-primary {
+    background: var(--alvobot-primary);
+    border-color: transparent;
+    color: var(--alvobot-gray-900);
+}
+
+.alvobot-admin-wrap .button.button-primary:hover,
+.alvobot-admin-container .button.button-primary:hover {
+    background: var(--alvobot-primary-dark);
+    border-color: transparent;
+    color: var(--alvobot-gray-900);
+}
+
+.alvobot-admin-wrap .button.button-link-delete,
+.alvobot-admin-container .button.button-link-delete {
+    background: transparent;
+    border-color: transparent;
+    color: var(--alvobot-error);
+}
+
+.alvobot-admin-wrap .button.button-link-delete:hover,
+.alvobot-admin-container .button.button-link-delete:hover {
+    background: rgba(246, 61, 104, 0.08);
+    color: var(--alvobot-error-dark);
+}
+
 /* ====================================
-   BADGES E STATUS
+   BADGES E STATUS — alinhados com o App
    ==================================== */
 .alvobot-badge {
     display: inline-flex;
     align-items: center;
-    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+    padding: var(--alvobot-space-xs) var(--alvobot-space-md);
     font-size: var(--alvobot-font-size-xs);
     font-weight: 500;
     line-height: 1.4;
-    border-radius: var(--alvobot-radius-sm);
+    border-radius: var(--alvobot-radius-full);
     gap: var(--alvobot-space-xs);
+    white-space: nowrap;
+    transition: all var(--alvobot-transition-fast);
 }
 
 .alvobot-badge-success {
     background: var(--alvobot-success-bg);
-    color: var(--alvobot-success);
+    color: var(--alvobot-success-dark);
 }
 
 .alvobot-badge-error {
     background: var(--alvobot-error-bg);
-    color: var(--alvobot-error);
+    color: var(--alvobot-error-dark);
 }
 
 .alvobot-badge-warning {
     background: var(--alvobot-warning-bg);
-    color: var(--alvobot-warning);
+    color: var(--alvobot-warning-dark);
 }
 
 .alvobot-badge-info {
@@ -556,33 +1011,76 @@
     color: var(--alvobot-info);
 }
 
+.alvobot-badge-primary {
+    background: var(--alvobot-primary-light);
+    color: var(--alvobot-primary-dark);
+}
+
 .alvobot-badge-neutral {
-    background: var(--alvobot-gray-100);
+    background: var(--alvobot-gray-200);
     color: var(--alvobot-gray-700);
 }
 
-/* Indicadores de status */
+/* Badge outline — com borda (como no App) */
+.alvobot-badge-outline {
+    background: transparent;
+    border: 1px solid currentColor;
+}
+
+.alvobot-badge-outline.alvobot-badge-success {
+    background: transparent;
+    border-color: var(--alvobot-success);
+    color: var(--alvobot-success);
+}
+
+.alvobot-badge-outline.alvobot-badge-error {
+    background: transparent;
+    border-color: var(--alvobot-error);
+    color: var(--alvobot-error);
+}
+
+.alvobot-badge-outline.alvobot-badge-warning {
+    background: transparent;
+    border-color: var(--alvobot-warning);
+    color: var(--alvobot-warning-dark);
+}
+
+.alvobot-badge-outline.alvobot-badge-info {
+    background: transparent;
+    border-color: var(--alvobot-info);
+    color: var(--alvobot-info);
+}
+
+/* Indicadores de status (dot) */
 .alvobot-status-indicator {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: var(--alvobot-radius-full);
     display: inline-block;
+    flex-shrink: 0;
+    background-color: currentColor;
+    animation: alvobot-dot-pulse 2s ease-in-out infinite;
 }
 
 .alvobot-status-indicator.success {
-    background: var(--alvobot-success);
+    color: var(--alvobot-success);
 }
 
 .alvobot-status-indicator.error {
-    background: var(--alvobot-error);
+    color: var(--alvobot-error);
 }
 
 .alvobot-status-indicator.warning {
-    background: var(--alvobot-warning);
+    color: var(--alvobot-warning);
 }
 
 .alvobot-status-indicator.info {
-    background: var(--alvobot-info);
+    color: var(--alvobot-info);
+}
+
+@keyframes alvobot-dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.8); }
 }
 
 /* ====================================
@@ -643,7 +1141,7 @@
 .alvobot-table td {
     padding: var(--alvobot-space-md) var(--alvobot-space-lg);
     text-align: left;
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-table th {
@@ -723,7 +1221,7 @@
     right: 0;
     bottom: 0;
     background-color: var(--alvobot-gray-400);
-    transition: 0.3s;
+    transition: all var(--alvobot-transition-fast);
     border-radius: 26px;
     box-sizing: border-box !important;
 }
@@ -768,6 +1266,314 @@
     display: inline-flex !important;
     align-items: center !important;
     margin-left: auto !important;
+}
+
+/* ====================================
+   CHECKBOXES — alinhados com o App
+   Usa !important para sobrescrever estilos do WordPress admin
+   ==================================== */
+.alvobot-admin-wrap input[type="checkbox"],
+.alvobot-admin-container input[type="checkbox"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    border: 1.5px solid var(--alvobot-gray-500) !important;
+    border-radius: var(--alvobot-radius-sm) !important;
+    background: var(--alvobot-white) !important;
+    cursor: pointer !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: transparent !important;
+}
+
+.alvobot-admin-wrap input[type="checkbox"]:hover:not(:disabled),
+.alvobot-admin-container input[type="checkbox"]:hover:not(:disabled) {
+    border-color: var(--alvobot-primary) !important;
+}
+
+.alvobot-admin-wrap input[type="checkbox"]:focus-visible,
+.alvobot-admin-container input[type="checkbox"]:focus-visible {
+    box-shadow: 0 0 0 2px var(--alvobot-white), 0 0 0 4px var(--alvobot-primary) !important;
+    outline: none !important;
+}
+
+.alvobot-admin-wrap input[type="checkbox"]:checked,
+.alvobot-admin-container input[type="checkbox"]:checked {
+    background: var(--alvobot-primary) !important;
+    border-color: var(--alvobot-primary) !important;
+}
+
+.alvobot-admin-wrap input[type="checkbox"]:checked::before,
+.alvobot-admin-container input[type="checkbox"]:checked::before {
+    content: '' !important;
+    display: block !important;
+    width: 5px !important;
+    height: 9px !important;
+    border: solid var(--alvobot-white) !important;
+    border-width: 0 2px 2px 0 !important;
+    transform: rotate(45deg) !important;
+    margin: 0 auto !important;
+    margin-top: -1px !important;
+    background: none !important;
+}
+
+/* Remove o checkmark nativo do WP (usa ::after) */
+.alvobot-admin-wrap input[type="checkbox"]:checked::after,
+.alvobot-admin-container input[type="checkbox"]:checked::after {
+    content: none !important;
+}
+
+.alvobot-admin-wrap input[type="checkbox"]:disabled,
+.alvobot-admin-container input[type="checkbox"]:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* Garante que checkboxes dentro de toggles permanecem escondidos */
+.alvobot-toggle input[type="checkbox"],
+.alvobot-pro-module-toggle input[type="checkbox"],
+.alvobot-toggle-label input[type="checkbox"] {
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    position: absolute !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: block !important;
+}
+
+/* Checkbox label inline */
+.alvobot-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 20px;
+    color: var(--alvobot-gray-900);
+    cursor: pointer;
+}
+
+.alvobot-checkbox-label input[type="checkbox"] {
+    margin: 0 !important;
+}
+
+/* ====================================
+   RADIO BUTTONS — alinhados com o App
+   ==================================== */
+.alvobot-admin-wrap input[type="radio"],
+.alvobot-admin-container input[type="radio"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    border: 1.5px solid var(--alvobot-gray-500) !important;
+    border-radius: 50% !important;
+    background: var(--alvobot-white) !important;
+    cursor: pointer !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.alvobot-admin-wrap input[type="radio"]:hover:not(:disabled),
+.alvobot-admin-container input[type="radio"]:hover:not(:disabled) {
+    border-color: var(--alvobot-primary) !important;
+}
+
+.alvobot-admin-wrap input[type="radio"]:focus-visible,
+.alvobot-admin-container input[type="radio"]:focus-visible {
+    box-shadow: 0 0 0 2px var(--alvobot-white), 0 0 0 4px var(--alvobot-primary) !important;
+    outline: none !important;
+}
+
+.alvobot-admin-wrap input[type="radio"]:checked,
+.alvobot-admin-container input[type="radio"]:checked {
+    border-color: var(--alvobot-primary) !important;
+    background: var(--alvobot-white) !important;
+}
+
+/* Remove pseudo-elemento nativo do WP */
+.alvobot-admin-wrap input[type="radio"]:checked::before,
+.alvobot-admin-container input[type="radio"]:checked::before {
+    content: none !important;
+}
+
+.alvobot-admin-wrap input[type="radio"]:checked::after,
+.alvobot-admin-container input[type="radio"]:checked::after {
+    content: '' !important;
+    display: block !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    background: var(--alvobot-primary) !important;
+    margin: 0 auto !important;
+}
+
+.alvobot-admin-wrap input[type="radio"]:disabled,
+.alvobot-admin-container input[type="radio"]:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* ====================================
+   DATE/COLOR INPUTS — alinhados com o App
+   ==================================== */
+.alvobot-admin-wrap input[type="date"],
+.alvobot-admin-wrap input[type="datetime-local"],
+.alvobot-admin-wrap input[type="time"],
+.alvobot-admin-container input[type="date"],
+.alvobot-admin-container input[type="datetime-local"],
+.alvobot-admin-container input[type="time"] {
+    height: var(--alvobot-touch-target-comfortable);
+    padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    font-family: var(--alvobot-font-family);
+    font-size: var(--alvobot-font-size-base);
+    line-height: 20px;
+    color: var(--alvobot-gray-900);
+    background: var(--alvobot-white);
+    transition: all var(--alvobot-transition-fast);
+    outline: none;
+    box-sizing: border-box;
+    box-shadow: none;
+}
+
+.alvobot-admin-wrap input[type="date"]:focus,
+.alvobot-admin-wrap input[type="datetime-local"]:focus,
+.alvobot-admin-wrap input[type="time"]:focus,
+.alvobot-admin-container input[type="date"]:focus,
+.alvobot-admin-container input[type="datetime-local"]:focus,
+.alvobot-admin-container input[type="time"]:focus {
+    border-color: var(--alvobot-primary);
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light);
+}
+
+.alvobot-admin-wrap input[type="color"],
+.alvobot-admin-container input[type="color"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    background: var(--alvobot-white);
+    cursor: pointer;
+    transition: all var(--alvobot-transition-fast);
+    box-sizing: border-box;
+}
+
+.alvobot-admin-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.alvobot-admin-wrap input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: var(--alvobot-radius-sm);
+}
+
+.alvobot-admin-wrap input[type="color"]:hover:not(:disabled),
+.alvobot-admin-container input[type="color"]:hover:not(:disabled) {
+    border-color: var(--alvobot-gray-500);
+}
+
+.alvobot-admin-wrap input[type="color"]:focus,
+.alvobot-admin-container input[type="color"]:focus {
+    border-color: var(--alvobot-primary);
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light);
+    outline: none;
+}
+
+/* ====================================
+   RANGE SLIDER — alinhado com o App
+   ==================================== */
+.alvobot-admin-wrap input[type="range"],
+.alvobot-admin-container input[type="range"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 400px;
+    height: 6px;
+    background: var(--alvobot-gray-300);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    margin: 10px 0;
+}
+
+.alvobot-admin-wrap input[type="range"]::-webkit-slider-thumb,
+.alvobot-admin-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--alvobot-primary);
+    border: 2px solid var(--alvobot-white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: all var(--alvobot-transition-fast);
+}
+
+.alvobot-admin-wrap input[type="range"]::-webkit-slider-thumb:hover,
+.alvobot-admin-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light);
+}
+
+.alvobot-admin-wrap input[type="range"]::-moz-range-thumb,
+.alvobot-admin-container input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--alvobot-primary);
+    border: 2px solid var(--alvobot-white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+}
+
+.alvobot-admin-wrap input[type="range"]:focus::-webkit-slider-thumb,
+.alvobot-admin-container input[type="range"]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light);
+}
+
+.alvobot-admin-wrap input[type="range"]::-webkit-slider-runnable-track {
+    border-radius: 3px;
+}
+
+.alvobot-admin-wrap input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: var(--alvobot-gray-300);
+    border-radius: 3px;
 }
 
 /* ====================================
@@ -961,7 +1767,7 @@
 /* Link principal - estado hover */
 #adminmenu li.toplevel_page_alvobot-pro > a:hover {
     color: var(--alvobot-white) !important;
-    background: rgba(205, 144, 66, 0.1) !important;
+    background: rgba(251, 191, 36, 0.1) !important;
 }
 
 /* Link principal - estado ativo/selecionado */
@@ -981,12 +1787,12 @@
     color: var(--alvobot-primary) !important;
     padding: 8px 20px !important;
     background: transparent !important;
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
 }
 
 /* Submenus - hover */
 #adminmenu li.toplevel_page_alvobot-pro .wp-submenu a:hover {
-    background: rgba(205, 144, 66, 0.1) !important;
+    background: rgba(251, 191, 36, 0.1) !important;
     color: var(--alvobot-white) !important;
 }
 
@@ -999,28 +1805,228 @@
 
 /* Separador visual */
 #adminmenu li.toplevel_page_alvobot-pro {
-    border-top: 1px solid rgba(205, 144, 66, 0.2);
-    border-bottom: 1px solid rgba(205, 144, 66, 0.2);
+    border-top: 1px solid rgba(251, 191, 36, 0.2);
+    border-bottom: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 /* ====================================
    CAMPOS ESPECÍFICOS
    ==================================== */
 
-/* Color Picker */
+/* ====================================
+   COLOR PICKER — Popover positioning only.
+   Iris internals use WordPress defaults.
+   ==================================== */
+
+/* --- Container --- */
+.alvobot-admin-wrap .wp-picker-container,
+.alvobot-admin-container .wp-picker-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.alvobot-admin-wrap .wp-picker-container.alvobot-picker-open,
+.alvobot-admin-container .wp-picker-container.alvobot-picker-open {
+    z-index: 99998;
+}
+
+/* --- Trigger button --- */
+.alvobot-admin-wrap .wp-picker-container .wp-color-result.button,
+.alvobot-admin-container .wp-picker-container .wp-color-result.button,
+.alvobot-admin-wrap .wp-color-result,
+.alvobot-admin-container .wp-color-result {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 4px 14px 4px 6px !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    background: var(--alvobot-white) !important;
+    cursor: pointer !important;
+    transition: all var(--alvobot-transition-fast) !important;
+    box-shadow: var(--alvobot-shadow-xs) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-sm) !important;
+    font-weight: 500 !important;
+    color: var(--alvobot-gray-700) !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+}
+
+.alvobot-admin-wrap .wp-color-result:hover,
+.alvobot-admin-container .wp-color-result:hover {
+    border-color: var(--alvobot-gray-500) !important;
+    box-shadow: var(--alvobot-shadow-sm) !important;
+}
+
+.alvobot-admin-wrap .wp-color-result:focus,
+.alvobot-admin-container .wp-color-result:focus {
+    border-color: var(--alvobot-primary) !important;
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light) !important;
+    outline: none !important;
+}
+
+.alvobot-admin-wrap .wp-color-result::after,
+.alvobot-admin-container .wp-color-result::after {
+    content: "" !important;
+    display: none !important;
+}
+
+/* --- Custom swatch (injected by JS) --- */
+.alvobot-admin-wrap .alvobot-color-swatch,
+.alvobot-admin-container .alvobot-color-swatch {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: var(--alvobot-radius-sm);
+    border: 2px solid var(--alvobot-white);
+    box-shadow: 0 0 0 1px var(--alvobot-gray-300), inset 0 0 0 1px rgba(0,0,0,0.06);
+    transition: box-shadow var(--alvobot-transition-fast);
+    pointer-events: none;
+}
+
+.alvobot-admin-wrap .wp-color-result:hover .alvobot-color-swatch,
+.alvobot-admin-container .wp-color-result:hover .alvobot-color-swatch {
+    box-shadow: 0 0 0 1px var(--alvobot-gray-500), inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+
+/* --- Result text label --- */
+.alvobot-admin-wrap .wp-color-result .wp-color-result-text,
+.alvobot-admin-container .wp-color-result .wp-color-result-text {
+    display: inline-block !important;
+    color: var(--alvobot-gray-600) !important;
+    font-size: var(--alvobot-font-size-sm) !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* --- Backdrop (no DOM moves) --- */
+.alvobot-admin-wrap .alvobot-color-backdrop,
+.alvobot-admin-container .alvobot-color-backdrop {
+    display: none;
+    position: absolute;
+    left: -12px;
+    z-index: 99999;
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-xl);
+    box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.15),
+                0 8px 20px -8px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    padding: 0 12px;
+    box-sizing: content-box;
+}
+
+/* --- Input wrap (absolute when open) --- */
+.alvobot-admin-wrap .wp-picker-container .wp-picker-input-wrap:not(.hidden),
+.alvobot-admin-container .wp-picker-container .wp-picker-input-wrap:not(.hidden) {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    z-index: 100001 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    white-space: nowrap !important;
+}
+
+/* Label inside input-wrap: collapse so it doesn't add extra space */
+.alvobot-admin-wrap .wp-picker-input-wrap label,
+.alvobot-admin-container .wp-picker-input-wrap label {
+    display: contents !important;
+}
+
+/* --- Holder (top set by JS) --- */
+.alvobot-admin-wrap .wp-picker-container .wp-picker-holder,
+.alvobot-admin-container .wp-picker-container .wp-picker-holder {
+    position: absolute !important;
+    left: 0 !important;
+    z-index: 100000 !important;
+    padding: 0 16px 16px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* --- Iris picker box: radius + remove WP default margin --- */
+.alvobot-admin-wrap .wp-picker-container .iris-picker,
+.alvobot-admin-container .wp-picker-container .iris-picker {
+    border-radius: var(--alvobot-radius-md) !important;
+    margin-top: 0 !important;
+}
+
+/* --- Hex input (bigger, matches app design system) --- */
+.alvobot-admin-wrap .wp-picker-container input[type="text"].wp-color-picker,
+.alvobot-admin-container .wp-picker-container input[type="text"].wp-color-picker {
+    height: 36px !important;
+    min-height: 36px !important;
+    width: 100px !important;
+    padding: 0 10px !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-sm) !important;
+    font-weight: 500 !important;
+    color: var(--alvobot-gray-800) !important;
+    background: var(--alvobot-white) !important;
+    line-height: 36px !important;
+    vertical-align: middle !important;
+}
+
+.alvobot-admin-wrap .wp-picker-container input[type="text"].wp-color-picker:focus,
+.alvobot-admin-container .wp-picker-container input[type="text"].wp-color-picker:focus {
+    border-color: var(--alvobot-primary) !important;
+    box-shadow: 0 0 0 3px var(--alvobot-primary-light) !important;
+    outline: none !important;
+}
+
+/* --- Clear / Default button (bigger, matches app design system) --- */
+.alvobot-admin-wrap .wp-picker-input-wrap .button.wp-picker-clear,
+.alvobot-admin-wrap .wp-picker-input-wrap .button.wp-picker-default,
+.alvobot-admin-container .wp-picker-input-wrap .button.wp-picker-clear,
+.alvobot-admin-container .wp-picker-input-wrap .button.wp-picker-default {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    margin: 0 !important;
+    border: 1px solid var(--alvobot-gray-300) !important;
+    border-radius: var(--alvobot-radius-md) !important;
+    background: var(--alvobot-white) !important;
+    color: var(--alvobot-gray-600) !important;
+    font-family: var(--alvobot-font-family) !important;
+    font-size: var(--alvobot-font-size-sm) !important;
+    font-weight: 500 !important;
+    line-height: 34px !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+}
+
+.alvobot-admin-wrap .wp-picker-input-wrap .button.wp-picker-clear:hover,
+.alvobot-admin-wrap .wp-picker-input-wrap .button.wp-picker-default:hover,
+.alvobot-admin-container .wp-picker-input-wrap .button.wp-picker-clear:hover,
+.alvobot-admin-container .wp-picker-input-wrap .button.wp-picker-default:hover {
+    border-color: var(--alvobot-gray-500) !important;
+    color: var(--alvobot-gray-800) !important;
+    background: var(--alvobot-gray-50) !important;
+}
+
+/* Legacy class */
 .alvobot-color-picker {
     display: inline-block;
-}
-
-.alvobot-color-picker .wp-color-result {
-    border-radius: var(--alvobot-radius-sm);
-    border: 1px solid var(--alvobot-gray-400);
-    height: 36px;
-    transition: all 0.2s ease;
-}
-
-.alvobot-color-picker .wp-color-result:hover {
-    border-color: var(--alvobot-accent);
 }
 
 /* Token field */
@@ -1042,12 +2048,17 @@
 
 .alvobot-token-toggle {
     cursor: pointer;
-    color: var(--alvobot-accent);
+    color: var(--alvobot-gray-600);
     padding: var(--alvobot-space-xs);
     border-radius: var(--alvobot-radius-sm);
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
     border: none;
     background: transparent;
+}
+
+.alvobot-token-toggle:focus {
+    outline: 2px solid var(--alvobot-primary);
+    outline-offset: 2px;
 }
 
 .alvobot-token-toggle:hover {
@@ -1084,6 +2095,311 @@
     height: auto;
     border-radius: var(--alvobot-radius-full);
     box-shadow: var(--alvobot-shadow-sm);
+}
+
+/* ====================================
+   AI CREDITS BADGE
+   ==================================== */
+.alvobot-credits-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--alvobot-radius-sm);
+    font-size: 13px;
+    line-height: 1;
+    border: 1px solid;
+}
+
+.alvobot-credits-badge .alvobot-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.alvobot-credits-badge strong {
+    font-weight: 600;
+}
+
+.alvobot-credits-ok {
+    background: var(--alvobot-success-bg);
+    border-color: var(--alvobot-success);
+    color: var(--alvobot-success-dark);
+}
+
+.alvobot-credits-low {
+    background: var(--alvobot-warning-bg);
+    border-color: var(--alvobot-warning);
+    color: var(--alvobot-warning-dark);
+}
+
+.alvobot-credits-critical {
+    background: var(--alvobot-error-bg);
+    border-color: var(--alvobot-error);
+    color: var(--alvobot-error-dark);
+}
+
+.alvobot-credits-noplan,
+.alvobot-credits-error {
+    background: var(--alvobot-gray-100);
+    border-color: var(--alvobot-gray-400);
+    color: var(--alvobot-gray-600);
+}
+
+.alvobot-credits-disconnected {
+    background: var(--alvobot-error-bg);
+    border-color: var(--alvobot-error);
+    color: var(--alvobot-error-dark);
+}
+
+.alvobot-credits-refresh {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: inherit;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.alvobot-credits-refresh:hover {
+    opacity: 1;
+}
+
+.alvobot-credits-refresh .alvobot-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.alvobot-credits-refresh .alvobot-icon.spin,
+.alvobot-credits-refresh .spin {
+    animation: alvobot-spin 1s linear infinite;
+}
+
+@keyframes alvobot-spin {
+    100% { transform: rotate(360deg); }
+}
+
+/* Lucide Icons base */
+.alvobot-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* AI Credits Card (Dashboard) */
+.alvobot-credits-card {
+    padding: var(--alvobot-space-lg) var(--alvobot-space-xl);
+}
+
+.alvobot-credits-card:hover {
+    transform: none;
+}
+
+.alvobot-credits-card-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--alvobot-space-xl);
+}
+
+.alvobot-credits-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.alvobot-credits-card-label {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+    font-size: var(--alvobot-font-size-sm);
+    font-weight: 600;
+    color: var(--alvobot-gray-700);
+    margin-bottom: var(--alvobot-space-xs);
+}
+
+.alvobot-credits-card-label > .alvobot-icon {
+    color: var(--alvobot-primary-dark);
+}
+
+.alvobot-credits-card-label .alvobot-credits-refresh {
+    margin-left: var(--alvobot-space-xs);
+}
+
+.alvobot-credits-card-detail {
+    margin: 0;
+    font-size: var(--alvobot-font-size-xs);
+    color: var(--alvobot-gray-500);
+    line-height: 1.4;
+}
+
+.alvobot-credits-card-detail--error {
+    color: var(--alvobot-error);
+}
+
+.alvobot-credits-card-detail--muted {
+    color: var(--alvobot-gray-400);
+}
+
+.alvobot-credits-card-extra {
+    display: inline-flex;
+    align-items: center;
+    margin-left: var(--alvobot-space-xs);
+    padding: 1px var(--alvobot-space-sm);
+    background: var(--alvobot-primary-light);
+    color: var(--alvobot-primary-dark);
+    border-radius: var(--alvobot-radius-full);
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 500;
+}
+
+.alvobot-credits-card-number {
+    display: flex;
+    align-items: baseline;
+    gap: var(--alvobot-space-xs);
+    flex-shrink: 0;
+}
+
+.alvobot-credits-value {
+    font-size: var(--alvobot-font-size-3xl);
+    font-weight: 700;
+    color: var(--alvobot-gray-900);
+    line-height: 1;
+}
+
+.alvobot-credits-value--error {
+    color: var(--alvobot-error);
+}
+
+.alvobot-credits-value--muted {
+    color: var(--alvobot-gray-400);
+}
+
+.alvobot-credits-unit {
+    font-size: var(--alvobot-font-size-sm);
+    color: var(--alvobot-gray-500);
+    font-weight: 400;
+}
+
+.alvobot-credits-card-bar {
+    margin-top: var(--alvobot-space-md);
+    padding-top: var(--alvobot-space-md);
+    border-top: 1px solid var(--alvobot-gray-300);
+}
+
+.alvobot-credits-bar {
+    height: 6px;
+    background: var(--alvobot-gray-200);
+    border-radius: var(--alvobot-radius-full);
+    overflow: hidden;
+}
+
+.alvobot-credits-bar-fill {
+    height: 100%;
+    border-radius: var(--alvobot-radius-full);
+    transition: width var(--alvobot-transition-slow);
+}
+
+.alvobot-credits-bar-fill.green { background: var(--alvobot-success); }
+.alvobot-credits-bar-fill.yellow { background: var(--alvobot-warning); }
+.alvobot-credits-bar-fill.red { background: var(--alvobot-error); }
+
+@media screen and (max-width: 480px) {
+    .alvobot-credits-card-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--alvobot-space-sm);
+    }
+    .alvobot-credits-card-number {
+        align-self: flex-end;
+    }
+}
+
+/* AI Generation Section */
+.alvobot-ai-section {
+    border-left: 3px solid var(--alvobot-primary);
+}
+
+.alvobot-ai-section h3 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-sm);
+}
+
+.alvobot-ai-cost-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--alvobot-space-xs);
+    background: var(--alvobot-primary);
+    color: var(--alvobot-gray-900);
+    padding: 2px var(--alvobot-space-sm);
+    border-radius: var(--alvobot-radius-lg);
+    font-size: var(--alvobot-font-size-xs);
+    font-weight: 600;
+}
+
+.alvobot-ai-preview {
+    margin-top: var(--alvobot-space-md);
+    padding: var(--alvobot-space-md);
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-sm);
+    display: none;
+}
+
+.alvobot-ai-preview.visible {
+    display: block;
+}
+
+.alvobot-ai-preview .avatar-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--alvobot-space-md);
+    margin-bottom: var(--alvobot-space-md);
+}
+
+.alvobot-ai-preview .avatar-preview img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--alvobot-gray-300);
+}
+
+.alvobot-ai-preview label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--alvobot-space-xs);
+    font-size: var(--alvobot-font-size-sm);
+}
+
+.alvobot-ai-preview input[type="text"],
+.alvobot-ai-preview textarea {
+    width: 100%;
+    margin-bottom: var(--alvobot-space-sm);
+}
+
+.alvobot-ai-preview textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.alvobot-ai-loading {
+    text-align: center;
+    padding: var(--alvobot-space-lg);
+    display: none;
+}
+
+.alvobot-ai-loading.visible {
+    display: block;
+}
+
+.alvobot-ai-loading .spinner {
+    visibility: visible;
+    float: none;
+    margin: 0 auto 10px;
 }
 
 /* ====================================
@@ -1129,7 +2445,7 @@
 .alvobot-helper-text code {
     background: var(--alvobot-gray-100);
     padding: 2px 4px;
-    border-radius: 3px;
+    border-radius: var(--alvobot-radius-sm);
     font-size: var(--alvobot-font-size-xs);
 }
 
@@ -1172,8 +2488,8 @@
 .alvobot-pro-header {
     background: var(--alvobot-white);
     padding: var(--alvobot-space-xl);
-    border-radius: var(--alvobot-radius-md);
-    box-shadow: var(--alvobot-shadow-md);
+    border-radius: var(--alvobot-radius-lg);
+    border: 1px solid var(--alvobot-gray-300);
     margin-bottom: var(--alvobot-space-xl);
 }
 
@@ -1201,11 +2517,10 @@
 /* Cards de módulo */
 .alvobot-pro-module-card {
     background: var(--alvobot-white);
-    border-radius: var(--alvobot-radius-md);
+    border-radius: var(--alvobot-radius-lg);
     padding: var(--alvobot-space-xl);
-    box-shadow: var(--alvobot-shadow-md);
     border: 1px solid var(--alvobot-gray-300);
-    transition: all 0.3s ease;
+    transition: box-shadow var(--alvobot-transition-normal), transform var(--alvobot-transition-normal);
 }
 
 .alvobot-pro-module-card:hover {
@@ -1266,7 +2581,7 @@
 }
 
 input:checked + .alvobot-pro-module-slider {
-    background-color: var(--alvobot-accent);
+    background-color: var(--alvobot-primary);
 }
 
 input:checked + .alvobot-pro-module-slider:before {
@@ -1286,21 +2601,21 @@ input:checked + .alvobot-pro-module-slider:before {
 .alvobot-pro-module-actions a {
     display: inline-block;
     text-decoration: none;
-    color: var(--alvobot-accent);
+    color: var(--alvobot-primary-dark);
     margin-right: var(--alvobot-space-sm);
-    transition: color 0.2s ease;
+    transition: color var(--alvobot-transition-normal);
 }
 
 .alvobot-pro-module-actions a:hover {
-    color: var(--alvobot-accent-dark);
+    color: var(--alvobot-primary);
 }
 
 /* Cartões de Status */
 .status-card {
     background: var(--alvobot-white);
     padding: var(--alvobot-space-xl);
-    border-radius: var(--alvobot-radius-md);
-    box-shadow: var(--alvobot-shadow-md);
+    border-radius: var(--alvobot-radius-lg);
+    border: 1px solid var(--alvobot-gray-300);
     margin-bottom: var(--alvobot-space-xl);
 }
 
@@ -1448,7 +2763,7 @@ input:checked + .alvobot-pro-module-slider:before {
     color: var(--alvobot-accent);
     padding: var(--alvobot-space-xs);
     border-radius: var(--alvobot-radius-sm);
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
     border: none;
     background: transparent;
 }
@@ -1532,7 +2847,7 @@ input:checked + .alvobot-pro-module-slider:before {
     border-radius: var(--alvobot-radius-md);
     background: var(--alvobot-white);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--alvobot-transition-slow);
     text-align: center;
 }
 
@@ -1654,14 +2969,9 @@ input:checked + .alvobot-pro-module-slider:before {
 }
 
 .logo-preview {
-    min-height: 300px;
-    background: var(--alvobot-white);
-    border: 1px solid var(--alvobot-gray-300);
-    border-radius: var(--alvobot-radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--alvobot-space-2xl);
 }
 
 .logo-placeholder {
@@ -1766,7 +3076,7 @@ input:checked + .alvobot-pro-module-slider:before {
     justify-content: center;
     padding: var(--alvobot-space-xl);
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
     color: var(--alvobot-gray-600);
     font-style: italic;
@@ -1836,7 +3146,7 @@ input:checked + .alvobot-pro-module-slider:before {
 }
 
 .alvobot-temp-login-url {
-    border-top: 1px solid var(--alvobot-gray-200);
+    border-top: 1px solid var(--alvobot-gray-300);
     padding-top: var(--alvobot-space-lg);
 }
 
@@ -1937,7 +3247,7 @@ input:checked + .alvobot-pro-module-slider:before {
 
 .alvobot-temp-login-creator {
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
     padding: var(--alvobot-space-xl);
     margin-top: var(--alvobot-space-lg);
@@ -1981,9 +3291,10 @@ input:checked + .alvobot-pro-module-slider:before {
     border-bottom: 2px solid var(--alvobot-primary);
 }
 
-.alvobot-settings-group-title .dashicons {
+.alvobot-settings-group-title .alvobot-icon {
     color: var(--alvobot-primary);
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
 }
 
 .alvobot-settings-field {
@@ -2031,10 +3342,10 @@ input:checked + .alvobot-pro-module-slider:before {
 /* Toggle settings */
 .alvobot-settings-toggle {
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
     padding: var(--alvobot-space-lg);
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
 }
 
 .alvobot-settings-toggle:hover {
@@ -2156,7 +3467,7 @@ input:checked + .alvobot-pro-module-slider:before {
     border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
     background: var(--alvobot-white);
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
 }
 
 .alvobot-action-item:hover {
@@ -2197,7 +3508,7 @@ input:checked + .alvobot-pro-module-slider:before {
     background: var(--alvobot-gray-50);
     padding: var(--alvobot-space-lg);
     border-radius: var(--alvobot-radius-md);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-settings-group-title {
@@ -2219,7 +3530,7 @@ input:checked + .alvobot-pro-module-slider:before {
     color: var(--alvobot-gray-600);
 }
 
-.alvobot-loading-spinner .dashicons {
+.alvobot-loading-spinner .alvobot-icon {
     animation: spin 1s linear infinite;
 }
 
@@ -2300,7 +3611,7 @@ input:checked + .alvobot-pro-module-slider:before {
     background: var(--alvobot-white);
     padding: var(--alvobot-space-lg);
     margin-top: var(--alvobot-space-md);
-    border-top: 1px solid var(--alvobot-gray-200);
+    border-top: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-url-header {
@@ -2361,7 +3672,7 @@ input:checked + .alvobot-pro-module-slider:before {
     gap: var(--alvobot-space-md);
     padding: var(--alvobot-space-lg);
     background: var(--alvobot-white);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
 }
 
@@ -2392,7 +3703,7 @@ input:checked + .alvobot-pro-module-slider:before {
 .alvobot-api-docs {
     margin-top: var(--alvobot-space-xl);
     padding-top: var(--alvobot-space-xl);
-    border-top: 1px solid var(--alvobot-gray-200);
+    border-top: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-docs-section {
@@ -2489,7 +3800,7 @@ input:checked + .alvobot-pro-module-slider:before {
     display: grid;
     grid-template-columns: 150px 80px 1fr;
     padding: var(--alvobot-space-md);
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-param-row:last-child {
@@ -2691,14 +4002,14 @@ input:checked + .alvobot-pro-module-slider:before {
 .alvobot-debug-info code {
     background: var(--alvobot-gray-100);
     padding: 2px 4px;
-    border-radius: 3px;
+    border-radius: var(--alvobot-radius-sm);
     font-size: var(--alvobot-font-size-xs);
     color: var(--alvobot-gray-800);
 }
 
 /* Debug toggle row */
 .alvobot-form-table tr.alvobot-debug-row {
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-form-table tr.alvobot-debug-row:last-child {
@@ -2731,7 +4042,7 @@ input:checked + .alvobot-pro-module-slider:before {
     --ag-odd-row-background-color: var(--alvobot-white);
     --ag-row-hover-color: var(--alvobot-gray-50);
     --ag-selected-row-background-color: var(--alvobot-info-bg);
-    --ag-border-color: var(--alvobot-gray-200);
+    --ag-border-color: var(--alvobot-gray-300);
     --ag-row-border-color: var(--alvobot-gray-100);
 }
 
@@ -2742,24 +4053,24 @@ input:checked + .alvobot-pro-module-slider:before {
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 1px solid #e5e7eb;
-    background: white;
-    border-radius: 6px;
+    border: 1px solid var(--alvobot-gray-300);
+    background: var(--alvobot-white);
+    border-radius: var(--alvobot-radius-sm);
     cursor: pointer;
-    transition: all 0.2s ease;
-    color: #6b7280;
+    transition: all var(--alvobot-transition-normal);
+    color: var(--alvobot-gray-600);
 }
 
 .alvobot-btn-icon:hover:not([disabled]) {
-    background: #f8fafc;
+    background: var(--alvobot-gray-50);
     border-color: var(--alvobot-primary);
     color: var(--alvobot-primary);
     transform: translateY(-1px);
 }
 
 .alvobot-btn-icon.alvobot-btn-danger:hover:not([disabled]) {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--alvobot-error);
+    color: var(--alvobot-error);
 }
 
 .alvobot-btn-icon[disabled] {
@@ -2796,7 +4107,7 @@ input:checked + .alvobot-pro-module-slider:before {
 
 .alvobot-filter-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--alvobot-gray-600);
     font-weight: 500;
     white-space: nowrap;
 }
@@ -2831,7 +4142,7 @@ input:checked + .alvobot-pro-module-slider:before {
     margin-bottom: 2rem;
     padding: 1.5rem;
     background: var(--alvobot-gray-50);
-    border-radius: 8px;
+    border-radius: var(--alvobot-radius-md);
 }
 
 .alvobot-info-item {
@@ -2856,7 +4167,7 @@ input:checked + .alvobot-pro-module-slider:before {
     max-height: 400px;
     overflow-y: auto;
     background: var(--alvobot-gray-50);
-    border-radius: 8px;
+    border-radius: var(--alvobot-radius-md);
     padding: 1rem;
 }
 
@@ -2866,7 +4177,7 @@ input:checked + .alvobot-pro-module-slider:before {
     gap: 0.75rem;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
-    border-radius: 4px;
+    border-radius: var(--alvobot-radius-sm);
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
     font-size: 0.875rem;
     background: white;
@@ -2888,30 +4199,30 @@ input:checked + .alvobot-pro-module-slider:before {
     font-weight: 600;
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
-    border-radius: 4px;
+    border-radius: var(--alvobot-radius-sm);
     text-transform: uppercase;
     min-width: 60px;
     text-align: center;
 }
 
 .alvobot-log-info .alvobot-log-level {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--alvobot-info-bg);
+    color: var(--alvobot-info-dark);
 }
 
 .alvobot-log-success .alvobot-log-level {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--alvobot-success-bg);
+    color: var(--alvobot-success-dark);
 }
 
 .alvobot-log-error .alvobot-log-level {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--alvobot-error-bg);
+    color: var(--alvobot-error-dark);
 }
 
 .alvobot-log-warning .alvobot-log-level {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--alvobot-warning-bg);
+    color: var(--alvobot-warning-dark);
 }
 
 .alvobot-log-message {
@@ -2923,7 +4234,7 @@ input:checked + .alvobot-pro-module-slider:before {
 /* Estilos para Modal de Detalhes */
 .alvobot-details-section {
     background: var(--alvobot-white);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-md);
     margin-bottom: var(--alvobot-space-lg);
     overflow: hidden;
@@ -2931,7 +4242,7 @@ input:checked + .alvobot-pro-module-slider:before {
 
 .alvobot-section-header {
     background: var(--alvobot-gray-50);
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
     padding: var(--alvobot-space-md) var(--alvobot-space-lg);
     display: flex;
     justify-content: space-between;
@@ -2952,7 +4263,7 @@ input:checked + .alvobot-pro-module-slider:before {
     padding: 4px 8px;
     border-radius: var(--alvobot-radius-sm);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--alvobot-transition-normal);
     font-size: 12px;
 }
 
@@ -2961,8 +4272,7 @@ input:checked + .alvobot-pro-module-slider:before {
     transform: scale(1.05);
 }
 
-.alvobot-phase-detail-btn .dashicons {
-    font-size: 14px;
+.alvobot-phase-detail-btn .alvobot-icon {
     width: 14px;
     height: 14px;
 }
@@ -2974,7 +4284,7 @@ input:checked + .alvobot-pro-module-slider:before {
     font-size: var(--alvobot-font-size-lg);
     font-weight: 600;
     color: var(--alvobot-gray-900);
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
 }
 
 .alvobot-details-section .alvobot-info-grid {
@@ -2994,7 +4304,7 @@ input:checked + .alvobot-pro-module-slider:before {
 
 .alvobot-content-preview {
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-sm);
     padding: var(--alvobot-space-md);
     font-family: 'Courier New', monospace;
@@ -3012,8 +4322,8 @@ input:checked + .alvobot-pro-module-slider:before {
 }
 
 .alvobot-code-block pre {
-    background: #2d3748;
-    color: #e2e8f0;
+    background: var(--alvobot-gray-900);
+    color: var(--alvobot-gray-200);
     border-radius: var(--alvobot-radius-sm);
     padding: var(--alvobot-space-lg);
     font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
@@ -3032,9 +4342,9 @@ input:checked + .alvobot-pro-module-slider:before {
 }
 
 .alvobot-error-log pre {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
+    background: var(--alvobot-error-bg);
+    color: var(--alvobot-error-dark);
+    border: 1px solid var(--alvobot-error);
     border-radius: var(--alvobot-radius-sm);
     padding: var(--alvobot-space-lg);
     font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
@@ -3069,12 +4379,12 @@ input:checked + .alvobot-pro-module-slider:before {
 
 #details-modal .alvobot-modal-body::-webkit-scrollbar-track {
     background: var(--alvobot-gray-100);
-    border-radius: 4px;
+    border-radius: var(--alvobot-radius-sm);
 }
 
 #details-modal .alvobot-modal-body::-webkit-scrollbar-thumb {
     background: var(--alvobot-gray-400);
-    border-radius: 4px;
+    border-radius: var(--alvobot-radius-sm);
 }
 
 #details-modal .alvobot-modal-body::-webkit-scrollbar-thumb:hover {
@@ -3111,7 +4421,7 @@ input:checked + .alvobot-pro-module-slider:before {
 
 .alvobot-phase-details .alvobot-log-entry {
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-sm);
     padding: var(--alvobot-space-sm);
     margin-bottom: var(--alvobot-space-sm);
@@ -3189,7 +4499,7 @@ input:checked + .alvobot-pro-module-slider:before {
     margin: var(--alvobot-space-md) 0;
     border-radius: var(--alvobot-border-radius);
     background: var(--alvobot-gray-50);
-    border: 1px solid var(--alvobot-gray-200);
+    border: 1px solid var(--alvobot-gray-300);
     overflow: hidden;
 }
 
@@ -3197,7 +4507,7 @@ input:checked + .alvobot-pro-module-slider:before {
     margin: 0;
     padding: var(--alvobot-space-sm) var(--alvobot-space-md);
     background: var(--alvobot-gray-100);
-    border-bottom: 1px solid var(--alvobot-gray-200);
+    border-bottom: 1px solid var(--alvobot-gray-300);
     font-size: var(--alvobot-font-size-sm);
     font-weight: 600;
     color: var(--alvobot-gray-800);
@@ -3264,7 +4574,7 @@ input:checked + .alvobot-pro-module-slider:before {
     color: var(--alvobot-gray-800);
     font-size: var(--alvobot-font-size-md);
     font-weight: 600;
-    border-bottom: 2px solid var(--alvobot-gray-200);
+    border-bottom: 2px solid var(--alvobot-gray-300);
     padding-bottom: var(--alvobot-space-sm);
 }
 
@@ -3292,7 +4602,7 @@ input:checked + .alvobot-pro-module-slider:before {
 .alvobot-curl-code::-webkit-scrollbar-thumb,
 .alvobot-error-code::-webkit-scrollbar-thumb {
     background: var(--alvobot-gray-400);
-    border-radius: 4px;
+    border-radius: var(--alvobot-radius-sm);
 }
 
 .alvobot-payload-code::-webkit-scrollbar-thumb:hover,

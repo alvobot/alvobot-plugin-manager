@@ -5,172 +5,172 @@
  * @package Alvobot_Quiz
  */
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 ?>
 
 <div class="quiz-docs-container">
-    <div class="docs-content">
-        <div class="docs-section">
-            <h2><?php _e('Como Usar o Quiz Builder', 'alvobot-pro'); ?></h2>
-            <p><?php _e('O Quiz Builder AlvoBot Pro permite criar quizzes interativos e formulários usando shortcodes simples. Totalmente integrado ao sistema AlvoBot com navegação por URLs únicas.', 'alvobot-pro'); ?></p>
-            
-            <h3><?php _e('Sintaxe Básica', 'alvobot-pro'); ?></h3>
-            <pre><code>[quiz redirect_url="/obrigado" style="modern" url_mode="suffix"]
+	<div class="docs-content">
+		<div class="docs-section">
+			<h2><?php _e( 'Como Usar o Quiz Builder', 'alvobot-pro' ); ?></h2>
+			<p><?php _e( 'O Quiz Builder AlvoBot Pro permite criar quizzes interativos e formulários usando shortcodes simples. Totalmente integrado ao sistema AlvoBot com navegação por URLs únicas.', 'alvobot-pro' ); ?></p>
+			
+			<h3><?php _e( 'Sintaxe Básica', 'alvobot-pro' ); ?></h3>
+			<pre><code>[quiz redirect_url="/obrigado" style="modern" url_mode="suffix"]
 [
-    {
-        "question": "Qual é a capital do Brasil?",
-        "answers": ["São Paulo", "Brasília", "Rio de Janeiro"],
-        "correct": [1],
-        "explanation": "Brasília é a capital federal desde 1960"
-    },
-    {
-        "question": "Quais são países da América do Sul?",
-        "answers": ["Brasil", "Argentina", "França", "Chile"],
-        "correct": [0, 1, 3],
-        "explanation": "França fica na Europa"
-    }
+	{
+		"question": "Qual é a capital do Brasil?",
+		"answers": ["São Paulo", "Brasília", "Rio de Janeiro"],
+		"correct": [1],
+		"explanation": "Brasília é a capital federal desde 1960"
+	},
+	{
+		"question": "Quais são países da América do Sul?",
+		"answers": ["Brasil", "Argentina", "França", "Chile"],
+		"correct": [0, 1, 3],
+		"explanation": "França fica na Europa"
+	}
 ]
 [/quiz]</code></pre>
-            
-            <h3><?php _e('Parâmetros Disponíveis', 'alvobot-pro'); ?></h3>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th><?php _e('Parâmetro', 'alvobot-pro'); ?></th>
-                        <th><?php _e('Padrão', 'alvobot-pro'); ?></th>
-                        <th><?php _e('Descrição', 'alvobot-pro'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>redirect_url</code></td>
-                        <td>-</td>
-                        <td><?php _e('URL para redirecionar após completar', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>style</code></td>
-                        <td>default</td>
-                        <td><?php _e('Estilo visual: default, modern, minimal', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>show_progress</code></td>
-                        <td>true</td>
-                        <td><?php _e('Exibe barra de progresso (formato 1/5, 2/5...)', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>allow_back</code></td>
-                        <td>true</td>
-                        <td><?php _e('Permite voltar às questões anteriores', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>randomize</code></td>
-                        <td>false</td>
-                        <td><?php _e('Embaralha a ordem das questões', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>auto_advance</code></td>
-                        <td>true</td>
-                        <td><?php _e('Avança automaticamente ao selecionar (sempre ativo)', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>show_score</code></td>
-                        <td>true</td>
-                        <td><?php _e('Exibe pontuação ao final (modo quiz)', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>show_nav_buttons</code></td>
-                        <td>false</td>
-                        <td><?php _e('Exibe botões de navegação', 'alvobot-pro'); ?></td>
-                    </tr>
-                    <tr>
-                        <td><code>url_mode</code></td>
-                        <td>params</td>
-                        <td><?php _e('Modo de URL: "params" ou "suffix" (compatível com AdSense)', 'alvobot-pro'); ?></td>
-                    </tr>
-                </tbody>
-            </table>
-            
-            <h3><?php _e('Modos de Operação', 'alvobot-pro'); ?></h3>
-            <p><?php _e('O plugin detecta automaticamente o modo baseado na presença do campo "correct":', 'alvobot-pro'); ?></p>
-            <ul>
-                <li><strong><?php _e('Modo Quiz:', 'alvobot-pro'); ?></strong> <?php _e('Quando as questões possuem respostas corretas. Suporte a múltiplas respostas corretas (array de índices). Calcula pontuação e pode exibir explicações.', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Modo Formulário:', 'alvobot-pro'); ?></strong> <?php _e('Quando as questões não possuem respostas corretas. Apenas coleta respostas.', 'alvobot-pro'); ?></li>
-            </ul>
-            
-            <h3><?php _e('Personalização Visual de Respostas', 'alvobot-pro'); ?></h3>
-            <p><?php _e('Cada resposta pode ter estilo personalizado com as seguintes opções:', 'alvobot-pro'); ?></p>
-            <ul>
-                <li><strong><?php _e('Cor de fundo:', 'alvobot-pro'); ?></strong> <?php _e('Define a cor de fundo da opção de resposta', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Cor do texto:', 'alvobot-pro'); ?></strong> <?php _e('Define a cor do texto da resposta', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Tamanho da fonte:', 'alvobot-pro'); ?></strong> <?php _e('Define o tamanho em pixels (10-32px)', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Peso da fonte:', 'alvobot-pro'); ?></strong> <?php _e('Define a espessura da fonte (300-800)', 'alvobot-pro'); ?></li>
-            </ul>
-            
-            <h4><?php _e('Exemplo com Estilos Personalizados:', 'alvobot-pro'); ?></h4>
-            <pre><code>[quiz style="modern"]
+			
+			<h3><?php _e( 'Parâmetros Disponíveis', 'alvobot-pro' ); ?></h3>
+			<table class="wp-list-table widefat fixed striped">
+				<thead>
+					<tr>
+						<th><?php _e( 'Parâmetro', 'alvobot-pro' ); ?></th>
+						<th><?php _e( 'Padrão', 'alvobot-pro' ); ?></th>
+						<th><?php _e( 'Descrição', 'alvobot-pro' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>redirect_url</code></td>
+						<td>-</td>
+						<td><?php _e( 'URL para redirecionar após completar', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>style</code></td>
+						<td>default</td>
+						<td><?php _e( 'Estilo visual: default, modern, minimal', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>show_progress</code></td>
+						<td>true</td>
+						<td><?php _e( 'Exibe barra de progresso (formato 1/5, 2/5...)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>allow_back</code></td>
+						<td>true</td>
+						<td><?php _e( 'Permite voltar às questões anteriores', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>randomize</code></td>
+						<td>false</td>
+						<td><?php _e( 'Embaralha a ordem das questões', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>auto_advance</code></td>
+						<td>true</td>
+						<td><?php _e( 'Avança automaticamente ao selecionar (sempre ativo)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>show_score</code></td>
+						<td>true</td>
+						<td><?php _e( 'Exibe pontuação ao final (modo quiz)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>show_nav_buttons</code></td>
+						<td>false</td>
+						<td><?php _e( 'Exibe botões de navegação', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>url_mode</code></td>
+						<td>params</td>
+						<td><?php _e( 'Modo de URL: "params" ou "suffix" (compatível com AdSense)', 'alvobot-pro' ); ?></td>
+					</tr>
+				</tbody>
+			</table>
+			
+			<h3><?php _e( 'Modos de Operação', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'O plugin detecta automaticamente o modo baseado na presença do campo "correct":', 'alvobot-pro' ); ?></p>
+			<ul>
+				<li><strong><?php _e( 'Modo Quiz:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quando as questões possuem respostas corretas. Suporte a múltiplas respostas corretas (array de índices). Calcula pontuação e pode exibir explicações.', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Modo Formulário:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quando as questões não possuem respostas corretas. Apenas coleta respostas.', 'alvobot-pro' ); ?></li>
+			</ul>
+			
+			<h3><?php _e( 'Personalização Visual de Respostas', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'Cada resposta pode ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
+			<ul>
+				<li><strong><?php _e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor de fundo da opção de resposta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor do texto da resposta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define o tamanho em pixels (10-32px)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
+			</ul>
+			
+			<h4><?php _e( 'Exemplo com Estilos Personalizados:', 'alvobot-pro' ); ?></h4>
+			<pre><code>[quiz style="modern"]
 [
-    {
-        "question": "Qual sua preferência?",
-        "answers": [
-            {
-                "text": "Opção A",
-                "styles": {
-                    "backgroundColor": "#e3f2fd",
-                    "color": "#1976d2",
-                    "fontSize": "16px",
-                    "fontWeight": "600"
-                }
-            },
-            "Opção B simples",
-            {
-                "text": "Opção C destacada",
-                "styles": {
-                    "backgroundColor": "#f3e5f5",
-                    "color": "#7b1fa2",
-                    "fontSize": "18px",
-                    "fontWeight": "700"
-                }
-            }
-        ]
-    }
+	{
+		"question": "Qual sua preferência?",
+		"answers": [
+			{
+				"text": "Opção A",
+				"styles": {
+					"backgroundColor": "#e3f2fd",
+					"color": "#1976d2",
+					"fontSize": "16px",
+					"fontWeight": "600"
+				}
+			},
+			"Opção B simples",
+			{
+				"text": "Opção C destacada",
+				"styles": {
+					"backgroundColor": "#f3e5f5",
+					"color": "#7b1fa2",
+					"fontSize": "18px",
+					"fontWeight": "700"
+				}
+			}
+		]
+	}
 ]
 [/quiz]</code></pre>
 
-            <h3><?php _e('Personalização de Perguntas', 'alvobot-pro'); ?></h3>
-            <p><?php _e('As perguntas também podem ter estilo personalizado com as seguintes opções:', 'alvobot-pro'); ?></p>
-            <ul>
-                <li><strong><?php _e('Cor de fundo:', 'alvobot-pro'); ?></strong> <?php _e('Define a cor de fundo da pergunta', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Cor do texto:', 'alvobot-pro'); ?></strong> <?php _e('Define a cor do texto da pergunta', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Tamanho da fonte:', 'alvobot-pro'); ?></strong> <?php _e('Define o tamanho em pixels (12-36px)', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Peso da fonte:', 'alvobot-pro'); ?></strong> <?php _e('Define a espessura da fonte (300-800)', 'alvobot-pro'); ?></li>
-            </ul>
-            
-            <h4><?php _e('Exemplo com Pergunta Estilizada:', 'alvobot-pro'); ?></h4>
-            <pre><code>{
-    "question": "Pergunta importante com destaque",
-    "answers": ["Sim", "Não"],
-    "styles": {
-        "backgroundColor": "#ffeb3b",
-        "color": "#d32f2f",
-        "fontSize": "20px",
-        "fontWeight": "700"
-    }
+			<h3><?php _e( 'Personalização de Perguntas', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'As perguntas também podem ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
+			<ul>
+				<li><strong><?php _e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor de fundo da pergunta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor do texto da pergunta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define o tamanho em pixels (12-36px)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
+			</ul>
+			
+			<h4><?php _e( 'Exemplo com Pergunta Estilizada:', 'alvobot-pro' ); ?></h4>
+			<pre><code>{
+	"question": "Pergunta importante com destaque",
+	"answers": ["Sim", "Não"],
+	"styles": {
+		"backgroundColor": "#ffeb3b",
+		"color": "#d32f2f",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	}
 }</code></pre>
 
-            <h3><?php _e('Gerador de Quiz com IA', 'alvobot-pro'); ?></h3>
-            <p><?php _e('Use este prompt completo com qualquer IA (ChatGPT, Claude, Gemini, etc.) para gerar automaticamente um quiz WordPress:', 'alvobot-pro'); ?></p>
-            <div class="docs-ai-prompt">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h4 style="margin: 0;"><?php _e('Prompt Completo para IA:', 'alvobot-pro'); ?></h4>
-                    <button type="button" id="copy-ai-prompt" class="alvobot-btn alvobot-btn-secondary">
-                        <i class="dashicons dashicons-clipboard"></i>
-                        <?php _e('Copiar Prompt', 'alvobot-pro'); ?>
-                    </button>
-                </div>
-                <div id="ai-prompt-content" style="background: #f5f5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;">
-<strong>🚀 GERADOR MASTER DE QUIZ WORDPRESS - ALVOBOT QUIZ PLUGIN</strong>
+			<h3><?php _e( 'Gerador de Quiz com IA', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'Use este prompt completo com qualquer IA (ChatGPT, Claude, Gemini, etc.) para gerar automaticamente um quiz WordPress:', 'alvobot-pro' ); ?></p>
+			<div class="docs-ai-prompt">
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+					<h4 style="margin: 0;"><?php _e( 'Prompt Completo para IA:', 'alvobot-pro' ); ?></h4>
+					<button type="button" id="copy-ai-prompt" class="alvobot-btn alvobot-btn-secondary">
+						<i data-lucide="clipboard" class="alvobot-icon"></i>
+						<?php _e( 'Copiar Prompt', 'alvobot-pro' ); ?>
+					</button>
+				</div>
+				<div id="ai-prompt-content" style="background: #f5f5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;">
+<strong>🚀 GERADOR MASTER DE QUIZ WordPress - ALVOBOT QUIZ PLUGIN</strong>
 
 Você é um engenheiro especialista em criação de quizzes persuasivos e formulários de alta conversão para WordPress. Sua missão é gerar um shortcode perfeito do plugin Alvobot Quiz que maximize o engajamento e conduza o usuário até a URL final com interesse genuíno.
 
@@ -223,64 +223,64 @@ O Alvobot Quiz é um plugin WordPress avançado que cria quizzes interativos usa
 
 <em>Estilos de QUESTÕES (aplicados no objeto da questão):</em>
 {
-  "question": "Texto da pergunta",
-  "styles": {
-    "backgroundColor": "#cor_hex",    // Cor de fundo da pergunta
-    "color": "#cor_hex",             // Cor do texto da pergunta  
-    "fontSize": "20px",              // Tamanho: 12px-36px
-    "fontWeight": "700"              // Peso: 300,400,500,600,700,800
-  }
+	"question": "Texto da pergunta",
+	"styles": {
+	"backgroundColor": "#cor_hex",    // Cor de fundo da pergunta
+	"color": "#cor_hex",             // Cor do texto da pergunta  
+	"fontSize": "20px",              // Tamanho: 12px-36px
+	"fontWeight": "700"              // Peso: 300,400,500,600,700,800
+	}
 }
 
 <em>Estilos de RESPOSTAS (aplicados em cada resposta):</em>
 {
-  "text": "Texto da resposta",
-  "styles": {
-    "backgroundColor": "#cor_hex",    // Cor de fundo da resposta
-    "color": "#cor_hex",             // Cor do texto da resposta
-    "fontSize": "16px",              // Tamanho: 10px-32px  
-    "fontWeight": "600"              // Peso: 300,400,500,600,700,800
-  }
+	"text": "Texto da resposta",
+	"styles": {
+	"backgroundColor": "#cor_hex",    // Cor de fundo da resposta
+	"color": "#cor_hex",             // Cor do texto da resposta
+	"fontSize": "16px",              // Tamanho: 10px-32px  
+	"fontWeight": "600"              // Peso: 300,400,500,600,700,800
+	}
 }
 
 <strong>📝 ESTRUTURAS DETALHADAS POR TIPO:</strong>
 
 <em>🎓 QUIZ EDUCACIONAL (com respostas corretas):</em>
 {
-  "question": "Pergunta clara e direta",
-  "answers": ["Opção A", "Opção B", "Opção C", "Opção D"],
-  "correct": 2,                    // Índice da resposta correta (começa em 0)
-  "explanation": "Explicação educativa e motivadora da resposta"
+	"question": "Pergunta clara e direta",
+	"answers": ["Opção A", "Opção B", "Opção C", "Opção D"],
+	"correct": 2,                    // Índice da resposta correta (começa em 0)
+	"explanation": "Explicação educativa e motivadora da resposta"
 }
 
 <em>📊 FORMULÁRIO DE PESQUISA (sem respostas corretas):</em>
 {
-  "question": "Pergunta para coleta de dados",
-  "answers": ["Opção 1", "Opção 2", "Opção 3"]
-  // SEM campo "correct" = modo formulário automático
+	"question": "Pergunta para coleta de dados",
+	"answers": ["Opção 1", "Opção 2", "Opção 3"]
+	// SEM campo "correct" = modo formulário automático
 }
 
 <em>🎯 QUIZ DE QUALIFICAÇÃO (misto - algumas com correct, outras sem):</em>
 [
-  {
-    "question": "Qual seu nível de experiência?",
-    "answers": ["Iniciante", "Intermediário", "Avançado", "Expert"]
-    // Sem "correct" = coleta dados
-  },
-  {
-    "question": "Qual a melhor prática para SEO?",
-    "answers": ["Keyword stuffing", "Conteúdo relevante", "Meta tags apenas", "Links pagos"],
-    "correct": 1,
-    "explanation": "Conteúdo relevante é a base do SEO moderno."
-    // Com "correct" = testa conhecimento
-  }
+	{
+	"question": "Qual seu nível de experiência?",
+	"answers": ["Iniciante", "Intermediário", "Avançado", "Expert"]
+	// Sem "correct" = coleta dados
+	},
+	{
+	"question": "Qual a melhor prática para SEO?",
+	"answers": ["Keyword stuffing", "Conteúdo relevante", "Meta tags apenas", "Links pagos"],
+	"correct": 1,
+	"explanation": "Conteúdo relevante é a base do SEO moderno."
+	// Com "correct" = testa conhecimento
+	}
 ]
 
 <em>🚀 QUESTÕES COM 1 RESPOSTA (Call-to-Action e Confirmações):</em>
 {
-  "question": "Deseja receber seu diagnóstico personalizado GRATUITO?",
-  "answers": ["Sim, quero receber agora!"]
-  // Apenas 1 resposta = CTA direto, confirmação ou transição
+	"question": "Deseja receber seu diagnóstico personalizado GRATUITO?",
+	"answers": ["Sim, quero receber agora!"]
+	// Apenas 1 resposta = CTA direto, confirmação ou transição
 }
 
 <em>💡 CASOS DE USO PARA 1 RESPOSTA:</em>
@@ -313,890 +313,890 @@ O Alvobot Quiz é um plugin WordPress avançado que cria quizzes interativos usa
 <em>🚗 EXEMPLO 1 - PRÉ-QUALIFICAÇÃO PARA CNH GRATUITA DO GOVERNO:</em>
 [quiz style="modern" show_progress="true" auto_advance="true" redirect_url="/inscricao-cnh-gratuita"]
 [
-  {
-    "question": "Você já possui Carteira Nacional de Habilitação (CNH)?",
-    "styles": {
-      "backgroundColor": "#1976D2",
-      "color": "#ffffff",
-      "fontSize": "20px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "Não, nunca tirei",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      "Sim, mas está vencida há mais de 5 anos",
-      "Sim, mas foi cassada/suspensa",
-      {
-        "text": "Já possuo CNH válida",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Qual é a sua renda familiar mensal?",
-    "answers": [
-      {
-        "text": "Até 2 salários mínimos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "De 2 a 3 salários mínimos",
-        "styles": {"backgroundColor": "#8BC34A", "color": "#ffffff"}
-      },
-      {
-        "text": "De 3 a 5 salários mínimos",
-        "styles": {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
-      },
-      {
-        "text": "Mais de 5 salários mínimos",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Você está inscrito no CadÚnico (Cadastro Único)?",
-    "answers": [
-      {
-        "text": "Sim, estou inscrito",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Não sei o que é",
-      "Não, mas gostaria de me inscrever",
-      "Não preciso, tenho renda alta"
-    ]
-  },
-  {
-    "question": "Qual o principal motivo para tirar a CNH?",
-    "styles": {
-      "backgroundColor": "#E3F2FD",
-      "fontSize": "18px",
-      "fontWeight": "600"
-    },
-    "answers": [
-      {
-        "text": "Conseguir um emprego melhor",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Independência e mobilidade",
-      "Trabalhar como motorista de app",
-      "Emergências familiares",
-      "Realizar um sonho pessoal"
-    ]
-  },
-  {
-    "question": "Você tem disponibilidade para as aulas teóricas e práticas?",
-    "answers": [
-      {
-        "text": "Sim, tenho total disponibilidade",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Tenho disponibilidade parcial",
-      "Só nos finais de semana",
-      "Só no período noturno",
-      "Preciso ajustar minha agenda"
-    ]
-  },
-  {
-    "question": "O que você mais deseja receber AGORA para conseguir sua CNH gratuita?",
-    "styles": {
-      "backgroundColor": "#FF6D00",
-      "color": "#ffffff",
-      "fontSize": "22px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "📋 Passo a passo completo da inscrição",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📍 Locais disponíveis na minha região",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📚 Material de estudo GRATUITO",
-        "styles": {
-          "backgroundColor": "#9C27B0",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "⚡ TODOS os benefícios + bônus exclusivos",
-        "styles": {
-          "backgroundColor": "#FF5722",
-          "color": "#ffffff",
-          "fontWeight": "800",
-          "fontSize": "20px"
-        }
-      }
-    ]
-  }
+	{
+	"question": "Você já possui Carteira Nacional de Habilitação (CNH)?",
+	"styles": {
+		"backgroundColor": "#1976D2",
+		"color": "#ffffff",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "Não, nunca tirei",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		"Sim, mas está vencida há mais de 5 anos",
+		"Sim, mas foi cassada/suspensa",
+		{
+		"text": "Já possuo CNH válida",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Qual é a sua renda familiar mensal?",
+	"answers": [
+		{
+		"text": "Até 2 salários mínimos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "De 2 a 3 salários mínimos",
+		"styles": {"backgroundColor": "#8BC34A", "color": "#ffffff"}
+		},
+		{
+		"text": "De 3 a 5 salários mínimos",
+		"styles": {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
+		},
+		{
+		"text": "Mais de 5 salários mínimos",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Você está inscrito no CadÚnico (Cadastro Único)?",
+	"answers": [
+		{
+		"text": "Sim, estou inscrito",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Não sei o que é",
+		"Não, mas gostaria de me inscrever",
+		"Não preciso, tenho renda alta"
+	]
+	},
+	{
+	"question": "Qual o principal motivo para tirar a CNH?",
+	"styles": {
+		"backgroundColor": "#E3F2FD",
+		"fontSize": "18px",
+		"fontWeight": "600"
+	},
+	"answers": [
+		{
+		"text": "Conseguir um emprego melhor",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Independência e mobilidade",
+		"Trabalhar como motorista de app",
+		"Emergências familiares",
+		"Realizar um sonho pessoal"
+	]
+	},
+	{
+	"question": "Você tem disponibilidade para as aulas teóricas e práticas?",
+	"answers": [
+		{
+		"text": "Sim, tenho total disponibilidade",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Tenho disponibilidade parcial",
+		"Só nos finais de semana",
+		"Só no período noturno",
+		"Preciso ajustar minha agenda"
+	]
+	},
+	{
+	"question": "O que você mais deseja receber AGORA para conseguir sua CNH gratuita?",
+	"styles": {
+		"backgroundColor": "#FF6D00",
+		"color": "#ffffff",
+		"fontSize": "22px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "📋 Passo a passo completo da inscrição",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📍 Locais disponíveis na minha região",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📚 Material de estudo GRATUITO",
+		"styles": {
+			"backgroundColor": "#9C27B0",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "⚡ TODOS os benefícios + bônus exclusivos",
+		"styles": {
+			"backgroundColor": "#FF5722",
+			"color": "#ffffff",
+			"fontWeight": "800",
+			"fontSize": "20px"
+		}
+		}
+	]
+	}
 ]
 [/quiz]
 
 <em>🏠 EXEMPLO 2 - PRÉ-QUALIFICAÇÃO MINHA CASA MINHA VIDA:</em>
 [quiz style="minimal" show_progress="true" allow_back="true" redirect_url="/pre-cadastro-mcmv"]
 [
-  {
-    "question": "Qual é a sua renda familiar bruta mensal?",
-    "styles": {
-      "backgroundColor": "#2E7D32",
-      "color": "#ffffff",
-      "fontSize": "20px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "Até R$ 2.640 (Faixa 1)",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "R$ 2.640 a R$ 4.400 (Faixa 2)",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "R$ 4.400 a R$ 8.000 (Faixa 3)",
-        "styles": {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
-      },
-      {
-        "text": "Mais de R$ 8.000",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Você já possui imóvel próprio?",
-    "answers": [
-      {
-        "text": "Não, nunca tive casa própria",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Não, mas já tive no passado",
-      {
-        "text": "Sim, mas pretendo trocar",
-        "styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
-      },
-      {
-        "text": "Sim, já tenho casa própria",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Há quanto tempo você trabalha com carteira assinada?",
-    "answers": [
-      {
-        "text": "Mais de 2 anos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Entre 1 e 2 anos",
-        "styles": {"backgroundColor": "#8BC34A", "color": "#ffffff"}
-      },
-      "Menos de 1 ano",
-      "Sou autônomo/MEI",
-      {
-        "text": "Estou desempregado",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Qual tipo de imóvel você deseja?",
-    "styles": {
-      "backgroundColor": "#E8F5E8",
-      "fontSize": "18px",
-      "fontWeight": "600"
-    },
-    "answers": [
-      {
-        "text": "Apartamento em condomínio",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Casa térrea",
-      "Casa sobrado",
-      "Tanto faz, quero o mais barato",
-      "Depende da localização"
-    ]
-  },
-  {
-    "question": "Em qual região você gostaria de morar?",
-    "answers": [
-      "Zona central da cidade",
-      {
-        "text": "Periferia (mais barato)",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Próximo ao trabalho",
-      "Próximo à família",
-      "Qualquer lugar disponível"
-    ]
-  },
-  {
-    "question": "O que seria MAIS VALIOSO para você realizar o sonho da casa própria?",
-    "styles": {
-      "backgroundColor": "#1B5E20",
-      "color": "#ffffff",
-      "fontSize": "22px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "🏠 Lista de imóveis disponíveis NA MINHA FAIXA",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "💰 Simulação do meu financiamento personalizada",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📋 Checklist completo de documentos",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "🎯 ACESSO TOTAL: imóveis + simulação + documentos",
-        "styles": {
-          "backgroundColor": "#E91E63",
-          "color": "#ffffff",
-          "fontWeight": "800",
-          "fontSize": "20px"
-        }
-      }
-    ]
-  }
+	{
+	"question": "Qual é a sua renda familiar bruta mensal?",
+	"styles": {
+		"backgroundColor": "#2E7D32",
+		"color": "#ffffff",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "Até R$ 2.640 (Faixa 1)",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "R$ 2.640 a R$ 4.400 (Faixa 2)",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "R$ 4.400 a R$ 8.000 (Faixa 3)",
+		"styles": {"backgroundColor": "#FFEB3B", "color": "#F57C00"}
+		},
+		{
+		"text": "Mais de R$ 8.000",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Você já possui imóvel próprio?",
+	"answers": [
+		{
+		"text": "Não, nunca tive casa própria",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Não, mas já tive no passado",
+		{
+		"text": "Sim, mas pretendo trocar",
+		"styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
+		},
+		{
+		"text": "Sim, já tenho casa própria",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Há quanto tempo você trabalha com carteira assinada?",
+	"answers": [
+		{
+		"text": "Mais de 2 anos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Entre 1 e 2 anos",
+		"styles": {"backgroundColor": "#8BC34A", "color": "#ffffff"}
+		},
+		"Menos de 1 ano",
+		"Sou autônomo/MEI",
+		{
+		"text": "Estou desempregado",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Qual tipo de imóvel você deseja?",
+	"styles": {
+		"backgroundColor": "#E8F5E8",
+		"fontSize": "18px",
+		"fontWeight": "600"
+	},
+	"answers": [
+		{
+		"text": "Apartamento em condomínio",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Casa térrea",
+		"Casa sobrado",
+		"Tanto faz, quero o mais barato",
+		"Depende da localização"
+	]
+	},
+	{
+	"question": "Em qual região você gostaria de morar?",
+	"answers": [
+		"Zona central da cidade",
+		{
+		"text": "Periferia (mais barato)",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Próximo ao trabalho",
+		"Próximo à família",
+		"Qualquer lugar disponível"
+	]
+	},
+	{
+	"question": "O que seria MAIS VALIOSO para você realizar o sonho da casa própria?",
+	"styles": {
+		"backgroundColor": "#1B5E20",
+		"color": "#ffffff",
+		"fontSize": "22px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "🏠 Lista de imóveis disponíveis NA MINHA FAIXA",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "💰 Simulação do meu financiamento personalizada",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📋 Checklist completo de documentos",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "🎯 ACESSO TOTAL: imóveis + simulação + documentos",
+		"styles": {
+			"backgroundColor": "#E91E63",
+			"color": "#ffffff",
+			"fontWeight": "800",
+			"fontSize": "20px"
+		}
+		}
+	]
+	}
 ]
 [/quiz]
 
 <em>🎓 EXEMPLO 3 - PRÉ-QUALIFICAÇÃO PROUNI BOLSA INTEGRAL:</em>
 [quiz style="modern" show_progress="true" auto_advance="false" redirect_url="/inscricao-prouni"]
 [
-  {
-    "question": "Você fez o ENEM e obteve pelo menos 450 pontos na média?",
-    "styles": {
-      "backgroundColor": "#1976D2",
-      "color": "#ffffff",
-      "fontSize": "20px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "Sim, fiz e passei dos 450 pontos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      "Fiz, mas não sei minha nota",
-      "Fiz, mas não atingi 450 pontos",
-      {
-        "text": "Não fiz o ENEM",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Qual é a renda per capita da sua família?",
-    "answers": [
-      {
-        "text": "Até 1,5 salário mínimo por pessoa",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "16px"
-        }
-      },
-      {
-        "text": "De 1,5 a 3 salários mínimos por pessoa",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Mais de 3 salários mínimos por pessoa",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      },
-      "Não sei calcular"
-    ]
-  },
-  {
-    "question": "Como você cursou o ensino médio?",
-    "answers": [
-      {
-        "text": "Integralmente em escola pública",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Em escola privada com bolsa integral",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Parte em pública, parte em privada",
-      {
-        "text": "Integralmente em escola privada",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Você tem alguma deficiência?",
-    "styles": {
-      "backgroundColor": "#E3F2FD",
-      "fontSize": "18px",
-      "fontWeight": "600"
-    },
-    "answers": [
-      {
-        "text": "Sim, tenho deficiência",
-        "styles": {
-          "backgroundColor": "#9C27B0",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Não tenho deficiência",
-      "Prefiro não informar"
-    ]
-  },
-  {
-    "question": "Qual curso de graduação você deseja fazer?",
-    "answers": [
-      {
-        "text": "Medicina/Odontologia",
-        "styles": {
-          "backgroundColor": "#FF5722",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Engenharia/Tecnologia",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Direito/Administração",
-        "styles": {
-          "backgroundColor": "#795548",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Pedagogia/Licenciaturas",
-      "Ainda não decidi"
-    ]
-  },
-  {
-    "question": "O que te ajudaria MAIS para conquistar sua vaga no ProUni?",
-    "styles": {
-      "backgroundColor": "#0D47A1",
-      "color": "#ffffff",
-      "fontSize": "22px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "🎯 Cursos com MAIOR chance de aprovação",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📊 Minha nota de corte personalizada",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📋 Documentos necessários organizados",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "🚀 ESTRATÉGIA COMPLETA: vagas + notas + documentos",
-        "styles": {
-          "backgroundColor": "#7B1FA2",
-          "color": "#ffffff",
-          "fontWeight": "800",
-          "fontSize": "20px"
-        }
-      }
-    ]
-  }
+	{
+	"question": "Você fez o ENEM e obteve pelo menos 450 pontos na média?",
+	"styles": {
+		"backgroundColor": "#1976D2",
+		"color": "#ffffff",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "Sim, fiz e passei dos 450 pontos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		"Fiz, mas não sei minha nota",
+		"Fiz, mas não atingi 450 pontos",
+		{
+		"text": "Não fiz o ENEM",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Qual é a renda per capita da sua família?",
+	"answers": [
+		{
+		"text": "Até 1,5 salário mínimo por pessoa",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "16px"
+		}
+		},
+		{
+		"text": "De 1,5 a 3 salários mínimos por pessoa",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Mais de 3 salários mínimos por pessoa",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		},
+		"Não sei calcular"
+	]
+	},
+	{
+	"question": "Como você cursou o ensino médio?",
+	"answers": [
+		{
+		"text": "Integralmente em escola pública",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Em escola privada com bolsa integral",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Parte em pública, parte em privada",
+		{
+		"text": "Integralmente em escola privada",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Você tem alguma deficiência?",
+	"styles": {
+		"backgroundColor": "#E3F2FD",
+		"fontSize": "18px",
+		"fontWeight": "600"
+	},
+	"answers": [
+		{
+		"text": "Sim, tenho deficiência",
+		"styles": {
+			"backgroundColor": "#9C27B0",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Não tenho deficiência",
+		"Prefiro não informar"
+	]
+	},
+	{
+	"question": "Qual curso de graduação você deseja fazer?",
+	"answers": [
+		{
+		"text": "Medicina/Odontologia",
+		"styles": {
+			"backgroundColor": "#FF5722",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Engenharia/Tecnologia",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Direito/Administração",
+		"styles": {
+			"backgroundColor": "#795548",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Pedagogia/Licenciaturas",
+		"Ainda não decidi"
+	]
+	},
+	{
+	"question": "O que te ajudaria MAIS para conquistar sua vaga no ProUni?",
+	"styles": {
+		"backgroundColor": "#0D47A1",
+		"color": "#ffffff",
+		"fontSize": "22px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "🎯 Cursos com MAIOR chance de aprovação",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📊 Minha nota de corte personalizada",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📋 Documentos necessários organizados",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "🚀 ESTRATÉGIA COMPLETA: vagas + notas + documentos",
+		"styles": {
+			"backgroundColor": "#7B1FA2",
+			"color": "#ffffff",
+			"fontWeight": "800",
+			"fontSize": "20px"
+		}
+		}
+	]
+	}
 ]
 [/quiz]
 
 <em>💰 EXEMPLO 4 - PRÉ-QUALIFICAÇÃO FIES FINANCIAMENTO ESTUDANTIL:</em>
 [quiz style="modern" show_progress="true" randomize="false" redirect_url="/solicitacao-fies"]
 [
-  {
-    "question": "Você participou do ENEM a partir de 2010?",
-    "styles": {
-      "backgroundColor": "#1976D2",
-      "color": "#ffffff",
-      "fontSize": "20px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "Sim, fiz ENEM e obtive mais de 450 pontos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      "Fiz ENEM mas não sei minha nota",
-      "Fiz ENEM mas tirei menos de 450",
-      {
-        "text": "Não fiz ENEM",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Qual a renda bruta mensal da sua família?",
-    "answers": [
-      {
-        "text": "Até 3 salários mínimos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700"
-        }
-      },
-      {
-        "text": "De 3 a 5 salários mínimos",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Mais de 5 salários mínimos",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      },
-      "Não sei informar"
-    ]
-  },
-  {
-    "question": "Você já está matriculado em alguma faculdade?",
-    "answers": [
-      {
-        "text": "Sim, em faculdade privada",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Não, mas já fui aprovado",
-      {
-        "text": "Não, ainda estou procurando",
-        "styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
-      },
-      {
-        "text": "Estou em faculdade pública",
-        "styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Como você pretende pagar a faculdade?",
-    "styles": {
-      "backgroundColor": "#E3F2FD",
-      "fontSize": "18px",
-      "fontWeight": "600"
-    },
-    "answers": [
-      {
-        "text": "100% financiado pelo FIES",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700"
-        }
-      },
-      {
-        "text": "Parte FIES, parte família",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Só com recursos próprios",
-      "Bolsa de estudos + FIES",
-      "Ainda não sei"
-    ]
-  },
-  {
-    "question": "Há quanto tempo você saiu do ensino médio?",
-    "answers": [
-      {
-        "text": "Menos de 2 anos",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "De 2 a 5 anos",
-      "De 5 a 10 anos", 
-      {
-        "text": "Mais de 10 anos",
-        "styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
-      },
-      "Ainda estou cursando"
-    ]
-  },
-  {
-    "question": "O que seria FUNDAMENTAL para você conseguir seu FIES?",
-    "styles": {
-      "backgroundColor": "#1565C0",
-      "color": "#ffffff",
-      "fontSize": "22px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "💰 Calculadora de financiamento personalizada",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "🏫 Faculdades que aceitam minha nota do ENEM",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📋 Documentação completa necessária",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "🎓 PACOTE COMPLETO: cálculos + faculdades + docs",
-        "styles": {
-          "backgroundColor": "#E65100",
-          "color": "#ffffff",
-          "fontWeight": "800",
-          "fontSize": "20px"
-        }
-      }
-    ]
-  }
+	{
+	"question": "Você participou do ENEM a partir de 2010?",
+	"styles": {
+		"backgroundColor": "#1976D2",
+		"color": "#ffffff",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "Sim, fiz ENEM e obtive mais de 450 pontos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		"Fiz ENEM mas não sei minha nota",
+		"Fiz ENEM mas tirei menos de 450",
+		{
+		"text": "Não fiz ENEM",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Qual a renda bruta mensal da sua família?",
+	"answers": [
+		{
+		"text": "Até 3 salários mínimos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700"
+		}
+		},
+		{
+		"text": "De 3 a 5 salários mínimos",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Mais de 5 salários mínimos",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		},
+		"Não sei informar"
+	]
+	},
+	{
+	"question": "Você já está matriculado em alguma faculdade?",
+	"answers": [
+		{
+		"text": "Sim, em faculdade privada",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Não, mas já fui aprovado",
+		{
+		"text": "Não, ainda estou procurando",
+		"styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
+		},
+		{
+		"text": "Estou em faculdade pública",
+		"styles": {"backgroundColor": "#F44336", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Como você pretende pagar a faculdade?",
+	"styles": {
+		"backgroundColor": "#E3F2FD",
+		"fontSize": "18px",
+		"fontWeight": "600"
+	},
+	"answers": [
+		{
+		"text": "100% financiado pelo FIES",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700"
+		}
+		},
+		{
+		"text": "Parte FIES, parte família",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Só com recursos próprios",
+		"Bolsa de estudos + FIES",
+		"Ainda não sei"
+	]
+	},
+	{
+	"question": "Há quanto tempo você saiu do ensino médio?",
+	"answers": [
+		{
+		"text": "Menos de 2 anos",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"De 2 a 5 anos",
+		"De 5 a 10 anos", 
+		{
+		"text": "Mais de 10 anos",
+		"styles": {"backgroundColor": "#FF9800", "color": "#ffffff"}
+		},
+		"Ainda estou cursando"
+	]
+	},
+	{
+	"question": "O que seria FUNDAMENTAL para você conseguir seu FIES?",
+	"styles": {
+		"backgroundColor": "#1565C0",
+		"color": "#ffffff",
+		"fontSize": "22px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "💰 Calculadora de financiamento personalizada",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "🏫 Faculdades que aceitam minha nota do ENEM",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📋 Documentação completa necessária",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "🎓 PACOTE COMPLETO: cálculos + faculdades + docs",
+		"styles": {
+			"backgroundColor": "#E65100",
+			"color": "#ffffff",
+			"fontWeight": "800",
+			"fontSize": "20px"
+		}
+		}
+	]
+	}
 ]
 [/quiz]
 
 <em>🧠 EXEMPLO 5 - QUALIFICAÇÃO PARA AUXÍLIO EMERGENCIAL:</em>
 [quiz style="minimal" show_progress="true" auto_advance="true" redirect_url="/solicitar-auxilio"]
 [
-  {
-    "question": "Qual é a sua situação de trabalho atual?",
-    "styles": {
-      "backgroundColor": "#FF5722",
-      "color": "#ffffff",
-      "fontSize": "20px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "Desempregado sem benefício",
-        "styles": {
-          "backgroundColor": "#F44336",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "Trabalho informal/autônomo",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "MEI com faturamento baixo",
-        "styles": {
-          "backgroundColor": "#FFEB3B",
-          "color": "#F57C00",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Tenho emprego formal",
-        "styles": {"backgroundColor": "#4CAF50", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Você é responsável pelo sustento da família?",
-    "answers": [
-      {
-        "text": "Sim, sou o único responsável",
-        "styles": {
-          "backgroundColor": "#F44336",
-          "color": "#ffffff",
-          "fontWeight": "700"
-        }
-      },
-      {
-        "text": "Sim, mas divido com alguém",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "Não, mas contribuo",
-      "Não sou responsável"
-    ]
-  },
-  {
-    "question": "Quantas pessoas moram na sua casa?",
-    "answers": [
-      "Moro sozinho",
-      {
-        "text": "2 a 3 pessoas",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "4 a 6 pessoas",
-        "styles": {
-          "backgroundColor": "#F44336",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Mais de 6 pessoas",
-        "styles": {
-          "backgroundColor": "#B71C1C",
-          "color": "#ffffff",
-          "fontWeight": "700"
-        }
-      }
-    ]
-  },
-  {
-    "question": "Sua renda mensal atual é:",
-    "styles": {
-      "backgroundColor": "#FFEBEE",
-      "fontSize": "18px",
-      "fontWeight": "600"
-    },
-    "answers": [
-      {
-        "text": "Zero ou quase zero",
-        "styles": {
-          "backgroundColor": "#F44336",
-          "color": "#ffffff",
-          "fontWeight": "700"
-        }
-      },
-      {
-        "text": "Menos de 1 salário mínimo",
-        "styles": {
-          "backgroundColor": "#FF5722",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      "1 salário mínimo",
-      {
-        "text": "Mais de 1 salário mínimo",
-        "styles": {"backgroundColor": "#4CAF50", "color": "#ffffff"}
-      }
-    ]
-  },
-  {
-    "question": "Você tem conta no banco?",
-    "answers": [
-      {
-        "text": "Sim, conta corrente",
-        "styles": {
-          "backgroundColor": "#4CAF50",
-          "color": "#ffffff",
-          "fontWeight": "600"
-        }
-      },
-      {
-        "text": "Sim, conta poupança",
-        "styles": {
-          "backgroundColor": "#8BC34A",
-          "color": "#ffffff"
-        }
-      },
-      "Não tenho conta",
-      "Conta está bloqueada"
-    ]
-  },
-  {
-    "question": "O que você PRECISA URGENTE para resolver sua situação?",
-    "styles": {
-      "backgroundColor": "#B71C1C",
-      "color": "#ffffff",
-      "fontSize": "22px",
-      "fontWeight": "700"
-    },
-    "answers": [
-      {
-        "text": "🚨 Como solicitar o auxílio HOJE MESMO",
-        "styles": {
-          "backgroundColor": "#F44336",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "💰 Outros benefícios que eu posso receber",
-        "styles": {
-          "backgroundColor": "#FF9800",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "📋 Documentos que preciso ter em mãos",
-        "styles": {
-          "backgroundColor": "#2196F3",
-          "color": "#ffffff",
-          "fontWeight": "700",
-          "fontSize": "18px"
-        }
-      },
-      {
-        "text": "⚡ ACESSO TOTAL: solicitação + benefícios + documentos",
-        "styles": {
-          "backgroundColor": "#4A148C",
-          "color": "#ffffff",
-          "fontWeight": "800",
-          "fontSize": "20px"
-        }
-      }
-    ]
-  }
+	{
+	"question": "Qual é a sua situação de trabalho atual?",
+	"styles": {
+		"backgroundColor": "#FF5722",
+		"color": "#ffffff",
+		"fontSize": "20px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "Desempregado sem benefício",
+		"styles": {
+			"backgroundColor": "#F44336",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "Trabalho informal/autônomo",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "MEI com faturamento baixo",
+		"styles": {
+			"backgroundColor": "#FFEB3B",
+			"color": "#F57C00",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Tenho emprego formal",
+		"styles": {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Você é responsável pelo sustento da família?",
+	"answers": [
+		{
+		"text": "Sim, sou o único responsável",
+		"styles": {
+			"backgroundColor": "#F44336",
+			"color": "#ffffff",
+			"fontWeight": "700"
+		}
+		},
+		{
+		"text": "Sim, mas divido com alguém",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"Não, mas contribuo",
+		"Não sou responsável"
+	]
+	},
+	{
+	"question": "Quantas pessoas moram na sua casa?",
+	"answers": [
+		"Moro sozinho",
+		{
+		"text": "2 a 3 pessoas",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "4 a 6 pessoas",
+		"styles": {
+			"backgroundColor": "#F44336",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Mais de 6 pessoas",
+		"styles": {
+			"backgroundColor": "#B71C1C",
+			"color": "#ffffff",
+			"fontWeight": "700"
+		}
+		}
+	]
+	},
+	{
+	"question": "Sua renda mensal atual é:",
+	"styles": {
+		"backgroundColor": "#FFEBEE",
+		"fontSize": "18px",
+		"fontWeight": "600"
+	},
+	"answers": [
+		{
+		"text": "Zero ou quase zero",
+		"styles": {
+			"backgroundColor": "#F44336",
+			"color": "#ffffff",
+			"fontWeight": "700"
+		}
+		},
+		{
+		"text": "Menos de 1 salário mínimo",
+		"styles": {
+			"backgroundColor": "#FF5722",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		"1 salário mínimo",
+		{
+		"text": "Mais de 1 salário mínimo",
+		"styles": {"backgroundColor": "#4CAF50", "color": "#ffffff"}
+		}
+	]
+	},
+	{
+	"question": "Você tem conta no banco?",
+	"answers": [
+		{
+		"text": "Sim, conta corrente",
+		"styles": {
+			"backgroundColor": "#4CAF50",
+			"color": "#ffffff",
+			"fontWeight": "600"
+		}
+		},
+		{
+		"text": "Sim, conta poupança",
+		"styles": {
+			"backgroundColor": "#8BC34A",
+			"color": "#ffffff"
+		}
+		},
+		"Não tenho conta",
+		"Conta está bloqueada"
+	]
+	},
+	{
+	"question": "O que você PRECISA URGENTE para resolver sua situação?",
+	"styles": {
+		"backgroundColor": "#B71C1C",
+		"color": "#ffffff",
+		"fontSize": "22px",
+		"fontWeight": "700"
+	},
+	"answers": [
+		{
+		"text": "🚨 Como solicitar o auxílio HOJE MESMO",
+		"styles": {
+			"backgroundColor": "#F44336",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "💰 Outros benefícios que eu posso receber",
+		"styles": {
+			"backgroundColor": "#FF9800",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "📋 Documentos que preciso ter em mãos",
+		"styles": {
+			"backgroundColor": "#2196F3",
+			"color": "#ffffff",
+			"fontWeight": "700",
+			"fontSize": "18px"
+		}
+		},
+		{
+		"text": "⚡ ACESSO TOTAL: solicitação + benefícios + documentos",
+		"styles": {
+			"backgroundColor": "#4A148C",
+			"color": "#ffffff",
+			"fontWeight": "800",
+			"fontSize": "20px"
+		}
+		}
+	]
+	}
 ]
 [/quiz]
 
@@ -1276,183 +1276,183 @@ Gere um shortcode que:
 Responda APENAS com o shortcode completo, sem explicações adicionais, pronto para colar no WordPress.
 
 Agora, com base nas informações fornecidas acima, gere o shortcode perfeito:
-                </div>
-            </div>
+				</div>
+			</div>
 
-            <h3><?php _e('Recursos do Builder Visual', 'alvobot-pro'); ?></h3>
-            <p><?php _e('O Alvobot Quiz inclui um builder visual completo com:', 'alvobot-pro'); ?></p>
-            <ul>
-                <li><strong><?php _e('Drag & Drop:', 'alvobot-pro'); ?></strong> <?php _e('Arraste componentes para criar questões rapidamente', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Preview em Tempo Real:', 'alvobot-pro'); ?></strong> <?php _e('Veja como o quiz aparecerá no frontend', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Templates Prontos:', 'alvobot-pro'); ?></strong> <?php _e('Quiz educacional, pesquisa de satisfação, geração de leads e teste de personalidade', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Importação/Exportação:', 'alvobot-pro'); ?></strong> <?php _e('Importe questões via JSON ou shortcode completo', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Duplicação de Elementos:', 'alvobot-pro'); ?></strong> <?php _e('Duplique questões e respostas com todos os estilos preservados', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Personalização Individual:', 'alvobot-pro'); ?></strong> <?php _e('Cada pergunta e resposta pode ter seu próprio estilo', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Múltiplas Respostas Corretas:', 'alvobot-pro'); ?></strong> <?php _e('Marque múltiplas respostas como corretas usando checkboxes simples', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Configurações Avançadas:', 'alvobot-pro'); ?></strong> <?php _e('Controle completo sobre navegação, progresso e comportamento', 'alvobot-pro'); ?></li>
-            </ul>
+			<h3><?php _e( 'Recursos do Builder Visual', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'O Alvobot Quiz inclui um builder visual completo com:', 'alvobot-pro' ); ?></p>
+			<ul>
+				<li><strong><?php _e( 'Drag & Drop:', 'alvobot-pro' ); ?></strong> <?php _e( 'Arraste componentes para criar questões rapidamente', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Preview em Tempo Real:', 'alvobot-pro' ); ?></strong> <?php _e( 'Veja como o quiz aparecerá no frontend', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Templates Prontos:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quiz educacional, pesquisa de satisfação, geração de leads e teste de personalidade', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Importação/Exportação:', 'alvobot-pro' ); ?></strong> <?php _e( 'Importe questões via JSON ou shortcode completo', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Duplicação de Elementos:', 'alvobot-pro' ); ?></strong> <?php _e( 'Duplique questões e respostas com todos os estilos preservados', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Personalização Individual:', 'alvobot-pro' ); ?></strong> <?php _e( 'Cada pergunta e resposta pode ter seu próprio estilo', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Múltiplas Respostas Corretas:', 'alvobot-pro' ); ?></strong> <?php _e( 'Marque múltiplas respostas como corretas usando checkboxes simples', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Configurações Avançadas:', 'alvobot-pro' ); ?></strong> <?php _e( 'Controle completo sobre navegação, progresso e comportamento', 'alvobot-pro' ); ?></li>
+			</ul>
 
-            <h3><?php _e('Compatibilidade com AdSense', 'alvobot-pro'); ?></h3>
-            <p><?php _e('O plugin oferece duas opções de navegação:', 'alvobot-pro'); ?></p>
-            <ul>
-                <li><strong><?php _e('Modo Parâmetros (padrão):', 'alvobot-pro'); ?></strong> <?php _e('Usa parâmetros GET (?question=2) - mais rápido', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('Modo Sufixo:', 'alvobot-pro'); ?></strong> <?php _e('URLs amigáveis (/post-name-1/, /post-name-2/) - compatível com AdSense', 'alvobot-pro'); ?></li>
-            </ul>O
+			<h3><?php _e( 'Compatibilidade com AdSense', 'alvobot-pro' ); ?></h3>
+			<p><?php _e( 'O plugin oferece duas opções de navegação:', 'alvobot-pro' ); ?></p>
+			<ul>
+				<li><strong><?php _e( 'Modo Parâmetros (padrão):', 'alvobot-pro' ); ?></strong> <?php _e( 'Usa parâmetros GET (?question=2) - mais rápido', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( 'Modo Sufixo:', 'alvobot-pro' ); ?></strong> <?php _e( 'URLs amigáveis (/post-name-1/, /post-name-2/) - compatível com AdSense', 'alvobot-pro' ); ?></li>
+			</ul>O
 
-            <h3><?php _e('Dicas Importantes', 'alvobot-pro'); ?></h3>
-            <ul>
-                <li><?php _e('Sempre use o editor de Texto do WordPress (nunca o Visual) ao editar shortcodes', 'alvobot-pro'); ?></li>
-                <li><?php _e('O plugin funciona sem JavaScript para acessibilidade', 'alvobot-pro'); ?></li>
-                <li><?php _e('Cada quiz gera um ID único baseado em suas questões', 'alvobot-pro'); ?></li>
-                <li><?php _e('As respostas são passadas via parâmetros GET na URL', 'alvobot-pro'); ?></li>
-                <li><?php _e('Use estilos personalizados para criar experiências visuais atrativas', 'alvobot-pro'); ?></li>
-                <li><?php _e('O contraste de texto é calculado automaticamente quando apenas a cor de fundo é definida', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('✅ NOVO: Uma pergunta pode ter apenas uma opção de resposta', 'alvobot-pro'); ?></strong></li>
-                <li><?php _e('Use o modo "suffix" para sites com AdSense que precisam de recarregamento completo', 'alvobot-pro'); ?></li>
-                <li><?php _e('O formato de progresso foi simplificado para 1/5, 2/5, etc. para ser universal', 'alvobot-pro'); ?></li>
-                <li><?php _e('Auto-avanço está sempre ativo para melhor experiência do usuário', 'alvobot-pro'); ?></li>
-                <li><strong><?php _e('🔧 Sistema integrado ao AlvoBot Pro para máxima compatibilidade', 'alvobot-pro'); ?></strong></li>
-            </ul>
+			<h3><?php _e( 'Dicas Importantes', 'alvobot-pro' ); ?></h3>
+			<ul>
+				<li><?php _e( 'Sempre use o editor de Texto do WordPress (nunca o Visual) ao editar shortcodes', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'O plugin funciona sem JavaScript para acessibilidade', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'Cada quiz gera um ID único baseado em suas questões', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'As respostas são passadas via parâmetros GET na URL', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'Use estilos personalizados para criar experiências visuais atrativas', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'O contraste de texto é calculado automaticamente quando apenas a cor de fundo é definida', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( '✅ NOVO: Uma pergunta pode ter apenas uma opção de resposta', 'alvobot-pro' ); ?></strong></li>
+				<li><?php _e( 'Use o modo "suffix" para sites com AdSense que precisam de recarregamento completo', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'O formato de progresso foi simplificado para 1/5, 2/5, etc. para ser universal', 'alvobot-pro' ); ?></li>
+				<li><?php _e( 'Auto-avanço está sempre ativo para melhor experiência do usuário', 'alvobot-pro' ); ?></li>
+				<li><strong><?php _e( '🔧 Sistema integrado ao AlvoBot Pro para máxima compatibilidade', 'alvobot-pro' ); ?></strong></li>
+			</ul>
 
-            <h3><?php _e('Troubleshooting - Problemas Comuns', 'alvobot-pro'); ?></h3>
-            <div class="alvobot-card" style="margin: 20px 0; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
-                <h4 style="color: #856404; margin: 0 0 15px;"><?php _e('⚠️ Soluções para Problemas Comuns', 'alvobot-pro'); ?></h4>
-                
-                <h5><?php _e('Botões não funcionam no Builder:', 'alvobot-pro'); ?></h5>
-                <ul>
-                    <li><?php _e('Verifique se está na página ?page=alvobot-quiz-builder', 'alvobot-pro'); ?></li>
-                    <li><?php _e('Limpe cache do navegador (Ctrl+F5)', 'alvobot-pro'); ?></li>
-                    <li><?php _e('Verifique console do navegador para erros JavaScript', 'alvobot-pro'); ?></li>
-                </ul>
+			<h3><?php _e( 'Troubleshooting - Problemas Comuns', 'alvobot-pro' ); ?></h3>
+			<div class="alvobot-card" style="margin: 20px 0; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
+				<h4 style="color: #856404; margin: 0 0 15px;"><?php _e( '⚠️ Soluções para Problemas Comuns', 'alvobot-pro' ); ?></h4>
+				
+				<h5><?php _e( 'Botões não funcionam no Builder:', 'alvobot-pro' ); ?></h5>
+				<ul>
+					<li><?php _e( 'Verifique se está na página ?page=alvobot-quiz-builder', 'alvobot-pro' ); ?></li>
+					<li><?php _e( 'Limpe cache do navegador (Ctrl+F5)', 'alvobot-pro' ); ?></li>
+					<li><?php _e( 'Verifique console do navegador para erros JavaScript', 'alvobot-pro' ); ?></li>
+				</ul>
 
-                <h5><?php _e('Quiz não aparece no frontend:', 'alvobot-pro'); ?></h5>
-                <ul>
-                    <li><?php _e('Certifique-se que o módulo Quiz Builder está ativo no dashboard AlvoBot Pro', 'alvobot-pro'); ?></li>
-                    <li><?php _e('Verifique se o shortcode está no editor de Texto (não Visual)', 'alvobot-pro'); ?></li>
-                    <li><?php _e('Valide o JSON em jsonlint.com', 'alvobot-pro'); ?></li>
-                </ul>
+				<h5><?php _e( 'Quiz não aparece no frontend:', 'alvobot-pro' ); ?></h5>
+				<ul>
+					<li><?php _e( 'Certifique-se que o módulo Quiz Builder está ativo no dashboard AlvoBot Pro', 'alvobot-pro' ); ?></li>
+					<li><?php _e( 'Verifique se o shortcode está no editor de Texto (não Visual)', 'alvobot-pro' ); ?></li>
+					<li><?php _e( 'Valide o JSON em jsonlint.com', 'alvobot-pro' ); ?></li>
+				</ul>
 
-                <h5><?php _e('Navegação entre questões não funciona:', 'alvobot-pro'); ?></h5>
-                <ul>
-                    <li><?php _e('Para sites com AdSense, use url_mode="suffix"', 'alvobot-pro'); ?></li>
-                    <li><?php _e('Verifique se as rewrite rules foram atualizadas (vá em Configurações > Links Permanentes e clique Salvar)', 'alvobot-pro'); ?></li>
-                </ul>
-            </div>
-        </div>
-    </div>
+				<h5><?php _e( 'Navegação entre questões não funciona:', 'alvobot-pro' ); ?></h5>
+				<ul>
+					<li><?php _e( 'Para sites com AdSense, use url_mode="suffix"', 'alvobot-pro' ); ?></li>
+					<li><?php _e( 'Verifique se as rewrite rules foram atualizadas (vá em Configurações > Links Permanentes e clique Salvar)', 'alvobot-pro' ); ?></li>
+				</ul>
+			</div>
+		</div>
+	</div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const copyButton = document.getElementById('copy-ai-prompt');
-    const promptContent = document.getElementById('ai-prompt-content');
-    
-    if (copyButton && promptContent) {
-        copyButton.addEventListener('click', function() {
-            // Create a temporary textarea to copy the text
-            const tempTextarea = document.createElement('textarea');
-            tempTextarea.value = promptContent.textContent || promptContent.innerText;
-            document.body.appendChild(tempTextarea);
-            
-            // Select and copy the text
-            tempTextarea.select();
-            tempTextarea.setSelectionRange(0, 99999); // For mobile devices
-            
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    // Update button text and style
-                    const originalHTML = copyButton.innerHTML;
-                    copyButton.innerHTML = '<i class="dashicons dashicons-yes"></i> <?php _e('Copiado!', 'alvobot-pro'); ?>';
-                    copyButton.style.backgroundColor = '#4CAF50';
-                    copyButton.style.borderColor = '#4CAF50';
-                    copyButton.style.color = '#fff';
-                    
-                    // Reset button after 3 seconds
-                    setTimeout(function() {
-                        copyButton.innerHTML = originalHTML;
-                        copyButton.style.backgroundColor = '';
-                        copyButton.style.borderColor = '';
-                        copyButton.style.color = '';
-                    }, 3000);
-                } else {
-                    alert('<?php _e('Erro ao copiar. Tente selecionar o texto manualmente.', 'alvobot-pro'); ?>');
-                }
-            } catch (err) {
-                // Fallback for older browsers
-                alert('<?php _e('Use Ctrl+C para copiar o texto selecionado.', 'alvobot-pro'); ?>');
-            }
-            
-            // Remove temporary textarea
-            document.body.removeChild(tempTextarea);
-        });
-    }
+	const copyButton = document.getElementById('copy-ai-prompt');
+	const promptContent = document.getElementById('ai-prompt-content');
+	
+	if (copyButton && promptContent) {
+		copyButton.addEventListener('click', function() {
+			// Create a temporary textarea to copy the text
+			const tempTextarea = document.createElement('textarea');
+			tempTextarea.value = promptContent.textContent || promptContent.innerText;
+			document.body.appendChild(tempTextarea);
+			
+			// Select and copy the text
+			tempTextarea.select();
+			tempTextarea.setSelectionRange(0, 99999); // For mobile devices
+			
+			try {
+				const successful = document.execCommand('copy');
+				if (successful) {
+					// Update button text and style
+					const originalHTML = copyButton.innerHTML;
+					copyButton.innerHTML = '<i data-lucide="check" class="alvobot-icon"></i> <?php _e( 'Copiado!', 'alvobot-pro' ); ?>';
+					copyButton.style.backgroundColor = '#4CAF50';
+					copyButton.style.borderColor = '#4CAF50';
+					copyButton.style.color = '#fff';
+					
+					// Reset button after 3 seconds
+					setTimeout(function() {
+						copyButton.innerHTML = originalHTML;
+						copyButton.style.backgroundColor = '';
+						copyButton.style.borderColor = '';
+						copyButton.style.color = '';
+					}, 3000);
+				} else {
+					alert('<?php _e( 'Erro ao copiar. Tente selecionar o texto manualmente.', 'alvobot-pro' ); ?>');
+				}
+			} catch (err) {
+				// Fallback for older browsers
+				alert('<?php _e( 'Use Ctrl+C para copiar o texto selecionado.', 'alvobot-pro' ); ?>');
+			}
+			
+			// Remove temporary textarea
+			document.body.removeChild(tempTextarea);
+		});
+	}
 });
 </script>
 
 <style>
 .docs-ai-prompt {
-    margin: 20px 0;
+	margin: 20px 0;
 }
 
 #ai-prompt-content {
-    max-height: 400px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    user-select: all;
-    -webkit-user-select: all;
-    -moz-user-select: all;
-    -ms-user-select: all;
+	max-height: 400px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	user-select: all;
+	-webkit-user-select: all;
+	-moz-user-select: all;
+	-ms-user-select: all;
 }
 
 #ai-prompt-content strong {
-    color: #1976d2;
-    font-weight: bold;
+	color: #1976d2;
+	font-weight: bold;
 }
 
 #ai-prompt-content em {
-    color: #7b1fa2;
-    font-style: italic;
+	color: #7b1fa2;
+	font-style: italic;
 }
 
 #copy-ai-prompt {
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    padding: 8px 16px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: #f8f9fa;
-    color: #495057;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
+	transition: all 0.3s ease;
+	white-space: nowrap;
+	padding: 8px 16px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background: #f8f9fa;
+	color: #495057;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 14px;
 }
 
 #copy-ai-prompt:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    background: #e9ecef;
-    border-color: #adb5bd;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+	background: #e9ecef;
+	border-color: #adb5bd;
 }
 
 @media (max-width: 768px) {
-    #ai-prompt-content {
-        font-size: 12px;
-        padding: 15px;
-    }
-    
-    .docs-ai-prompt > div:first-child {
-        flex-direction: column;
-        gap: 10px;
-        align-items: stretch;
-    }
-    
-    #copy-ai-prompt {
-        width: 100%;
-        justify-content: center;
-    }
+	#ai-prompt-content {
+		font-size: 12px;
+		padding: 15px;
+	}
+	
+	.docs-ai-prompt > div:first-child {
+		flex-direction: column;
+		gap: 10px;
+		align-items: stretch;
+	}
+	
+	#copy-ai-prompt {
+		width: 100%;
+		justify-content: center;
+	}
 }
 </style>

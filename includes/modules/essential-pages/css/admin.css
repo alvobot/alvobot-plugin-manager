@@ -3,293 +3,293 @@
 
 /* Main container */
 .alvobot-essential-pages .alvobot-admin-wrap {
-    max-width: var(--alvobot-bp-xl);
-    margin: var(--alvobot-space-xl) auto;
-    padding: 0 var(--alvobot-space-xl);
+	max-width: var(--alvobot-bp-xl);
+	margin: var(--alvobot-space-xl) auto;
+	padding: 0 var(--alvobot-space-xl);
 }
 
 /* Header styling */
 .alvobot-essential-pages h1 {
-    font-size: var(--alvobot-font-size-3xl);
-    font-weight: 600;
-    margin: 0 0 var(--alvobot-space-sm);
-    padding: var(--alvobot-space-sm) 0 var(--alvobot-space-xs);
-    line-height: 1.3;
-    color: var(--alvobot-gray-900);
+	font-size: var(--alvobot-font-size-3xl);
+	font-weight: 600;
+	margin: 0 0 var(--alvobot-space-sm);
+	padding: var(--alvobot-space-sm) 0 var(--alvobot-space-xs);
+	line-height: 1.3;
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-essential-pages .description {
-    margin: var(--alvobot-space-lg) 0;
-    color: var(--alvobot-gray-600);
-    font-size: var(--alvobot-font-size-base);
-    line-height: 1.5;
+	margin: var(--alvobot-space-lg) 0;
+	color: var(--alvobot-gray-600);
+	font-size: var(--alvobot-font-size-base);
+	line-height: 1.5;
 }
 
 /* Page cards grid */
 .page-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--alvobot-space-xl);
-    margin: var(--alvobot-space-xl) 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: var(--alvobot-space-xl);
+	margin: var(--alvobot-space-xl) 0;
 }
 
 .page-card {
-    background: var(--alvobot-white);
-    border: 1px solid var(--alvobot-gray-500);
-    border-radius: var(--alvobot-radius-sm);
-    padding: var(--alvobot-space-xl);
-    display: flex;
-    flex-direction: column;
-    box-shadow: var(--alvobot-shadow-sm);
-    transition: all 0.3s ease;
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-sm);
+	padding: var(--alvobot-space-xl);
+	display: flex;
+	flex-direction: column;
+	box-shadow: var(--alvobot-shadow-sm);
+	transition: all 0.3s ease;
 }
 
 .page-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--alvobot-shadow-md);
+	transform: translateY(-2px);
+	box-shadow: var(--alvobot-shadow-md);
 }
 
 .page-card h2 {
-    margin: 0 0 var(--alvobot-space-lg);
-    font-size: var(--alvobot-font-size-xl);
-    font-weight: 600;
-    color: var(--alvobot-gray-900);
+	margin: 0 0 var(--alvobot-space-lg);
+	font-size: var(--alvobot-font-size-xl);
+	font-weight: 600;
+	color: var(--alvobot-gray-900);
 }
 
 /* Page info section */
 .page-info {
-    margin-bottom: var(--alvobot-space-lg);
-    flex-grow: 1;
+	margin-bottom: var(--alvobot-space-lg);
+	flex-grow: 1;
 }
 
 .page-info p {
-    margin: var(--alvobot-space-xs) 0;
-    color: var(--alvobot-gray-700);
-    font-size: var(--alvobot-font-size-base);
+	margin: var(--alvobot-space-xs) 0;
+	color: var(--alvobot-gray-700);
+	font-size: var(--alvobot-font-size-base);
 }
 
 .page-info .label {
-    font-weight: 600;
-    margin-right: var(--alvobot-space-xs);
-    color: var(--alvobot-gray-800);
+	font-weight: 600;
+	margin-right: var(--alvobot-space-xs);
+	color: var(--alvobot-gray-800);
 }
 
 .status-published {
-    background: var(--alvobot-success-bg);
-    color: var(--alvobot-success);
-    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
-    border-radius: var(--alvobot-radius-sm);
-    font-size: var(--alvobot-font-size-xs);
-    font-weight: 500;
-    display: inline-block;
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success);
+	padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+	border-radius: var(--alvobot-radius-sm);
+	font-size: var(--alvobot-font-size-xs);
+	font-weight: 500;
+	display: inline-block;
 }
 
 .status-pending {
-    background: var(--alvobot-warning-bg);
-    color: var(--alvobot-warning);
-    padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
-    border-radius: var(--alvobot-radius-sm);
-    font-size: var(--alvobot-font-size-xs);
-    font-weight: 500;
-    display: inline-block;
+	background: var(--alvobot-warning-bg);
+	color: var(--alvobot-warning);
+	padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
+	border-radius: var(--alvobot-radius-sm);
+	font-size: var(--alvobot-font-size-xs);
+	font-weight: 500;
+	display: inline-block;
 }
 
 /* Page actions */
 .page-actions {
-    display: flex;
-    gap: var(--alvobot-space-sm);
-    justify-content: flex-start;
-    align-items: center;
-    margin-top: auto;
-    flex-wrap: wrap;
+	display: flex;
+	gap: var(--alvobot-space-sm);
+	justify-content: flex-start;
+	align-items: center;
+	margin-top: auto;
+	flex-wrap: wrap;
 }
 
 .page-actions .button {
-    padding: var(--alvobot-space-xs) var(--alvobot-space-md);
-    height: 32px;
-    line-height: 22px;
-    white-space: nowrap;
-    margin: 0;
-    font-size: var(--alvobot-font-size-sm);
-    border-radius: var(--alvobot-radius-sm);
-    transition: all 0.2s ease;
+	padding: var(--alvobot-space-xs) var(--alvobot-space-md);
+	height: 32px;
+	line-height: 22px;
+	white-space: nowrap;
+	margin: 0;
+	font-size: var(--alvobot-font-size-sm);
+	border-radius: var(--alvobot-radius-sm);
+	transition: all 0.2s ease;
 }
 
 .page-actions .button-link-delete {
-    color: var(--alvobot-error);
-    border: 1px solid var(--alvobot-error);
-    background: transparent;
+	color: var(--alvobot-error);
+	border: 1px solid var(--alvobot-error);
+	background: transparent;
 }
 
 .page-actions .button-link-delete:hover {
-    color: var(--alvobot-white);
-    background: var(--alvobot-error);
+	color: var(--alvobot-white);
+	background: var(--alvobot-error);
 }
 
 /* Global actions section */
 .global-actions {
-    margin: var(--alvobot-space-xl) 0;
-    padding: var(--alvobot-space-xl);
-    background: var(--alvobot-white);
-    border: 1px solid var(--alvobot-gray-500);
-    border-radius: var(--alvobot-radius-sm);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--alvobot-shadow-sm);
+	margin: var(--alvobot-space-xl) 0;
+	padding: var(--alvobot-space-xl);
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-sm);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	box-shadow: var(--alvobot-shadow-sm);
 }
 
 .global-actions .left-actions,
 .global-actions .right-actions {
-    display: flex;
-    gap: var(--alvobot-space-sm);
+	display: flex;
+	gap: var(--alvobot-space-sm);
 }
 
 .global-actions .button {
-    padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
-    font-size: var(--alvobot-font-size-base);
-    border-radius: var(--alvobot-radius-sm);
-    transition: all 0.2s ease;
+	padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
+	font-size: var(--alvobot-font-size-base);
+	border-radius: var(--alvobot-radius-sm);
+	transition: all 0.2s ease;
 }
 
 .global-actions .button-primary {
-    background: var(--alvobot-primary);
-    border-color: var(--alvobot-primary);
-    color: var(--alvobot-white);
+	background: var(--alvobot-primary);
+	border-color: var(--alvobot-primary);
+	color: var(--alvobot-white);
 }
 
 .global-actions .button-primary:hover {
-    background: var(--alvobot-primary-dark);
-    border-color: var(--alvobot-primary-dark);
+	background: var(--alvobot-primary-dark);
+	border-color: var(--alvobot-primary-dark);
 }
 
 .global-actions .button-link-delete {
-    color: var(--alvobot-error);
-    border: 1px solid var(--alvobot-error);
-    background: transparent;
+	color: var(--alvobot-error);
+	border: 1px solid var(--alvobot-error);
+	background: transparent;
 }
 
 .global-actions .button-link-delete:hover {
-    color: var(--alvobot-white);
-    background: var(--alvobot-error);
+	color: var(--alvobot-white);
+	background: var(--alvobot-error);
 }
 
 /* Status indicators using unified system */
 .status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--alvobot-radius-full);
-    display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: var(--alvobot-radius-full);
+	display: inline-block;
 }
 
 .status-registered .status-indicator {
-    background: var(--alvobot-success);
+	background: var(--alvobot-success);
 }
 
 .status-unregistered .status-indicator {
-    background: var(--alvobot-error);
+	background: var(--alvobot-error);
 }
 
 .text-success {
-    color: var(--alvobot-success);
+	color: var(--alvobot-success);
 }
 
 .text-error {
-    color: var(--alvobot-error);
+	color: var(--alvobot-error);
 }
 
 /* Notices using unified system */
 .notice {
-    margin: var(--alvobot-space-xl) 0;
-    padding: var(--alvobot-space-md) var(--alvobot-space-lg);
-    border-radius: var(--alvobot-radius-sm);
-    border-left: 4px solid;
+	margin: var(--alvobot-space-xl) 0;
+	padding: var(--alvobot-space-md) var(--alvobot-space-lg);
+	border-radius: var(--alvobot-radius-sm);
+	border-left: 4px solid;
 }
 
 .notice-success {
-    background: var(--alvobot-success-bg);
-    border-left-color: var(--alvobot-success);
-    color: var(--alvobot-gray-800);
+	background: var(--alvobot-success-bg);
+	border-left-color: var(--alvobot-success);
+	color: var(--alvobot-gray-800);
 }
 
 .notice-error {
-    background: var(--alvobot-error-bg);
-    border-left-color: var(--alvobot-error);
-    color: var(--alvobot-gray-800);
+	background: var(--alvobot-error-bg);
+	border-left-color: var(--alvobot-error);
+	color: var(--alvobot-gray-800);
 }
 
 /* Responsive design */
 @media screen and (max-width: 782px) {
-    .alvobot-essential-pages .alvobot-admin-wrap {
-        padding: 0 var(--alvobot-space-lg);
-        margin: var(--alvobot-space-lg) auto;
-    }
+	.alvobot-essential-pages .alvobot-admin-wrap {
+		padding: 0 var(--alvobot-space-lg);
+		margin: var(--alvobot-space-lg) auto;
+	}
 
-    .page-cards {
-        grid-template-columns: 1fr;
-        gap: var(--alvobot-space-lg);
-    }
-    
-    .page-actions {
-        flex-wrap: wrap;
-    }
-    
-    .page-actions .button {
-        flex: 1;
-        text-align: center;
-        min-width: 80px;
-    }
-    
-    .global-actions {
-        flex-direction: column;
-        gap: var(--alvobot-space-md);
-        padding: var(--alvobot-space-lg);
-    }
-    
-    .global-actions .left-actions,
-    .global-actions .right-actions {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .global-actions .button {
-        flex: 1;
-        text-align: center;
-    }
+	.page-cards {
+		grid-template-columns: 1fr;
+		gap: var(--alvobot-space-lg);
+	}
 
-    .page-card {
-        padding: var(--alvobot-space-lg);
-    }
+	.page-actions {
+		flex-wrap: wrap;
+	}
+
+	.page-actions .button {
+		flex: 1;
+		text-align: center;
+		min-width: 80px;
+	}
+
+	.global-actions {
+		flex-direction: column;
+		gap: var(--alvobot-space-md);
+		padding: var(--alvobot-space-lg);
+	}
+
+	.global-actions .left-actions,
+	.global-actions .right-actions {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.global-actions .button {
+		flex: 1;
+		text-align: center;
+	}
+
+	.page-card {
+		padding: var(--alvobot-space-lg);
+	}
 }
 
 /* Additional legacy compatibility */
 .alvobot-pro-wrap {
-    /* Fallback for old class references */
-    max-width: var(--alvobot-bp-xl);
-    margin: var(--alvobot-space-xl) auto;
-    padding: 0 var(--alvobot-space-xl);
+	/* Fallback for old class references */
+	max-width: var(--alvobot-bp-xl);
+	margin: var(--alvobot-space-xl) auto;
+	padding: 0 var(--alvobot-space-xl);
 }
 
 .alvobot-pro-header {
-    background: var(--alvobot-white);
-    padding: var(--alvobot-space-2xl);
-    border-radius: var(--alvobot-radius-md);
-    box-shadow: var(--alvobot-shadow-md);
-    margin-bottom: var(--alvobot-space-xl);
-    border-left: 4px solid var(--alvobot-primary);
+	background: var(--alvobot-white);
+	padding: var(--alvobot-space-2xl);
+	border-radius: var(--alvobot-radius-md);
+	box-shadow: var(--alvobot-shadow-md);
+	margin-bottom: var(--alvobot-space-xl);
+	border-left: 4px solid var(--alvobot-primary);
 }
 
 .alvobot-pro-header h1 {
-    margin: 0 0 var(--alvobot-space-sm);
-    color: var(--alvobot-gray-900);
-    font-size: var(--alvobot-font-size-3xl);
-    font-weight: 600;
-    line-height: 1.3;
+	margin: 0 0 var(--alvobot-space-sm);
+	color: var(--alvobot-gray-900);
+	font-size: var(--alvobot-font-size-3xl);
+	font-weight: 600;
+	line-height: 1.3;
 }
 
 .alvobot-pro-header p {
-    margin: 0;
-    color: var(--alvobot-gray-600);
-    font-size: var(--alvobot-font-size-base);
-    line-height: 1.5;
+	margin: 0;
+	color: var(--alvobot-gray-600);
+	font-size: var(--alvobot-font-size-base);
+	line-height: 1.5;
 }

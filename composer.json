@@ -3,10 +3,15 @@
   "description": "WordPress plugin manager with AI-powered modules",
   "type": "wordpress-plugin",
   "require": {
-    "php": ">=7.4"
+    "php": ">=7.4",
+    "enshrined/svg-sanitize": "^0.22"
   },
   "require-dev": {
-    "phpunit/phpunit": "^9.5"
+    "phpunit/phpunit": "^9.5",
+    "squizlabs/php_codesniffer": "^3.7",
+    "wp-coding-standards/wpcs": "^3.0",
+    "phpcompatibility/phpcompatibility-wp": "*",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
   },
   "autoload": {
     "psr-4": {
@@ -19,6 +24,23 @@
     }
   },
   "scripts": {
-    "test": "phpunit"
+    "test": "phpunit",
+    "lint": [
+      "@lint:php",
+      "@lint:js"
+    ],
+    "lint:php": "phpcs",
+    "lint:js": "biome check",
+    "lint:fix": [
+      "@lint:fix:php",
+      "@lint:fix:js"
+    ],
+    "lint:fix:php": "phpcbf",
+    "lint:fix:js": "biome check --fix"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
   }
 }

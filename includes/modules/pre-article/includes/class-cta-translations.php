@@ -7,532 +7,532 @@
 
 declare(strict_types=1);
 
-if (!class_exists('Alvobot_PreArticle_CTA_Translations')) {
+if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 
-    class Alvobot_PreArticle_CTA_Translations {
-        
-        /**
-         * Traduções das CTAs para múltiplos idiomas
-         * Baseado nas top 15 línguas de países com maiores PIBs e mais de 5 milhões de falantes
-         */
-        private static $cta_translations = [
-            // Português (Brasil/Portugal)
-            'pt' => [
-                'Desejo Saber Mais Sobre o Assunto',
-                'Desbloquear o Conteúdo Agora', 
-                'Quero Ler o Artigo Completo!',
-                'Continuar Lendo Este Conteúdo',
-                'Ver o Artigo na Íntegra',
-                'Acessar o Conteúdo Completo',
-                'Não Quero Perder o Resto',
-                'Mostrar o Artigo Inteiro',
-                'Ler Mais Sobre Este Tema',
-                'Explorar o Assunto Completo'
-            ],
-            // Inglês
-            'en' => [
-                'I Want to Learn More About This',
-                'Unlock the Content Now',
-                'I Want to Read the Complete Article!',
-                'Continue Reading This Content',
-                'View the Full Article',
-                'Access the Complete Content',
-                'I Don\'t Want to Miss the Rest',
-                'Show the Entire Article',
-                'Read More About This Topic',
-                'Explore the Complete Subject'
-            ],
-            // Espanhol
-            'es' => [
-                'Quiero Saber Más Sobre Este Tema',
-                'Desbloquear el Contenido Ahora',
-                '¡Quiero Leer el Artículo Completo!',
-                'Seguir Leyendo Este Contenido',
-                'Ver el Artículo Completo',
-                'Acceder al Contenido Completo',
-                'No Quiero Perderme el Resto',
-                'Mostrar el Artículo Entero',
-                'Leer Más Sobre Este Tema',
-                'Explorar el Tema Completo'
-            ],
-            // Italiano
-            'it' => [
-                'Voglio Sapere Di Più Su Questo',
-                'Sblocca il Contenuto Ora',
-                'Voglio Leggere l\'Articolo Completo!',
-                'Continua a Leggere Questo Contenuto',
-                'Visualizza l\'Articolo Completo',
-                'Accedi al Contenuto Completo',
-                'Non Voglio Perdere il Resto',
-                'Mostra l\'Articolo Intero',
-                'Leggi di Più su Questo Argomento',
-                'Esplora l\'Argomento Completo'
-            ],
-            // Japonês
-            'ja' => [
-                'この件についてもっと知りたい',
-                'コンテンツを今すぐ解除',
-                '完全な記事を読みたい！',
-                'このコンテンツを読み続ける',
-                '記事全体を見る',
-                '完全なコンテンツにアクセス',
-                '残りを見逃したくない',
-                '記事全体を表示',
-                'このトピックについてもっと読む',
-                '完全な主題を探る'
-            ],
-            // Alemão  
-            'de' => [
-                'Ich möchte mehr darüber erfahren',
-                'Inhalte jetzt freischalten',
-                'Ich möchte den vollständigen Artikel lesen!',
-                'Diesen Inhalt weiterlesen',
-                'Den vollständigen Artikel anzeigen',
-                'Auf den vollständigen Inhalt zugreifen',
-                'Ich möchte den Rest nicht verpassen',
-                'Den ganzen Artikel zeigen',
-                'Mehr über dieses Thema lesen',
-                'Das vollständige Thema erkunden'
-            ],
-            // Francês
-            'fr' => [
-                'Je veux en savoir plus à ce sujet',
-                'Débloquer le contenu maintenant',
-                'Je veux lire l\'article complet !',
-                'Continuer à lire ce contenu',
-                'Voir l\'article complet',
-                'Accéder au contenu complet',
-                'Je ne veux pas manquer le reste',
-                'Afficher l\'article entier',
-                'Lire plus sur ce sujet',
-                'Explorer le sujet complet'
-            ],
-            // Chinês (Simplificado)
-            'zh' => [
-                '我想了解更多关于这个的信息',
-                '现在解锁内容',
-                '我想阅读完整的文章！',
-                '继续阅读此内容',
-                '查看完整文章',
-                '访问完整内容',
-                '我不想错过其余部分',
-                '显示整篇文章',
-                '阅读更多关于此主题',
-                '探索完整主题'
-            ],
-            // Hindi
-            'hi' => [
-                'मैं इस बारे में और जानना चाहता हूं',
-                'अभी सामग्री अनलॉक करें',
-                'मैं पूरा लेख पढ़ना चाहता हूं!',
-                'यह सामग्री पढ़ना जारी रखें',
-                'पूरा लेख देखें',
-                'पूरी सामग्री तक पहुंचें',
-                'मैं बाकी को मिस नहीं करना चाहता',
-                'पूरा लेख दिखाएं',
-                'इस विषय के बारे में और पढ़ें',
-                'पूरे विषय का अन्वेषण करें'
-            ],
-            // Árabe
-            'ar' => [
-                'أريد أن أعرف المزيد عن هذا',
-                'إلغاء قفل المحتوى الآن',
-                'أريد قراءة المقال كاملاً!',
-                'متابعة قراءة هذا المحتوى',
-                'عرض المقال الكامل',
-                'الوصول إلى المحتوى الكامل',
-                'لا أريد تفويت الباقي',
-                'إظهار المقال كاملاً',
-                'قراءة المزيد عن هذا الموضوع',
-                'استكشاف الموضوع الكامل'
-            ],
-            // Russo
-            'ru' => [
-                'Я хочу узнать больше об этом',
-                'Разблокировать контент сейчас',
-                'Я хочу прочитать полную статью!',
-                'Продолжить чтение этого контента',
-                'Посмотреть полную статью',
-                'Получить доступ к полному контенту',
-                'Я не хочу пропустить остальное',
-                'Показать всю статью',
-                'Читать больше на эту тему',
-                'Изучить полную тему'
-            ],
-            // Coreano
-            'ko' => [
-                '이것에 대해 더 알고 싶습니다',
-                '지금 콘텐츠 잠금 해제',
-                '전체 기사를 읽고 싶습니다!',
-                '이 콘텐츠를 계속 읽기',
-                '전체 기사 보기',
-                '완전한 콘텐츠에 액세스',
-                '나머지를 놓치고 싶지 않습니다',
-                '전체 기사 표시',
-                '이 주제에 대해 더 읽기',
-                '완전한 주제 탐구'
-            ],
-            // Turco
-            'tr' => [
-                'Bu konuda daha fazla öğrenmek istiyorum',
-                'İçeriği şimdi kilidini aç',
-                'Tam makaleyi okumak istiyorum!',
-                'Bu içeriği okumaya devam et',
-                'Tam makaleyi görüntüle',
-                'Tam içeriğe erişim',
-                'Geri kalanını kaçırmak istemiyorum',
-                'Tüm makaleyi göster',
-                'Bu konu hakkında daha fazla oku',
-                'Tam konuyu keşfet'
-            ],
-            // Indonésio
-            'id' => [
-                'Saya ingin tahu lebih banyak tentang ini',
-                'Buka kunci konten sekarang',
-                'Saya ingin membaca artikel lengkap!',
-                'Lanjutkan membaca konten ini',
-                'Lihat artikel lengkap',
-                'Akses konten lengkap',
-                'Saya tidak ingin melewatkan sisanya',
-                'Tampilkan seluruh artikel',
-                'Baca lebih lanjut tentang topik ini',
-                'Jelajahi topik lengkap'
-            ],
-            // Holandês
-            'nl' => [
-                'Ik wil meer weten over dit onderwerp',
-                'Ontgrendel de inhoud nu',
-                'Ik wil het volledige artikel lezen!',
-                'Doorgaan met het lezen van deze inhoud',
-                'Het volledige artikel bekijken',
-                'Toegang tot de volledige inhoud',
-                'Ik wil de rest niet missen',
-                'Het hele artikel tonen',
-                'Meer lezen over dit onderwerp',
-                'Het volledige onderwerp verkennen'
-            ],
-            // Tailandês
-            'th' => [
-                'ฉันต้องการทราบข้อมูลเพิ่มเติมเกี่ยวกับเรื่องนี้',
-                'ปลดล็อกเนื้อหาตอนนี้',
-                'ฉันต้องการอ่านบทความฉบับเต็ม!',
-                'อ่านเนื้อหานี้ต่อ',
-                'ดูบทความฉบับเต็ม',
-                'เข้าถึงเนื้อหาฉบับสมบูรณ์',
-                'ฉันไม่อยากพลาดส่วนที่เหลือ',
-                'แสดงบทความทั้งหมด',
-                'อ่านเพิ่มเติมเกี่ยวกับหัวข้อนี้',
-                'สำรวจหัวข้อฉบับสมบูรณ์'
-            ]
-        ];
+	class Alvobot_PreArticle_CTA_Translations {
 
-        /**
-         * Mapeia códigos de idioma para nomes nativos
-         */
-        private static $language_names = [
-            'pt' => 'Português',
-            'en' => 'English', 
-            'es' => 'Español',
-            'it' => 'Italiano',
-            'ja' => '日本語',
-            'de' => 'Deutsch',
-            'fr' => 'Français',
-            'zh' => '中文',
-            'hi' => 'हिन्दी',
-            'ar' => 'العربية',
-            'ru' => 'Русский',
-            'ko' => '한국어',
-            'tr' => 'Türkçe',
-            'id' => 'Bahasa Indonesia',
-            'nl' => 'Nederlands',
-            'th' => 'ไทย'
-        ];
+		/**
+		 * Traduções das CTAs para múltiplos idiomas
+		 * Baseado nas top 15 línguas de países com maiores PIBs e mais de 5 milhões de falantes
+		 */
+		private static $cta_translations = [
+			// Português (Brasil/Portugal)
+			'pt' => [
+				'Desejo Saber Mais Sobre o Assunto',
+				'Desbloquear o Conteúdo Agora',
+				'Quero Ler o Artigo Completo!',
+				'Continuar Lendo Este Conteúdo',
+				'Ver o Artigo na Íntegra',
+				'Acessar o Conteúdo Completo',
+				'Não Quero Perder o Resto',
+				'Mostrar o Artigo Inteiro',
+				'Ler Mais Sobre Este Tema',
+				'Explorar o Assunto Completo',
+			],
+			// Inglês
+			'en' => [
+				'I Want to Learn More About This',
+				'Unlock the Content Now',
+				'I Want to Read the Complete Article!',
+				'Continue Reading This Content',
+				'View the Full Article',
+				'Access the Complete Content',
+				'I Don\'t Want to Miss the Rest',
+				'Show the Entire Article',
+				'Read More About This Topic',
+				'Explore the Complete Subject',
+			],
+			// Espanhol
+			'es' => [
+				'Quiero Saber Más Sobre Este Tema',
+				'Desbloquear el Contenido Ahora',
+				'¡Quiero Leer el Artículo Completo!',
+				'Seguir Leyendo Este Contenido',
+				'Ver el Artículo Completo',
+				'Acceder al Contenido Completo',
+				'No Quiero Perderme el Resto',
+				'Mostrar el Artículo Entero',
+				'Leer Más Sobre Este Tema',
+				'Explorar el Tema Completo',
+			],
+			// Italiano
+			'it' => [
+				'Voglio Sapere Di Più Su Questo',
+				'Sblocca il Contenuto Ora',
+				'Voglio Leggere l\'Articolo Completo!',
+				'Continua a Leggere Questo Contenuto',
+				'Visualizza l\'Articolo Completo',
+				'Accedi al Contenuto Completo',
+				'Non Voglio Perdere il Resto',
+				'Mostra l\'Articolo Intero',
+				'Leggi di Più su Questo Argomento',
+				'Esplora l\'Argomento Completo',
+			],
+			// Japonês
+			'ja' => [
+				'この件についてもっと知りたい',
+				'コンテンツを今すぐ解除',
+				'完全な記事を読みたい！',
+				'このコンテンツを読み続ける',
+				'記事全体を見る',
+				'完全なコンテンツにアクセス',
+				'残りを見逃したくない',
+				'記事全体を表示',
+				'このトピックについてもっと読む',
+				'完全な主題を探る',
+			],
+			// Alemão
+			'de' => [
+				'Ich möchte mehr darüber erfahren',
+				'Inhalte jetzt freischalten',
+				'Ich möchte den vollständigen Artikel lesen!',
+				'Diesen Inhalt weiterlesen',
+				'Den vollständigen Artikel anzeigen',
+				'Auf den vollständigen Inhalt zugreifen',
+				'Ich möchte den Rest nicht verpassen',
+				'Den ganzen Artikel zeigen',
+				'Mehr über dieses Thema lesen',
+				'Das vollständige Thema erkunden',
+			],
+			// Francês
+			'fr' => [
+				'Je veux en savoir plus à ce sujet',
+				'Débloquer le contenu maintenant',
+				'Je veux lire l\'article complet !',
+				'Continuer à lire ce contenu',
+				'Voir l\'article complet',
+				'Accéder au contenu complet',
+				'Je ne veux pas manquer le reste',
+				'Afficher l\'article entier',
+				'Lire plus sur ce sujet',
+				'Explorer le sujet complet',
+			],
+			// Chinês (Simplificado)
+			'zh' => [
+				'我想了解更多关于这个的信息',
+				'现在解锁内容',
+				'我想阅读完整的文章！',
+				'继续阅读此内容',
+				'查看完整文章',
+				'访问完整内容',
+				'我不想错过其余部分',
+				'显示整篇文章',
+				'阅读更多关于此主题',
+				'探索完整主题',
+			],
+			// Hindi
+			'hi' => [
+				'मैं इस बारे में और जानना चाहता हूं',
+				'अभी सामग्री अनलॉक करें',
+				'मैं पूरा लेख पढ़ना चाहता हूं!',
+				'यह सामग्री पढ़ना जारी रखें',
+				'पूरा लेख देखें',
+				'पूरी सामग्री तक पहुंचें',
+				'मैं बाकी को मिस नहीं करना चाहता',
+				'पूरा लेख दिखाएं',
+				'इस विषय के बारे में और पढ़ें',
+				'पूरे विषय का अन्वेषण करें',
+			],
+			// Árabe
+			'ar' => [
+				'أريد أن أعرف المزيد عن هذا',
+				'إلغاء قفل المحتوى الآن',
+				'أريد قراءة المقال كاملاً!',
+				'متابعة قراءة هذا المحتوى',
+				'عرض المقال الكامل',
+				'الوصول إلى المحتوى الكامل',
+				'لا أريد تفويت الباقي',
+				'إظهار المقال كاملاً',
+				'قراءة المزيد عن هذا الموضوع',
+				'استكشاف الموضوع الكامل',
+			],
+			// Russo
+			'ru' => [
+				'Я хочу узнать больше об этом',
+				'Разблокировать контент сейчас',
+				'Я хочу прочитать полную статью!',
+				'Продолжить чтение этого контента',
+				'Посмотреть полную статью',
+				'Получить доступ к полному контенту',
+				'Я не хочу пропустить остальное',
+				'Показать всю статью',
+				'Читать больше на эту тему',
+				'Изучить полную тему',
+			],
+			// Coreano
+			'ko' => [
+				'이것에 대해 더 알고 싶습니다',
+				'지금 콘텐츠 잠금 해제',
+				'전체 기사를 읽고 싶습니다!',
+				'이 콘텐츠를 계속 읽기',
+				'전체 기사 보기',
+				'완전한 콘텐츠에 액세스',
+				'나머지를 놓치고 싶지 않습니다',
+				'전체 기사 표시',
+				'이 주제에 대해 더 읽기',
+				'완전한 주제 탐구',
+			],
+			// Turco
+			'tr' => [
+				'Bu konuda daha fazla öğrenmek istiyorum',
+				'İçeriği şimdi kilidini aç',
+				'Tam makaleyi okumak istiyorum!',
+				'Bu içeriği okumaya devam et',
+				'Tam makaleyi görüntüle',
+				'Tam içeriğe erişim',
+				'Geri kalanını kaçırmak istemiyorum',
+				'Tüm makaleyi göster',
+				'Bu konu hakkında daha fazla oku',
+				'Tam konuyu keşfet',
+			],
+			// Indonésio
+			'id' => [
+				'Saya ingin tahu lebih banyak tentang ini',
+				'Buka kunci konten sekarang',
+				'Saya ingin membaca artikel lengkap!',
+				'Lanjutkan membaca konten ini',
+				'Lihat artikel lengkap',
+				'Akses konten lengkap',
+				'Saya tidak ingin melewatkan sisanya',
+				'Tampilkan seluruh artikel',
+				'Baca lebih lanjut tentang topik ini',
+				'Jelajahi topik lengkap',
+			],
+			// Holandês
+			'nl' => [
+				'Ik wil meer weten over dit onderwerp',
+				'Ontgrendel de inhoud nu',
+				'Ik wil het volledige artikel lezen!',
+				'Doorgaan met het lezen van deze inhoud',
+				'Het volledige artikel bekijken',
+				'Toegang tot de volledige inhoud',
+				'Ik wil de rest niet missen',
+				'Het hele artikel tonen',
+				'Meer lezen over dit onderwerp',
+				'Het volledige onderwerp verkennen',
+			],
+			// Tailandês
+			'th' => [
+				'ฉันต้องการทราบข้อมูลเพิ่มเติมเกี่ยวกับเรื่องนี้',
+				'ปลดล็อกเนื้อหาตอนนี้',
+				'ฉันต้องการอ่านบทความฉบับเต็ม!',
+				'อ่านเนื้อหานี้ต่อ',
+				'ดูบทความฉบับเต็ม',
+				'เข้าถึงเนื้อหาฉบับสมบูรณ์',
+				'ฉันไม่อยากพลาดส่วนที่เหลือ',
+				'แสดงบทความทั้งหมด',
+				'อ่านเพิ่มเติมเกี่ยวกับหัวข้อนี้',
+				'สำรวจหัวข้อฉบับสมบูรณ์',
+			],
+		];
 
-        /**
-         * Detecta o idioma atual do site
-         */
-        public static function get_current_language() {
-            // Prioridade 1: Verifica idioma forçado por sessão
-            if (session_status() === PHP_SESSION_NONE) {
-                @session_start();
-            }
-            $forced_lang = self::get_forced_language();
-            if ($forced_lang && isset(self::$cta_translations[$forced_lang])) {
-                return $forced_lang;
-            }
+		/**
+		 * Mapeia códigos de idioma para nomes nativos
+		 */
+		private static $language_names = [
+			'pt' => 'Português',
+			'en' => 'English',
+			'es' => 'Español',
+			'it' => 'Italiano',
+			'ja' => '日本語',
+			'de' => 'Deutsch',
+			'fr' => 'Français',
+			'zh' => '中文',
+			'hi' => 'हिन्दी',
+			'ar' => 'العربية',
+			'ru' => 'Русский',
+			'ko' => '한국어',
+			'tr' => 'Türkçe',
+			'id' => 'Bahasa Indonesia',
+			'nl' => 'Nederlands',
+			'th' => 'ไทย',
+		];
 
-            // Prioridade 2: Verifica parâmetro forçado (para debug)
-            if (isset($_GET['force_lang']) && isset(self::$cta_translations[$_GET['force_lang']])) {
-                return $_GET['force_lang'];
-            }
+		/**
+		 * Detecta o idioma atual do site
+		 */
+		public static function get_current_language() {
+			// Prioridade 1: Verifica idioma forçado por sessão
+			if ( session_status() === PHP_SESSION_NONE ) {
+				@session_start();
+			}
+			$forced_lang = self::get_forced_language();
+			if ( $forced_lang && isset( self::$cta_translations[ $forced_lang ] ) ) {
+				return $forced_lang;
+			}
 
-            // Prioridade 3: Verifica URL para detectar idioma (padrão dominio.com/es/)
-            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-            if (preg_match('/^\/([a-z]{2})(\/|$)/', $request_uri, $matches)) {
-                $url_lang = $matches[1];
-                if (isset(self::$cta_translations[$url_lang])) {
-                    // Log da detecção por URL
-                    if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
-                        AlvoBotPro::debug_log('pre-article', "Idioma detectado por URL: {$url_lang} (URI: {$request_uri})");
-                    }
-                    return $url_lang;
-                }
-            }
+			// Prioridade 2: Verifica parâmetro forçado (para debug)
+			if ( isset( $_GET['force_lang'] ) && isset( self::$cta_translations[ $_GET['force_lang'] ] ) ) {
+				return $_GET['force_lang'];
+			}
 
-            // Prioridade 4: Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
-            if (function_exists('pll_current_language') && !class_exists('Automatic_Polylang')) {
-                $lang = pll_current_language();
-                if ($lang && isset(self::$cta_translations[$lang])) {
-                    return $lang;
-                }
-            }
+			// Prioridade 3: Verifica URL para detectar idioma (padrão dominio.com/es/)
+			$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+			if ( preg_match( '/^\/([a-z]{2})(\/|$)/', $request_uri, $matches ) ) {
+				$url_lang = $matches[1];
+				if ( isset( self::$cta_translations[ $url_lang ] ) ) {
+					// Log da detecção por URL
+					if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+						AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por URL: {$url_lang} (URI: {$request_uri})" );
+					}
+					return $url_lang;
+				}
+			}
 
-            // Prioridade 5: Verifica WPML
-            if (defined('ICL_LANGUAGE_CODE') && isset(self::$cta_translations[ICL_LANGUAGE_CODE])) {
-                return ICL_LANGUAGE_CODE;
-            }
+			// Prioridade 4: Verifica se o Polylang oficial está ativo (evita conflito com AutoPoly)
+			if ( function_exists( 'pll_current_language' ) && ! class_exists( 'Automatic_Polylang' ) ) {
+				$lang = pll_current_language();
+				if ( $lang && isset( self::$cta_translations[ $lang ] ) ) {
+					return $lang;
+				}
+			}
 
-            // Prioridade 6: Idioma do WordPress baseado em locale
-            $locale = get_locale();
-            $lang_code = substr($locale, 0, 2);
+			// Prioridade 5: Verifica WPML
+			if ( defined( 'ICL_LANGUAGE_CODE' ) && isset( self::$cta_translations[ ICL_LANGUAGE_CODE ] ) ) {
+				return ICL_LANGUAGE_CODE;
+			}
 
-            // Verifica se temos traduções para este idioma
-            if (isset(self::$cta_translations[$lang_code])) {
-                // Log da detecção por locale
-                if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
-                    AlvoBotPro::debug_log('pre-article', "Idioma detectado por locale do WordPress: {$lang_code} (locale: {$locale})");
-                }
-                return $lang_code;
-            }
+			// Prioridade 6: Idioma do WordPress baseado em locale
+			$locale    = get_locale();
+			$lang_code = substr( $locale, 0, 2 );
 
-            // Prioridade 7: Detecta pelo domínio (ex: sitio.es, site.fr)
-            $host = $_SERVER['HTTP_HOST'] ?? '';
-            if (preg_match('/\.([a-z]{2})$/', $host, $matches)) {
-                $domain_lang = $matches[1];
-                if (isset(self::$cta_translations[$domain_lang])) {
-                    // Log da detecção por domínio
-                    if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
-                        AlvoBotPro::debug_log('pre-article', "Idioma detectado por domínio: {$domain_lang} (host: {$host})");
-                    }
-                    return $domain_lang;
-                }
-            }
+			// Verifica se temos traduções para este idioma
+			if ( isset( self::$cta_translations[ $lang_code ] ) ) {
+				// Log da detecção por locale
+				if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+					AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por locale do WordPress: {$lang_code} (locale: {$locale})" );
+				}
+				return $lang_code;
+			}
 
-            // Prioridade 8: Detecta pelo Accept-Language do navegador
-            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-                $accept_languages = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-                foreach ($accept_languages as $lang_str) {
-                    $lang_code = substr(trim($lang_str), 0, 2);
-                    if (isset(self::$cta_translations[$lang_code])) {
-                        // Log da detecção por navegador
-                        if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
-                            AlvoBotPro::debug_log('pre-article', "Idioma detectado por navegador: {$lang_code} (Accept-Language: {$_SERVER['HTTP_ACCEPT_LANGUAGE']})");
-                        }
-                        return $lang_code;
-                    }
-                }
-            }
+			// Prioridade 7: Detecta pelo domínio (ex: sitio.es, site.fr)
+			$host = $_SERVER['HTTP_HOST'] ?? '';
+			if ( preg_match( '/\.([a-z]{2})$/', $host, $matches ) ) {
+				$domain_lang = $matches[1];
+				if ( isset( self::$cta_translations[ $domain_lang ] ) ) {
+					// Log da detecção por domínio
+					if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+						AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por domínio: {$domain_lang} (host: {$host})" );
+					}
+					return $domain_lang;
+				}
+			}
 
-            // Fallback final: português
-            if (function_exists('AlvoBotPro') && method_exists('AlvoBotPro', 'debug_log')) {
-                AlvoBotPro::debug_log('pre-article', "Nenhum idioma detectado, usando fallback: pt");
-            }
-            return 'pt';
-        }
+			// Prioridade 8: Detecta pelo Accept-Language do navegador
+			if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) {
+				$accept_languages = explode( ',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] );
+				foreach ( $accept_languages as $lang_str ) {
+					$lang_code = substr( trim( $lang_str ), 0, 2 );
+					if ( isset( self::$cta_translations[ $lang_code ] ) ) {
+						// Log da detecção por navegador
+						if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+							AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por navegador: {$lang_code} (Accept-Language: {$_SERVER['HTTP_ACCEPT_LANGUAGE']})" );
+						}
+						return $lang_code;
+					}
+				}
+			}
 
-        /**
-         * Obtém as CTAs traduzidas para o idioma atual
-         */
-        public static function get_translated_ctas($language = null) {
-            if (!$language) {
-                $language = self::get_current_language();
-            }
+			// Fallback final: português
+			if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+				AlvoBotPro::debug_log( 'pre-article', 'Nenhum idioma detectado, usando fallback: pt' );
+			}
+			return 'pt';
+		}
 
-            // Verifica se existe tradução para o idioma
-            if (isset(self::$cta_translations[$language])) {
-                return self::$cta_translations[$language];
-            }
+		/**
+		 * Obtém as CTAs traduzidas para o idioma atual
+		 */
+		public static function get_translated_ctas( $language = null ) {
+			if ( ! $language ) {
+				$language = self::get_current_language();
+			}
 
-            // Fallback: português
-            return self::$cta_translations['pt'];
-        }
+			// Verifica se existe tradução para o idioma
+			if ( isset( self::$cta_translations[ $language ] ) ) {
+				return self::$cta_translations[ $language ];
+			}
 
-        /**
-         * Obtém um texto de CTA traduzido por índice
-         */
-        public static function get_translated_cta_by_index($index, $language = null) {
-            $ctas = self::get_translated_ctas($language);
-            
-            // Garante que o índice existe
-            if (isset($ctas[$index])) {
-                return $ctas[$index];
-            }
+			// Fallback: português
+			return self::$cta_translations['pt'];
+		}
 
-            // Fallback: primeiro CTA disponível
-            return isset($ctas[0]) ? $ctas[0] : 'Ler Mais';
-        }
+		/**
+		 * Obtém um texto de CTA traduzido por índice
+		 */
+		public static function get_translated_cta_by_index( $index, $language = null ) {
+			$ctas = self::get_translated_ctas( $language );
 
-        /**
-         * Obtém todas as traduções disponíveis
-         */
-        public static function get_all_translations() {
-            return self::$cta_translations;
-        }
+			// Garante que o índice existe
+			if ( isset( $ctas[ $index ] ) ) {
+				return $ctas[ $index ];
+			}
 
-        /**
-         * Obtém os idiomas suportados
-         */
-        public static function get_supported_languages() {
-            return array_keys(self::$cta_translations);
-        }
+			// Fallback: primeiro CTA disponível
+			return isset( $ctas[0] ) ? $ctas[0] : 'Ler Mais';
+		}
 
-        /**
-         * Obtém o nome nativo do idioma
-         */
-        public static function get_language_native_name($lang_code) {
-            return isset(self::$language_names[$lang_code]) ? self::$language_names[$lang_code] : $lang_code;
-        }
+		/**
+		 * Obtém todas as traduções disponíveis
+		 */
+		public static function get_all_translations() {
+			return self::$cta_translations;
+		}
 
-        /**
-         * Traduz automaticamente um texto de CTA padrão se correspondência for encontrada
-         */
-        public static function translate_default_cta($cta_text, $target_language = null) {
-            if (!$target_language) {
-                $target_language = self::get_current_language();
-            }
+		/**
+		 * Obtém os idiomas suportados
+		 */
+		public static function get_supported_languages() {
+			return array_keys( self::$cta_translations );
+		}
 
-            // Se já está no idioma de destino, retorna como está
-            if ($target_language === 'pt') {
-                return $cta_text;
-            }
+		/**
+		 * Obtém o nome nativo do idioma
+		 */
+		public static function get_language_native_name( $lang_code ) {
+			return isset( self::$language_names[ $lang_code ] ) ? self::$language_names[ $lang_code ] : $lang_code;
+		}
 
-            $default_ctas_pt = self::$cta_translations['pt'];
-            $target_ctas = self::get_translated_ctas($target_language);
+		/**
+		 * Traduz automaticamente um texto de CTA padrão se correspondência for encontrada
+		 */
+		public static function translate_default_cta( $cta_text, $target_language = null ) {
+			if ( ! $target_language ) {
+				$target_language = self::get_current_language();
+			}
 
-            // Procura o índice do texto em português
-            $index = array_search($cta_text, $default_ctas_pt);
-            
-            if ($index !== false && isset($target_ctas[$index])) {
-                return $target_ctas[$index];
-            }
+			// Se já está no idioma de destino, retorna como está
+			if ( $target_language === 'pt' ) {
+				return $cta_text;
+			}
 
-            // Se não encontrou correspondência exata, retorna o texto original
-            return $cta_text;
-        }
+			$default_ctas_pt = self::$cta_translations['pt'];
+			$target_ctas     = self::get_translated_ctas( $target_language );
 
-        /**
-         * Verifica se um idioma é suportado
-         */
-        public static function is_language_supported($lang_code) {
-            return isset(self::$cta_translations[$lang_code]);
-        }
+			// Procura o índice do texto em português
+			$index = array_search( $cta_text, $default_ctas_pt );
 
-        /**
-         * Força um idioma específico (útil para debug e testes)
-         */
-        public static function force_language($lang_code) {
-            if (self::is_language_supported($lang_code)) {
-                $_SESSION['alvobot_forced_language'] = $lang_code;
-                return true;
-            }
-            return false;
-        }
+			if ( $index !== false && isset( $target_ctas[ $index ] ) ) {
+				return $target_ctas[ $index ];
+			}
 
-        /**
-         * Remove o idioma forçado
-         */
-        public static function clear_forced_language() {
-            unset($_SESSION['alvobot_forced_language']);
-        }
+			// Se não encontrou correspondência exata, retorna o texto original
+			return $cta_text;
+		}
 
-        /**
-         * Obtém o idioma forçado se existir
-         */
-        public static function get_forced_language() {
-            return $_SESSION['alvobot_forced_language'] ?? null;
-        }
+		/**
+		 * Verifica se um idioma é suportado
+		 */
+		public static function is_language_supported( $lang_code ) {
+			return isset( self::$cta_translations[ $lang_code ] );
+		}
 
-        /**
-         * Debug: retorna informações sobre o idioma detectado
-         */
-        public static function get_language_debug_info() {
-            $current_lang = self::get_current_language();
-            $supported_langs = self::get_supported_languages();
+		/**
+		 * Força um idioma específico (útil para debug e testes)
+		 */
+		public static function force_language( $lang_code ) {
+			if ( self::is_language_supported( $lang_code ) ) {
+				$_SESSION['alvobot_forced_language'] = $lang_code;
+				return true;
+			}
+			return false;
+		}
 
-            // Testa cada método de detecção individualmente
-            $detection_methods = [];
+		/**
+		 * Remove o idioma forçado
+		 */
+		public static function clear_forced_language() {
+			unset( $_SESSION['alvobot_forced_language'] );
+		}
 
-            // Força parâmetro
-            $force_lang = isset($_GET['force_lang']) && isset(self::$cta_translations[$_GET['force_lang']]) ? $_GET['force_lang'] : null;
-            $detection_methods['force_param'] = $force_lang;
+		/**
+		 * Obtém o idioma forçado se existir
+		 */
+		public static function get_forced_language() {
+			return $_SESSION['alvobot_forced_language'] ?? null;
+		}
 
-            // URL
-            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
-            $url_lang = null;
-            if (preg_match('/^\/([a-z]{2})(\/|$)/', $request_uri, $matches)) {
-                $url_lang = isset(self::$cta_translations[$matches[1]]) ? $matches[1] : null;
-            }
-            $detection_methods['url_detection'] = $url_lang;
+		/**
+		 * Debug: retorna informações sobre o idioma detectado
+		 */
+		public static function get_language_debug_info() {
+			$current_lang    = self::get_current_language();
+			$supported_langs = self::get_supported_languages();
 
-            // Polylang
-            $pll_lang = null;
-            if (function_exists('pll_current_language') && !class_exists('Automatic_Polylang')) {
-                $lang = pll_current_language();
-                $pll_lang = ($lang && isset(self::$cta_translations[$lang])) ? $lang : null;
-            }
-            $detection_methods['polylang'] = $pll_lang;
+			// Testa cada método de detecção individualmente
+			$detection_methods = [];
 
-            // WPML
-            $wpml_lang = null;
-            if (defined('ICL_LANGUAGE_CODE') && isset(self::$cta_translations[ICL_LANGUAGE_CODE])) {
-                $wpml_lang = ICL_LANGUAGE_CODE;
-            }
-            $detection_methods['wpml'] = $wpml_lang;
+			// Força parâmetro
+			$force_lang                       = isset( $_GET['force_lang'] ) && isset( self::$cta_translations[ $_GET['force_lang'] ] ) ? $_GET['force_lang'] : null;
+			$detection_methods['force_param'] = $force_lang;
 
-            // WordPress locale
-            $locale = get_locale();
-            $wp_lang = substr($locale, 0, 2);
-            $wp_lang = isset(self::$cta_translations[$wp_lang]) ? $wp_lang : null;
-            $detection_methods['wordpress_locale'] = $wp_lang;
+			// URL
+			$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+			$url_lang    = null;
+			if ( preg_match( '/^\/([a-z]{2})(\/|$)/', $request_uri, $matches ) ) {
+				$url_lang = isset( self::$cta_translations[ $matches[1] ] ) ? $matches[1] : null;
+			}
+			$detection_methods['url_detection'] = $url_lang;
 
-            // Domínio
-            $host = $_SERVER['HTTP_HOST'] ?? '';
-            $domain_lang = null;
-            if (preg_match('/\.([a-z]{2})$/', $host, $matches)) {
-                $domain_lang = isset(self::$cta_translations[$matches[1]]) ? $matches[1] : null;
-            }
-            $detection_methods['domain'] = $domain_lang;
+			// Polylang
+			$pll_lang = null;
+			if ( function_exists( 'pll_current_language' ) && ! class_exists( 'Automatic_Polylang' ) ) {
+				$lang     = pll_current_language();
+				$pll_lang = ( $lang && isset( self::$cta_translations[ $lang ] ) ) ? $lang : null;
+			}
+			$detection_methods['polylang'] = $pll_lang;
 
-            // Accept-Language
-            $browser_lang = null;
-            if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-                $accept_languages = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-                foreach ($accept_languages as $lang_str) {
-                    $lang_code = substr(trim($lang_str), 0, 2);
-                    if (isset(self::$cta_translations[$lang_code])) {
-                        $browser_lang = $lang_code;
-                        break;
-                    }
-                }
-            }
-            $detection_methods['browser'] = $browser_lang;
+			// WPML
+			$wpml_lang = null;
+			if ( defined( 'ICL_LANGUAGE_CODE' ) && isset( self::$cta_translations[ ICL_LANGUAGE_CODE ] ) ) {
+				$wpml_lang = ICL_LANGUAGE_CODE;
+			}
+			$detection_methods['wpml'] = $wpml_lang;
 
-            return [
-                'detected_language' => $current_lang,
-                'language_name' => self::get_language_native_name($current_lang),
-                'is_supported' => self::is_language_supported($current_lang),
-                'supported_languages' => $supported_langs,
-                'detection_methods' => $detection_methods,
-                'request_uri' => $request_uri,
-                'http_host' => $_SERVER['HTTP_HOST'] ?? '',
-                'accept_language' => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '',
-                'site_locale' => get_locale(),
-                'polylang_active' => function_exists('pll_current_language') && !class_exists('Automatic_Polylang'),
-                'autopoly_detected' => class_exists('Automatic_Polylang'),
-                'wpml_active' => defined('ICL_LANGUAGE_CODE'),
-                'pll_function_exists' => function_exists('pll_current_language'),
-                'PLL_function_exists' => function_exists('PLL')
-            ];
-        }
-    }
+			// WordPress locale
+			$locale                                = get_locale();
+			$wp_lang                               = substr( $locale, 0, 2 );
+			$wp_lang                               = isset( self::$cta_translations[ $wp_lang ] ) ? $wp_lang : null;
+			$detection_methods['wordpress_locale'] = $wp_lang;
+
+			// Domínio
+			$host        = $_SERVER['HTTP_HOST'] ?? '';
+			$domain_lang = null;
+			if ( preg_match( '/\.([a-z]{2})$/', $host, $matches ) ) {
+				$domain_lang = isset( self::$cta_translations[ $matches[1] ] ) ? $matches[1] : null;
+			}
+			$detection_methods['domain'] = $domain_lang;
+
+			// Accept-Language
+			$browser_lang = null;
+			if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) {
+				$accept_languages = explode( ',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] );
+				foreach ( $accept_languages as $lang_str ) {
+					$lang_code = substr( trim( $lang_str ), 0, 2 );
+					if ( isset( self::$cta_translations[ $lang_code ] ) ) {
+						$browser_lang = $lang_code;
+						break;
+					}
+				}
+			}
+			$detection_methods['browser'] = $browser_lang;
+
+			return [
+				'detected_language'   => $current_lang,
+				'language_name'       => self::get_language_native_name( $current_lang ),
+				'is_supported'        => self::is_language_supported( $current_lang ),
+				'supported_languages' => $supported_langs,
+				'detection_methods'   => $detection_methods,
+				'request_uri'         => $request_uri,
+				'http_host'           => $_SERVER['HTTP_HOST'] ?? '',
+				'accept_language'     => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '',
+				'site_locale'         => get_locale(),
+				'polylang_active'     => function_exists( 'pll_current_language' ) && ! class_exists( 'Automatic_Polylang' ),
+				'autopoly_detected'   => class_exists( 'Automatic_Polylang' ),
+				'wpml_active'         => defined( 'ICL_LANGUAGE_CODE' ),
+				'pll_function_exists' => function_exists( 'pll_current_language' ),
+				'PLL_function_exists' => function_exists( 'PLL' ),
+			];
+		}
+	}
 }
