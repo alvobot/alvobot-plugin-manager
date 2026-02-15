@@ -184,7 +184,7 @@ class Alvobot_Quiz_Main {
 	 * Debug parse request to see what's happening with rewrite rules
 	 */
 	public function debug_parse_request( $wp ) {
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 
 		// Debug aquiz-e URLs
 		if ( strpos( $request_uri, 'aquiz-e' ) !== false ) {
@@ -223,8 +223,8 @@ class Alvobot_Quiz_Main {
 			$defaults = array(
 				'default_theme' => 'default',
 				'primary_color' => '#007cba',
-				'text_next'     => __( 'Próxima', 'alvobot-quiz' ),
-				'text_previous' => __( 'Anterior', 'alvobot-quiz' ),
+				'text_next'     => __( 'Próxima', 'alvobot-pro' ),
+				'text_previous' => __( 'Anterior', 'alvobot-pro' ),
 				'show_progress' => true,
 				'allow_back'    => true,
 			);

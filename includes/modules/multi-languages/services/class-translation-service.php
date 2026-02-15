@@ -95,10 +95,11 @@ class AlvoBotPro_Translation_Service {
 		global $wpdb;
 
 		// Remove transients antigos de locks de tradução
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} 
-                 WHERE option_name LIKE %s 
+				"DELETE FROM {$wpdb->options}
+                 WHERE option_name LIKE %s
                  AND option_value < %d",
 				'_transient_alvobot_translation_lock_%',
 				time() - 600 // 10 minutos atrás
@@ -459,13 +460,13 @@ class AlvoBotPro_Translation_Service {
 	 * Ordena termos por hierarquia (pais antes de filhos)
 	 */
 	private function sort_terms_by_hierarchy( $terms ) {
-		$sorted  = array();
-		$pending = $terms;
+		$sorted         = array();
+		$pending        = $terms;
 		$max_iterations = count( $terms ) * 2;
-		$iteration = 0;
+		$iteration      = 0;
 
 		while ( ! empty( $pending ) && $iteration < $max_iterations ) {
-			$iteration++;
+			++$iteration;
 			foreach ( $pending as $key => $term ) {
 				if ( $term->parent == 0 || isset( $sorted[ $term->parent ] ) ) {
 					$sorted[ $term->term_id ] = $term;
@@ -498,32 +499,65 @@ class AlvoBotPro_Translation_Service {
 			return $cache[ $term->term_id ];
 		}
 
+		// Pula termos com nome vazio
+		if ( empty( trim( $term->name ) ) ) {
+			return null;
+		}
+
 		// Verifica se já existe tradução no Polylang
 		if ( function_exists( 'pll_get_term_translations' ) ) {
 			$translations = pll_get_term_translations( $term->term_id );
 			if ( ! empty( $translations[ $target_lang ] ) ) {
-				$cache[ $term->term_id ] = $translations[ $target_lang ];
-				AlvoBotPro::debug_log( 'multi-languages', "Termo '{$term->name}' já tem tradução (ID: {$translations[$target_lang]}) para {$target_lang}" );
-				return $translations[ $target_lang ];
+				// Valida que o termo traduzido ainda existe (pode ter sido deletado)
+				$existing = get_term( $translations[ $target_lang ], $taxonomy );
+				if ( $existing && ! is_wp_error( $existing ) ) {
+					$cache[ $term->term_id ] = $translations[ $target_lang ];
+					AlvoBotPro::debug_log( 'multi-languages', "Termo '{$term->name}' já tem tradução (ID: {$translations[$target_lang]}) para {$target_lang}" );
+					return $translations[ $target_lang ];
+				}
+				// Tradução no Polylang aponta para termo deletado — recria
+				AlvoBotPro::debug_log( 'multi-languages', "Tradução stale para '{$term->name}' (ID: {$translations[$target_lang]}) — recriando" );
 			}
 		}
 
-		// Traduz o nome do termo
+		// Traduz o nome do termo via AI
 		$name_result = $this->translation_engine->translate_text( $term->name, $source_lang, $target_lang );
 		if ( ! $name_result['success'] || empty( $name_result['translated_text'] ) ) {
 			AlvoBotPro::debug_log( 'multi-languages', "Falha ao traduzir termo '{$term->name}' para {$target_lang}" );
 			return null;
 		}
 
-		$translated_name = $name_result['translated_text'];
+		// Limpa o nome traduzido (remove aspas, HTML entities, espaços extras)
+		$translated_name = trim( wp_strip_all_tags( html_entity_decode( $name_result['translated_text'], ENT_QUOTES, 'UTF-8' ) ) );
+		$translated_name = preg_replace( '/^["\']|["\']$/', '', $translated_name ); // Remove aspas envolventes
+		$translated_name = trim( $translated_name );
 
-		// Traduz o slug
+		if ( empty( $translated_name ) ) {
+			AlvoBotPro::debug_log( 'multi-languages', "Nome traduzido vazio após sanitização para termo '{$term->name}'" );
+			return null;
+		}
+
 		$translated_slug = sanitize_title( $translated_name );
 
 		// Resolve parent traduzido (se hierárquico)
 		$translated_parent = 0;
-		if ( $term->parent > 0 && isset( $cache[ $term->parent ] ) ) {
-			$translated_parent = $cache[ $term->parent ];
+		if ( $term->parent > 0 ) {
+			if ( isset( $cache[ $term->parent ] ) ) {
+				// Pai já foi processado neste batch
+				$translated_parent = $cache[ $term->parent ];
+			} elseif ( function_exists( 'pll_get_term_translations' ) ) {
+				// Pai não está no batch — verifica se já tem tradução no Polylang
+				$parent_translations = pll_get_term_translations( $term->parent );
+				if ( ! empty( $parent_translations[ $target_lang ] ) ) {
+					// Valida que o parent traduzido ainda existe
+					$parent_term = get_term( $parent_translations[ $target_lang ], $taxonomy );
+					if ( $parent_term && ! is_wp_error( $parent_term ) ) {
+						$translated_parent      = $parent_translations[ $target_lang ];
+						$cache[ $term->parent ] = $translated_parent;
+					}
+				}
+				// Se pai não tem tradução ou foi deletado, cria como root (melhor que falhar)
+			}
 		}
 
 		// Cria o termo traduzido
@@ -532,7 +566,7 @@ class AlvoBotPro_Translation_Service {
 			'parent' => $translated_parent,
 		);
 
-		// Traduz descrição se existir
+		// Traduz descrição se existir (custo extra de 1 crédito)
 		if ( ! empty( $term->description ) ) {
 			$desc_result = $this->translation_engine->translate_text( $term->description, $source_lang, $target_lang );
 			if ( $desc_result['success'] && ! empty( $desc_result['translated_text'] ) ) {
@@ -542,11 +576,24 @@ class AlvoBotPro_Translation_Service {
 
 		$result = wp_insert_term( $translated_name, $taxonomy, $insert_args );
 
-		// Se o termo já existe com esse nome, reutiliza
 		if ( is_wp_error( $result ) ) {
-			$existing_id = $result->get_error_data( 'term_exists' );
-			if ( $existing_id ) {
-				$new_term_id = intval( $existing_id );
+			// wp_insert_term pode retornar term_exists com term_id ou term_taxonomy_id
+			$existing_data = $result->get_error_data( 'term_exists' );
+			if ( $existing_data ) {
+				// Pode ser int (term_id) ou array em algumas versões do WP
+				if ( is_array( $existing_data ) && isset( $existing_data['term_id'] ) ) {
+					$new_term_id = intval( $existing_data['term_id'] );
+				} else {
+					$new_term_id = intval( $existing_data );
+				}
+
+				// Valida que o term_id é realmente válido
+				$existing_term = get_term( $new_term_id, $taxonomy );
+				if ( ! $existing_term || is_wp_error( $existing_term ) ) {
+					AlvoBotPro::debug_log( 'multi-languages', "term_exists retornou ID inválido ({$new_term_id}) para '{$translated_name}'" );
+					return null;
+				}
+
 				AlvoBotPro::debug_log( 'multi-languages', "Termo '{$translated_name}' já existe (ID: {$new_term_id}), reutilizando" );
 			} else {
 				AlvoBotPro::debug_log( 'multi-languages', "Erro ao criar termo '{$translated_name}': " . $result->get_error_message() );
@@ -563,7 +610,7 @@ class AlvoBotPro_Translation_Service {
 		}
 
 		if ( function_exists( 'pll_save_term_translations' ) ) {
-			$term_translations = pll_get_term_translations( $term->term_id );
+			$term_translations                 = pll_get_term_translations( $term->term_id );
 			$term_translations[ $target_lang ] = $new_term_id;
 			if ( ! isset( $term_translations[ $source_lang ] ) ) {
 				$term_translations[ $source_lang ] = $term->term_id;
@@ -576,9 +623,28 @@ class AlvoBotPro_Translation_Service {
 	}
 
 	/**
-	 * Traduz e atribui taxonomias (categorias/tags) ao post traduzido
+	 * Traduz e atribui taxonomias (categorias/tags) ao post traduzido.
+	 * Erros aqui NÃO devem impedir o sucesso da tradução do post.
 	 */
 	private function translate_and_assign_taxonomies( $source_post_id, $translated_post_id, $source_lang, $target_lang ) {
+		// Sem engine de tradução, não há como traduzir termos
+		if ( ! $this->translation_engine ) {
+			AlvoBotPro::debug_log( 'multi-languages', 'Translation engine não disponível para traduzir taxonomias' );
+			return;
+		}
+
+		try {
+			$this->do_translate_and_assign_taxonomies( $source_post_id, $translated_post_id, $source_lang, $target_lang );
+		} catch ( Exception $e ) {
+			// Taxonomias falharem NÃO deve impedir o sucesso do post traduzido
+			AlvoBotPro::debug_log( 'multi-languages', 'Erro ao traduzir taxonomias (post já foi criado): ' . $e->getMessage() );
+		}
+	}
+
+	/**
+	 * Implementação interna da tradução de taxonomias
+	 */
+	private function do_translate_and_assign_taxonomies( $source_post_id, $translated_post_id, $source_lang, $target_lang ) {
 		// Taxonomias internas do Polylang que devem ser ignoradas
 		$skip_taxonomies = array( 'language', 'post_translations', 'term_translations' );
 
@@ -625,7 +691,7 @@ class AlvoBotPro_Translation_Service {
 			// Atribui termos traduzidos ao post traduzido
 			if ( ! empty( $translated_term_ids ) ) {
 				wp_set_post_terms( $translated_post_id, $translated_term_ids, $taxonomy );
-				AlvoBotPro::debug_log( 'multi-languages', "Atribuídos " . count( $translated_term_ids ) . " termos de '{$taxonomy}' ao post {$translated_post_id}" );
+				AlvoBotPro::debug_log( 'multi-languages', 'Atribuídos ' . count( $translated_term_ids ) . " termos de '{$taxonomy}' ao post {$translated_post_id}" );
 			}
 		}
 	}

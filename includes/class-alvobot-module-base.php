@@ -161,11 +161,12 @@ abstract class AlvoBotPro_Module_Base {
 	 */
 	public function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
 		}
 
 		// Processa formulário se enviado
-		if ( isset( $_POST['submit'] ) && wp_verify_nonce( $_POST['_wpnonce'], $this->module_id . '_settings' ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by wp_verify_nonce in same condition.
+		if ( isset( $_POST['submit'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), $this->module_id . '_settings' ) ) {
 			$this->process_settings_form();
 		}
 
@@ -176,7 +177,7 @@ abstract class AlvoBotPro_Module_Base {
 	 * Processa o formulário de configurações
 	 */
 	protected function process_settings_form() {
-		$settings = $_POST;
+		$settings = $_POST; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in render_settings_page before calling this method.
 		unset( $settings['submit'], $settings['_wpnonce'], $settings['_wp_http_referer'] );
 
 		if ( $this->save_settings( $settings ) ) {
@@ -339,6 +340,7 @@ abstract class AlvoBotPro_Module_Base {
 			$args['required'] ? 'required' : ''
 		);
 
+		// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- $common_attrs is built entirely from esc_attr() calls above.
 		switch ( $args['type'] ) {
 			case 'textarea':
 				printf(
@@ -395,6 +397,7 @@ abstract class AlvoBotPro_Module_Base {
 				);
 				break;
 		}
+		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**

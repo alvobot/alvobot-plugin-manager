@@ -25,7 +25,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 	 * Get application data for admin interface
 	 */
 	public static function get_app_data() {
-		if ( empty( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'alvobot-temporary-login-admin-' . get_current_user_id() ) ) {
+		if ( empty( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot-temporary-login-admin-' . get_current_user_id() ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This IS the nonce verification.
 			wp_send_json_error( 'Unauthorized', 401 );
 		}
 
@@ -84,7 +84,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 	 * @param array $post_data POST data array
 	 */
 	private static function verify_request( $post_data ) {
-		if ( empty( $post_data['nonce'] ) || ! wp_verify_nonce( $post_data['nonce'], 'alvobot-temporary-login-admin-' . get_current_user_id() ) ) {
+		if ( empty( $post_data['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $post_data['nonce'] ) ), 'alvobot-temporary-login-admin-' . get_current_user_id() ) ) {
 			wp_send_json_error( 'Unauthorized', 401 );
 		}
 
@@ -97,7 +97,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 	 * Create a temporary user
 	 */
 	public static function enable_access() {
-		self::verify_request( $_POST );
+		self::verify_request( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified inside verify_request.
 
 		if ( AlvoBotPro_TemporaryLogin_Options::has_temporary_user() ) {
 			// Temporary user already exists
@@ -109,6 +109,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 			wp_send_json_error( $user_ID );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in verify_request above.
 		if ( ! empty( $_POST['is_keep_user_posts'] ) && 'true' === $_POST['is_keep_user_posts'] ) {
 			AlvoBotPro_TemporaryLogin_Options::set_created_by_user_id( $user_ID );
 		}
@@ -120,7 +121,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 	 * Revoke access for all temporary users
 	 */
 	public static function revoke_access() {
-		self::verify_request( $_POST );
+		self::verify_request( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified inside verify_request.
 
 		AlvoBotPro_TemporaryLogin_Options::remove_all_temporary_users();
 
@@ -131,7 +132,7 @@ class AlvoBotPro_TemporaryLogin_Ajax {
 	 * Extend access for a temporary user
 	 */
 	public static function extend_access() {
-		self::verify_request( $_POST );
+		self::verify_request( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified inside verify_request.
 
 		$temporary_users = AlvoBotPro_TemporaryLogin_Options::get_temporary_users();
 		if ( empty( $temporary_users ) ) {

@@ -7,13 +7,8 @@ class AlvoBotPro_Ajax {
 	 * Inicializa os hooks AJAX
 	 */
 	public function __construct() {
-		// Handlers para usuários logados
 		add_action( 'wp_ajax_alvobot_pro_toggle_module', array( $this, 'toggle_module' ) );
-		add_action( 'wp_ajax_grp_register_site', array( $this, 'register_site' ) );
-		add_action( 'wp_ajax_grp_retry_registration', array( $this, 'retry_registration' ) );
-		add_action( 'wp_ajax_grp_save_settings', array( $this, 'save_settings' ) );
-		add_action( 'wp_ajax_grp_reset_plugin', array( $this, 'reset_plugin' ) );
-		add_action( 'wp_ajax_grp_get_activity_log', array( $this, 'get_activity_log' ) );
+		add_action( 'wp_ajax_alvobot_retry_registration', array( $this, 'retry_registration' ) );
 	}
 
 	/**
@@ -28,8 +23,8 @@ class AlvoBotPro_Ajax {
 			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
 		}
 
-		$module  = isset( $_POST['module'] ) ? sanitize_text_field( $_POST['module'] ) : '';
-		$enabled = isset( $_POST['enabled'] ) ? filter_var( $_POST['enabled'], FILTER_VALIDATE_BOOLEAN ) : false;
+		$module  = isset( $_POST['module'] ) ? sanitize_text_field( wp_unslash( $_POST['module'] ) ) : '';
+		$enabled = isset( $_POST['enabled'] ) ? filter_var( wp_unslash( $_POST['enabled'] ), FILTER_VALIDATE_BOOLEAN ) : false;
 
 		if ( empty( $module ) ) {
 			wp_send_json_error( array( 'message' => 'Módulo não especificado' ) );
@@ -97,33 +92,6 @@ class AlvoBotPro_Ajax {
 	}
 
 	/**
-	 * Registra o site no AlvoBot
-	 */
-	public function register_site() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
-		}
-
-		if ( ! check_ajax_referer( 'grp_register_nonce', 'nonce', false ) ) {
-			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
-		}
-
-		$app_password = isset( $_POST['app_password'] ) ? sanitize_text_field( $_POST['app_password'] ) : '';
-		if ( empty( $app_password ) ) {
-			wp_send_json_error( array( 'message' => 'Senha do aplicativo não fornecida' ) );
-		}
-
-		$plugin_manager = new AlvoBotPro_PluginManager();
-		$result         = $plugin_manager->register_site( $app_password );
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-		}
-
-		wp_send_json_success( array( 'message' => 'Site registrado com sucesso' ) );
-	}
-
-	/**
 	 * Refaz o registro do site no AlvoBot
 	 */
 	public function retry_registration() {
@@ -131,7 +99,7 @@ class AlvoBotPro_Ajax {
 			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
 		}
 
-		if ( ! check_ajax_referer( 'retry_registration_nonce', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'alvobot_retry_registration', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
 		}
 
@@ -159,82 +127,43 @@ class AlvoBotPro_Ajax {
 
 		if ( $result ) {
 			AlvoBotPro::debug_log( 'core', '[AJAX] Refazer registro: SUCESSO' );
+
+			// Atualiza o status de conexão para 'connected'
+			update_option(
+				'alvobot_connection_status',
+				array(
+					'status'    => 'connected',
+					'timestamp' => time(),
+					'message'   => 'Conexão estabelecida com sucesso',
+				)
+			);
+
 			wp_send_json_success( array( 'message' => 'Registro refeito com sucesso!' ) );
 		} else {
 			AlvoBotPro::debug_log( 'core', '[AJAX] Refazer registro: ERRO no servidor' );
-			wp_send_json_error( array( 'message' => 'Erro ao refazer o registro. Verifique os logs para mais detalhes.' ) );
+
+			// Se register_site falhou mas não salvou status (ex: WP_Error de rede),
+			// garante que o status de erro seja registrado
+			$current_status = get_option( 'alvobot_connection_status' );
+			if ( ! $current_status || ! is_array( $current_status ) || $current_status['status'] !== 'error' ) {
+				update_option(
+					'alvobot_connection_status',
+					array(
+						'status'     => 'error',
+						'error_type' => 'registration_failed',
+						'timestamp'  => time(),
+						'message'    => 'Falha ao conectar com o servidor central. Verifique sua conexão com a internet.',
+					)
+				);
+			}
+
+			$error_msg = 'Erro ao refazer o registro.';
+			$status    = get_option( 'alvobot_connection_status' );
+			if ( is_array( $status ) && ! empty( $status['message'] ) ) {
+				$error_msg .= ' ' . $status['message'];
+			}
+
+			wp_send_json_error( array( 'message' => $error_msg ) );
 		}
-	}
-
-	/**
-	 * Salva as configurações do plugin
-	 */
-	public function save_settings() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
-		}
-
-		if ( ! check_ajax_referer( 'grp_settings_nonce', 'nonce', false ) ) {
-			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
-		}
-
-		$settings = isset( $_POST['settings'] ) ? $_POST['settings'] : array();
-		if ( empty( $settings ) ) {
-			wp_send_json_error( array( 'message' => 'Nenhuma configuração fornecida' ) );
-		}
-
-		parse_str( $settings, $parsed_settings );
-		$sanitized_settings = array(
-			'auto_update'   => isset( $parsed_settings['grp_settings']['auto_update'] ),
-			'allow_install' => isset( $parsed_settings['grp_settings']['allow_install'] ),
-			'allow_delete'  => isset( $parsed_settings['grp_settings']['allow_delete'] ),
-		);
-
-		update_option( 'grp_settings', $sanitized_settings );
-		wp_send_json_success( array( 'message' => 'Configurações salvas com sucesso' ) );
-	}
-
-	/**
-	 * Reseta o plugin para as configurações padrão
-	 */
-	public function reset_plugin() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
-		}
-
-		if ( ! check_ajax_referer( 'grp_reset_nonce', 'nonce', false ) ) {
-			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
-		}
-
-		// Remove todas as opções do plugin
-		delete_option( 'grp_site_token' );
-		delete_option( 'grp_registration_status' );
-		delete_option( 'grp_settings' );
-		delete_option( 'grp_activity_log' );
-
-		// Remove o usuário alvobot se existir
-		$user = get_user_by( 'login', 'alvobot' );
-		if ( $user ) {
-			require_once ABSPATH . 'wp-admin/includes/user.php';
-			wp_delete_user( $user->ID );
-		}
-
-		wp_send_json_success( array( 'message' => 'Plugin resetado com sucesso' ) );
-	}
-
-	/**
-	 * Retorna o log de atividades
-	 */
-	public function get_activity_log() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
-		}
-
-		if ( ! check_ajax_referer( 'grp_log_nonce', 'nonce', false ) ) {
-			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
-		}
-
-		$log = get_option( 'grp_activity_log', array() );
-		wp_send_json_success( array( 'log' => $log ) );
 	}
 }

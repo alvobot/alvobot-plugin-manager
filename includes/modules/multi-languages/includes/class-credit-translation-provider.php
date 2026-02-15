@@ -123,7 +123,7 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 				'target_language' => $target_lang,
 				'provider'        => 'credits',
 				'usage'           => array(
-					'credits_consumed' => isset( $result['credits']['consumed'] ) ? $result['credits']['consumed'] : 1,
+					'credits_consumed'  => isset( $result['credits']['consumed'] ) ? $result['credits']['consumed'] : 1,
 					'credits_remaining' => isset( $result['credits']['remaining'] ) ? $result['credits']['remaining'] : 0,
 				),
 			);
@@ -137,7 +137,7 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 	 * Verifica se o provider esta configurado (site registrado no AlvoBot)
 	 */
 	public function is_configured() {
-		return ! empty( get_option( 'grp_site_token' ) );
+		return ! empty( get_option( 'alvobot_site_token' ) );
 	}
 
 	/**
@@ -182,9 +182,9 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 
 		$credits = $this->ai_api->get_credits();
 		if ( ! empty( $credits ) && ! isset( $credits['error'] ) ) {
-			$stats['credits_available']  = isset( $credits['total_available'] ) ? $credits['total_available'] : 0;
-			$stats['monthly_limit']      = isset( $credits['monthly_limit'] ) ? $credits['monthly_limit'] : 0;
-			$stats['has_active_plan']    = ! empty( $credits['has_active_plan'] );
+			$stats['credits_available'] = isset( $credits['total_available'] ) ? $credits['total_available'] : 0;
+			$stats['monthly_limit']     = isset( $credits['monthly_limit'] ) ? $credits['monthly_limit'] : 0;
+			$stats['has_active_plan']   = ! empty( $credits['has_active_plan'] );
 		}
 
 		return $stats;
@@ -221,7 +221,7 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 	public function validate_settings( $settings ) {
 		$errors = array();
 
-		if ( empty( get_option( 'grp_site_token' ) ) ) {
+		if ( empty( get_option( 'alvobot_site_token' ) ) ) {
 			$errors[] = 'Site nao esta registrado no AlvoBot';
 		}
 

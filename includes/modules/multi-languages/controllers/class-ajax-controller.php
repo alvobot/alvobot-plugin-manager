@@ -49,7 +49,7 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 
 		// Validar parâmetros obrigatórios
 		foreach ( $required_params as $param => $validation ) {
-			$value = $_POST[ $param ] ?? null;
+			$value = isset( $_POST[ $param ] ) ? wp_unslash( $_POST[ $param ] ) : null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per type below.
 
 			// Verificar se parâmetro existe
 			if ( $value === null || $value === '' ) {
@@ -85,7 +85,7 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 		}
 
 		// Capturar parâmetros opcionais
-		$optional_params = $_POST['options'] ?? [];
+		$optional_params = isset( $_POST['options'] ) ? wp_unslash( $_POST['options'] ) : []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized below.
 		if ( is_array( $optional_params ) ) {
 			$validated_data['options'] = array_map( 'sanitize_text_field', $optional_params );
 		} else {
@@ -122,7 +122,8 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 	 * Handler para download de logs (não é AJAX)
 	 */
 	public function handle_download_logs() {
-		if ( ! isset( $_GET['action'] ) || $_GET['action'] !== 'alvobot_download_queue_item_logs' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Action detection only, nonce verified in download_queue_item_logs.
+		if ( ! isset( $_GET['action'] ) || sanitize_text_field( wp_unslash( $_GET['action'] ) ) !== 'alvobot_download_queue_item_logs' ) {
 			return;
 		}
 
@@ -353,7 +354,7 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 	 * Valida nonce para AJAX
 	 */
 	private function validate_nonce( $action = 'alvobot_nonce' ) {
-		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', $action ) ) {
+		if ( ! wp_verify_nonce( isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '', $action ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This IS the nonce verification.
 			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
 		}
 	}
@@ -427,7 +428,7 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 
 			update_option( 'alvobot_openai_usage_stats', $stats );
 
-			AlvoBotPro::debug_log( 'multi-languages', 'Estatísticas de uso resetadas. Valores anteriores: ' . json_encode( $old_stats ) );
+			AlvoBotPro::debug_log( 'multi-languages', 'Estatísticas de uso resetadas. Valores anteriores: ' . wp_json_encode( $old_stats ) );
 
 			wp_send_json_success(
 				array(

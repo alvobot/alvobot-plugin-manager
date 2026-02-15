@@ -52,26 +52,26 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 	protected function render_settings_sections( $settings ) {
 		?>
 		<div class="alvobot-form-section">
-			<h3 class="alvobot-section-title"><?php _e( 'Status dos Logins Temporários', 'alvobot-pro' ); ?></h3>
+			<h3 class="alvobot-section-title"><?php esc_html_e( 'Status dos Logins Temporários', 'alvobot-pro' ); ?></h3>
 			<div id="temporary-login-status">
 				<div class="alvobot-loading">
 					<i data-lucide="refresh-cw" class="alvobot-icon"></i>
-					<?php _e( 'Carregando status...', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Carregando status...', 'alvobot-pro' ); ?>
 				</div>
 			</div>
 		</div>
 
 		<div class="alvobot-form-section">
-			<h3 class="alvobot-section-title"><?php _e( 'Criar Novo Login Temporário', 'alvobot-pro' ); ?></h3>
+			<h3 class="alvobot-section-title"><?php esc_html_e( 'Criar Novo Login Temporário', 'alvobot-pro' ); ?></h3>
 			<p class="alvobot-description">
-				<?php _e( 'Gere um link de acesso temporário para permitir que outras pessoas acessem o painel administrativo por tempo limitado.', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Gere um link de acesso temporário para permitir que outras pessoas acessem o painel administrativo por tempo limitado.', 'alvobot-pro' ); ?>
 			</p>
 			
 			<div class="alvobot-temp-login-creator">
 				<div class="alvobot-temp-login-action">
 					<button type="button" id="create-temp-login" class="alvobot-btn alvobot-btn-primary alvobot-btn-lg">
 						<i data-lucide="plus" class="alvobot-icon"></i>
-						<?php _e( 'Criar Login Temporário', 'alvobot-pro' ); ?>
+						<?php esc_html_e( 'Criar Login Temporário', 'alvobot-pro' ); ?>
 					</button>
 				</div>
 			</div>
@@ -82,33 +82,35 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 	}
 
 	public function handle_temporary_login() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Token-based authentication, not a form submission.
 		if ( ! isset( $_GET['temp-login-token'] ) || ! isset( $_GET['tl-site'] ) ) {
 			return;
 		}
 
-		$token      = sanitize_text_field( $_GET['temp-login-token'] );
-		$site_token = sanitize_text_field( $_GET['tl-site'] );
+		$token      = sanitize_text_field( wp_unslash( $_GET['temp-login-token'] ) );
+		$site_token = sanitize_text_field( wp_unslash( $_GET['tl-site'] ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		// Verifica se o site token é válido
-		$stored_token = get_option( 'grp_site_token' );
+		$stored_token = get_option( 'alvobot_site_token' );
 		if ( $site_token !== $stored_token ) {
-			wp_die( __( 'Token do site inválido.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Token do site inválido.', 'alvobot-pro' ) );
 		}
 
 		// Verifica se o token de login é válido
 		if ( ! get_transient( 'alvobot_temp_login_token_' . $token ) ) {
-			wp_die( __( 'Token de login inválido ou expirado.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Token de login inválido ou expirado.', 'alvobot-pro' ) );
 		}
 
 		// Verifica se o login temporário está ativo
 		if ( ! $this->is_temp_login_active() ) {
-			wp_die( __( 'Este link de login expirou.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Este link de login expirou.', 'alvobot-pro' ) );
 		}
 
 		// Obtém o usuário temporário
 		$user = get_user_by( 'login', 'alvobot_temp' );
 		if ( ! $user ) {
-			wp_die( __( 'Usuário temporário não encontrado.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Usuário temporário não encontrado.', 'alvobot-pro' ) );
 		}
 
 		// Remove o token (uso único)
@@ -119,7 +121,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 		wp_set_auth_cookie( $user->ID, true );
 
 		// Redireciona para o admin
-		wp_redirect( admin_url() );
+		wp_safe_redirect( admin_url() );
 		exit;
 	}
 
@@ -243,7 +245,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 	 */
 	private function generate_temp_login_url() {
 		$token      = wp_generate_password( 32, false );
-		$site_token = get_option( 'grp_site_token' );
+		$site_token = get_option( 'alvobot_site_token' );
 
 		// Salva o token temporariamente (30 minutos)
 		set_transient( 'alvobot_temp_login_token_' . $token, true, 30 * MINUTE_IN_SECONDS );
@@ -340,7 +342,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 		}
 
 		// Verifica se o token é válido consultando a opção do WordPress
-		$stored_token = get_option( 'grp_site_token' );
+		$stored_token = get_option( 'alvobot_site_token' );
 
 		if ( ! $stored_token || $token !== $stored_token ) {
 			return new WP_Error(

@@ -22,17 +22,18 @@ class AlvoBotPro_PluginManager {
 		add_action( 'admin_notices', array( $this, 'show_connection_warnings' ) );
 		add_action( 'admin_init', array( $this, 'handle_retry_connection' ) );
 		add_action( 'admin_init', array( $this, 'auto_deactivate_blocked_plugins' ), 1 );
-		$this->init();
+		// Defer init to plugins_loaded so wp_generate_password() is available
+		add_action( 'plugins_loaded', array( $this, 'init' ) );
 	}
 
 	public function init() {
 		// Generate site token if not exists
-		if ( ! get_option( 'grp_site_token' ) ) {
+		if ( ! get_option( 'alvobot_site_token' ) ) {
 			$token = wp_generate_password( 32, false );
-			update_option( 'grp_site_token', $token );
+			update_option( 'alvobot_site_token', $token );
 			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site gerado: ' . substr( $token, 0, 8 ) . '...' );
 		} else {
-			$existing_token = get_option( 'grp_site_token' );
+			$existing_token = get_option( 'alvobot_site_token' );
 			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site já existe: ' . substr( $existing_token, 0, 8 ) . '...' );
 		}
 
@@ -70,7 +71,7 @@ class AlvoBotPro_PluginManager {
 			$extra_info  .= '<li>Desative temporariamente plugins de segurança e tente novamente</li>';
 			$extra_info  .= '<li>Verifique se seu site está usando HTTPS (Application Passwords requerem SSL)</li>';
 			$extra_info  .= '</ul>';
-			$retry_button = '<p><a href="' . admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ) . '" class="button button-primary">Tentar Novamente</a></p>';
+			$retry_button = '<p><a href="' . wp_nonce_url( admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ), 'alvobot_retry_connection' ) . '" class="button button-primary">Tentar Novamente</a></p>';
 		} elseif ( $error_type === 'registration_failed' ) {
 			$http_status = isset( $status['http_status'] ) ? $status['http_status'] : null;
 
@@ -98,14 +99,14 @@ class AlvoBotPro_PluginManager {
 			}
 
 			$extra_info  .= '</ul>';
-			$retry_button = '<p><a href="' . admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ) . '" class="button button-primary">Tentar Novamente</a></p>';
+			$retry_button = '<p><a href="' . wp_nonce_url( admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ), 'alvobot_retry_connection' ) . '" class="button button-primary">Tentar Novamente</a></p>';
 		} elseif ( $error_type === 'user_creation_failed' ) {
 			$extra_info   = '<p><strong>O que fazer:</strong></p>';
 			$extra_info  .= '<ul style="margin-left: 20px;">';
 			$extra_info  .= '<li>Verifique se há conflitos com outros plugins</li>';
 			$extra_info  .= '<li>Verifique as permissões do banco de dados</li>';
 			$extra_info  .= '</ul>';
-			$retry_button = '<p><a href="' . admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ) . '" class="button button-primary">Tentar Novamente</a></p>';
+			$retry_button = '<p><a href="' . wp_nonce_url( admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ), 'alvobot_retry_connection' ) . '" class="button button-primary">Tentar Novamente</a></p>';
 		}
 
 		// Exibe o aviso com estilo de erro
@@ -113,16 +114,16 @@ class AlvoBotPro_PluginManager {
 		<div class="notice notice-error is-dismissible" style="border-left-color: #dc3232;">
 			<h3 style="margin-top: 10px;"><i data-lucide="alert-triangle" class="alvobot-icon" style="width:18px;height:18px;vertical-align:middle;margin-right:4px;color:#dc3232;"></i> AlvoBot Pro - Falha na Conexão</h3>
 			<p><strong><?php echo esc_html( $message ); ?></strong></p>
-			<?php echo $extra_info; ?>
-			<?php echo $retry_button; ?>
-			<p style="margin-bottom: 10px;"><small>Erro detectado em: <?php echo date( 'd/m/Y H:i:s', $status['timestamp'] ); ?></small></p>
+			<?php echo wp_kses_post( $extra_info ); ?>
+			<?php echo wp_kses_post( $retry_button ); ?>
+			<p style="margin-bottom: 10px;"><small>Erro detectado em: <?php echo esc_html( date( 'd/m/Y H:i:s', $status['timestamp'] ) ); ?></small></p>
 		</div>
 		<?php
 	}
 
 	public function handle_retry_connection() {
 		// Verifica se foi solicitado retry
-		if ( ! isset( $_GET['retry_connection'] ) || $_GET['retry_connection'] != '1' ) {
+		if ( ! isset( $_GET['retry_connection'] ) || sanitize_text_field( wp_unslash( $_GET['retry_connection'] ) ) != '1' ) {
 			return;
 		}
 
@@ -131,12 +132,17 @@ class AlvoBotPro_PluginManager {
 			return;
 		}
 
+		// Verifica nonce para proteção CSRF
+		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'alvobot_retry_connection' ) ) {
+			return;
+		}
+
 		// Executa o activate novamente
 		AlvoBotPro::debug_log( 'plugin-manager', 'Tentativa manual de reconexão iniciada' );
 		$this->activate();
 
 		// Redireciona para limpar a URL
-		wp_redirect( admin_url( 'admin.php?page=alvobot-pro' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=alvobot-pro' ) );
 		exit;
 	}
 
@@ -247,12 +253,12 @@ class AlvoBotPro_PluginManager {
 
 	public function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'alvobot-pro' ) );
 		}
 
 		// Get current status
 		$alvobot_user      = get_user_by( 'login', 'alvobot' );
-		$site_token        = get_option( 'grp_site_token' );
+		$site_token        = get_option( 'alvobot_site_token' );
 		$connection_status = get_option( 'alvobot_connection_status' );
 
 		// Check if Application Password exists
@@ -269,11 +275,12 @@ class AlvoBotPro_PluginManager {
 
 		// Check if we need to trigger activation manually
 		if ( isset( $_POST['action'] ) ) {
-			if ( $_POST['action'] === 'activate_plugin_manager' ) {
+			$pm_post_action = sanitize_text_field( wp_unslash( $_POST['action'] ) );
+			if ( $pm_post_action === 'activate_plugin_manager' ) {
 				check_admin_referer( 'activate_plugin_manager' );
 				$this->activate();
-			} elseif ( $_POST['action'] === 'retry_registration' ) {
-				check_admin_referer( 'retry_registration' );
+			} elseif ( $pm_post_action === 'retry_registration' ) {
+				check_admin_referer( 'alvobot_retry_registration', 'alvobot_retry_registration_nonce' );
 				AlvoBotPro::debug_log( 'plugin-manager', ' Iniciando processo de refazer registro' );
 
 				// Gerar nova senha de aplicativo e registrar novamente
@@ -288,7 +295,7 @@ class AlvoBotPro_PluginManager {
 							add_action(
 								'admin_notices',
 								function () {
-									echo '<div class="notice notice-success"><p>Registro refeito com sucesso!</p></div>';
+									echo '<div class="notice notice-success"><p>' . esc_html__( 'Registro refeito com sucesso!', 'alvobot-pro' ) . '</p></div>';
 								}
 							);
 						} else {
@@ -296,7 +303,7 @@ class AlvoBotPro_PluginManager {
 							add_action(
 								'admin_notices',
 								function () {
-									echo '<div class="notice notice-error"><p>Erro ao refazer o registro. Verifique os logs para mais detalhes.</p></div>';
+									echo '<div class="notice notice-error"><p>' . esc_html__( 'Erro ao refazer o registro. Verifique os logs para mais detalhes.', 'alvobot-pro' ) . '</p></div>';
 								}
 							);
 						}
@@ -305,7 +312,7 @@ class AlvoBotPro_PluginManager {
 						add_action(
 							'admin_notices',
 							function () {
-								echo '<div class="notice notice-error"><p>Erro ao gerar nova senha de aplicativo.</p></div>';
+								echo '<div class="notice notice-error"><p>' . esc_html__( 'Erro ao gerar nova senha de aplicativo.', 'alvobot-pro' ) . '</p></div>';
 							}
 						);
 					}
@@ -314,7 +321,7 @@ class AlvoBotPro_PluginManager {
 					add_action(
 						'admin_notices',
 						function () {
-							echo '<div class="notice notice-error"><p>Usuário alvobot não encontrado. Execute a inicialização primeiro.</p></div>';
+							echo '<div class="notice notice-error"><p>' . esc_html__( 'Usuário alvobot não encontrado. Execute a inicialização primeiro.', 'alvobot-pro' ) . '</p></div>';
 						}
 					);
 				}
@@ -322,7 +329,7 @@ class AlvoBotPro_PluginManager {
 
 			// Refresh status after any action
 			$alvobot_user      = get_user_by( 'login', 'alvobot' );
-			$site_token        = get_option( 'grp_site_token' );
+			$site_token        = get_option( 'alvobot_site_token' );
 			$connection_status = get_option( 'alvobot_connection_status' );
 
 			// Recalculate Application Password status
@@ -417,12 +424,12 @@ class AlvoBotPro_PluginManager {
 	public function register_site( $app_password = null ) {
 		AlvoBotPro::debug_log( 'plugin-manager', ' Iniciando registro do site no servidor central' );
 
-		if ( ! defined( 'GRP_SERVER_URL' ) ) {
-			AlvoBotPro::debug_log( 'plugin-manager', ' ERRO: GRP_SERVER_URL não está definida' );
+		if ( ! defined( 'ALVOBOT_SERVER_URL' ) ) {
+			AlvoBotPro::debug_log( 'plugin-manager', ' ERRO: ALVOBOT_SERVER_URL não está definida' );
 			return false;
 		}
 
-		AlvoBotPro::debug_log( 'plugin-manager', ' GRP_SERVER_URL definida: ' . GRP_SERVER_URL );
+		AlvoBotPro::debug_log( 'plugin-manager', ' ALVOBOT_SERVER_URL definida: ' . ALVOBOT_SERVER_URL );
 
 		// Carrega as funções necessárias do WordPress
 		if ( ! function_exists( 'get_plugins' ) ) {
@@ -432,7 +439,7 @@ class AlvoBotPro_PluginManager {
 		$plugins        = get_plugins();
 		$active_plugins = get_option( 'active_plugins', array() );
 
-		$site_token = get_option( 'grp_site_token' );
+		$site_token = get_option( 'alvobot_site_token' );
 		$data       = array(
 			'action'     => 'register_site',
 			'site_url'   => get_site_url(),
@@ -453,8 +460,8 @@ class AlvoBotPro_PluginManager {
 			AlvoBotPro::debug_log( 'plugin-manager', ' Senha de aplicativo incluída nos dados' );
 		}
 
-		AlvoBotPro::debug_log( 'plugin-manager', ' Dados a serem enviados: ' . print_r( $data, true ) );
-		AlvoBotPro::debug_log( 'plugin-manager', ' URL do servidor: ' . GRP_SERVER_URL );
+		AlvoBotPro::debug_log( 'plugin-manager', ' Dados a serem enviados: ' . wp_json_encode( $this->sanitize_log_data( $data ) ) );
+		AlvoBotPro::debug_log( 'plugin-manager', ' URL do servidor: ' . ALVOBOT_SERVER_URL );
 
 		$args = array(
 			'body'      => wp_json_encode( $data ),
@@ -466,11 +473,22 @@ class AlvoBotPro_PluginManager {
 		);
 
 		AlvoBotPro::debug_log( 'plugin-manager', ' Enviando requisição POST para o servidor' );
-		$response = wp_remote_post( GRP_SERVER_URL, $args );
+		$response = wp_remote_post( ALVOBOT_SERVER_URL, $args );
 
 		if ( is_wp_error( $response ) ) {
 			AlvoBotPro::debug_log( 'plugin-manager', ' ERRO ao registrar site: ' . $response->get_error_message() );
 			AlvoBotPro::debug_log( 'plugin-manager', ' Código do erro: ' . $response->get_error_code() );
+
+			update_option(
+				'alvobot_connection_status',
+				array(
+					'status'     => 'error',
+					'error_type' => 'registration_failed',
+					'timestamp'  => time(),
+					'message'    => 'Erro de conexão: ' . $response->get_error_message(),
+				)
+			);
+
 			return false;
 		}
 
@@ -480,8 +498,8 @@ class AlvoBotPro_PluginManager {
 
 		AlvoBotPro::debug_log( 'plugin-manager', ' Resposta do servidor:' );
 		AlvoBotPro::debug_log( 'plugin-manager', ' - Status: ' . $status_code );
-		AlvoBotPro::debug_log( 'plugin-manager', ' - Headers: ' . print_r( $headers, true ) );
-		AlvoBotPro::debug_log( 'plugin-manager', ' - Body: ' . $body );
+		AlvoBotPro::debug_log( 'plugin-manager', ' - Headers: ' . wp_json_encode( $this->sanitize_log_data( (array) $headers ) ) );
+		AlvoBotPro::debug_log( 'plugin-manager', ' - Body: ' . $this->truncate_log_string( $body, 800 ) );
 
 		// Decodifica a resposta para obter detalhes do erro
 		$json_response = null;
@@ -490,7 +508,7 @@ class AlvoBotPro_PluginManager {
 			if ( json_last_error() !== JSON_ERROR_NONE ) {
 				AlvoBotPro::debug_log( 'plugin-manager', ' AVISO: Resposta não é um JSON válido: ' . json_last_error_msg() );
 			} else {
-				AlvoBotPro::debug_log( 'plugin-manager', ' Resposta decodificada: ' . print_r( $json_response, true ) );
+				AlvoBotPro::debug_log( 'plugin-manager', ' Resposta decodificada: ' . wp_json_encode( $this->sanitize_log_data( $json_response ) ) );
 			}
 		} catch ( Exception $e ) {
 			AlvoBotPro::debug_log( 'plugin-manager', ' AVISO ao decodificar resposta: ' . $e->getMessage() );
@@ -574,16 +592,15 @@ class AlvoBotPro_PluginManager {
 		$params       = $request->get_json_params();
 		$body_token   = isset( $params['token'] ) ? sanitize_text_field( $params['token'] ) : '';
 
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Token verification - Header Token: ' . ( $header_token ? 'Present' : 'Missing' ) );
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Token verification - Body Token: ' . ( $body_token ? 'Present' : 'Missing' ) );
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Token verification - Stored Token: ' . ( get_option( 'grp_site_token' ) ? 'Present' : 'Missing' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Token verification - Header Token: ' . ( $header_token ? 'Present' : 'Missing' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Token verification - Body Token: ' . ( $body_token ? 'Present' : 'Missing' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Token verification - Stored Token: ' . ( get_option( 'alvobot_site_token' ) ? 'Present' : 'Missing' ) );
 
 		// Aceita o token tanto no header quanto no body
 		$token = ! empty( $header_token ) ? $header_token : $body_token;
 
-		if ( empty( $token ) || $token !== get_option( 'grp_site_token' ) ) {
-			AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Token verification failed - Token: ' . $token );
-			AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Token verification failed - Stored Token: ' . get_option( 'grp_site_token' ) );
+		if ( empty( $token ) || $token !== get_option( 'alvobot_site_token' ) ) {
+			AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Token verification failed' );
 			return new WP_Error( 'unauthorized', 'Token inválido', array( 'status' => 401 ) );
 		}
 		return true;
@@ -595,7 +612,7 @@ class AlvoBotPro_PluginManager {
 	 * @return true|WP_Error
 	 */
 	private function check_rate_limit() {
-		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 		$key = 'alvobot_rl_' . md5( $ip );
 
 		$data = get_transient( $key );
@@ -649,16 +666,16 @@ class AlvoBotPro_PluginManager {
 			);
 		}
 
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Starting command execution at ' . date( 'Y-m-d H:i:s' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Starting command execution at ' . date( 'Y-m-d H:i:s' ) );
 
 		$params = $request->get_json_params();
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Received parameters: ' . print_r( $params, true ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Received parameters: ' . wp_json_encode( $this->sanitize_log_data( $params ) ) );
 
 		$command = isset( $params['command'] ) ? sanitize_text_field( $params['command'] ) : '';
-		AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Command received: ' . $command );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Command received: ' . $command );
 
 		if ( empty( $command ) ) {
-			AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Error: No command provided' );
+			AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Error: No command provided' );
 			return new WP_Error( 'missing_command', 'Comando não fornecido.' );
 		}
 
@@ -668,41 +685,41 @@ class AlvoBotPro_PluginManager {
 				$plugin_slug = isset( $params['plugin_slug'] ) ? sanitize_text_field( $params['plugin_slug'] ) : '';
 				$plugin_url  = isset( $params['plugin_url'] ) ? esc_url_raw( $params['plugin_url'] ) : '';
 
-				AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Install request - Slug: ' . $plugin_slug . ', URL: ' . $plugin_url );
+				AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Install request - Slug: ' . $plugin_slug . ', URL: ' . $this->sanitize_log_url( $plugin_url ) );
 
 				// Carrega as funções necessárias
 				if ( ! function_exists( 'show_message' ) ) {
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Loading WordPress admin functions' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Loading WordPress admin functions' );
 					require_once ABSPATH . 'wp-admin/includes/admin.php';
 				}
 
 				if ( ! function_exists( 'plugins_api' ) ) {
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Loading plugins API' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Loading plugins API' );
 					require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 				}
 
 				if ( ! class_exists( 'Plugin_Upgrader' ) ) {
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Loading upgrader classes' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Loading upgrader classes' );
 					require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 				}
 
 				if ( ! function_exists( 'get_plugins' ) ) {
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Loading plugin functions' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Loading plugin functions' );
 					require_once ABSPATH . 'wp-admin/includes/plugin.php';
 				}
 
 				if ( ! empty( $plugin_slug ) ) {
 					// Instalação a partir do repositório WordPress
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Installing from WordPress repository: ' . $plugin_slug );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Installing from WordPress repository: ' . $plugin_slug );
 
 					// Check if plugin is already installed
 					$existing_plugin_file = $this->find_plugin_file_by_slug( $plugin_slug );
 					if ( $existing_plugin_file ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Plugin already installed: ' . $existing_plugin_file );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Plugin already installed: ' . $existing_plugin_file );
 
 						// Check if already active
 						if ( is_plugin_active( $existing_plugin_file ) ) {
-							AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Plugin already active' );
+							AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Plugin already active' );
 							return new WP_REST_Response(
 								array(
 									'success'     => true,
@@ -716,11 +733,11 @@ class AlvoBotPro_PluginManager {
 						// Activate existing plugin
 						$activate = activate_plugin( $existing_plugin_file );
 						if ( is_wp_error( $activate ) ) {
-							AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Activation Error: ' . $activate->get_error_message() );
+							AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Activation Error: ' . $activate->get_error_message() );
 							return $activate;
 						}
 
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Existing plugin activated: ' . $existing_plugin_file );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Existing plugin activated: ' . $existing_plugin_file );
 						return new WP_REST_Response(
 							array(
 								'success'     => true,
@@ -753,7 +770,7 @@ class AlvoBotPro_PluginManager {
 					);
 
 					if ( is_wp_error( $api ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] API Error: ' . $api->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] API Error: ' . $api->get_error_message() );
 						return $api;
 					}
 
@@ -761,7 +778,7 @@ class AlvoBotPro_PluginManager {
 					$installed = $upgrader->install( $api->download_link );
 
 					if ( is_wp_error( $installed ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Installation Error: ' . $installed->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Installation Error: ' . $installed->get_error_message() );
 						return $installed;
 					}
 
@@ -769,12 +786,12 @@ class AlvoBotPro_PluginManager {
 
 					// If plugin_info() returns null, try to find the plugin file manually
 					if ( ! $plugin_file ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] plugin_info() returned null, trying to find plugin file manually' );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] plugin_info() returned null, trying to find plugin file manually' );
 						$plugin_file = $this->find_plugin_file_by_slug( $plugin_slug );
 					}
 
 					if ( ! $plugin_file ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Error: Could not determine plugin file after installation' );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Error: Could not determine plugin file after installation' );
 						return new WP_Error( 'plugin_error', 'Não foi possível determinar o arquivo do plugin após a instalação' );
 					}
 
@@ -782,11 +799,11 @@ class AlvoBotPro_PluginManager {
 					$activate = activate_plugin( $plugin_file );
 
 					if ( is_wp_error( $activate ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Activation Error: ' . $activate->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Activation Error: ' . $activate->get_error_message() );
 						return $activate;
 					}
 
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Plugin installed and activated successfully: ' . $plugin_file );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Plugin installed and activated successfully: ' . $plugin_file );
 					return new WP_REST_Response(
 						array(
 							'success'     => true,
@@ -796,11 +813,11 @@ class AlvoBotPro_PluginManager {
 					);
 				} elseif ( ! empty( $plugin_url ) ) {
 					// Instalação a partir de uma URL
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Installing from URL: ' . $plugin_url );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Installing from URL: ' . $plugin_url );
 
 					// Valida a URL
 					if ( ! filter_var( $plugin_url, FILTER_VALIDATE_URL ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Invalid URL provided: ' . $plugin_url );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Invalid URL provided: ' . $plugin_url );
 						return new WP_Error( 'invalid_url', 'URL inválida' );
 					}
 
@@ -808,16 +825,16 @@ class AlvoBotPro_PluginManager {
 					$plugins_before = get_plugins();
 
 					// Baixa o arquivo temporariamente
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Downloading plugin from URL' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Downloading plugin from URL' );
 					$download_file = download_url( $plugin_url );
 
 					if ( is_wp_error( $download_file ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Download Error: ' . $download_file->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Download Error: ' . $download_file->get_error_message() );
 						return new WP_Error( 'download_failed', 'Erro ao baixar o plugin: ' . $download_file->get_error_message() );
 					}
 
 					// Instala o plugin
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Installing downloaded plugin' );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Installing downloaded plugin' );
 					$upgrader  = new Plugin_Upgrader( new Automatic_Upgrader_Skin() );
 					$installed = $upgrader->install( $download_file );
 
@@ -825,7 +842,7 @@ class AlvoBotPro_PluginManager {
 					@unlink( $download_file );
 
 					if ( is_wp_error( $installed ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Installation Error: ' . $installed->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Installation Error: ' . $installed->get_error_message() );
 						return new WP_Error( 'install_failed', 'Falha na instalação do plugin: ' . $installed->get_error_message() );
 					}
 
@@ -834,23 +851,23 @@ class AlvoBotPro_PluginManager {
 					$new_plugins   = array_diff_key( $plugins_after, $plugins_before );
 
 					if ( empty( $new_plugins ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] No new plugins found after installation' );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] No new plugins found after installation' );
 						return new WP_Error( 'plugin_not_found', 'Nenhum novo plugin encontrado após instalação' );
 					}
 
 					// Obtém o primeiro plugin recém-instalado
 					$plugin_file = key( $new_plugins );
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] New plugin detected: ' . $plugin_file );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] New plugin detected: ' . $plugin_file );
 
 					// Ativa o plugin
 					$result = activate_plugin( $plugin_file );
 
 					if ( is_wp_error( $result ) ) {
-						AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Activation Error: ' . $result->get_error_message() );
+						AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Activation Error: ' . $result->get_error_message() );
 						return new WP_Error( 'activation_failed', 'Falha na ativação do plugin: ' . $result->get_error_message() );
 					}
 
-					AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Successfully installed and activated plugin from URL: ' . $plugin_file );
+					AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Successfully installed and activated plugin from URL: ' . $plugin_file );
 					return new WP_REST_Response(
 						array(
 							'success'     => true,
@@ -971,9 +988,12 @@ class AlvoBotPro_PluginManager {
 	private function handle_reset( $request ) {
 		try {
 			// Guarda o token atual antes de deletar
-			$current_token = get_option( 'grp_site_token' );
+			$current_token = get_option( 'alvobot_site_token' );
 
 			// Remove todas as opções do plugin
+			delete_option( 'alvobot_site_token' );
+			delete_option( 'alvobot_connection_status' );
+			// Legados (caso existam)
 			delete_option( 'grp_site_token' );
 			delete_option( 'grp_site_code' );
 			delete_option( 'grp_registered' );
@@ -1000,7 +1020,7 @@ class AlvoBotPro_PluginManager {
 
 			// Gera e salva um novo token
 			$new_token = wp_generate_password( 32, false );
-			update_option( 'grp_site_token', $new_token );
+			update_option( 'alvobot_site_token', $new_token );
 
 			// Registra o site com a nova senha de app
 			$this->register_site( $app_password_data[0] );
@@ -1019,13 +1039,109 @@ class AlvoBotPro_PluginManager {
 				)
 			);
 		} catch ( Exception $e ) {
-			AlvoBotPro::debug_log( 'plugin-manager', '[GRP Debug] Reset error: ' . $e->getMessage() );
+			AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Reset error: ' . $e->getMessage() );
 			return new WP_Error(
 				'reset_failed',
 				'Erro ao resetar o plugin: ' . $e->getMessage(),
 				array( 'status' => 500 )
 			);
 		}
+	}
+
+	/**
+	 * Sanitiza dados antes do log para evitar exposição de segredos e payloads muito grandes.
+	 */
+	private function sanitize_log_data( $data, $depth = 0 ) {
+		if ( $depth > 4 ) {
+			return '[max-depth]';
+		}
+
+		if ( is_array( $data ) ) {
+			$sanitized = array();
+			foreach ( $data as $key => $value ) {
+				$normalized_key = is_string( $key ) ? strtolower( $key ) : '';
+				if ( $this->is_sensitive_log_key( $normalized_key ) ) {
+					$sanitized[ $key ] = '[redacted]';
+					continue;
+				}
+				$sanitized[ $key ] = $this->sanitize_log_data( $value, $depth + 1 );
+			}
+			return $sanitized;
+		}
+
+		if ( is_object( $data ) ) {
+			if ( $data instanceof Traversable ) {
+				return $this->sanitize_log_data( iterator_to_array( $data ), $depth + 1 );
+			}
+			if ( method_exists( $data, 'get_error_message' ) && method_exists( $data, 'get_error_code' ) ) {
+				return array(
+					'error_code'    => $data->get_error_code(),
+					'error_message' => $this->truncate_log_string( $data->get_error_message() ),
+				);
+			}
+			return '[object ' . get_class( $data ) . ']';
+		}
+
+		if ( is_string( $data ) ) {
+			return $this->truncate_log_string( $data, 500 );
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Define quais chaves são sensíveis para logs.
+	 */
+	private function is_sensitive_log_key( $key ) {
+		$sensitive_fragments = array(
+			'token',
+			'password',
+			'app_password',
+			'authorization',
+			'api_key',
+			'secret',
+		);
+
+		foreach ( $sensitive_fragments as $fragment ) {
+			if ( strpos( $key, $fragment ) !== false ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Trunca strings para evitar logs extensos.
+	 */
+	private function truncate_log_string( $value, $max_length = 300 ) {
+		if ( ! is_string( $value ) ) {
+			return $value;
+		}
+
+		$length = strlen( $value );
+		if ( $length <= $max_length ) {
+			return $value;
+		}
+
+		return substr( $value, 0, $max_length ) . '...[truncated ' . ( $length - $max_length ) . ' chars]';
+	}
+
+	/**
+	 * Remove query string/fragment de URLs antes de registrar em log.
+	 */
+	private function sanitize_log_url( $url ) {
+		if ( empty( $url ) || ! is_string( $url ) ) {
+			return '';
+		}
+
+		$parsed = wp_parse_url( $url );
+		if ( empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+			return $this->truncate_log_string( $url, 200 );
+		}
+
+		$path = isset( $parsed['path'] ) ? $parsed['path'] : '';
+		return $parsed['scheme'] . '://' . $parsed['host'] . $path;
 	}
 
 	private function find_plugin_file_by_slug( $slug ) {

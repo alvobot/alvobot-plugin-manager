@@ -7,20 +7,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 $polylang_active = class_exists( 'Polylang' ) || function_exists( 'pll_the_languages' );
 
 // Processa atualização de modelos se solicitado
-if ( isset( $_POST['refresh_openai_models'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_openai_settings' ) ) {
+if ( isset( $_POST['refresh_openai_models'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_openai_settings' ) ) {
 	require_once plugin_dir_path( __FILE__ ) . '../includes/class-translation-providers.php';
 	$openai_provider = new AlvoBotPro_OpenAI_Translation_Provider();
 	$updated_models  = $openai_provider->refresh_models();
 
 	if ( ! empty( $updated_models ) ) {
-		echo '<div class="alvobot-notice alvobot-notice-success"><p>Modelos atualizados com sucesso! ' . count( $updated_models ) . ' modelos encontrados.</p></div>';
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- All dynamic content escaped with esc_html() and intval()
+		echo '<div class="alvobot-notice alvobot-notice-success"><p>' . esc_html__( 'Modelos atualizados com sucesso!', 'alvobot-pro' ) . ' ' . intval( count( $updated_models ) ) . ' ' . esc_html__( 'modelos encontrados.', 'alvobot-pro' ) . '</p></div>';
 	} else {
-		echo '<div class="alvobot-notice alvobot-notice-error"><p>Não foi possível carregar modelos do Flowise. Verifique a conectividade ou os logs de erro.</p></div>';
+		echo '<div class="alvobot-notice alvobot-notice-error"><p>' . esc_html__( 'Não foi possível carregar modelos do Flowise. Verifique a conectividade ou os logs de erro.', 'alvobot-pro' ) . '</p></div>';
 	}
 }
 
 // Limpa todos os caches se solicitado
-if ( isset( $_POST['clear_all_caches'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_openai_settings' ) ) {
+if ( isset( $_POST['clear_all_caches'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_openai_settings' ) ) {
 	// Limpa cache de traduções
 	delete_transient( 'alvobot_translation_cache' );
 
@@ -30,24 +31,24 @@ if ( isset( $_POST['clear_all_caches'] ) && wp_verify_nonce( $_POST['_wpnonce'],
 	// Limpa cache de logs
 	delete_transient( 'alvobot_multi_languages_logs' );
 
-	echo '<div class="alvobot-notice alvobot-notice-success"><p>Todos os caches foram limpos com sucesso!</p></div>';
+	echo '<div class="alvobot-notice alvobot-notice-success"><p>' . esc_html__( 'Todos os caches foram limpos com sucesso!', 'alvobot-pro' ) . '</p></div>';
 }
 
 // Salva configurações se solicitado
-if ( isset( $_POST['save_openai_settings'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_openai_settings' ) ) {
+if ( isset( $_POST['save_openai_settings'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_openai_settings' ) ) {
 	$openai_settings = array(
-		'api_key'              => sanitize_text_field( $_POST['openai_api_key'] ?? '' ),
-		'model'                => sanitize_text_field( $_POST['openai_model'] ?? 'gpt-4o-mini' ),
-		'max_tokens'           => intval( $_POST['openai_max_tokens'] ?? 3000 ),
-		'temperature'          => floatval( $_POST['openai_temperature'] ?? 0.3 ),
-		'timeout'              => intval( $_POST['openai_timeout'] ?? 60 ),
+		'api_key'              => isset( $_POST['openai_api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ) ) : '',
+		'model'                => isset( $_POST['openai_model'] ) ? sanitize_text_field( wp_unslash( $_POST['openai_model'] ) ) : 'gpt-4o-mini',
+		'max_tokens'           => isset( $_POST['openai_max_tokens'] ) ? intval( $_POST['openai_max_tokens'] ) : 3000,
+		'temperature'          => isset( $_POST['openai_temperature'] ) ? floatval( $_POST['openai_temperature'] ) : 0.3,
+		'timeout'              => isset( $_POST['openai_timeout'] ) ? intval( $_POST['openai_timeout'] ) : 60,
 		'disable_cache'        => isset( $_POST['openai_disable_cache'] ) ? true : false,
 		'disable_models_cache' => isset( $_POST['openai_disable_models_cache'] ) ? true : false,
 	);
 
 	update_option( 'alvobot_openai_settings', $openai_settings );
 
-	echo '<div class="alvobot-notice alvobot-notice-success"><p>Configurações do OpenAI salvas com sucesso!</p></div>';
+	echo '<div class="alvobot-notice alvobot-notice-success"><p>' . esc_html__( 'Configurações do OpenAI salvas com sucesso!', 'alvobot-pro' ) . '</p></div>';
 }
 
 // Carrega configurações atuais
@@ -111,7 +112,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 			<!-- Aviso: Polylang não está ativo -->
 			<div class="alvobot-notice alvobot-notice-error">
 				<p><strong>Plugin Necessário:</strong> O Polylang deve estar instalado e ativo para usar o sistema de tradução.</p>
-				<p><a href="<?php echo admin_url( 'plugin-install.php?s=polylang&tab=search&type=term' ); ?>" class="button">Instalar Polylang</a></p>
+				<p><a href="<?php echo esc_url( admin_url( 'plugin-install.php?s=polylang&tab=search&type=term' ) ); ?>" class="button">Instalar Polylang</a></p>
 			</div>
 		<?php endif; ?>
 
@@ -132,17 +133,17 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 								<i data-lucide="languages" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number"><?php echo count( $polylang_languages ); ?></div>
+								<div class="alvobot-stat-number"><?php echo intval( count( $polylang_languages ) ); ?></div>
 								<div class="alvobot-stat-label">Idiomas Configurados</div>
 							</div>
 						</div>
 						
 						<div class="alvobot-stat-item">
 							<div class="alvobot-stat-icon">
-								<i data-lucide="<?php echo ! empty( $openai_settings['api_key'] ) ? 'check-circle' : 'x-circle'; ?>" class="alvobot-icon"></i>
+								<i data-lucide="<?php echo esc_attr( ! empty( $openai_settings['api_key'] ) ? 'check-circle' : 'x-circle' ); ?>" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number"><?php echo ! empty( $openai_settings['api_key'] ) ? 'Configurado' : 'Pendente'; ?></div>
+								<div class="alvobot-stat-number"><?php echo esc_html( ! empty( $openai_settings['api_key'] ) ? 'Configurado' : 'Pendente' ); ?></div>
 								<div class="alvobot-stat-label">OpenAI Status</div>
 							</div>
 						</div>
@@ -153,7 +154,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 								<i data-lucide="line-chart" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number"><?php echo number_format( $usage_stats['total_translations'] ); ?></div>
+								<div class="alvobot-stat-number"><?php echo esc_html( number_format( $usage_stats['total_translations'] ) ); ?></div>
 								<div class="alvobot-stat-label">Traduções Realizadas</div>
 							</div>
 						</div>
@@ -163,7 +164,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 								<i data-lucide="dollar-sign" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number">$<?php echo number_format( $usage_stats['total_cost_estimate'], 4 ); ?></div>
+								<div class="alvobot-stat-number">$<?php echo esc_html( number_format( $usage_stats['total_cost_estimate'], 4 ) ); ?></div>
 								<div class="alvobot-stat-label">Custo Estimado</div>
 							</div>
 						</div>
@@ -179,7 +180,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 					<h2 class="alvobot-card-title">Idiomas Disponíveis para Tradução</h2>
 					<p class="alvobot-card-subtitle">
 						Configurados no Polylang 
-						<a href="<?php echo admin_url( 'admin.php?page=mlang' ); ?>" class="alvobot-link-inline" title="Configurar idiomas no Polylang">
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=mlang' ) ); ?>" class="alvobot-link-inline" title="Configurar idiomas no Polylang">
 							<i data-lucide="settings" class="alvobot-icon" style="font-size: 14px; vertical-align: middle;"></i>
 						</a>
 					</p>
@@ -236,7 +237,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 													<option value="<?php echo esc_attr( $model['id'] ); ?>" <?php selected( $openai_settings['model'], $model['id'] ); ?>>
 														<?php echo esc_html( $model['name'] ); ?>
 														<?php if ( $model['cost_input'] > 0 ) : ?>
-															($<?php echo number_format( $model['cost_input'], 4 ); ?>/1K tokens)
+															($<?php echo esc_html( number_format( $model['cost_input'], 4 ) ); ?>/1K tokens)
 														<?php endif; ?>
 													</option>
 												<?php endforeach; ?>
@@ -255,7 +256,7 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 										<?php if ( ! empty( $openai_settings['api_key'] ) ) : ?>
 											Modelos carregados diretamente da API OpenAI. Clique no botão de atualização para buscar novos modelos.
 											<?php if ( ! empty( $available_models ) ) : ?>
-												<br><strong><?php echo count( $available_models ); ?> modelos disponíveis</strong>
+												<br><strong><?php echo intval( count( $available_models ) ); ?> modelos disponíveis</strong>
 											<?php endif; ?>
 										<?php else : ?>
 											Configure sua API key primeiro para carregar modelos disponíveis da OpenAI.
@@ -274,10 +275,10 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 											<br><span style="color: var(--alvobot-gray-600);"><?php echo esc_html( $model['description'] ); ?></span>
 										<?php endif; ?>
 										<br><small>
-											Máx. tokens: <?php echo number_format( $model['max_tokens'] ); ?>
+											Máx. tokens: <?php echo esc_html( number_format( $model['max_tokens'] ) ); ?>
 												<?php if ( $model['cost_input'] > 0 ) : ?>
-												| Entrada: $<?php echo number_format( $model['cost_input'], 4 ); ?>/1K
-												| Saída: $<?php echo number_format( $model['cost_output'], 4 ); ?>/1K
+												| Entrada: $<?php echo esc_html( number_format( $model['cost_input'], 4 ) ); ?>/1K
+												| Saída: $<?php echo esc_html( number_format( $model['cost_output'], 4 ) ); ?>/1K
 											<?php endif; ?>
 										</small>
 									</div>
@@ -399,19 +400,19 @@ if ( $polylang_active && function_exists( 'PLL' ) && PLL()->model ) {
 					<table class="alvobot-table">
 						<tr>
 							<td><strong>Total de Traduções:</strong></td>
-							<td><?php echo number_format( $usage_stats['total_translations'] ); ?></td>
+							<td><?php echo esc_html( number_format( $usage_stats['total_translations'] ) ); ?></td>
 						</tr>
 						<tr>
 							<td><strong>Total de Tokens:</strong></td>
-							<td><?php echo number_format( $usage_stats['total_tokens'] ); ?></td>
+							<td><?php echo esc_html( number_format( $usage_stats['total_tokens'] ) ); ?></td>
 						</tr>
 						<tr>
 							<td><strong>Custo Estimado:</strong></td>
-							<td>$<?php echo number_format( $usage_stats['total_cost_estimate'], 4 ); ?></td>
+							<td>$<?php echo esc_html( number_format( $usage_stats['total_cost_estimate'], 4 ) ); ?></td>
 						</tr>
 						<tr>
 							<td><strong>Última Atualização:</strong></td>
-							<td><?php echo date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $usage_stats['last_reset'] ) ); ?></td>
+							<td><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $usage_stats['last_reset'] ) ) ); ?></td>
 						</tr>
 					</table>
 				</div>
@@ -567,7 +568,7 @@ jQuery(document).ready(function($) {
 			type: 'POST',
 			data: {
 				action: 'alvobot_test_openai_connection',
-				nonce: '<?php echo wp_create_nonce( 'alvobot_nonce' ); ?>'
+				nonce: '<?php echo esc_js( wp_create_nonce( 'alvobot_nonce' ) ); ?>'
 			},
 			success: function(response) {
 				$('#connection-test-loading').hide();
@@ -653,7 +654,7 @@ jQuery(document).ready(function($) {
 			type: 'POST',
 			data: {
 				action: 'alvobot_reset_usage_stats',
-				nonce: '<?php echo wp_create_nonce( 'alvobot_nonce' ); ?>'
+				nonce: '<?php echo esc_js( wp_create_nonce( 'alvobot_nonce' ) ); ?>'
 			},
 			success: function(response) {
 				$('#confirm-reset').prop('disabled', false).html('<i data-lucide="refresh-cw" class="alvobot-icon"></i> Resetar Estatísticas'); if(typeof lucide!=='undefined') lucide.createIcons();

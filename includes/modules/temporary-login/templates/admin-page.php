@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 if (typeof wpApiSettings === 'undefined') {
 	window.wpApiSettings = {
 		root: '<?php echo esc_url_raw( rest_url() ); ?>',
-		nonce: '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+		nonce: '<?php echo esc_js( wp_create_nonce( 'wp_rest' ) ); ?>'
 	};
 }
 

@@ -30,7 +30,7 @@ class AlvoBotPro_LogoGenerator_API {
 		$params = $request->get_json_params();
 		$token  = isset( $params['token'] ) ? sanitize_text_field( $params['token'] ) : '';
 
-		if ( empty( $token ) || $token !== get_option( 'grp_site_token' ) ) {
+		if ( empty( $token ) || $token !== get_option( 'alvobot_site_token' ) ) {
 			return new WP_Error( 'unauthorized', 'Token inválido', array( 'status' => 401 ) );
 		}
 

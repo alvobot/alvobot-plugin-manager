@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Segurança
 }
 
+require_once dirname( __DIR__, 2 ) . '/shared/countries-languages.php';
+
 /**
  * -----------------------------------------------------------------
  * 1) SHORTCODE DO FORMULÁRIO DE CONTATO
@@ -21,36 +23,74 @@ function alvobot_contact_form_shortcode() {
 
 	// Processa o envio do formulário, se submetido e nonce válido
 	if ( isset( $_POST['contact_submit'] ) && check_admin_referer( 'contact_form_nonce', 'contact_nonce' ) ) {
-		$to      = get_option( 'admin_email' );
-		$subject = sanitize_text_field( $_POST['contact_subject'] );
-		$name    = sanitize_text_field( $_POST['contact_name'] );
-		$email   = sanitize_email( $_POST['contact_email'] );
-		$phone   = sanitize_text_field( $_POST['contact_phone'] );
-		$message = sanitize_textarea_field( $_POST['contact_message'] );
 
-		$body = sprintf(
-			"Nome: %s\nE-mail: %s\nTelefone: %s\n\nMensagem:\n%s",
-			$name,
-			$email,
-			$phone,
-			$message
-		);
-
-		$headers = [ "From: {$name} <{$email}>" ];
-
-		if ( wp_mail( $to, $subject, $body, $headers ) ) {
+		// Anti-spam: honeypot (bots preenchem campos hidden)
+		if ( ! empty( $_POST['website_url'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- honeypot field, value is never used
 			$feedback = '<div class="success">' . esc_html__( 'Mensagem enviada com sucesso!', 'alvobot-pro' ) . '</div>';
-		} else {
-			$feedback = '<div class="error">' . esc_html__( 'Erro ao enviar mensagem. Tente novamente.', 'alvobot-pro' ) . '</div>';
+			ob_start();
+			echo '<div class="contact-form-wrapper">' . wp_kses_post( $feedback ) . '</div>';
+			return ob_get_clean();
+		}
+
+		// Anti-spam: timestamp (forms enviados em < 3s são bots)
+		$form_ts = isset( $_POST['_form_ts'] ) ? intval( wp_unslash( $_POST['_form_ts'] ) ) : 0;
+		$elapsed = time() - $form_ts;
+		if ( $elapsed < 3 || $elapsed > 3600 ) {
+			$feedback = '<div class="error">' . esc_html__( 'Erro de validação. Tente novamente.', 'alvobot-pro' ) . '</div>';
+		}
+
+		// Anti-spam: rate limiting (max 3 envios por 5 minutos por IP)
+		if ( empty( $feedback ) ) {
+			$ip_hash       = md5( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown' );
+			$transient_key = 'alvobot_contact_rl_' . $ip_hash;
+			$submissions   = get_transient( $transient_key );
+
+			if ( false !== $submissions && $submissions >= 3 ) {
+				$feedback = '<div class="error">' . esc_html__( 'Muitas tentativas. Aguarde alguns minutos.', 'alvobot-pro' ) . '</div>';
+			} else {
+				set_transient( $transient_key, ( $submissions ? $submissions + 1 : 1 ), 300 );
+			}
+		}
+
+		// Envia o email se passou em todas as verificações
+		if ( empty( $feedback ) ) {
+			$to      = get_option( 'admin_email' );
+			$subject = isset( $_POST['contact_subject'] ) ? sanitize_text_field( wp_unslash( $_POST['contact_subject'] ) ) : '';
+			$name    = isset( $_POST['contact_name'] ) ? sanitize_text_field( wp_unslash( $_POST['contact_name'] ) ) : '';
+			$email   = isset( $_POST['contact_email'] ) ? sanitize_email( wp_unslash( $_POST['contact_email'] ) ) : '';
+			$phone   = isset( $_POST['contact_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['contact_phone'] ) ) : '';
+			$message = isset( $_POST['contact_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['contact_message'] ) ) : '';
+
+			$body = sprintf(
+				"Nome: %s\nE-mail: %s\nTelefone: %s\n\nMensagem:\n%s",
+				$name,
+				$email,
+				$phone,
+				$message
+			);
+
+			$headers = array( "From: {$name} <{$email}>" );
+
+			if ( wp_mail( $to, $subject, $body, $headers ) ) {
+				$feedback = '<div class="success">' . esc_html__( 'Mensagem enviada com sucesso!', 'alvobot-pro' ) . '</div>';
+			} else {
+				$feedback = '<div class="error">' . esc_html__( 'Erro ao enviar mensagem. Tente novamente.', 'alvobot-pro' ) . '</div>';
+			}
 		}
 	}
 
 	ob_start();
 	?>
 	<div class="contact-form-wrapper">
-		<?php echo $feedback; ?>
+		<?php echo wp_kses_post( $feedback ); ?>
 		<form action="" method="post" id="contact-form" class="contact-form">
 			<?php wp_nonce_field( 'contact_form_nonce', 'contact_nonce' ); ?>
+			<input type="hidden" name="_form_ts" value="<?php echo esc_attr( time() ); ?>">
+			<!-- Anti-spam honeypot -->
+			<div style="position:absolute;left:-9999px;" aria-hidden="true">
+				<label for="website_url">Website</label>
+				<input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off">
+			</div>
 			<div class="form-group">
 				<label for="name"><?php esc_html_e( 'Nome *', 'alvobot-pro' ); ?></label>
 				<input type="text" name="contact_name" id="name" required>
@@ -201,7 +241,8 @@ class AlvoBotPro_EssentialPages {
 	 */
 	public function enqueue_admin_assets( $hook_suffix ) {
 		// Só carrega os estilos na página de configurações do módulo
-		if ( ! isset( $_GET['page'] ) || 'alvobot-pro-essential-pages' !== $_GET['page'] ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
+		if ( ! isset( $_GET['page'] ) || 'alvobot-pro-essential-pages' !== sanitize_text_field( wp_unslash( $_GET['page'] ) ) ) {
 			return;
 		}
 
@@ -273,9 +314,9 @@ class AlvoBotPro_EssentialPages {
 		}
 
 		AlvoBotPro::debug_log( 'essential_pages', 'render_settings_page chamado' );
-		if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) === 'POST' ) {
 			AlvoBotPro::debug_log( 'essential_pages', 'Método POST detectado' );
-			AlvoBotPro::debug_log( 'essential_pages', 'POST data = ' . print_r( $_POST, true ) );
+			AlvoBotPro::debug_log( 'essential_pages', 'POST data = ' . print_r( $_POST, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r,WordPress.Security.NonceVerification.Missing -- Debug logging only, nonce verified below.
 		}
 
 		// Processar ações do formulário
@@ -283,8 +324,9 @@ class AlvoBotPro_EssentialPages {
 		$action_status   = 'success';
 
 		// Processa ações enviadas (ações globais ou individuais)
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by check_admin_referer in same condition.
 		if ( isset( $_POST['alvobot_action'] ) && check_admin_referer( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ) ) {
-			$action = sanitize_text_field( $_POST['alvobot_action'] );
+			$action = sanitize_text_field( wp_unslash( $_POST['alvobot_action'] ) );
 
 			// Executar a ação solicitada
 			switch ( $action ) {
@@ -310,7 +352,7 @@ class AlvoBotPro_EssentialPages {
 
 				case 'create_page':
 					if ( isset( $_POST['page_key'] ) ) {
-						$page_key = sanitize_text_field( $_POST['page_key'] );
+						$page_key = sanitize_text_field( wp_unslash( $_POST['page_key'] ) );
 						if ( isset( $this->essential_pages[ $page_key ] ) ) {
 							// Exclui a página existente (caso exista) e cria uma nova
 							$result          = $this->create_essential_page( $page_key, true );
@@ -322,7 +364,7 @@ class AlvoBotPro_EssentialPages {
 
 				case 'delete_page':
 					if ( isset( $_POST['page_key'] ) ) {
-						$page_key = sanitize_text_field( $_POST['page_key'] );
+						$page_key = sanitize_text_field( wp_unslash( $_POST['page_key'] ) );
 						if ( isset( $this->essential_pages[ $page_key ] ) ) {
 							$this->delete_essential_page( $page_key );
 							$action_complete = 'deleted';
@@ -344,6 +386,7 @@ class AlvoBotPro_EssentialPages {
 				);
 
 				// Redireciona para mesma página - não use exit() para evitar tela em branco
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- URL is escaped with esc_url()
 				echo "<meta http-equiv='refresh' content='0;url=" .
 					esc_url( add_query_arg( [ 'page' => 'alvobot-pro-essential-pages' ], admin_url( 'admin.php' ) ) ) . "'>";
 				echo '<p>Redirecionando...</p>';
@@ -402,7 +445,7 @@ class AlvoBotPro_EssentialPages {
 								$message = __( 'Operação concluída com sucesso!', 'alvobot-pro' );
 						}
 
-						echo '<div class="notice ' . $status_class . ' is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+						echo '<div class="notice ' . esc_attr( $status_class ) . ' is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 						delete_option( 'alvobot_essential_pages_message' );
 					}
 					settings_errors( 'alvobot_essential_pages' );
@@ -1432,32 +1475,32 @@ class AlvoBotPro_EssentialPages {
 		<div id="alvobot-translation-modal" style="display: none;">
 			<div class="alvobot-modal-content">
 				<div class="alvobot-modal-header">
-					<h3><?php _e( 'Traduções Multi-idioma', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Traduções Multi-idioma', 'alvobot-pro' ); ?></h3>
 					<button type="button" class="alvobot-modal-close">&times;</button>
 				</div>
 				<div class="alvobot-modal-body">
 					<div class="translation-options">
-						<h4><?php _e( 'O que você deseja fazer?', 'alvobot-pro' ); ?></h4>
+						<h4><?php esc_html_e( 'O que você deseja fazer?', 'alvobot-pro' ); ?></h4>
 
 						<div class="option-card" data-option="translate-existing">
-							<h5><?php _e( 'Traduzir Páginas Existentes', 'alvobot-pro' ); ?></h5>
-							<p><?php _e( 'Traduzir o conteúdo das páginas já criadas para outros idiomas usando IA.', 'alvobot-pro' ); ?></p>
+							<h5><?php esc_html_e( 'Traduzir Páginas Existentes', 'alvobot-pro' ); ?></h5>
+							<p><?php esc_html_e( 'Traduzir o conteúdo das páginas já criadas para outros idiomas usando IA.', 'alvobot-pro' ); ?></p>
 						</div>
 
 						<div class="option-card" data-option="create-multilingual">
-							<h5><?php _e( 'Criar Páginas Multi-idioma', 'alvobot-pro' ); ?></h5>
-							<p><?php _e( 'Criar páginas essenciais já traduzidas para vários idiomas de uma vez.', 'alvobot-pro' ); ?></p>
+							<h5><?php esc_html_e( 'Criar Páginas Multi-idioma', 'alvobot-pro' ); ?></h5>
+							<p><?php esc_html_e( 'Criar páginas essenciais já traduzidas para vários idiomas de uma vez.', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 
 					<div class="translation-step-2" style="display: none;">
-						<h4><?php _e( 'Selecione os Idiomas', 'alvobot-pro' ); ?></h4>
+						<h4><?php esc_html_e( 'Selecione os Idiomas', 'alvobot-pro' ); ?></h4>
 						<div class="languages-grid" id="languages-selection">
 							<!-- Idiomas serão carregados via AJAX -->
 						</div>
 
 						<div class="pages-selection" style="display: none;">
-							<h4><?php _e( 'Selecione as Páginas', 'alvobot-pro' ); ?></h4>
+							<h4><?php esc_html_e( 'Selecione as Páginas', 'alvobot-pro' ); ?></h4>
 							<div class="pages-grid">
 								<?php foreach ( $this->essential_pages as $key => $page ) : ?>
 									<label class="page-option">
@@ -1470,7 +1513,7 @@ class AlvoBotPro_EssentialPages {
 					</div>
 
 					<div class="translation-progress" style="display: none;">
-						<h4><?php _e( 'Progresso da Tradução', 'alvobot-pro' ); ?></h4>
+						<h4><?php esc_html_e( 'Progresso da Tradução', 'alvobot-pro' ); ?></h4>
 						<div class="progress-bar">
 							<div class="progress-fill" style="width: 0%"></div>
 						</div>
@@ -1479,17 +1522,17 @@ class AlvoBotPro_EssentialPages {
 					</div>
 
 					<div class="translation-results" style="display: none;">
-						<h4><?php _e( 'Resultados', 'alvobot-pro' ); ?></h4>
+						<h4><?php esc_html_e( 'Resultados', 'alvobot-pro' ); ?></h4>
 						<div class="results-content">
 							<!-- Resultados aparecerão aqui -->
 						</div>
 					</div>
 				</div>
 				<div class="alvobot-modal-footer">
-					<button type="button" class="button cancel-btn"><?php _e( 'Cancelar', 'alvobot-pro' ); ?></button>
-					<button type="button" class="button button-secondary back-btn" style="display: none;"><?php _e( 'Voltar', 'alvobot-pro' ); ?></button>
-					<button type="button" class="button button-primary next-btn"><?php _e( 'Próximo', 'alvobot-pro' ); ?></button>
-					<button type="button" class="button button-primary start-translation-btn" style="display: none;"><?php _e( 'Iniciar Tradução', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button cancel-btn"><?php esc_html_e( 'Cancelar', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button button-secondary back-btn" style="display: none;"><?php esc_html_e( 'Voltar', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button button-primary next-btn"><?php esc_html_e( 'Próximo', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button button-primary start-translation-btn" style="display: none;"><?php esc_html_e( 'Iniciar Tradução', 'alvobot-pro' ); ?></button>
 				</div>
 			</div>
 		</div>
@@ -1508,162 +1551,162 @@ class AlvoBotPro_EssentialPages {
 			justify-content: center;
 		}
 		.alvobot-modal-content {
-			background: white;
-			border-radius: 8px;
+			background: var(--alvobot-white);
+			border-radius: var(--alvobot-radius-md);
 			width: 90%;
 			max-width: 700px;
 			max-height: 80vh;
 			overflow-y: auto;
-			box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+			box-shadow: var(--alvobot-shadow-xl);
 		}
 		.alvobot-modal-header {
-			padding: 20px;
-			border-bottom: 1px solid #ddd;
+			padding: var(--alvobot-space-xl);
+			border-bottom: 1px solid var(--alvobot-gray-300);
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			background: #f8f9fa;
-			border-radius: 8px 8px 0 0;
+			background: var(--alvobot-gray-100);
+			border-radius: var(--alvobot-radius-md) var(--alvobot-radius-md) 0 0;
 		}
 		.alvobot-modal-header h3 {
 			margin: 0;
-			color: #2c3e50;
+			color: var(--alvobot-gray-900);
 		}
 		.alvobot-modal-close {
 			background: none;
 			border: none;
 			font-size: 24px;
 			cursor: pointer;
-			color: #666;
+			color: var(--alvobot-gray-600);
 		}
 		.alvobot-modal-close:hover {
-			color: #333;
+			color: var(--alvobot-gray-900);
 		}
 		.alvobot-modal-body {
-			padding: 30px;
+			padding: var(--alvobot-space-3xl);
 		}
 		.option-card {
-			border: 2px solid #e1e5e9;
-			border-radius: 8px;
-			padding: 20px;
-			margin: 15px 0;
+			border: 2px solid var(--alvobot-gray-300);
+			border-radius: var(--alvobot-radius-md);
+			padding: var(--alvobot-space-xl);
+			margin: var(--alvobot-space-lg) 0;
 			cursor: pointer;
-			transition: all 0.3s ease;
-			background: #f8f9fa;
+			transition: all var(--alvobot-transition-slow);
+			background: var(--alvobot-gray-100);
 		}
 		.option-card:hover, .option-card.selected {
-			border-color: #0073aa;
-			background: #e3f2fd;
+			border-color: var(--alvobot-accent);
+			background: var(--alvobot-info-bg);
 			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(0,115,170,0.2);
+			box-shadow: var(--alvobot-shadow-md);
 		}
 		.option-card h5 {
-			margin: 0 0 10px 0;
-			color: #2c3e50;
-			font-size: 16px;
+			margin: 0 0 var(--alvobot-space-md) 0;
+			color: var(--alvobot-gray-900);
+			font-size: var(--alvobot-font-size-lg);
 		}
 		.option-card p {
 			margin: 0;
-			color: #666;
-			font-size: 14px;
+			color: var(--alvobot-gray-600);
+			font-size: var(--alvobot-font-size-base);
 		}
 		.languages-grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-			gap: 15px;
-			margin: 20px 0;
+			gap: var(--alvobot-space-lg);
+			margin: var(--alvobot-space-xl) 0;
 		}
 		.language-option {
-			border: 2px solid #e1e5e9;
-			border-radius: 6px;
-			padding: 15px;
+			border: 2px solid var(--alvobot-gray-300);
+			border-radius: var(--alvobot-radius-md);
+			padding: var(--alvobot-space-lg);
 			cursor: pointer;
-			transition: all 0.2s ease;
+			transition: all var(--alvobot-transition-normal);
 			text-align: center;
-			background: white;
+			background: var(--alvobot-white);
 		}
 		.language-option:hover, .language-option.selected {
-			border-color: #0073aa;
-			background: #e3f2fd;
+			border-color: var(--alvobot-accent);
+			background: var(--alvobot-info-bg);
 		}
 		.language-option input {
-			margin-right: 8px;
+			margin-right: var(--alvobot-space-sm);
 		}
 		.pages-grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-			gap: 15px;
-			margin: 20px 0;
+			gap: var(--alvobot-space-lg);
+			margin: var(--alvobot-space-xl) 0;
 		}
 		.page-option {
-			border: 2px solid #e1e5e9;
-			border-radius: 6px;
-			padding: 15px;
+			border: 2px solid var(--alvobot-gray-300);
+			border-radius: var(--alvobot-radius-md);
+			padding: var(--alvobot-space-lg);
 			cursor: pointer;
-			transition: all 0.2s ease;
+			transition: all var(--alvobot-transition-normal);
 			text-align: center;
-			background: white;
+			background: var(--alvobot-white);
 			display: flex;
 			align-items: center;
 			justify-content: center;
 		}
 		.page-option:hover {
-			border-color: #0073aa;
-			background: #e3f2fd;
+			border-color: var(--alvobot-accent);
+			background: var(--alvobot-info-bg);
 		}
 		.page-option input:checked + span {
 			font-weight: bold;
-			color: #0073aa;
+			color: var(--alvobot-accent);
 		}
 		.progress-bar {
 			width: 100%;
 			height: 20px;
-			background: #e1e5e9;
-			border-radius: 10px;
+			background: var(--alvobot-gray-300);
+			border-radius: var(--alvobot-radius-full);
 			overflow: hidden;
-			margin: 15px 0;
+			margin: var(--alvobot-space-lg) 0;
 		}
 		.progress-fill {
 			height: 100%;
-			background: linear-gradient(90deg, #0073aa, #005177);
-			transition: width 0.3s ease;
+			background: linear-gradient(90deg, var(--alvobot-accent), var(--alvobot-accent-dark));
+			transition: width var(--alvobot-transition-slow);
 		}
 		.progress-text {
 			text-align: center;
 			font-weight: bold;
-			color: #2c3e50;
+			color: var(--alvobot-gray-900);
 		}
 		.progress-details {
-			margin-top: 15px;
-			padding: 10px;
-			background: #f8f9fa;
-			border-radius: 5px;
-			border-left: 4px solid #0073aa;
+			margin-top: var(--alvobot-space-lg);
+			padding: var(--alvobot-space-md);
+			background: var(--alvobot-gray-100);
+			border-radius: var(--alvobot-radius-sm);
+			border-left: 4px solid var(--alvobot-accent);
 		}
 		.alvobot-modal-footer {
-			padding: 20px;
-			border-top: 1px solid #ddd;
+			padding: var(--alvobot-space-xl);
+			border-top: 1px solid var(--alvobot-gray-300);
 			text-align: right;
-			background: #f8f9fa;
-			border-radius: 0 0 8px 8px;
+			background: var(--alvobot-gray-100);
+			border-radius: 0 0 var(--alvobot-radius-md) var(--alvobot-radius-md);
 		}
 		.alvobot-modal-footer .button {
-			margin-left: 10px;
+			margin-left: var(--alvobot-space-md);
 		}
 		.results-content {
 			max-height: 300px;
 			overflow-y: auto;
 		}
 		.result-item {
-			padding: 10px;
+			padding: var(--alvobot-space-md);
 			margin: 5px 0;
-			border-radius: 5px;
-			border-left: 4px solid #28a745;
-			background: #f8fff8;
+			border-radius: var(--alvobot-radius-sm);
+			border-left: 4px solid var(--alvobot-success);
+			background: var(--alvobot-success-bg);
 		}
 		.result-item.error {
-			border-left-color: #dc3545;
-			background: #fff8f8;
+			border-left-color: var(--alvobot-error);
+			background: var(--alvobot-error-bg);
 		}
 		</style>
 		<?php
@@ -1719,7 +1762,7 @@ class AlvoBotPro_EssentialPages {
 	 */
 	public function ajax_translate_pages() {
 		// Verifica nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'alvobot_essential_pages_translation' ) ) {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot_essential_pages_translation' ) ) {
 			wp_send_json_error( __( 'Acesso negado.', 'alvobot-pro' ) );
 		}
 
@@ -1728,8 +1771,8 @@ class AlvoBotPro_EssentialPages {
 			wp_send_json_error( __( 'Permissões insuficientes.', 'alvobot-pro' ) );
 		}
 
-		$page_id          = intval( $_POST['page_id'] );
-		$target_languages = array_map( 'sanitize_text_field', $_POST['target_languages'] );
+		$page_id          = isset( $_POST['page_id'] ) ? intval( wp_unslash( $_POST['page_id'] ) ) : 0;
+		$target_languages = isset( $_POST['target_languages'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['target_languages'] ) ) : array();
 
 		if ( empty( $page_id ) || empty( $target_languages ) ) {
 			wp_send_json_error( __( 'Parâmetros inválidos.', 'alvobot-pro' ) );
@@ -1782,7 +1825,7 @@ class AlvoBotPro_EssentialPages {
 	 */
 	public function ajax_get_languages() {
 		// Verifica nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'alvobot_essential_pages_translation' ) ) {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot_essential_pages_translation' ) ) {
 			wp_send_json_error( __( 'Acesso negado.', 'alvobot-pro' ) );
 		}
 
@@ -1817,7 +1860,7 @@ class AlvoBotPro_EssentialPages {
 	 */
 	public function ajax_create_translated_pages() {
 		// Verifica nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'alvobot_essential_pages_translation' ) ) {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot_essential_pages_translation' ) ) {
 			wp_send_json_error( __( 'Acesso negado.', 'alvobot-pro' ) );
 		}
 
@@ -1826,8 +1869,8 @@ class AlvoBotPro_EssentialPages {
 			wp_send_json_error( __( 'Permissões insuficientes.', 'alvobot-pro' ) );
 		}
 
-		$target_languages = array_map( 'sanitize_text_field', $_POST['target_languages'] );
-		$selected_pages   = array_map( 'sanitize_text_field', $_POST['selected_pages'] );
+		$target_languages = isset( $_POST['target_languages'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['target_languages'] ) ) : array();
+		$selected_pages   = isset( $_POST['selected_pages'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['selected_pages'] ) ) : array();
 
 		if ( empty( $target_languages ) || empty( $selected_pages ) ) {
 			wp_send_json_error( __( 'Parâmetros inválidos.', 'alvobot-pro' ) );
@@ -2026,48 +2069,14 @@ class AlvoBotPro_EssentialPages {
 	 * Obtém nome nativo do idioma
 	 */
 	private function get_language_native_name( $lang_code ) {
-		$native_names = array(
-			'pt' => 'Português',
-			'en' => 'English',
-			'es' => 'Español',
-			'fr' => 'Français',
-			'de' => 'Deutsch',
-			'it' => 'Italiano',
-			'ru' => 'Русский',
-			'zh' => '中文',
-			'ja' => '日本語',
-			'ko' => '한국어',
-			'ar' => 'العربية',
-			'hi' => 'हिन्दी',
-			'nl' => 'Nederlands',
-			'tr' => 'Türkçe',
-		);
-
-		return isset( $native_names[ $lang_code ] ) ? $native_names[ $lang_code ] : $lang_code;
+		return alvobot_get_language_native_name( $lang_code );
 	}
 
 	/**
 	 * Obtém emoji da bandeira do país
 	 */
 	private function get_language_flag( $lang_code ) {
-		$flags = array(
-			'pt' => '🇧🇷',
-			'en' => '🇺🇸',
-			'es' => '🇪🇸',
-			'fr' => '🇫🇷',
-			'de' => '🇩🇪',
-			'it' => '🇮🇹',
-			'ru' => '🇷🇺',
-			'zh' => '🇨🇳',
-			'ja' => '🇯🇵',
-			'ko' => '🇰🇷',
-			'ar' => '🇸🇦',
-			'hi' => '🇮🇳',
-			'nl' => '🇳🇱',
-			'tr' => '🇹🇷',
-		);
-
-		return isset( $flags[ $lang_code ] ) ? $flags[ $lang_code ] : '🌐';
+		return alvobot_get_language_flag( $lang_code );
 	}
 
 	/**

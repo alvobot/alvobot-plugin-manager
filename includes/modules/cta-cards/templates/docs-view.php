@@ -15,13 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="docs-sidebar">
 		<nav class="docs-nav">
 			<ul>
-				<li><a href="#getting-started" class="nav-link active"><?php _e( 'Primeiros Passos', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#basic-usage" class="nav-link"><?php _e( 'Uso Básico', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#templates" class="nav-link"><?php _e( 'Templates', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#parameters" class="nav-link"><?php _e( 'Parâmetros', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#advanced" class="nav-link"><?php _e( 'Uso Avançado', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#tips" class="nav-link"><?php _e( 'Dicas e Truques', 'alvobot-pro' ); ?></a></li>
-				<li><a href="#troubleshooting" class="nav-link"><?php _e( 'Solução de Problemas', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#getting-started" class="nav-link active"><?php esc_html_e( 'Primeiros Passos', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#basic-usage" class="nav-link"><?php esc_html_e( 'Uso Básico', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#templates" class="nav-link"><?php esc_html_e( 'Templates', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#parameters" class="nav-link"><?php esc_html_e( 'Parâmetros', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#advanced" class="nav-link"><?php esc_html_e( 'Uso Avançado', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#tips" class="nav-link"><?php esc_html_e( 'Dicas e Truques', 'alvobot-pro' ); ?></a></li>
+				<li><a href="#troubleshooting" class="nav-link"><?php esc_html_e( 'Solução de Problemas', 'alvobot-pro' ); ?></a></li>
 			</ul>
 		</nav>
 	</div>
@@ -30,75 +30,75 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Getting Started -->
 		<section id="getting-started" class="docs-section active">
 			<div class="docs-header">
-				<h2><?php _e( 'Primeiros Passos', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Aprenda a usar o CTA Cards para criar chamadas para ação atrativas em seus posts e páginas.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Primeiros Passos', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Aprenda a usar o CTA Cards para criar chamadas para ação atrativas em seus posts e páginas.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'O que são CTA Cards?', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'CTA Cards são elementos visuais interativos que você pode inserir em qualquer post ou página do WordPress usando shortcodes. Eles foram projetados para aumentar o engajamento e direcionar seus visitantes para ações específicas.', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'O que são CTA Cards?', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'CTA Cards são elementos visuais interativos que você pode inserir em qualquer post ou página do WordPress usando shortcodes. Eles foram projetados para aumentar o engajamento e direcionar seus visitantes para ações específicas.', 'alvobot-pro' ); ?></p>
 				
 				<div class="feature-list">
 					<div class="feature-item">
 						<span class="feature-icon"><i data-lucide="palette" class="alvobot-icon"></i></span>
 						<div>
-							<strong><?php _e( '8 Templates Únicos', 'alvobot-pro' ); ?></strong>
-							<p><?php _e( 'Escolha entre diferentes estilos visuais para cada situação', 'alvobot-pro' ); ?></p>
+							<strong><?php esc_html_e( '8 Templates Únicos', 'alvobot-pro' ); ?></strong>
+							<p><?php esc_html_e( 'Escolha entre diferentes estilos visuais para cada situação', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-icon"><i data-lucide="paintbrush" class="alvobot-icon"></i></span>
 						<div>
-							<strong><?php _e( 'Totalmente Personalizável', 'alvobot-pro' ); ?></strong>
-							<p><?php _e( 'Cores, textos, imagens e ícones podem ser ajustados', 'alvobot-pro' ); ?></p>
+							<strong><?php esc_html_e( 'Totalmente Personalizável', 'alvobot-pro' ); ?></strong>
+							<p><?php esc_html_e( 'Cores, textos, imagens e ícones podem ser ajustados', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-icon"><i data-lucide="smartphone" class="alvobot-icon"></i></span>
 						<div>
-							<strong><?php _e( 'Design Responsivo', 'alvobot-pro' ); ?></strong>
-							<p><?php _e( 'Funciona perfeitamente em desktop, tablet e mobile', 'alvobot-pro' ); ?></p>
+							<strong><?php esc_html_e( 'Design Responsivo', 'alvobot-pro' ); ?></strong>
+							<p><?php esc_html_e( 'Funciona perfeitamente em desktop, tablet e mobile', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-icon"><i data-lucide="zap" class="alvobot-icon"></i></span>
 						<div>
-							<strong><?php _e( 'Efeitos Avançados', 'alvobot-pro' ); ?></strong>
-							<p><?php _e( 'Animações, pulsos e efeitos LED para chamar atenção', 'alvobot-pro' ); ?></p>
+							<strong><?php esc_html_e( 'Efeitos Avançados', 'alvobot-pro' ); ?></strong>
+							<p><?php esc_html_e( 'Animações, pulsos e efeitos LED para chamar atenção', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Como Começar', 'alvobot-pro' ); ?></h3>
+				<h3><?php esc_html_e( 'Como Começar', 'alvobot-pro' ); ?></h3>
 				<div class="step-list">
 					<div class="step-item">
 						<div class="step-number">1</div>
 						<div class="step-content">
-							<h4><?php _e( 'Use o Gerador', 'alvobot-pro' ); ?></h4>
-							<p><?php _e( 'Acesse a aba "Gerador" para criar seu primeiro CTA de forma visual e interativa.', 'alvobot-pro' ); ?></p>
+							<h4><?php esc_html_e( 'Use o Gerador', 'alvobot-pro' ); ?></h4>
+							<p><?php esc_html_e( 'Acesse a aba "Gerador" para criar seu primeiro CTA de forma visual e interativa.', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="step-item">
 						<div class="step-number">2</div>
 						<div class="step-content">
-							<h4><?php _e( 'Escolha um Template', 'alvobot-pro' ); ?></h4>
-							<p><?php _e( 'Selecione o template que melhor se adequa ao seu objetivo na barra lateral.', 'alvobot-pro' ); ?></p>
+							<h4><?php esc_html_e( 'Escolha um Template', 'alvobot-pro' ); ?></h4>
+							<p><?php esc_html_e( 'Selecione o template que melhor se adequa ao seu objetivo na barra lateral.', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="step-item">
 						<div class="step-number">3</div>
 						<div class="step-content">
-							<h4><?php _e( 'Configure e Personalize', 'alvobot-pro' ); ?></h4>
-							<p><?php _e( 'Preencha os campos no centro e veja o resultado em tempo real no preview.', 'alvobot-pro' ); ?></p>
+							<h4><?php esc_html_e( 'Configure e Personalize', 'alvobot-pro' ); ?></h4>
+							<p><?php esc_html_e( 'Preencha os campos no centro e veja o resultado em tempo real no preview.', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 					<div class="step-item">
 						<div class="step-number">4</div>
 						<div class="step-content">
-							<h4><?php _e( 'Copie e Cole', 'alvobot-pro' ); ?></h4>
-							<p><?php _e( 'Copie o shortcode gerado e cole em qualquer post ou página.', 'alvobot-pro' ); ?></p>
+							<h4><?php esc_html_e( 'Copie e Cole', 'alvobot-pro' ); ?></h4>
+							<p><?php esc_html_e( 'Copie o shortcode gerado e cole em qualquer post ou página.', 'alvobot-pro' ); ?></p>
 						</div>
 					</div>
 				</div>
@@ -108,27 +108,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Basic Usage -->
 		<section id="basic-usage" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Uso Básico', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Aprenda a sintaxe básica dos shortcodes CTA Cards.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Uso Básico', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Aprenda a sintaxe básica dos shortcodes CTA Cards.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Sintaxe Básica', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'Para usar um CTA card, adicione o shortcode em qualquer post ou página:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Sintaxe Básica', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'Para usar um CTA card, adicione o shortcode em qualquer post ou página:', 'alvobot-pro' ); ?></p>
 				
 				<div class="code-example">
 					<pre><code>[cta_card template="vertical" title="Meu Título" button="Clique Aqui" url="/minha-pagina"]</code></pre>
 				</div>
 
 				<div class="alert alert-info">
-					<strong><?php _e( 'Dica:', 'alvobot-pro' ); ?></strong>
-					<?php _e( 'Os únicos parâmetros obrigatórios são template, title e url. Todos os outros são opcionais.', 'alvobot-pro' ); ?>
+					<strong><?php esc_html_e( 'Dica:', 'alvobot-pro' ); ?></strong>
+					<?php esc_html_e( 'Os únicos parâmetros obrigatórios são template, title e url. Todos os outros são opcionais.', 'alvobot-pro' ); ?>
 				</div>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Exemplo Prático', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'Vamos criar um CTA para promover um e-book gratuito:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Exemplo Prático', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'Vamos criar um CTA para promover um e-book gratuito:', 'alvobot-pro' ); ?></p>
 				
 				<div class="code-example">
 					<pre><code>[cta_card 
@@ -144,7 +144,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</div>
 
 				<div class="result-preview">
-					<h4><?php _e( 'Resultado:', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( 'Resultado:', 'alvobot-pro' ); ?></h4>
 					<?php echo do_shortcode( '[cta_card template="vertical" title="E-book Gratuito: Marketing Digital 2024" subtitle="Guia Completo para Iniciantes" description="Aprenda as estratégias mais eficazes para divulgar seu negócio online e aumentar suas vendas." button="Baixar Grátis" url="#" color_button="#27AE60" color_primary="#2ECC71"]' ); ?>
 				</div>
 			</div>
@@ -153,111 +153,111 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Templates -->
 		<section id="templates" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Templates Disponíveis', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Conheça todos os templates e quando usar cada um.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Templates Disponíveis', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Conheça todos os templates e quando usar cada um.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="template-grid">
 				<div class="template-doc-card">
 					<h3>vertical</h3>
-					<p><?php _e( 'Layout centralizado ideal para destaque no meio do conteúdo.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Layout centralizado ideal para destaque no meio do conteúdo.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Promoções principais', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Downloads de lead magnets', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Inscrições em newsletters', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Promoções principais', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Downloads de lead magnets', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Inscrições em newsletters', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>horizontal</h3>
-					<p><?php _e( 'Imagem à esquerda e conteúdo à direita.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Imagem à esquerda e conteúdo à direita.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Artigos relacionados', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Produtos com imagem', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Cursos e treinamentos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Artigos relacionados', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Produtos com imagem', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Cursos e treinamentos', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>minimal</h3>
-					<p><?php _e( 'Design limpo e discreto com tag opcional.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Design limpo e discreto com tag opcional.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Downloads rápidos', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Links para ferramentas', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'CTAs secundários', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Downloads rápidos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Links para ferramentas', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'CTAs secundários', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>banner</h3>
-					<p><?php _e( 'Banner grande com imagem de fundo opcional.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Banner grande com imagem de fundo opcional.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Ofertas especiais', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Eventos e webinars', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Lançamentos importantes', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Ofertas especiais', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Eventos e webinars', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Lançamentos importantes', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>simple</h3>
-					<p><?php _e( 'Card simples com ícone/emoji e link.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Card simples com ícone/emoji e link.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Links em listas', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Recursos rápidos', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Navegação interna', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Links em listas', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Recursos rápidos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Navegação interna', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>pulse</h3>
-					<p><?php _e( 'Template animado com indicador "ao vivo".', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Template animado com indicador "ao vivo".', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Transmissões ao vivo', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Ofertas por tempo limitado', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Eventos urgentes', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Transmissões ao vivo', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Ofertas por tempo limitado', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Eventos urgentes', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>multi-button</h3>
-					<p><?php _e( 'Template com até 3 botões diferentes.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Template com até 3 botões diferentes.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Comparação de planos', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Múltiplas opções', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Call-to-actions complexos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Comparação de planos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Múltiplas opções', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Call-to-actions complexos', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="template-doc-card">
 					<h3>led-border</h3>
-					<p><?php _e( 'Template futurista com efeito LED colorido.', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Template futurista com efeito LED colorido.', 'alvobot-pro' ); ?></p>
 					<div class="template-usage">
-						<strong><?php _e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
+						<strong><?php esc_html_e( 'Melhor para:', 'alvobot-pro' ); ?></strong>
 						<ul>
-							<li><?php _e( 'Produtos tecnológicos', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Ofertas especiais', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'CTAs que precisam se destacar', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Produtos tecnológicos', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Ofertas especiais', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'CTAs que precisam se destacar', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
@@ -267,18 +267,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Parameters -->
 		<section id="parameters" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Referência de Parâmetros', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Lista completa de todos os parâmetros disponíveis.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Referência de Parâmetros', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Lista completa de todos os parâmetros disponíveis.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="params-table-container">
 				<table class="params-table">
 					<thead>
 						<tr>
-							<th><?php _e( 'Parâmetro', 'alvobot-pro' ); ?></th>
-							<th><?php _e( 'Tipo', 'alvobot-pro' ); ?></th>
-							<th><?php _e( 'Padrão', 'alvobot-pro' ); ?></th>
-							<th><?php _e( 'Descrição', 'alvobot-pro' ); ?></th>
+							<th><?php esc_html_e( 'Parâmetro', 'alvobot-pro' ); ?></th>
+							<th><?php esc_html_e( 'Tipo', 'alvobot-pro' ); ?></th>
+							<th><?php esc_html_e( 'Padrão', 'alvobot-pro' ); ?></th>
+							<th><?php esc_html_e( 'Descrição', 'alvobot-pro' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -286,126 +286,126 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<td><code>template</code></td>
 							<td><span class="param-type">string</span></td>
 							<td>vertical</td>
-							<td><?php _e( 'Modelo do card (vertical, horizontal, minimal, banner, simple, pulse, multi-button, led-border)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Modelo do card (vertical, horizontal, minimal, banner, simple, pulse, multi-button, led-border)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>title</code></td>
 							<td><span class="param-type">string</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Título principal do CTA', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Título principal do CTA', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>subtitle</code></td>
 							<td><span class="param-type">string</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Subtítulo opcional', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Subtítulo opcional', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>description</code></td>
 							<td><span class="param-type">html</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Texto descritivo (HTML permitido)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Texto descritivo (HTML permitido)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>button</code></td>
 							<td><span class="param-type">string</span></td>
-							<td><?php _e( 'Saiba Mais', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Texto do botão principal', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Saiba Mais', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Texto do botão principal', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>url</code></td>
 							<td><span class="param-type">url</span></td>
 							<td>#</td>
-							<td><?php _e( 'URL de destino do CTA', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'URL de destino do CTA', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>target</code></td>
 							<td><span class="param-type">string</span></td>
 							<td>_self</td>
-							<td><?php _e( 'Como abrir o link (_self, _blank)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Como abrir o link (_self, _blank)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>image</code></td>
 							<td><span class="param-type">url</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'URL da imagem (templates horizontal, multi-button, led-border)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'URL da imagem (templates horizontal, multi-button, led-border)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>icon</code></td>
 							<td><span class="param-type">string</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Ícone Dashicons ou emoji (ex: dashicons-star-filled ou 🌟)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Ícone Dashicons ou emoji (ex: dashicons-star-filled ou 🌟)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>tag</code></td>
 							<td><span class="param-type">string</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Badge/tag (template minimal)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Badge/tag (template minimal)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>background</code></td>
 							<td><span class="param-type">url</span></td>
-							<td><?php _e( 'vazio', 'alvobot-pro' ); ?></td>
-							<td><?php _e( 'Imagem de fundo (template banner)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'vazio', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Imagem de fundo (template banner)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>color_primary</code></td>
 							<td><span class="param-type">color</span></td>
 							<td>#2271b1</td>
-							<td><?php _e( 'Cor principal (hex)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Cor principal (hex)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>color_button</code></td>
 							<td><span class="param-type">color</span></td>
 							<td>#2271b1</td>
-							<td><?php _e( 'Cor do botão (hex)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Cor do botão (hex)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>color_text</code></td>
 							<td><span class="param-type">color</span></td>
 							<td>#333333</td>
-							<td><?php _e( 'Cor do texto (hex)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Cor do texto (hex)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>color_bg</code></td>
 							<td><span class="param-type">color</span></td>
 							<td>#ffffff</td>
-							<td><?php _e( 'Cor de fundo (hex)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Cor de fundo (hex)', 'alvobot-pro' ); ?></td>
 						</tr>
 						<tr>
 							<td><code>align</code></td>
 							<td><span class="param-type">string</span></td>
 							<td>center</td>
-							<td><?php _e( 'Alinhamento (left, center, right)', 'alvobot-pro' ); ?></td>
+							<td><?php esc_html_e( 'Alinhamento (left, center, right)', 'alvobot-pro' ); ?></td>
 						</tr>
 					</tbody>
 				</table>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Parâmetros Específicos por Template', 'alvobot-pro' ); ?></h3>
+				<h3><?php esc_html_e( 'Parâmetros Específicos por Template', 'alvobot-pro' ); ?></h3>
 				
 				<div class="template-params">
 					<h4>Template Pulse</h4>
 					<ul>
-						<li><code>pulse_text</code> - <?php _e( 'Texto do indicador (padrão: "AO VIVO")', 'alvobot-pro' ); ?></li>
-						<li><code>pulse_color</code> - <?php _e( 'Cor do pulse (padrão: "#ff6b6b")', 'alvobot-pro' ); ?></li>
+						<li><code>pulse_text</code> - <?php esc_html_e( 'Texto do indicador (padrão: "AO VIVO")', 'alvobot-pro' ); ?></li>
+						<li><code>pulse_color</code> - <?php esc_html_e( 'Cor do pulse (padrão: "#ff6b6b")', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="template-params">
 					<h4>Template Multi-Button</h4>
 					<ul>
-						<li><code>button2</code>, <code>url2</code>, <code>target2</code>, <code>color_button2</code> - <?php _e( 'Segundo botão', 'alvobot-pro' ); ?></li>
-						<li><code>button3</code>, <code>url3</code>, <code>target3</code>, <code>color_button3</code> - <?php _e( 'Terceiro botão', 'alvobot-pro' ); ?></li>
+						<li><code>button2</code>, <code>url2</code>, <code>target2</code>, <code>color_button2</code> - <?php esc_html_e( 'Segundo botão', 'alvobot-pro' ); ?></li>
+						<li><code>button3</code>, <code>url3</code>, <code>target3</code>, <code>color_button3</code> - <?php esc_html_e( 'Terceiro botão', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="template-params">
 					<h4>Template LED Border</h4>
 					<ul>
-						<li><code>led_colors</code> - <?php _e( 'Cores do LED separadas por vírgula (padrão: "#ff0080,#00ff80,#8000ff,#ff8000")', 'alvobot-pro' ); ?></li>
-						<li><code>led_speed</code> - <?php _e( 'Velocidade da animação (padrão: "2s")', 'alvobot-pro' ); ?></li>
+						<li><code>led_colors</code> - <?php esc_html_e( 'Cores do LED separadas por vírgula (padrão: "#ff0080,#00ff80,#8000ff,#ff8000")', 'alvobot-pro' ); ?></li>
+						<li><code>led_speed</code> - <?php esc_html_e( 'Velocidade da animação (padrão: "2s")', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 			</div>
@@ -414,16 +414,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Advanced -->
 		<section id="advanced" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Uso Avançado', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Técnicas avançadas e exemplos complexos.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Uso Avançado', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Técnicas avançadas e exemplos complexos.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Ícones e Emojis', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'Você pode usar tanto ícones do WordPress (Dashicons) quanto emojis no parâmetro icon:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Ícones e Emojis', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'Você pode usar tanto ícones do WordPress (Dashicons) quanto emojis no parâmetro icon:', 'alvobot-pro' ); ?></p>
 				
 				<div class="icon-examples">
-					<h4><?php _e( 'Exemplos com Dashicons:', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( 'Exemplos com Dashicons:', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>icon="dashicons-star-filled"
 icon="dashicons-download"
@@ -431,7 +431,7 @@ icon="dashicons-video-alt3"
 icon="dashicons-cart"</code></pre>
 					</div>
 
-					<h4><?php _e( 'Exemplos com Emojis:', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( 'Exemplos com Emojis:', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>icon="🌟"
 icon="📁" 
@@ -441,14 +441,14 @@ icon="🛒"</code></pre>
 				</div>
 
 				<div class="alert alert-info">
-					<strong><?php _e( 'Dica:', 'alvobot-pro' ); ?></strong>
-					<?php _e( 'O sistema detecta automaticamente se você está usando um emoji ou um ícone Dashicons e aplica o estilo correto.', 'alvobot-pro' ); ?>
+					<strong><?php esc_html_e( 'Dica:', 'alvobot-pro' ); ?></strong>
+					<?php esc_html_e( 'O sistema detecta automaticamente se você está usando um emoji ou um ícone Dashicons e aplica o estilo correto.', 'alvobot-pro' ); ?>
 				</div>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Múltiplos Botões', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'O template multi-button permite até 3 botões com estilos diferentes:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Múltiplos Botões', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'O template multi-button permite até 3 botões com estilos diferentes:', 'alvobot-pro' ); ?></p>
 				
 				<div class="code-example">
 					<pre><code>[cta_card 
@@ -468,8 +468,8 @@ icon="🛒"</code></pre>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Efeito LED Personalizado', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'Personalize as cores e velocidade do efeito LED:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Efeito LED Personalizado', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'Personalize as cores e velocidade do efeito LED:', 'alvobot-pro' ); ?></p>
 				
 				<div class="code-example">
 					<pre><code>[cta_card 
@@ -482,15 +482,15 @@ icon="🛒"</code></pre>
 	icon="⚡"]</code></pre>
 				</div>
 
-				<p><?php _e( 'Velocidades disponíveis: 1s (rápida), 2s (normal), 3s (lenta), 4s (muito lenta)', 'alvobot-pro' ); ?></p>
+				<p><?php esc_html_e( 'Velocidades disponíveis: 1s (rápida), 2s (normal), 3s (lenta), 4s (muito lenta)', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="docs-card">
-				<h3><?php _e( 'Shortcodes Completos de Todos os Templates', 'alvobot-pro' ); ?></h3>
-				<p><?php _e( 'Copie e cole estes shortcodes completos diretamente ou use como base para personalização:', 'alvobot-pro' ); ?></p>
+				<h3><?php esc_html_e( 'Shortcodes Completos de Todos os Templates', 'alvobot-pro' ); ?></h3>
+				<p><?php esc_html_e( 'Copie e cole estes shortcodes completos diretamente ou use como base para personalização:', 'alvobot-pro' ); ?></p>
 				
 				<div class="template-shortcodes">
-					<h4><?php _e( '1. Template Vertical', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '1. Template Vertical', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="vertical" 
@@ -508,7 +508,7 @@ icon="🛒"</code></pre>
 	align="center"]</code></pre>
 					</div>
 
-					<h4><?php _e( '2. Template Horizontal', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '2. Template Horizontal', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="horizontal" 
@@ -523,7 +523,7 @@ icon="🛒"</code></pre>
 	color_bg="#ffffff"]</code></pre>
 					</div>
 
-					<h4><?php _e( '3. Template Minimalista', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '3. Template Minimalista', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="minimal" 
@@ -538,7 +538,7 @@ icon="🛒"</code></pre>
 	color_bg="#ffffff"]</code></pre>
 					</div>
 
-					<h4><?php _e( '4. Template Banner', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '4. Template Banner', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="banner" 
@@ -552,7 +552,7 @@ icon="🛒"</code></pre>
 	align="center"]</code></pre>
 					</div>
 
-					<h4><?php _e( '5. Template Simples', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '5. Template Simples', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="simple" 
@@ -565,7 +565,7 @@ icon="🛒"</code></pre>
 	color_bg="#ffffff"]</code></pre>
 					</div>
 
-					<h4><?php _e( '6. Template Pulse Animado', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '6. Template Pulse Animado', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="pulse" 
@@ -584,7 +584,7 @@ icon="🛒"</code></pre>
 	align="center"]</code></pre>
 					</div>
 
-					<h4><?php _e( '7. Template Múltiplos Botões', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '7. Template Múltiplos Botões', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="multi-button" 
@@ -609,7 +609,7 @@ icon="🛒"</code></pre>
 	align="center"]</code></pre>
 					</div>
 
-					<h4><?php _e( '8. Template LED Border', 'alvobot-pro' ); ?></h4>
+					<h4><?php esc_html_e( '8. Template LED Border', 'alvobot-pro' ); ?></h4>
 					<div class="code-example">
 						<pre><code>[cta_card 
 	template="led-border" 
@@ -631,8 +631,8 @@ icon="🛒"</code></pre>
 				</div>
 
 				<div class="alert alert-info">
-					<i data-lucide="lightbulb" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><strong><?php _e( 'Dica para IAs:', 'alvobot-pro' ); ?></strong>
-					<?php _e( 'Estes shortcodes podem ser copiados e fornecidos para IAs como ChatGPT, Claude ou outras para personalização automática. Basta especificar o que você quer modificar (cores, textos, URLs, etc.) e a IA poderá ajustar os parâmetros apropriados.', 'alvobot-pro' ); ?>
+					<i data-lucide="lightbulb" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><strong><?php esc_html_e( 'Dica para IAs:', 'alvobot-pro' ); ?></strong>
+					<?php esc_html_e( 'Estes shortcodes podem ser copiados e fornecidos para IAs como ChatGPT, Claude ou outras para personalização automática. Basta especificar o que você quer modificar (cores, textos, URLs, etc.) e a IA poderá ajustar os parâmetros apropriados.', 'alvobot-pro' ); ?>
 				</div>
 			</div>
 		</section>
@@ -640,74 +640,74 @@ icon="🛒"</code></pre>
 		<!-- Tips -->
 		<section id="tips" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Dicas e Truques', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Maximize o impacto dos seus CTAs com essas dicas práticas.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Dicas e Truques', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Maximize o impacto dos seus CTAs com essas dicas práticas.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="tips-grid">
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="palette" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Escolha de Cores', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Escolha de Cores', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Use cores que contrastem com seu tema', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Vermelho/laranja para urgência', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Verde para ações positivas', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Azul para confiança', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use cores que contrastem com seu tema', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Vermelho/laranja para urgência', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Verde para ações positivas', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Azul para confiança', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="pencil" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Textos Eficazes', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Textos Eficazes', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Use verbos de ação no botão', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Mantenha títulos concisos', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Crie senso de urgência quando apropriado', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Destaque benefícios, não características', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use verbos de ação no botão', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Mantenha títulos concisos', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Crie senso de urgência quando apropriado', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Destaque benefícios, não características', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="smartphone" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Design Responsivo', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Design Responsivo', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Teste em dispositivos móveis', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Use imagens otimizadas', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Evite textos muito longos em mobile', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Considere o template horizontal para mobile', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Teste em dispositivos móveis', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use imagens otimizadas', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Evite textos muito longos em mobile', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Considere o template horizontal para mobile', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="trending-up" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Conversão', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Conversão', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Posicione CTAs em pontos estratégicos', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Use apenas um CTA principal por página', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Teste diferentes templates', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Monitore métricas de clique', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Posicione CTAs em pontos estratégicos', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use apenas um CTA principal por página', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Teste diferentes templates', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Monitore métricas de clique', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="gauge" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Performance', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Performance', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Use imagens comprimidas (WebP quando possível)', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Evite muitos CTAs animados na mesma página', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Teste a velocidade de carregamento', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Use CDN para imagens externas', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use imagens comprimidas (WebP quando possível)', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Evite muitos CTAs animados na mesma página', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Teste a velocidade de carregamento', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use CDN para imagens externas', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 
 				<div class="tip-card">
 					<div class="tip-icon"><i data-lucide="target" class="alvobot-icon"></i></div>
-					<h3><?php _e( 'Estratégia', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Estratégia', 'alvobot-pro' ); ?></h3>
 					<ul>
-						<li><?php _e( 'Alinhe CTA com o objetivo da página', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Use templates diferentes para públicos diferentes', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Crie sequências de CTAs (funil)', 'alvobot-pro' ); ?></li>
-						<li><?php _e( 'Personalize por contexto do conteúdo', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Alinhe CTA com o objetivo da página', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Use templates diferentes para públicos diferentes', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Crie sequências de CTAs (funil)', 'alvobot-pro' ); ?></li>
+						<li><?php esc_html_e( 'Personalize por contexto do conteúdo', 'alvobot-pro' ); ?></li>
 					</ul>
 				</div>
 			</div>
@@ -716,68 +716,68 @@ icon="🛒"</code></pre>
 		<!-- Troubleshooting -->
 		<section id="troubleshooting" class="docs-section">
 			<div class="docs-header">
-				<h2><?php _e( 'Solução de Problemas', 'alvobot-pro' ); ?></h2>
-				<p><?php _e( 'Resolva os problemas mais comuns rapidamente.', 'alvobot-pro' ); ?></p>
+				<h2><?php esc_html_e( 'Solução de Problemas', 'alvobot-pro' ); ?></h2>
+				<p><?php esc_html_e( 'Resolva os problemas mais comuns rapidamente.', 'alvobot-pro' ); ?></p>
 			</div>
 
 			<div class="faq-list">
 				<div class="faq-item">
-					<h3 class="faq-question"><?php _e( 'O CTA não aparece na página', 'alvobot-pro' ); ?></h3>
+					<h3 class="faq-question"><?php esc_html_e( 'O CTA não aparece na página', 'alvobot-pro' ); ?></h3>
 					<div class="faq-answer">
-						<p><?php _e( 'Verifique se:', 'alvobot-pro' ); ?></p>
+						<p><?php esc_html_e( 'Verifique se:', 'alvobot-pro' ); ?></p>
 						<ul>
-							<li><?php _e( 'O shortcode está escrito corretamente', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'O módulo CTA Cards está ativo no AlvoBot Pro', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Não há conflitos com outros plugins', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'O cache da página foi limpo', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'O shortcode está escrito corretamente', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'O módulo CTA Cards está ativo no AlvoBot Pro', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Não há conflitos com outros plugins', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'O cache da página foi limpo', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question"><?php _e( 'O design está quebrado ou diferente', 'alvobot-pro' ); ?></div>
+					<div class="faq-question"><?php esc_html_e( 'O design está quebrado ou diferente', 'alvobot-pro' ); ?></div>
 					<div class="faq-answer">
-						<p><?php _e( 'Possíveis causas:', 'alvobot-pro' ); ?></p>
+						<p><?php esc_html_e( 'Possíveis causas:', 'alvobot-pro' ); ?></p>
 						<ul>
-							<li><?php _e( 'Conflito com CSS do tema - adicione !important nas cores', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Plugin de cache não atualizado', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'JavaScript do tema interferindo', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Conflito com CSS do tema - adicione !important nas cores', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Plugin de cache não atualizado', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'JavaScript do tema interferindo', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question"><?php _e( 'Ícones não aparecem', 'alvobot-pro' ); ?></div>
+					<div class="faq-question"><?php esc_html_e( 'Ícones não aparecem', 'alvobot-pro' ); ?></div>
 					<div class="faq-answer">
-						<p><?php _e( 'Soluções:', 'alvobot-pro' ); ?></p>
+						<p><?php esc_html_e( 'Soluções:', 'alvobot-pro' ); ?></p>
 						<ul>
-							<li><?php _e( 'Verifique se está usando o nome correto do Dashicon', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Teste com um emoji simples como "🌟"', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Confirme se o tema suporta Dashicons', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Verifique se está usando o nome correto do Dashicon', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Teste com um emoji simples como "🌟"', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Confirme se o tema suporta Dashicons', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question"><?php _e( 'Animações não funcionam', 'alvobot-pro' ); ?></div>
+					<div class="faq-question"><?php esc_html_e( 'Animações não funcionam', 'alvobot-pro' ); ?></div>
 					<div class="faq-answer">
-						<p><?php _e( 'Verifique:', 'alvobot-pro' ); ?></p>
+						<p><?php esc_html_e( 'Verifique:', 'alvobot-pro' ); ?></p>
 						<ul>
-							<li><?php _e( 'Se o usuário não tem preferência de movimento reduzido ativa', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Se não há CSS conflitante bloqueando animações', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Se o navegador suporta as animações CSS utilizadas', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Se o usuário não tem preferência de movimento reduzido ativa', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Se não há CSS conflitante bloqueando animações', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Se o navegador suporta as animações CSS utilizadas', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question"><?php _e( 'Template não responsivo no mobile', 'alvobot-pro' ); ?></div>
+					<div class="faq-question"><?php esc_html_e( 'Template não responsivo no mobile', 'alvobot-pro' ); ?></div>
 					<div class="faq-answer">
-						<p><?php _e( 'Soluções:', 'alvobot-pro' ); ?></p>
+						<p><?php esc_html_e( 'Soluções:', 'alvobot-pro' ); ?></p>
 						<ul>
-							<li><?php _e( 'Limpe o cache e teste novamente', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Verifique se o tema tem viewport meta tag', 'alvobot-pro' ); ?></li>
-							<li><?php _e( 'Teste com o template "vertical" que é mais mobile-friendly', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Limpe o cache e teste novamente', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Verifique se o tema tem viewport meta tag', 'alvobot-pro' ); ?></li>
+							<li><?php esc_html_e( 'Teste com o template "vertical" que é mais mobile-friendly', 'alvobot-pro' ); ?></li>
 						</ul>
 					</div>
 				</div>

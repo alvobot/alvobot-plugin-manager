@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once dirname( __DIR__, 3 ) . '/shared/countries-languages.php';
+
 // Evita redeclaração da classe
 if ( class_exists( 'AlvoBotPro_OpenAI_Translation_Provider' ) ) {
 	return;
@@ -276,26 +278,7 @@ Now, translate the following text:
 	 * Converte nome de idioma para código ISO 639-1
 	 */
 	private function get_language_iso_code( $language_name ) {
-		$iso_codes = array(
-			'português'  => 'pt',
-			'portuguese' => 'pt',
-			'inglês'     => 'en',
-			'english'    => 'en',
-			'espanhol'   => 'es',
-			'spanish'    => 'es',
-			'español'    => 'es',
-			'francês'    => 'fr',
-			'french'     => 'fr',
-			'français'   => 'fr',
-			'italiano'   => 'it',
-			'italian'    => 'it',
-			'alemão'     => 'de',
-			'german'     => 'de',
-			'deutsch'    => 'de',
-		);
-
-		$lang_key = strtolower( $language_name );
-		return isset( $iso_codes[ $lang_key ] ) ? $iso_codes[ $lang_key ] : strtolower( substr( $language_name, 0, 2 ) );
+		return alvobot_get_language_iso_code( $language_name );
 	}
 
 	/**
@@ -307,7 +290,7 @@ Now, translate the following text:
 
 		// Prepara dados da requisição
 		$args = array(
-			'body'       => json_encode( $data ),
+			'body'       => wp_json_encode( $data ),
 			'headers'    => $headers,
 			'timeout'    => $this->settings['timeout'],
 			'user-agent' => 'AlvoBot Multi Languages',
@@ -408,10 +391,8 @@ Now, translate the following text:
 		}
 
 		// Payload limpo para log
-		$safe_data = $data;
-
-		// Comando curl equivalente
-		$curl_command = $this->generate_curl_equivalent( $safe_data, $safe_headers );
+		$safe_data = $this->sanitize_log_data( $data, 0, 350 );
+		$safe_args = $this->sanitize_log_data( $args, 0, 350 );
 
 		// Log estruturado
 		$log_entry = [
@@ -441,10 +422,10 @@ Now, translate the following text:
 			],
 			'headers'         => $safe_headers,
 			'payload'         => $safe_data,
-			'curl_equivalent' => $curl_command,
+			'request_args'    => $safe_args,
 		];
 
-		AlvoBotPro::debug_log( 'multi-languages', '[START] OPENAI REQUEST:' . json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', '[START] OPENAI REQUEST:' . wp_json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**
@@ -456,6 +437,7 @@ Now, translate the following text:
 			$api_key_preview                       = 'sk-' . substr( $this->settings['api_key'], 3, 4 ) . '...' . substr( $this->settings['api_key'], -4 );
 			$safe_args['headers']['Authorization'] = 'Bearer ' . $api_key_preview;
 		}
+		$safe_args = $this->sanitize_log_data( $safe_args, 0, 300 );
 
 		$log_entry = [
 			'timestamp'           => $timestamp,
@@ -470,7 +452,7 @@ Now, translate the following text:
 			'request_args'        => $safe_args,
 		];
 
-		AlvoBotPro::debug_log( 'multi-languages', '[ERROR] OPENAI REQUEST:' . json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', '[ERROR] OPENAI REQUEST:' . wp_json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**
@@ -501,12 +483,10 @@ Now, translate the following text:
 				'throughput_kb_per_second' => $duration_ms > 0 ? round( ( $response_size_kb / $duration_ms ) * 1000, 2 ) : 0,
 			],
 			'rate_limit_info'       => $rate_limit_info,
-			'response_headers'      => (array) $response_headers,
-			'response_body_preview' => substr( $body, 0, 500 ) . '...',
-			'full_response_body'    => $body,
+			'response_body_preview' => $this->truncate_log_string( $body, 500 ),
 		];
 
-		AlvoBotPro::debug_log( 'multi-languages', '[RESPONSE] OPENAI:' . json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', '[RESPONSE] OPENAI:' . wp_json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**
@@ -529,10 +509,10 @@ Now, translate the following text:
 				'rate_limit_type'       => $this->identify_rate_limit_type( $error_data ),
 			],
 			'request_duration_ms' => $duration_ms,
-			'full_error_response' => $body,
+			'error_response'      => $this->truncate_log_string( $body, 500 ),
 		];
 
-		AlvoBotPro::debug_log( 'multi-languages', '[ERROR] OPENAI API:' . json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', '[ERROR] OPENAI API:' . wp_json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**
@@ -568,36 +548,34 @@ Now, translate the following text:
 		}
 
 		$log_entry = [
-			'timestamp'            => $timestamp,
-			'event'                => 'OPENAI_SUCCESS',
-			'success_details'      => [
+			'timestamp'          => $timestamp,
+			'event'              => 'OPENAI_SUCCESS',
+			'success_details'    => [
 				'request_duration_ms' => $duration_ms,
 				'tokens_per_second'   => $duration_ms > 0 ? round( ( $total_tokens / $duration_ms ) * 1000, 2 ) : 0,
 				'model_used'          => $model_id,
 				'finish_reason'       => $response_data['choices'][0]['finish_reason'] ?? 'unknown',
 			],
-			'token_usage'          => [
+			'token_usage'        => [
 				'prompt_tokens'     => $prompt_tokens,
 				'completion_tokens' => $completion_tokens,
 				'total_tokens'      => $total_tokens,
 				'efficiency_ratio'  => $prompt_tokens > 0 ? round( $completion_tokens / $prompt_tokens, 2 ) : 0,
 			],
-			'cost_calculation'     => [
+			'cost_calculation'   => [
 				'input_cost_usd'  => $actual_input_cost,
 				'output_cost_usd' => $actual_output_cost,
 				'total_cost_usd'  => $total_actual_cost,
 				'cost_per_token'  => $total_tokens > 0 ? round( $total_actual_cost / $total_tokens, 6 ) : 0,
 			],
-			'translation_result'   => [
+			'translation_result' => [
 				'output_length_chars' => strlen( $translated_text ),
 				'output_word_count'   => str_word_count( $translated_text ),
-				'translation_preview' => substr( $translated_text, 0, 200 ) . '...',
-				'full_translation'    => $translated_text,
+				'translation_preview' => $this->truncate_log_string( $translated_text, 200 ),
 			],
-			'full_openai_response' => $response_data,
 		];
 
-		AlvoBotPro::debug_log( 'multi-languages', '[SUCCESS] OPENAI:' . json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', '[SUCCESS] OPENAI:' . wp_json_encode( $log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**
@@ -612,11 +590,83 @@ Now, translate the following text:
 		}
 
 		$curl_parts[] = '-H "Content-Type: application/json"';
-		$curl_parts[] = "-d '" . json_encode( $data, JSON_UNESCAPED_UNICODE ) . "'";
+		$curl_parts[] = "-d '" . wp_json_encode( $data, JSON_UNESCAPED_UNICODE ) . "'";
 		$curl_parts[] = '--connect-timeout ' . $this->settings['timeout'];
 		$curl_parts[] = '--max-time ' . ( $this->settings['timeout'] + 10 );
 
 		return implode( ' ', $curl_parts );
+	}
+
+	/**
+	 * Sanitiza dados antes do log para reduzir vazamento e volume.
+	 */
+	private function sanitize_log_data( $data, $depth = 0, $max_string_length = 300 ) {
+		if ( $depth > 4 ) {
+			return '[max-depth]';
+		}
+
+		if ( is_array( $data ) ) {
+			$sanitized = [];
+			foreach ( $data as $key => $value ) {
+				$normalized_key = is_string( $key ) ? strtolower( $key ) : '';
+				if ( $this->is_sensitive_log_key( $normalized_key ) ) {
+					$sanitized[ $key ] = '[redacted]';
+					continue;
+				}
+				$sanitized[ $key ] = $this->sanitize_log_data( $value, $depth + 1, $max_string_length );
+			}
+			return $sanitized;
+		}
+
+		if ( is_object( $data ) ) {
+			if ( $data instanceof Traversable ) {
+				return $this->sanitize_log_data( iterator_to_array( $data ), $depth + 1, $max_string_length );
+			}
+			return '[object ' . get_class( $data ) . ']';
+		}
+
+		if ( is_string( $data ) ) {
+			return $this->truncate_log_string( $data, $max_string_length );
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Indica chaves sensíveis para mascaramento no log.
+	 */
+	private function is_sensitive_log_key( $key ) {
+		$sensitive_fragments = [
+			'authorization',
+			'api_key',
+			'token',
+			'password',
+			'secret',
+		];
+
+		foreach ( $sensitive_fragments as $fragment ) {
+			if ( strpos( $key, $fragment ) !== false ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Trunca string para manter logs leves.
+	 */
+	private function truncate_log_string( $value, $max_length = 300 ) {
+		if ( ! is_string( $value ) ) {
+			return $value;
+		}
+
+		$length = strlen( $value );
+		if ( $length <= $max_length ) {
+			return $value;
+		}
+
+		return substr( $value, 0, $max_length ) . '...[truncated ' . ( $length - $max_length ) . ' chars]';
 	}
 
 	/**

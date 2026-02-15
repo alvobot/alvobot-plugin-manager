@@ -14,6 +14,8 @@ class AlvoBotPro_Smart_Links_Generator {
 	 * Busca posts candidatos da mesma categoria + língua
 	 */
 	public function get_candidate_posts( $post_id, $limit = 15 ) {
+		$post       = get_post( $post_id );
+		$post_type  = $post ? $post->post_type : 'post';
 		$categories = wp_get_post_categories( $post_id );
 		$language   = null;
 
@@ -22,7 +24,7 @@ class AlvoBotPro_Smart_Links_Generator {
 		}
 
 		$args = array(
-			'post_type'      => 'post',
+			'post_type'      => $post_type,
 			'post_status'    => 'publish',
 			'posts_per_page' => $limit,
 			'post__not_in'   => array( $post_id ),
@@ -39,6 +41,15 @@ class AlvoBotPro_Smart_Links_Generator {
 			$args['lang'] = $language;
 		}
 
+		/**
+		 * Filtra os argumentos da query de candidatos (primeira busca: mesma categoria).
+		 *
+		 * @param array  $args    WP_Query args.
+		 * @param int    $post_id Post sendo processado.
+		 * @param int    $limit   Limite de candidatos.
+		 */
+		$args = apply_filters( 'alvobot_smart_links_candidate_args', $args, $post_id, $limit );
+
 		$posts = get_posts( $args );
 
 		// Fallback: se não tem posts suficientes na mesma categoria, buscar do mesmo idioma
@@ -46,7 +57,7 @@ class AlvoBotPro_Smart_Links_Generator {
 			$existing_ids = array_merge( array( $post_id ), wp_list_pluck( $posts, 'ID' ) );
 
 			$fallback_args = array(
-				'post_type'      => 'post',
+				'post_type'      => $post_type,
 				'post_status'    => 'publish',
 				'posts_per_page' => $limit - count( $posts ),
 				'post__not_in'   => $existing_ids,
@@ -57,6 +68,15 @@ class AlvoBotPro_Smart_Links_Generator {
 			if ( $language ) {
 				$fallback_args['lang'] = $language;
 			}
+
+			/**
+			 * Filtra os argumentos da query de candidatos fallback (busca aleatória).
+			 *
+			 * @param array $fallback_args WP_Query args.
+			 * @param int   $post_id      Post sendo processado.
+			 * @param array $existing_ids  IDs já encontrados.
+			 */
+			$fallback_args = apply_filters( 'alvobot_smart_links_candidate_fallback_args', $fallback_args, $post_id, $existing_ids );
 
 			$fallback = get_posts( $fallback_args );
 			$posts    = array_merge( $posts, $fallback );
@@ -79,7 +99,12 @@ class AlvoBotPro_Smart_Links_Generator {
 
 		$links_per_block = isset( $settings['links_per_block'] ) ? absint( $settings['links_per_block'] ) : 3;
 		$num_blocks      = isset( $settings['num_blocks'] ) ? absint( $settings['num_blocks'] ) : 3;
-		$total_needed    = $links_per_block * $num_blocks;
+
+		// Validar ranges
+		$links_per_block = max( 1, min( 5, $links_per_block ) );
+		$num_blocks      = max( 1, min( 3, $num_blocks ) );
+
+		$total_needed = $links_per_block * $num_blocks;
 
 		// Buscar candidatos (2x o necessário para IA escolher os melhores)
 		$candidates = $this->get_candidate_posts( $post_id, $total_needed * 2 );
@@ -138,35 +163,118 @@ class AlvoBotPro_Smart_Links_Generator {
 			return new WP_Error( 'invalid_response', 'Resposta inválida da API.' );
 		}
 
-		// Adicionar URLs e posições aos blocos
-		$blocks    = $result['data']['blocks'];
+		// Validar e processar blocos da resposta
+		$blocks    = $this->validate_api_blocks( $result['data']['blocks'], $candidates );
 		$positions = array( 'after_first', 'middle', 'before_last' );
 
+		if ( empty( $blocks ) ) {
+			AlvoBotPro::debug_log( 'smart-internal-links', 'Nenhum bloco válido após validação da resposta' );
+			return new WP_Error( 'invalid_response', 'A API não retornou links válidos.' );
+		}
+
+		// Adicionar posições aos blocos
 		foreach ( $blocks as $i => &$block ) {
 			$block['position'] = isset( $positions[ $i ] ) ? $positions[ $i ] : $positions[0];
-			if ( isset( $block['links'] ) && is_array( $block['links'] ) ) {
-				foreach ( $block['links'] as &$link ) {
-					$link['url'] = get_permalink( $link['post_id'] );
-				}
-			}
 		}
-		unset( $block, $link );
+		unset( $block );
 
 		// Salvar no post_meta
 		$meta = array(
 			'enabled'      => true,
 			'generated_at' => current_time( 'mysql' ),
 			'language'     => function_exists( 'pll_get_post_language' ) ? pll_get_post_language( $post_id, 'slug' ) : substr( get_locale(), 0, 2 ),
-			'disclaimer'   => isset( $result['data']['disclaimer'] ) ? $result['data']['disclaimer'] : '',
+			'disclaimer'   => isset( $result['data']['disclaimer'] ) && is_string( $result['data']['disclaimer'] ) ? $result['data']['disclaimer'] : '',
 			'blocks'       => $blocks,
 		);
 
 		update_post_meta( $post_id, '_alvobot_smart_links', $meta );
 		delete_transient( 'alvobot_ai_credits' );
 
+		/**
+		 * Fires after links are generated for a post.
+		 *
+		 * @param int   $post_id Post ID.
+		 * @param array $meta    The saved meta data.
+		 */
+		do_action( 'alvobot_smart_links_generated', $post_id, $meta );
+
 		AlvoBotPro::debug_log( 'smart-internal-links', "Links gerados para post {$post_id}: " . count( $blocks ) . ' blocos' );
 
 		return $meta;
+	}
+
+	/**
+	 * Valida a estrutura dos blocos retornados pela AI API.
+	 * Garante que cada bloco tenha links com post_id válido e texto.
+	 *
+	 * @param array $api_blocks  Blocos da resposta da API.
+	 * @param array $candidates  Posts candidatos (para validar IDs).
+	 * @return array Blocos validados com URLs adicionadas.
+	 */
+	private function validate_api_blocks( $api_blocks, $candidates ) {
+		if ( ! is_array( $api_blocks ) ) {
+			return array();
+		}
+
+		// Construir mapa de IDs válidos dos candidatos
+		$valid_ids = array();
+		foreach ( $candidates as $c ) {
+			$valid_ids[ $c->ID ] = true;
+		}
+
+		$validated_blocks = array();
+
+		foreach ( $api_blocks as $block ) {
+			if ( ! is_array( $block ) ) {
+				continue;
+			}
+
+			if ( ! isset( $block['links'] ) || ! is_array( $block['links'] ) ) {
+				continue;
+			}
+
+			$valid_links = array();
+
+			foreach ( $block['links'] as $link ) {
+				if ( ! is_array( $link ) ) {
+					continue;
+				}
+
+				// post_id é obrigatório e deve ser de um candidato válido
+				$link_post_id = isset( $link['post_id'] ) ? absint( $link['post_id'] ) : 0;
+				if ( ! $link_post_id ) {
+					continue;
+				}
+
+				// Verificar se o post_id é de um candidato ou ao menos existe e está publicado
+				if ( ! isset( $valid_ids[ $link_post_id ] ) ) {
+					$link_post = get_post( $link_post_id );
+					if ( ! $link_post || $link_post->post_status !== 'publish' ) {
+						continue;
+					}
+				}
+
+				// text é obrigatório
+				$text = isset( $link['text'] ) && is_string( $link['text'] ) ? trim( $link['text'] ) : '';
+				if ( empty( $text ) ) {
+					continue;
+				}
+
+				$valid_links[] = array(
+					'post_id' => $link_post_id,
+					'text'    => sanitize_text_field( $text ),
+					'url'     => get_permalink( $link_post_id ),
+				);
+			}
+
+			if ( ! empty( $valid_links ) ) {
+				$validated_blocks[] = array(
+					'links' => $valid_links,
+				);
+			}
+		}
+
+		return $validated_blocks;
 	}
 
 	/**

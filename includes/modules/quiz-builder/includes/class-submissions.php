@@ -24,11 +24,27 @@ class Alvobot_Quiz_Submissions {
 	private $table_name;
 
 	/**
+	 * Cache group for this class.
+	 *
+	 * @var string
+	 */
+	private $cache_group = 'alvobot_quiz_submissions';
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
 		global $wpdb;
 		$this->table_name = $wpdb->prefix . 'alvobot_quiz_submissions';
+	}
+
+	/**
+	 * Invalidate all caches for this group.
+	 */
+	private function flush_cache() {
+		wp_cache_delete( 'quiz_ids', $this->cache_group );
+		wp_cache_delete( 'last_change', $this->cache_group );
+		wp_cache_set( 'last_change', microtime( true ), $this->cache_group );
 	}
 
 	/**
@@ -104,9 +120,11 @@ class Alvobot_Quiz_Submissions {
 		}
 
 		if ( ! empty( $values ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property; WHERE clause uses placeholders built above.
 			$sql = $wpdb->prepare( $sql, $values );
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Prepared above; dynamic filters make caching impractical.
 		return $wpdb->get_results( $sql );
 	}
 
@@ -150,9 +168,11 @@ class Alvobot_Quiz_Submissions {
 		$sql = "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_clause}";
 
 		if ( ! empty( $values ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property; WHERE clause uses placeholders built above.
 			$sql = $wpdb->prepare( $sql, $values );
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Prepared above; dynamic filters make caching impractical.
 		return (int) $wpdb->get_var( $sql );
 	}
 
@@ -163,7 +183,16 @@ class Alvobot_Quiz_Submissions {
 	 */
 	public function get_quiz_ids() {
 		global $wpdb;
-		return $wpdb->get_col( "SELECT DISTINCT quiz_id FROM {$this->table_name} ORDER BY quiz_id ASC" );
+
+		$cached = wp_cache_get( 'quiz_ids', $this->cache_group );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$result = $wpdb->get_col( "SELECT DISTINCT quiz_id FROM {$this->table_name} ORDER BY quiz_id ASC" );
+		wp_cache_set( 'quiz_ids', $result, $this->cache_group, HOUR_IN_SECONDS );
+		return $result;
 	}
 
 	/**
@@ -182,12 +211,23 @@ class Alvobot_Quiz_Submissions {
 		$ids          = array_map( 'intval', $ids );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-		return $wpdb->query(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->query(
 			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is a class property; $placeholders is a safe array_fill of %d.
 				"DELETE FROM {$this->table_name} WHERE id IN ($placeholders)",
 				$ids
 			)
 		);
+
+		if ( $result ) {
+			$this->flush_cache();
+			foreach ( $ids as $id ) {
+				wp_cache_delete( 'submission_' . $id, $this->cache_group );
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -198,12 +238,25 @@ class Alvobot_Quiz_Submissions {
 	 */
 	public function get_submission( $id ) {
 		global $wpdb;
-		return $wpdb->get_row(
+
+		$cache_key = 'submission_' . (int) $id;
+		$cached    = wp_cache_get( $cache_key, $this->cache_group );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->get_row(
 			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 				"SELECT * FROM {$this->table_name} WHERE id = %d",
 				$id
 			)
 		);
+		if ( $result ) {
+			wp_cache_set( $cache_key, $result, $this->cache_group, HOUR_IN_SECONDS );
+		}
+		return $result;
 	}
 
 	/**
@@ -235,9 +288,10 @@ class Alvobot_Quiz_Submissions {
 		$data['page_url'] = esc_url_raw( $data['page_url'] );
 		// answers is expected to be a JSON string or array, sanitize accordingly
 		if ( is_array( $data['answers'] ) ) {
-			$data['answers'] = json_encode( $data['answers'] );
+			$data['answers'] = wp_json_encode( $data['answers'] );
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert(
 			$this->table_name,
 			$data,
@@ -256,6 +310,10 @@ class Alvobot_Quiz_Submissions {
 		if ( $result === false && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
 			AlvoBotPro::debug_log( 'quiz-builder', 'DB Insert Error: ' . $wpdb->last_error );
 			AlvoBotPro::debug_log( 'quiz-builder', 'Last Query: ' . $wpdb->last_query );
+		}
+
+		if ( $result ) {
+			$this->flush_cache();
 		}
 
 		return $result ? $wpdb->insert_id : false;
@@ -278,7 +336,7 @@ class Alvobot_Quiz_Submissions {
 		$formatted_data = $this->format_webhook_data( $data, $platform );
 
 		$args = array(
-			'body'        => json_encode( $formatted_data ),
+			'body'        => wp_json_encode( $formatted_data ),
 			'headers'     => array(
 				'Content-Type' => 'application/json',
 			),
@@ -291,7 +349,7 @@ class Alvobot_Quiz_Submissions {
 		// Log webhook attempt
 		if ( method_exists( 'AlvoBotPro', 'debug_log' ) ) {
 			AlvoBotPro::debug_log( 'quiz-builder', 'Sending webhook to ' . $platform . ': ' . $url );
-			AlvoBotPro::debug_log( 'quiz-builder', 'Webhook payload: ' . json_encode( $formatted_data ) );
+			AlvoBotPro::debug_log( 'quiz-builder', 'Webhook payload: ' . wp_json_encode( $formatted_data ) );
 		}
 
 		$response = wp_remote_post( $url, $args );

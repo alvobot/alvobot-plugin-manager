@@ -14,12 +14,15 @@ class AlvoBotPro_Smart_Links_Renderer {
 	 * Renderiza um bloco de links
 	 */
 	public function render_block( $block, $disclaimer = '', $settings = array() ) {
-		$links = isset( $block['links'] ) ? $block['links'] : array();
+		$links = isset( $block['links'] ) && is_array( $block['links'] ) ? $block['links'] : array();
 
 		// Filtrar links de posts que ainda existem e estão publicados
 		$links = array_filter(
 			$links,
 			function ( $link ) {
+				if ( ! is_array( $link ) ) {
+					return false;
+				}
 				$post_id = isset( $link['post_id'] ) ? absint( $link['post_id'] ) : 0;
 				if ( ! $post_id ) {
 					return false;
@@ -28,6 +31,9 @@ class AlvoBotPro_Smart_Links_Renderer {
 				return $post && $post->post_status === 'publish';
 			}
 		);
+
+		// Reindexar array após filtro
+		$links = array_values( $links );
 
 		if ( empty( $links ) ) {
 			return '';
@@ -39,12 +45,16 @@ class AlvoBotPro_Smart_Links_Renderer {
 		$border_size  = isset( $settings['button_border_size'] ) ? absint( $settings['button_border_size'] ) : 2;
 		$border_style = $border_size > 0 ? 'border:' . $border_size . 'px solid ' . esc_attr( $border_color ) : 'border:none';
 
-		$html  = '<div class="alvobot-sil">';
+		$html  = '<nav class="alvobot-sil" role="navigation" aria-label="Artigos relacionados">';
 		$html .= '<div class="alvobot-sil__list">';
 
 		foreach ( $links as $link ) {
 			$url  = ! empty( $link['url'] ) ? $link['url'] : get_permalink( $link['post_id'] );
-			$text = isset( $link['text'] ) ? $link['text'] : '';
+			$text = isset( $link['text'] ) && is_string( $link['text'] ) ? $link['text'] : '';
+
+			if ( empty( $text ) ) {
+				continue;
+			}
 
 			$html .= '<a href="' . esc_url( $url ) . '" class="alvobot-sil__btn" style="background:' . esc_attr( $bg_color ) . ';color:' . esc_attr( $text_color ) . ';' . $border_style . '">';
 			$html .= '<span class="alvobot-sil__text">' . esc_html( $text ) . '</span>';
@@ -60,7 +70,7 @@ class AlvoBotPro_Smart_Links_Renderer {
 			$html .= '<p class="alvobot-sil__disclaimer">' . esc_html( $disclaimer ) . '</p>';
 		}
 
-		$html .= '</div>';
+		$html .= '</nav>';
 
 		return $html;
 	}

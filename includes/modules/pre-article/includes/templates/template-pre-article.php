@@ -368,7 +368,7 @@ if ( have_posts() ) :
 					<?php
 					// Se há quiz, mostra o conteúdo completo sem "continue"
 					if ( $allow_quiz && $has_quiz ) {
-						echo $first_part;
+						echo wp_kses_post( $first_part );
 					} else {
 						// Remove qualquer HTML no final que possa causar quebra de linha
 						$first_part = preg_replace( '/<\/p>\s*$/', '', $first_part );
@@ -382,7 +382,7 @@ if ( have_posts() ) :
 							get_permalink()
 						);
 						// Adiciona o continue na mesma linha
-						echo $first_part . ' <a href="' . esc_url( $continue_1_url ) . '" class="continue-reading">...continue</a>';
+						echo wp_kses_post( $first_part ) . ' <a href="' . esc_url( $continue_1_url ) . '" class="continue-reading">...continue</a>';
 					}
 					?>
 				</div>
@@ -399,7 +399,7 @@ if ( have_posts() ) :
 					<?php
 					if ( $use_shortcode && ! empty( $shortcode ) ) {
 						// Renderiza o shortcode
-						echo do_shortcode( $shortcode );
+						echo wp_kses_post( do_shortcode( $shortcode ) );
 					} elseif ( ! empty( $ctas ) ) {
 						// Renderiza os botões CTA padrão
 						foreach ( $ctas as $index => $cta ) {
@@ -444,7 +444,7 @@ if ( have_posts() ) :
 							get_permalink()
 						);
 						// Adiciona o continue na mesma linha
-						echo $second_part . ' <a href="' . esc_url( $continue_2_url ) . '" class="continue-reading">...continue</a>';
+						echo wp_kses_post( $second_part ) . ' <a href="' . esc_url( $continue_2_url ) . '" class="continue-reading">...continue</a>';
 					}
 					?>
 				</div>
@@ -534,13 +534,13 @@ if ( have_posts() ) :
 							// Links padrão do rodapé
 							$privacy_policy_url = get_privacy_policy_url();
 							if ( $privacy_policy_url ) {
-								echo '<a href="' . esc_url( $privacy_policy_url ) . '" class="footer-link">' . __( 'Política de Privacidade', 'alvobot-pre-artigo' ) . '</a>';
+								echo '<a href="' . esc_url( $privacy_policy_url ) . '" class="footer-link">' . esc_html__( 'Política de Privacidade', 'alvobot-pro' ) . '</a>';
 							}
 							?>
 						</div>
 						<p class="copyright">
-							&copy; <?php echo date( 'Y' ); ?> <?php echo esc_html( get_bloginfo( 'name' ) ); ?>. 
-							<?php _e( 'Todos os direitos reservados.', 'alvobot-pre-artigo' ); ?>
+							&copy; <?php echo esc_html( date( 'Y' ) ); ?> <?php echo esc_html( get_bloginfo( 'name' ) ); ?>. 
+							<?php esc_html_e( 'Todos os direitos reservados.', 'alvobot-pro' ); ?>
 						</p>
 					</div>
 				</div>

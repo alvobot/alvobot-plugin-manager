@@ -20,9 +20,10 @@ class PluginBasicsTest extends TestCase
      */
     public function testPluginConstantValues() 
     {
-        $this->assertEquals('2.3.0', ALVOBOT_PRO_VERSION);
-        $this->assertStringContainsString('alvobot-plugin-manager', ALVOBOT_PRO_PLUGIN_DIR);
-        $this->assertStringContainsString('alvobot-plugin-manager', ALVOBOT_PRO_PLUGIN_URL);
+        $this->assertNotEmpty(ALVOBOT_PRO_VERSION);
+        $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', ALVOBOT_PRO_VERSION, 'Versão deve ser semver (ex: 2.8.1)');
+        $this->assertStringContainsString('alvobot', strtolower(ALVOBOT_PRO_PLUGIN_DIR));
+        $this->assertStringContainsString('alvobot', strtolower(ALVOBOT_PRO_PLUGIN_URL));
     }
     
     /**

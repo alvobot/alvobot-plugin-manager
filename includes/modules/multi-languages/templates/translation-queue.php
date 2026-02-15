@@ -40,51 +40,39 @@ if ( $script_enqueued ) {
 }
 ?>
 
-<div class="alvobot-admin-wrap">
-	<div class="alvobot-admin-container">
-		<div class="alvobot-admin-header">
-			<div class="alvobot-header-icon">
-				<i data-lucide="list-ordered" class="alvobot-icon"></i>
-			</div>
-			<div class="alvobot-header-content">
-				<h1><?php echo esc_html__( 'Fila de Traduções', 'alvobot-pro' ); ?></h1>
-				<p><?php echo esc_html__( 'Gerencie e monitore as traduções em processamento automático', 'alvobot-pro' ); ?></p>
-			</div>
-		</div>
-
 		<!-- Status Cards -->
 		<div class="alvobot-grid alvobot-grid-5">
 			<div class="alvobot-card alvobot-card-stat">
 				<div class="alvobot-stat-item">
-					<div class="alvobot-stat-number" id="queue-total"><?php echo $stats->total ?? 0; ?></div>
+					<div class="alvobot-stat-number" id="queue-total"><?php echo intval( $stats->total ?? 0 ); ?></div>
 					<div class="alvobot-stat-label"><?php echo esc_html__( 'Total na Fila', 'alvobot-pro' ); ?></div>
 				</div>
 			</div>
 			
 			<div class="alvobot-card alvobot-card-stat alvobot-card-pending">
 				<div class="alvobot-stat-item">
-					<div class="alvobot-stat-number" id="queue-pending"><?php echo $stats->pending ?? 0; ?></div>
+					<div class="alvobot-stat-number" id="queue-pending"><?php echo intval( $stats->pending ?? 0 ); ?></div>
 					<div class="alvobot-stat-label"><?php echo esc_html__( 'Pendentes', 'alvobot-pro' ); ?></div>
 				</div>
 			</div>
 			
 			<div class="alvobot-card alvobot-card-stat alvobot-card-processing">
 				<div class="alvobot-stat-item">
-					<div class="alvobot-stat-number" id="queue-processing"><?php echo $stats->processing ?? 0; ?></div>
+					<div class="alvobot-stat-number" id="queue-processing"><?php echo intval( $stats->processing ?? 0 ); ?></div>
 					<div class="alvobot-stat-label"><?php echo esc_html__( 'Processando', 'alvobot-pro' ); ?></div>
 				</div>
 			</div>
 			
 			<div class="alvobot-card alvobot-card-stat alvobot-card-completed">
 				<div class="alvobot-stat-item">
-					<div class="alvobot-stat-number" id="queue-completed"><?php echo $stats->completed ?? 0; ?></div>
+					<div class="alvobot-stat-number" id="queue-completed"><?php echo intval( $stats->completed ?? 0 ); ?></div>
 					<div class="alvobot-stat-label"><?php echo esc_html__( 'Concluídas', 'alvobot-pro' ); ?></div>
 				</div>
 			</div>
 			
 			<div class="alvobot-card alvobot-card-stat alvobot-card-failed">
 				<div class="alvobot-stat-item">
-					<div class="alvobot-stat-number" id="queue-error"><?php echo $stats->failed ?? 0; ?></div>
+					<div class="alvobot-stat-number" id="queue-error"><?php echo intval( $stats->failed ?? 0 ); ?></div>
 					<div class="alvobot-stat-label"><?php echo esc_html__( 'Falharam', 'alvobot-pro' ); ?></div>
 				</div>
 			</div>
@@ -160,8 +148,6 @@ if ( $script_enqueued ) {
 				<div id="queue-grid" class="ag-theme-alpine" style="height: 600px; width: 100%;"></div>
 			</div>
 		</div>
-	</div>
-</div>
 
 <!-- Modal de Logs -->
 <div id="logs-modal" class="alvobot-modal" style="display: none;">
@@ -286,14 +272,14 @@ if ( $script_enqueued ) {
 // Garantir que as variáveis estejam disponíveis
 <?php if ( ! $script_enqueued ) : ?>
 var alvobotMultiLanguages = {
-	ajaxUrl: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
-	restUrl: '<?php echo rest_url( 'alvobot-pro/v1' ); ?>',
-	nonce: '<?php echo wp_create_nonce( 'alvobot_nonce' ); ?>',
-	restNonce: '<?php echo wp_create_nonce( 'wp_rest' ); ?>',
+	ajaxUrl: '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
+	restUrl: '<?php echo esc_url( rest_url( 'alvobot-pro/v1' ) ); ?>',
+	nonce: '<?php echo esc_attr( wp_create_nonce( 'alvobot_nonce' ) ); ?>',
+	restNonce: '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>',
 	translations: {
-		error: '<?php echo __( 'Erro', 'alvobot-pro' ); ?>',
-		success: '<?php echo __( 'Sucesso', 'alvobot-pro' ); ?>',
-		processing: '<?php echo __( 'Processando...', 'alvobot-pro' ); ?>'
+		error: '<?php echo esc_js( __( 'Erro', 'alvobot-pro' ) ); ?>',
+		success: '<?php echo esc_js( __( 'Sucesso', 'alvobot-pro' ) ); ?>',
+		processing: '<?php echo esc_js( __( 'Processando...', 'alvobot-pro' ) ); ?>'
 	}
 };
 <?php endif; ?>
@@ -303,7 +289,7 @@ jQuery(document).ready(function($) {
 	
 	console.log('AlvoBot Queue: Iniciando script da fila de traduções');
 	console.log('AlvoBot Queue: alvobotMultiLanguages disponível:', typeof alvobotMultiLanguages !== 'undefined');
-	console.log('AlvoBot Queue: Script enfileirado:', <?php echo $script_enqueued ? 'true' : 'false'; ?>);
+	console.log('AlvoBot Queue: Script enfileirado:', <?php echo esc_html( $script_enqueued ? 'true' : 'false' ); ?>);
 	
 	// Verificar se variáveis estão disponíveis
 	if (typeof alvobotMultiLanguages === 'undefined') {
@@ -450,11 +436,10 @@ jQuery(document).ready(function($) {
 				console.error('AlvoBot Queue: AG Grid não está carregado');
 				gridDiv.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;"><p><i data-lucide="refresh-cw" class="alvobot-icon alvobot-spin" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> Carregando AG Grid...</p><p>Se esta mensagem persistir, verifique sua conexão com a internet.</p></div>';
 				
-				// Tenta carregar AG Grid novamente após 2 segundos
 				setTimeout(() => {
 					if (typeof agGrid !== 'undefined') {
 						console.log('AlvoBot Queue: AG Grid carregado com atraso');
-						new agGrid.Grid(gridDiv, gridOptions);
+						agGrid.createGrid(gridDiv, gridOptions);
 					} else {
 						gridDiv.innerHTML = '<div style="padding: 40px; text-align: center; color: #d32f2f;"><p><i data-lucide="x-circle" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> Erro: AG Grid não pode ser carregado</p><p>Verifique sua conexão com a internet e recarregue a página.</p></div>';
 					}
@@ -463,7 +448,7 @@ jQuery(document).ready(function($) {
 			}
 			
 			console.log('AlvoBot Queue: Criando instância do AG Grid');
-			new agGrid.Grid(gridDiv, gridOptions);
+			agGrid.createGrid(gridDiv, gridOptions);
 		}
 		
 		// Renderizadores de células
@@ -471,7 +456,7 @@ jQuery(document).ready(function($) {
 			const item = params.data;
 			if (!item.post_id) return '<span style="color: #9ca3af;">Post não encontrado</span>';
 			
-			const editUrl = `<?php echo admin_url( 'post.php?action=edit&post=' ); ?>${item.post_id}`;
+			const editUrl = `<?php echo esc_url( admin_url( 'post.php?action=edit&post=' ) ); ?>${item.post_id}`;
 			const postType = item.post_type === 'page' ? 'Página' : 'Post';
 			
 			return `
@@ -698,7 +683,7 @@ jQuery(document).ready(function($) {
 			
 			console.log('AlvoBot Queue: Atualizando grid com', data.length, 'itens');
 			console.log('AlvoBot Queue: Dados do grid:', data);
-			this.gridApi.setRowData(data);
+			this.gridApi.setGridOption('rowData', data);
 			this.applyFilters();
 			if(typeof lucide!=='undefined') lucide.createIcons();
 		}

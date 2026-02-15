@@ -262,12 +262,17 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			}
 
 			// Prioridade 2: Verifica parâmetro forçado (para debug)
-			if ( isset( $_GET['force_lang'] ) && isset( self::$cta_translations[ $_GET['force_lang'] ] ) ) {
-				return $_GET['force_lang'];
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Debug/display parameter, no data modification.
+			if ( isset( $_GET['force_lang'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Debug/display parameter, no data modification.
+				$force_lang_param = sanitize_text_field( wp_unslash( $_GET['force_lang'] ) );
+				if ( isset( self::$cta_translations[ $force_lang_param ] ) ) {
+					return $force_lang_param;
+				}
 			}
 
 			// Prioridade 3: Verifica URL para detectar idioma (padrão dominio.com/es/)
-			$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 			if ( preg_match( '/^\/([a-z]{2})(\/|$)/', $request_uri, $matches ) ) {
 				$url_lang = $matches[1];
 				if ( isset( self::$cta_translations[ $url_lang ] ) ) {
@@ -306,7 +311,7 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			}
 
 			// Prioridade 7: Detecta pelo domínio (ex: sitio.es, site.fr)
-			$host = $_SERVER['HTTP_HOST'] ?? '';
+			$host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
 			if ( preg_match( '/\.([a-z]{2})$/', $host, $matches ) ) {
 				$domain_lang = $matches[1];
 				if ( isset( self::$cta_translations[ $domain_lang ] ) ) {
@@ -320,13 +325,14 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 
 			// Prioridade 8: Detecta pelo Accept-Language do navegador
 			if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) {
-				$accept_languages = explode( ',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] );
+				$accept_language_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) );
+				$accept_languages      = explode( ',', $accept_language_header );
 				foreach ( $accept_languages as $lang_str ) {
 					$lang_code = substr( trim( $lang_str ), 0, 2 );
 					if ( isset( self::$cta_translations[ $lang_code ] ) ) {
 						// Log da detecção por navegador
 						if ( function_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
-							AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por navegador: {$lang_code} (Accept-Language: {$_SERVER['HTTP_ACCEPT_LANGUAGE']})" );
+							AlvoBotPro::debug_log( 'pre-article', "Idioma detectado por navegador: {$lang_code} (Accept-Language: {$accept_language_header})" );
 						}
 						return $lang_code;
 					}
@@ -449,7 +455,7 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 		 * Obtém o idioma forçado se existir
 		 */
 		public static function get_forced_language() {
-			return $_SESSION['alvobot_forced_language'] ?? null;
+			return isset( $_SESSION['alvobot_forced_language'] ) ? sanitize_text_field( $_SESSION['alvobot_forced_language'] ) : null;
 		}
 
 		/**
@@ -463,11 +469,13 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			$detection_methods = [];
 
 			// Força parâmetro
-			$force_lang                       = isset( $_GET['force_lang'] ) && isset( self::$cta_translations[ $_GET['force_lang'] ] ) ? $_GET['force_lang'] : null;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Debug/display parameter, no data modification.
+			$force_lang_val                   = isset( $_GET['force_lang'] ) ? sanitize_text_field( wp_unslash( $_GET['force_lang'] ) ) : null;
+			$force_lang                       = $force_lang_val && isset( self::$cta_translations[ $force_lang_val ] ) ? $force_lang_val : null;
 			$detection_methods['force_param'] = $force_lang;
 
 			// URL
-			$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 			$url_lang    = null;
 			if ( preg_match( '/^\/([a-z]{2})(\/|$)/', $request_uri, $matches ) ) {
 				$url_lang = isset( self::$cta_translations[ $matches[1] ] ) ? $matches[1] : null;
@@ -496,7 +504,7 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			$detection_methods['wordpress_locale'] = $wp_lang;
 
 			// Domínio
-			$host        = $_SERVER['HTTP_HOST'] ?? '';
+			$host        = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
 			$domain_lang = null;
 			if ( preg_match( '/\.([a-z]{2})$/', $host, $matches ) ) {
 				$domain_lang = isset( self::$cta_translations[ $matches[1] ] ) ? $matches[1] : null;
@@ -506,7 +514,8 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			// Accept-Language
 			$browser_lang = null;
 			if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) {
-				$accept_languages = explode( ',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] );
+				$accept_lang_debug = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) );
+				$accept_languages  = explode( ',', $accept_lang_debug );
 				foreach ( $accept_languages as $lang_str ) {
 					$lang_code = substr( trim( $lang_str ), 0, 2 );
 					if ( isset( self::$cta_translations[ $lang_code ] ) ) {
@@ -524,8 +533,8 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 				'supported_languages' => $supported_langs,
 				'detection_methods'   => $detection_methods,
 				'request_uri'         => $request_uri,
-				'http_host'           => $_SERVER['HTTP_HOST'] ?? '',
-				'accept_language'     => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '',
+				'http_host'           => isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '',
+				'accept_language'     => isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) : '',
 				'site_locale'         => get_locale(),
 				'polylang_active'     => function_exists( 'pll_current_language' ) && ! class_exists( 'Automatic_Polylang' ),
 				'autopoly_detected'   => class_exists( 'Automatic_Polylang' ),

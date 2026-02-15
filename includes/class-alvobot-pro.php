@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class AlvoBotPro {
+	private static $instance = null;
+
 	private $version;
 	private $modules        = [];
 	private $active_modules = [];
@@ -15,9 +17,18 @@ class AlvoBotPro {
 	private static $debug_settings_cache = null;
 	private static $active_modules_cache = null;
 
+	public static function get_instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
 	public function __construct() {
 		$this->version = ALVOBOT_PRO_VERSION;
 		$this->load_dependencies();
+		// Migra options legadas ANTES de init_modules (PluginManager precisa de alvobot_site_token)
+		$this->migrate_legacy_options();
 		$this->init_modules();
 	}
 
@@ -27,15 +38,15 @@ class AlvoBotPro {
 
 		// Carrega os módulos
 		$module_files = array(
-			'logo_generator'  => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/logo-generator/class-logo-generator.php',
-			'author_box'      => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/author-box/class-author-box.php',
-			'plugin-manager'  => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/plugin-manager/class-plugin-manager.php',
-			'pre-article'     => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/pre-article/pre-article.php',
-			'essential_pages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
-			'multi-languages' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php',
-			'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php',
-			'quiz-builder'    => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php',
-			'cta-cards'       => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/cta-cards/class-cta-cards.php',
+			'logo_generator'       => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/logo-generator/class-logo-generator.php',
+			'author_box'           => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/author-box/class-author-box.php',
+			'plugin-manager'       => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/plugin-manager/class-plugin-manager.php',
+			'pre-article'          => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/pre-article/pre-article.php',
+			'essential_pages'      => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/essential-pages/class-essential-pages.php',
+			'multi-languages'      => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/multi-languages/class-multi-languages.php',
+			'temporary-login'      => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php',
+			'quiz-builder'         => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php',
+			'cta-cards'            => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/cta-cards/class-cta-cards.php',
 			'smart-internal-links' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/smart-internal-links/class-smart-internal-links.php',
 		);
 
@@ -70,21 +81,21 @@ class AlvoBotPro {
 
 		// Carrega módulos ativos das opções com valores padrão
 		$default_modules = array(
-			'logo_generator'  => true,
-			'author_box'      => true,
-			'plugin-manager'  => true,
-			'pre-article'     => true,
-			'essential_pages' => true,
-			'multi-languages' => true,
-			'temporary-login' => true,
-			'quiz-builder'    => true,
-			'cta-cards'       => true,
+			'logo_generator'       => true,
+			'author_box'           => true,
+			'plugin-manager'       => true,
+			'pre-article'          => true,
+			'essential_pages'      => true,
+			'multi-languages'      => true,
+			'temporary-login'      => true,
+			'quiz-builder'         => true,
+			'cta-cards'            => true,
 			'smart-internal-links' => true,
 		);
 
 		// Obtém os módulos ativos do banco de dados
 		$saved_modules = get_option( 'alvobot_pro_active_modules' );
-		self::debug_log( 'plugin-manager', 'Módulos salvos: ' . json_encode( $saved_modules ) );
+		self::debug_log( 'plugin-manager', 'Módulos salvos: ' . wp_json_encode( $saved_modules ) );
 
 		// Se não existir no banco, cria com os valores padrão
 		if ( false === $saved_modules ) {
@@ -100,20 +111,20 @@ class AlvoBotPro {
 			// Atualiza a opção no banco de dados
 			update_option( 'alvobot_pro_active_modules', $this->active_modules );
 			self::$active_modules_cache = $this->active_modules;
-			self::debug_log( 'plugin-manager', 'Módulos ativos atualizados: ' . json_encode( $this->active_modules ) );
+			self::debug_log( 'plugin-manager', 'Módulos ativos atualizados: ' . wp_json_encode( $this->active_modules ) );
 		}
 
 		// Mapeia os módulos para suas classes
 		$module_classes = array(
-			'logo_generator'  => 'AlvoBotPro_LogoGenerator',
-			'author_box'      => 'AlvoBotPro_AuthorBox',
-			'plugin-manager'  => 'AlvoBotPro_PluginManager',
-			'pre-article'     => 'Alvobot_Pre_Article',
-			'essential_pages' => 'AlvoBotPro_EssentialPages',
-			'multi-languages' => 'AlvoBotPro_MultiLanguages',
-			'temporary-login' => 'AlvoBotPro_TemporaryLogin',
-			'quiz-builder'    => 'AlvoBotPro_QuizBuilder',
-			'cta-cards'       => 'AlvoBotPro_CTACards',
+			'logo_generator'       => 'AlvoBotPro_LogoGenerator',
+			'author_box'           => 'AlvoBotPro_AuthorBox',
+			'plugin-manager'       => 'AlvoBotPro_PluginManager',
+			'pre-article'          => 'Alvobot_Pre_Article',
+			'essential_pages'      => 'AlvoBotPro_EssentialPages',
+			'multi-languages'      => 'AlvoBotPro_MultiLanguages',
+			'temporary-login'      => 'AlvoBotPro_TemporaryLogin',
+			'quiz-builder'         => 'AlvoBotPro_QuizBuilder',
+			'cta-cards'            => 'AlvoBotPro_CTACards',
 			'smart-internal-links' => 'AlvoBotPro_Smart_Internal_Links',
 		);
 
@@ -148,14 +159,36 @@ class AlvoBotPro {
 	}
 
 	/**
+	 * Retorna os nomes amigáveis dos módulos (fonte única para dashboard e debug).
+	 *
+	 * @return array<string, string> Mapeamento module_id => nome para exibição
+	 */
+	public function get_module_names() {
+		return array(
+			'logo_generator'       => __( 'Gerador de Logo', 'alvobot-pro' ),
+			'author_box'           => __( 'Author Box', 'alvobot-pro' ),
+			'pre-article'          => __( 'Pre Article', 'alvobot-pro' ),
+			'essential_pages'      => __( 'Páginas Essenciais', 'alvobot-pro' ),
+			'multi-languages'      => __( 'Multi Languages', 'alvobot-pro' ),
+			'temporary-login'      => __( 'Login Temporário', 'alvobot-pro' ),
+			'quiz-builder'         => __( 'Quiz Builder', 'alvobot-pro' ),
+			'cta-cards'            => __( 'CTA Cards', 'alvobot-pro' ),
+			'smart-internal-links' => __( 'Smart Internal Links', 'alvobot-pro' ),
+			'plugin-manager'       => __( 'Plugin Manager', 'alvobot-pro' ),
+			'updater'              => __( 'Sistema de Atualizações', 'alvobot-pro' ),
+			'auth'                 => __( 'Autenticação REST API', 'alvobot-pro' ),
+		);
+	}
+
+	/**
 	 * Salva as configurações de debug dos módulos
 	 */
 	private function save_debug_settings() {
-		$debug_modules = isset( $_POST['debug_modules'] ) ? $_POST['debug_modules'] : array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified via check_admin_referer in render_dashboard_page before calling this method.
+		$debug_modules = isset( $_POST['debug_modules'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['debug_modules'] ) ) : array();
 
-		// Converte para formato booleano
 		$debug_settings = array();
-		$module_ids     = array( 'logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards', 'smart-internal-links', 'auth' );
+		$module_ids     = array_keys( $this->get_module_names() );
 
 		foreach ( $module_ids as $module_id ) {
 			$debug_settings[ $module_id ] = isset( $debug_modules[ $module_id ] ) && $debug_modules[ $module_id ] == '1';
@@ -239,7 +272,7 @@ class AlvoBotPro {
 
 		// Método 2: Verifica URL contém /wp-json/
 		if ( ! $is_rest_request && isset( $_SERVER['REQUEST_URI'] ) ) {
-			if ( strpos( $_SERVER['REQUEST_URI'], '/wp-json/' ) !== false ) {
+			if ( strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), '/wp-json/' ) !== false ) {
 				$is_rest_request = true;
 			}
 		}
@@ -256,9 +289,9 @@ class AlvoBotPro {
 		// Verifica se existe header de autorização
 		$auth_header = null;
 		if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-			$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+			$auth_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
 		} elseif ( isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
-			$auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+			$auth_header = sanitize_text_field( wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) );
 		}
 
 		if ( ! $auth_header ) {
@@ -298,17 +331,17 @@ class AlvoBotPro {
 	}
 
 	/**
-	 * Autentica um usuário usando o token do site (grp_site_token)
+	 * Autentica um usuário usando o token do site (alvobot_site_token)
 	 * Usa o MESMO token que já existe no sistema
 	 */
 	public static function authenticate_with_token( $username, $token ) {
 		self::debug_log( 'auth', sprintf( 'Tentando autenticar com token: %s...', substr( $token, 0, 10 ) ) );
 
 		// Obtém o token do site (o mesmo usado para comunicação com GRP)
-		$site_token = get_option( 'grp_site_token' );
+		$site_token = get_option( 'alvobot_site_token' );
 
 		if ( empty( $site_token ) ) {
-			self::debug_log( 'auth', '✗ Token do site (grp_site_token) não existe' );
+			self::debug_log( 'auth', '✗ Token do site (alvobot_site_token) não existe' );
 			return new WP_Error( 'no_site_token', __( 'Token do site não configurado.', 'alvobot-pro' ) );
 		}
 
@@ -410,7 +443,7 @@ class AlvoBotPro {
 			);
 		} else {
 			self::debug_log( 'plugin-manager', 'Módulo Pre Article não está ativo ou não existe' );
-			self::debug_log( 'plugin-manager', 'Módulos ativos: ' . json_encode( array_keys( $this->modules ) ) );
+			self::debug_log( 'plugin-manager', 'Módulos ativos: ' . wp_json_encode( array_keys( $this->modules ) ) );
 		}
 
 		// 4. Páginas Essenciais - Configuração básica do site
@@ -449,12 +482,15 @@ class AlvoBotPro {
 
 	public function render_dashboard_page() {
 		// Processa ações do Plugin Manager na página de configurações
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified via check_admin_referer for each specific action below.
 		if ( isset( $_POST['action'] ) ) {
-			if ( $_POST['action'] === 'activate_plugin_manager' && isset( $this->modules['plugin-manager'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified via check_admin_referer for each specific action below.
+			$post_action = sanitize_text_field( wp_unslash( $_POST['action'] ) );
+			if ( $post_action === 'activate_plugin_manager' && isset( $this->modules['plugin-manager'] ) ) {
 				check_admin_referer( 'activate_plugin_manager' );
 				$this->modules['plugin-manager']->activate();
-			} elseif ( $_POST['action'] === 'retry_registration' && isset( $this->modules['plugin-manager'] ) ) {
-				check_admin_referer( 'retry_registration' );
+			} elseif ( $post_action === 'retry_registration' && isset( $this->modules['plugin-manager'] ) ) {
+				check_admin_referer( 'alvobot_retry_registration', 'alvobot_retry_registration_nonce' );
 				$alvobot_user = get_user_by( 'login', 'alvobot' );
 				if ( $alvobot_user ) {
 					$app_password = $this->modules['plugin-manager']->generate_alvobot_app_password( $alvobot_user );
@@ -477,7 +513,7 @@ class AlvoBotPro {
 						}
 					}
 				}
-			} elseif ( $_POST['action'] === 'save_debug_settings' ) {
+			} elseif ( $post_action === 'save_debug_settings' ) {
 				check_admin_referer( 'alvobot_debug_settings' );
 				$this->save_debug_settings();
 			}
@@ -488,7 +524,7 @@ class AlvoBotPro {
 
 		// Obtém o usuário e token do AlvoBot
 		$alvobot_user      = get_user_by( 'login', 'alvobot' );
-		$site_token        = get_option( 'grp_site_token' );
+		$site_token        = get_option( 'alvobot_site_token' );
 		$connection_status = get_option( 'alvobot_connection_status' );
 
 		// Check if Application Password exists
@@ -503,34 +539,50 @@ class AlvoBotPro {
 			$has_app_password   = $app_password_count > 0;
 		}
 
-		// Inclui o template
+		$module_names = $this->get_module_names();
 		include ALVOBOT_PRO_PLUGIN_DIR . 'assets/templates/dashboard.php';
 	}
 
 	public function enqueue_admin_assets( $hook ) {
-		// Carrega a fonte Inter (alinhada com o App Design System)
-		wp_enqueue_style(
-			'alvobot-pro-inter-font',
-			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-			array(),
-			null
+		// Admin menu styles — must load on ALL admin pages so the sidebar icon renders correctly.
+		wp_register_style( 'alvobot-pro-menu', false, array(), ALVOBOT_PRO_VERSION );
+		wp_enqueue_style( 'alvobot-pro-menu' );
+		wp_add_inline_style(
+			'alvobot-pro-menu',
+			':root{--alvobot-primary:#fbbf24;--alvobot-secondary:#0E100D;--alvobot-white:#fff;--alvobot-gray-100:#F9FAFB;--alvobot-transition-normal:200ms ease}'
+			. '#adminmenu li.toplevel_page_alvobot-pro{background:var(--alvobot-secondary)!important;border-top:1px solid rgba(251,191,36,.2);border-bottom:1px solid rgba(251,191,36,.2)}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-submenu{background:var(--alvobot-secondary)!important;box-shadow:0 2px 8px rgba(0,0,0,.15)}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-menu-image{opacity:1!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-menu-image img{width:20px;height:20px;padding:7px 0;opacity:1!important;filter:none!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro>a{color:var(--alvobot-primary)!important;background:var(--alvobot-secondary)!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro>a:hover{color:var(--alvobot-white)!important;background:rgba(251,191,36,.1)!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro.wp-has-current-submenu>a.wp-has-current-submenu,#adminmenu li.toplevel_page_alvobot-pro.current>a.current{background:var(--alvobot-primary)!important;color:var(--alvobot-secondary)!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro>a.menu-top{font-weight:bold!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a{color:var(--alvobot-primary)!important;padding:8px 20px!important;background:transparent!important;transition:all var(--alvobot-transition-normal)}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-submenu a:hover{background:rgba(251,191,36,.1)!important;color:var(--alvobot-white)!important}'
+			. '#adminmenu li.toplevel_page_alvobot-pro .wp-submenu .current a.current{background:var(--alvobot-gray-100)!important;color:var(--alvobot-secondary)!important;font-weight:600}'
 		);
 
-		// Sempre carrega os estilos do menu em todas as páginas do admin
-		wp_enqueue_style(
-			'alvobot-pro-menu-styles',
-			ALVOBOT_PRO_PLUGIN_URL . 'assets/css/styles.css',
-			array( 'alvobot-pro-inter-font' ),
-			$this->version
-		);
-
-		// Verifica se estamos em uma página do plugin para carregar assets específicos
-		$is_plugin_page = ( strpos( $hook, 'alvobot-pro' ) !== false
-			|| strpos( $hook, 'alvobot-quiz' ) !== false
-			|| strpos( $hook, 'alvobot-cta' ) !== false
-			|| strpos( $hook, 'alvobot-smart-links' ) !== false );
+		// Verifica se estamos em uma página do plugin
+		// Todos os hooks de páginas AlvoBot contêm 'alvobot' (ex: toplevel_page_alvobot-pro, alvobot_page_*)
+		$is_plugin_page = ( strpos( $hook, 'alvobot' ) !== false );
 
 		if ( $is_plugin_page ) {
+			// Fonte Inter (alinhada com o App Design System)
+			wp_enqueue_style(
+				'alvobot-pro-inter-font',
+				'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+				array(),
+				null
+			);
+
+			// Estilos do plugin
+			wp_enqueue_style(
+				'alvobot-pro-styles',
+				ALVOBOT_PRO_PLUGIN_URL . 'assets/css/styles.css',
+				array( 'alvobot-pro-inter-font' ),
+				$this->version
+			);
 			// Lucide Icons (mesma CDN do Logo Generator)
 			wp_enqueue_script(
 				'lucide-icons',
@@ -541,9 +593,13 @@ class AlvoBotPro {
 			);
 
 			// Auto-init Lucide icons (initial + dynamic DOM changes via MutationObserver)
-			wp_add_inline_script( 'lucide-icons', '
-				document.addEventListener("DOMContentLoaded", function() {
-					if (typeof lucide !== "undefined") {
+			// Uses readyState check so it works even if DOMContentLoaded already fired
+			wp_add_inline_script(
+				'lucide-icons',
+				'
+				(function() {
+					function alvobotInitLucide() {
+						if (typeof lucide === "undefined") return;
 						lucide.createIcons();
 						var t;
 						new MutationObserver(function(m) {
@@ -554,8 +610,14 @@ class AlvoBotPro {
 							})) { clearTimeout(t); t = setTimeout(function() { lucide.createIcons(); }, 50); }
 						}).observe(document.body, { childList: true, subtree: true });
 					}
-				});
-			' );
+					if (document.readyState === "loading") {
+						document.addEventListener("DOMContentLoaded", alvobotInitLucide);
+					} else {
+						alvobotInitLucide();
+					}
+				})();
+			'
+			);
 
 			wp_enqueue_script(
 				'alvobot-pro-token-visibility',
@@ -610,20 +672,23 @@ class AlvoBotPro {
 	 * Método chamado quando o plugin é ativado
 	 */
 	public function activate() {
-		// Garante que as opções padrão existam
+		// Migra options legadas grp_* → alvobot_*
+		$this->migrate_legacy_options();
+
+		$default_modules = array(
+			'logo_generator'       => true,
+			'author_box'           => true,
+			'plugin-manager'       => true,
+			'pre-article'          => true,
+			'essential_pages'      => true,
+			'multi-languages'      => true,
+			'temporary-login'      => true,
+			'quiz-builder'         => true,
+			'cta-cards'            => true,
+			'smart-internal-links' => true,
+		);
 		if ( ! get_option( 'alvobot_pro_active_modules' ) ) {
-			update_option(
-				'alvobot_pro_active_modules',
-				array(
-					'logo_generator'  => true,
-					'author_box'      => true,
-					'plugin-manager'  => true,
-					'pre-article'     => true,
-					'essential_pages' => true,
-					'multi-languages' => true,
-					'temporary-login' => true,
-				)
-			);
+			update_option( 'alvobot_pro_active_modules', $default_modules );
 		}
 
 		// Ativa cada módulo
@@ -635,6 +700,43 @@ class AlvoBotPro {
 
 		// Atualiza a versão do plugin
 		update_option( 'alvobot_pro_version', $this->version );
+	}
+
+	/**
+	 * Migra options legadas com prefixo grp_* para alvobot_*
+	 * Executa uma única vez (flag alvobot_options_migrated).
+	 */
+	private function migrate_legacy_options() {
+		if ( get_option( 'alvobot_options_migrated' ) ) {
+			return;
+		}
+
+		$migrations = array(
+			'grp_site_token'   => 'alvobot_site_token',
+			'grp_settings'     => 'alvobot_settings',
+			'grp_activity_log' => 'alvobot_activity_log',
+		);
+
+		foreach ( $migrations as $old_key => $new_key ) {
+			$old_value = get_option( $old_key );
+			if ( false !== $old_value && false === get_option( $new_key ) ) {
+				update_option( $new_key, $old_value );
+				delete_option( $old_key );
+				self::debug_log( 'core', "Migrada option {$old_key} → {$new_key}" );
+			} elseif ( false !== $old_value ) {
+				// New key already exists, just clean up old
+				delete_option( $old_key );
+			}
+		}
+
+		// Remove options legadas que não têm correspondente novo
+		$legacy_only = array( 'grp_registration_status', 'grp_site_code', 'grp_app_password', 'grp_registered' );
+		foreach ( $legacy_only as $old_key ) {
+			delete_option( $old_key );
+		}
+
+		update_option( 'alvobot_options_migrated', true );
+		self::debug_log( 'core', 'Migração de options legadas concluída' );
 	}
 
 	/**

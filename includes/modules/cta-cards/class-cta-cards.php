@@ -105,7 +105,7 @@ class AlvoBotPro_CTACards {
 	 */
 	public function render_admin_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
 		}
 
 		// Include admin template
@@ -164,7 +164,7 @@ class AlvoBotPro_CTACards {
 		add_action(
 			'admin_head',
 			function () {
-				echo '<link rel="stylesheet" type="text/css" href="' . plugin_dir_url( __FILE__ ) . 'assets/css/cta-cards.css?v=' . ALVOBOT_PRO_VERSION . '" />';
+				echo '<link rel="stylesheet" type="text/css" href="' . esc_url( plugin_dir_url( __FILE__ ) . 'assets/css/cta-cards.css?v=' . ALVOBOT_PRO_VERSION ) . '" />';
 			}
 		);
 
@@ -265,12 +265,12 @@ class AlvoBotPro_CTACards {
 	 */
 	public function render_cta_preview() {
 		// Verify nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'alvobot_cta_cards_nonce' ) ) {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot_cta_cards_nonce' ) ) {
 			wp_send_json_error( __( 'Acesso negado.', 'alvobot-pro' ) );
 		}
 
 		// Get shortcode from request
-		$shortcode = sanitize_text_field( $_POST['shortcode'] );
+		$shortcode = isset( $_POST['shortcode'] ) ? sanitize_text_field( wp_unslash( $_POST['shortcode'] ) ) : '';
 
 		if ( empty( $shortcode ) ) {
 			wp_send_json_error( __( 'Shortcode inválido.', 'alvobot-pro' ) );
@@ -386,11 +386,11 @@ class AlvoBotPro_CTACards {
 		<div id="alvobot-cta-translation-modal" style="display: none;">
 			<div class="alvobot-modal-content">
 				<div class="alvobot-modal-header">
-					<h3><?php _e( 'Traduzir CTA Cards', 'alvobot-pro' ); ?></h3>
+					<h3><?php esc_html_e( 'Traduzir CTA Cards', 'alvobot-pro' ); ?></h3>
 					<button type="button" class="alvobot-modal-close">&times;</button>
 				</div>
 				<div class="alvobot-modal-body">
-					<p><?php _e( 'Este post contém shortcodes [cta_card]. Selecione os idiomas para os quais deseja traduzir os textos dos CTA Cards:', 'alvobot-pro' ); ?></p>
+					<p><?php esc_html_e( 'Este post contém shortcodes [cta_card]. Selecione os idiomas para os quais deseja traduzir os textos dos CTA Cards:', 'alvobot-pro' ); ?></p>
 					<div class="alvobot-languages-selection">
 						<?php foreach ( $this->get_available_languages() as $lang_code => $lang_name ) : ?>
 							<label>
@@ -402,13 +402,13 @@ class AlvoBotPro_CTACards {
 					<div class="alvobot-translation-options">
 						<label>
 							<input type="checkbox" name="replace_original" value="1">
-							<?php _e( 'Substituir shortcodes originais pelos traduzidos', 'alvobot-pro' ); ?>
+							<?php esc_html_e( 'Substituir shortcodes originais pelos traduzidos', 'alvobot-pro' ); ?>
 						</label>
 					</div>
 				</div>
 				<div class="alvobot-modal-footer">
-					<button type="button" class="button button-secondary alvobot-modal-cancel"><?php _e( 'Cancelar', 'alvobot-pro' ); ?></button>
-					<button type="button" class="button button-primary alvobot-translate-cta-submit"><?php _e( 'Traduzir', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button button-secondary alvobot-modal-cancel"><?php esc_html_e( 'Cancelar', 'alvobot-pro' ); ?></button>
+					<button type="button" class="button button-primary alvobot-translate-cta-submit"><?php esc_html_e( 'Traduzir', 'alvobot-pro' ); ?></button>
 				</div>
 			</div>
 		</div>
@@ -500,7 +500,7 @@ class AlvoBotPro_CTACards {
 	 */
 	public function translate_cta_shortcode() {
 		// Verify nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'alvobot_cta_translation_nonce' ) ) {
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'alvobot_cta_translation_nonce' ) ) {
 			wp_send_json_error( __( 'Acesso negado.', 'alvobot-pro' ) );
 		}
 
@@ -509,9 +509,9 @@ class AlvoBotPro_CTACards {
 			wp_send_json_error( __( 'Permissões insuficientes.', 'alvobot-pro' ) );
 		}
 
-		$post_id          = intval( $_POST['post_id'] );
-		$target_languages = array_map( 'sanitize_text_field', $_POST['target_languages'] );
-		$replace_original = isset( $_POST['replace_original'] ) && $_POST['replace_original'];
+		$post_id          = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$target_languages = isset( $_POST['target_languages'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['target_languages'] ) ) : array();
+		$replace_original = isset( $_POST['replace_original'] ) && sanitize_text_field( wp_unslash( $_POST['replace_original'] ) );
 
 		if ( empty( $post_id ) || empty( $target_languages ) ) {
 			wp_send_json_error( __( 'Parâmetros inválidos.', 'alvobot-pro' ) );

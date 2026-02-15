@@ -11,7 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'builder';
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab navigation display logic, no data modification.
+$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'builder';
 ?>
 
 <div class="alvobot-admin-wrap">
@@ -22,7 +23,7 @@ $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'bui
 			</div>
 			<div class="alvobot-header-content">
 				<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-				<p><?php _e( 'Create interactive quizzes with unique URL navigation for monetization.', 'alvobot-pro' ); ?></p>
+				<p><?php esc_html_e( 'Create interactive quizzes with unique URL navigation for monetization.', 'alvobot-pro' ); ?></p>
 			</div>
 		</div>
 		
@@ -30,12 +31,12 @@ $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'bui
 			<a href="?page=alvobot-quiz-builder&tab=builder"
 				class="nav-tab <?php echo $active_tab == 'builder' ? 'nav-tab-active' : ''; ?>">
 				<i data-lucide="wrench" class="alvobot-icon"></i>
-				<?php _e( 'Quiz Builder', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Quiz Builder', 'alvobot-pro' ); ?>
 			</a>
 			<a href="?page=alvobot-quiz-builder&tab=docs"
 				class="nav-tab <?php echo $active_tab == 'docs' ? 'nav-tab-active' : ''; ?>">
 				<i data-lucide="book-open" class="alvobot-icon"></i>
-				<?php _e( 'Documentation', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Documentation', 'alvobot-pro' ); ?>
 			</a>
 		</nav>
 		

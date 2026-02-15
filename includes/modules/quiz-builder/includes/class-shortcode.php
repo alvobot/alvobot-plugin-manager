@@ -61,15 +61,16 @@ class Alvobot_Quiz_Shortcode {
 	 * This prevents "headers already sent" errors
 	 */
 	public function handle_early_lead_submission() {
-		if ( $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
+		if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) !== 'POST' ) {
 			return;
 		}
 
-		if ( ! isset( $_POST['alvobot_quiz_action'] ) || $_POST['alvobot_quiz_action'] !== 'submit_lead' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified immediately below.
+		if ( ! isset( $_POST['alvobot_quiz_action'] ) || sanitize_text_field( wp_unslash( $_POST['alvobot_quiz_action'] ) ) !== 'submit_lead' ) {
 			return;
 		}
 
-		if ( ! isset( $_POST['alvobot_quiz_nonce'] ) || ! wp_verify_nonce( $_POST['alvobot_quiz_nonce'], 'alvobot_quiz_lead_submit' ) ) {
+		if ( ! isset( $_POST['alvobot_quiz_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['alvobot_quiz_nonce'] ) ), 'alvobot_quiz_lead_submit' ) ) {
 			if ( method_exists( 'AlvoBotPro', 'debug_log' ) ) {
 				AlvoBotPro::debug_log( 'quiz-builder', 'Lead submission: Nonce verification failed' );
 			}
@@ -98,8 +99,10 @@ class Alvobot_Quiz_Shortcode {
 			$questions    = json_decode( $json_content, true );
 
 			if ( json_last_error() === JSON_ERROR_NONE && is_array( $questions ) ) {
-				$quiz_step = isset( $_POST['quiz_step'] ) ? intval( $_POST['quiz_step'] ) : 0;
-				$quiz_id   = isset( $_POST['quiz_id'] ) ? sanitize_text_field( $_POST['quiz_id'] ) : '';
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above in handle_early_lead_submission.
+				$quiz_step = isset( $_POST['quiz_step'] ) ? intval( wp_unslash( $_POST['quiz_step'] ) ) : 0;
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above in handle_early_lead_submission.
+				$quiz_id   = isset( $_POST['quiz_id'] ) ? sanitize_text_field( wp_unslash( $_POST['quiz_id'] ) ) : '';
 
 				if ( method_exists( 'AlvoBotPro', 'debug_log' ) ) {
 					AlvoBotPro::debug_log( 'quiz-builder', 'Lead submission: Processing step ' . $quiz_step . ' for quiz ' . $quiz_id );
@@ -127,13 +130,18 @@ class Alvobot_Quiz_Shortcode {
 		}
 
 		// Process phone number with country code
+		// Nonce verified in calling method handle_early_lead_submission().
 		$phone = '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_early_lead_submission.
 		if ( isset( $_POST['lead_phone'] ) && ! empty( $_POST['lead_phone'] ) ) {
-			$phone = sanitize_text_field( $_POST['lead_phone'] );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_early_lead_submission.
+			$phone = sanitize_text_field( wp_unslash( $_POST['lead_phone'] ) );
 
 			// Get country code and prepend to phone number
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_early_lead_submission.
 			if ( isset( $_POST['lead_phone_country'] ) && ! empty( $_POST['lead_phone_country'] ) ) {
-				$country_code = sanitize_text_field( $_POST['lead_phone_country'] );
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_early_lead_submission.
+				$country_code = sanitize_text_field( wp_unslash( $_POST['lead_phone_country'] ) );
 				$countries    = $this->get_country_phone_data();
 
 				if ( isset( $countries[ $country_code ] ) && ! empty( $countries[ $country_code ]['dial_code'] ) ) {
@@ -144,15 +152,17 @@ class Alvobot_Quiz_Shortcode {
 			}
 		}
 
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_early_lead_submission.
 		$data = array(
 			'quiz_id'    => $quiz_id,
-			'name'       => isset( $_POST['lead_name'] ) ? sanitize_text_field( $_POST['lead_name'] ) : '',
-			'email'      => isset( $_POST['lead_email'] ) ? sanitize_email( $_POST['lead_email'] ) : '',
+			'name'       => isset( $_POST['lead_name'] ) ? sanitize_text_field( wp_unslash( $_POST['lead_name'] ) ) : '',
+			'email'      => isset( $_POST['lead_email'] ) ? sanitize_email( wp_unslash( $_POST['lead_email'] ) ) : '',
 			'phone'      => $phone,
-			'answers'    => isset( $_POST['answers'] ) ? sanitize_text_field( $_POST['answers'] ) : '',
-			'page_url'   => isset( $_POST['page_url'] ) ? esc_url_raw( $_POST['page_url'] ) : $this->get_current_url(),
+			'answers'    => isset( $_POST['answers'] ) ? sanitize_text_field( wp_unslash( $_POST['answers'] ) ) : '',
+			'page_url'   => isset( $_POST['page_url'] ) ? esc_url_raw( wp_unslash( $_POST['page_url'] ) ) : $this->get_current_url(),
 			'created_at' => current_time( 'mysql' ),
 		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		// Save to DB
 		$submissions = new Alvobot_Quiz_Submissions();
@@ -164,7 +174,7 @@ class Alvobot_Quiz_Shortcode {
 		// Debug logging
 		if ( method_exists( 'AlvoBotPro', 'debug_log' ) ) {
 			AlvoBotPro::debug_log( 'quiz-builder', 'Lead submission save attempt - Insert ID: ' . ( $insert_id ? $insert_id : 'FAILED' ) );
-			AlvoBotPro::debug_log( 'quiz-builder', 'Lead data: ' . json_encode( $data ) );
+			AlvoBotPro::debug_log( 'quiz-builder', 'Lead data: ' . wp_json_encode( $data ) );
 		}
 
 		// Send Webhook with platform-specific formatting
@@ -188,8 +198,8 @@ class Alvobot_Quiz_Shortcode {
 				),
 				$redirect_url
 			);
-			// Use wp_redirect for external URLs (wp_safe_redirect only allows same-host)
-			wp_redirect( $redirect_url );
+			// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Redirect URL may be external (configured by quiz admin).
+			wp_redirect( esc_url_raw( $redirect_url ) );
 			exit;
 		}
 
@@ -360,7 +370,7 @@ class Alvobot_Quiz_Shortcode {
 			'randomize'         => 'false',
 			'show_progress'     => 'true',
 			'url_mode'          => 'suffix', // Recarregar página (compatível com AdSense) - padrão
-			'thank_you_message' => __( 'Thank you for completing this quiz!', 'alvobot-quiz' ),
+			'thank_you_message' => __( 'Thank you for completing this quiz!', 'alvobot-pro' ),
 		);
 
 		$atts = shortcode_atts( $default_atts, $atts, $tag );
@@ -368,7 +378,7 @@ class Alvobot_Quiz_Shortcode {
 		// Check if content is empty
 		if ( empty( $content ) ) {
 			$this->log_debug( 'No quiz content found between shortcode tags' );
-			return '<div class="quiz-error">' . __( 'Error: No quiz content found in the shortcode.', 'alvobot-quiz' ) . '</div>';
+			return '<div class="quiz-error">' . __( 'Error: No quiz content found in the shortcode.', 'alvobot-pro' ) . '</div>';
 		}
 
 		// Store the quiz content including shortcode tags
@@ -420,7 +430,7 @@ class Alvobot_Quiz_Shortcode {
 					AlvoBotPro::debug_log( 'quiz-builder', 'AJAX Preview - Decoded questions: ' . var_export( $questions, true ) );
 				}
 			}
-			return '<div class="quiz-error">' . __( 'Error: Invalid JSON in shortcode content. Please check your JSON syntax.', 'alvobot-quiz' ) . '</div>';
+			return '<div class="quiz-error">' . __( 'Error: Invalid JSON in shortcode content. Please check your JSON syntax.', 'alvobot-pro' ) . '</div>';
 		}
 
 		return $this->generate_quiz_html( $questions, $atts );
@@ -624,9 +634,12 @@ class Alvobot_Quiz_Shortcode {
 		// Determine current quiz step from URL parameters
 		$quiz_step = $this->get_current_quiz_step();
 
-		$current_quiz_id = sanitize_text_field( isset( $_GET['quiz_id'] ) ? $_GET['quiz_id'] : '' );
-		$action          = sanitize_text_field( isset( $_GET['action'] ) ? $_GET['action'] : '' );
-		$answer_string   = sanitize_text_field( isset( $_GET['answers'] ) ? $_GET['answers'] : '' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading URL parameters for quiz navigation, no data modification.
+		$current_quiz_id = isset( $_GET['quiz_id'] ) ? sanitize_text_field( wp_unslash( $_GET['quiz_id'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading URL parameters for quiz navigation, no data modification.
+		$action          = isset( $_GET['action'] ) ? sanitize_text_field( wp_unslash( $_GET['action'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading URL parameters for quiz navigation, no data modification.
+		$answer_string   = isset( $_GET['answers'] ) ? sanitize_text_field( wp_unslash( $_GET['answers'] ) ) : '';
 
 		// Parse answers
 		$answers = ! empty( $answer_string ) ? explode( ',', $answer_string ) : array();
@@ -668,24 +681,26 @@ class Alvobot_Quiz_Shortcode {
 		}
 
 		// Process current step
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading URL parameters for quiz step navigation, no data modification.
 		// Se quiz_display_step está definido (vem do JavaScript), usa ele diretamente
 		if ( isset( $_GET['quiz_display_step'] ) ) {
-			$quiz_step = max( 0, intval( $_GET['quiz_display_step'] ) );
+			$quiz_step = max( 0, intval( wp_unslash( $_GET['quiz_display_step'] ) ) );
 
 			// Se há uma resposta atual sendo processada, salva ela
 			if ( isset( $_GET['current_answer'] ) && $quiz_step > 0 ) {
-				$current_answer            = sanitize_text_field( $_GET['current_answer'] );
+				$current_answer            = sanitize_text_field( wp_unslash( $_GET['current_answer'] ) );
 				$previous_step             = $quiz_step - 1; // A resposta é para a pergunta anterior
 				$answers[ $previous_step ] = $current_answer;
 			}
 		} else {
 			// Lógica tradicional para compatibilidade (apenas avanço)
 			if ( $action === 'next' && isset( $_GET['current_answer'] ) ) {
-				$current_answer        = sanitize_text_field( $_GET['current_answer'] );
+				$current_answer        = sanitize_text_field( wp_unslash( $_GET['current_answer'] ) );
 				$answers[ $quiz_step ] = $current_answer;
 				++$quiz_step;
 			}
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		// Convert answers to string
 		$answer_string = implode( ',', $answers );
@@ -741,9 +756,9 @@ class Alvobot_Quiz_Shortcode {
 			$percentage = $total_scored > 0 ? round( ( $score / $total_scored ) * 100 ) : 0;
 
 			$output .= '<div class="quiz-results">';
-			$output .= '<h3>' . __( 'Quiz Results', 'alvobot-quiz' ) . '</h3>';
+			$output .= '<h3>' . __( 'Quiz Results', 'alvobot-pro' ) . '</h3>';
 			$output .= '<p>' . sprintf(
-				__( 'Your score: %1$s/%2$s (%3$s%%)', 'alvobot-quiz' ),
+				__( 'Your score: %1$s/%2$s (%3$s%%)', 'alvobot-pro' ),
 				'<strong>' . $score . '</strong>',
 				$total_scored,
 				$percentage
@@ -768,7 +783,7 @@ class Alvobot_Quiz_Shortcode {
 		} else {
 			// Form mode
 			$output .= '<div class="quiz-completed">';
-			$output .= '<h3>' . __( 'Please wait...', 'alvobot-quiz' ) . '</h3>';
+			$output .= '<h3>' . __( 'Please wait...', 'alvobot-pro' ) . '</h3>';
 			$output .= '</div>';
 
 			// Redirect with responses
@@ -797,9 +812,9 @@ class Alvobot_Quiz_Shortcode {
 	 */
 	private function generate_redirect_html( $redirect_url ) {
 		$output  = '<div class="quiz-redirect">';
-		$output .= '<p>' . __( 'Redirecting...', 'alvobot-quiz' ) . '</p>';
+		$output .= '<p>' . __( 'Redirecting...', 'alvobot-pro' ) . '</p>';
 		$output .= '<p><a href="' . esc_url( $redirect_url ) . '">' .
-					__( 'Click here if you are not redirected automatically.', 'alvobot-quiz' ) .
+					__( 'Click here if you are not redirected automatically.', 'alvobot-pro' ) .
 					'</a></p>';
 		$output .= '</div>';
 		$output .= '<meta http-equiv="refresh" content="2;url=' . esc_url( $redirect_url ) . '">';
@@ -836,12 +851,12 @@ class Alvobot_Quiz_Shortcode {
 
 		// Get i18n customizations or use defaults
 		$i18n              = isset( $question['i18n'] ) ? $question['i18n'] : array();
-		$label_name        = ! empty( $i18n['labelName'] ) ? $i18n['labelName'] : __( 'Nome completo', 'alvobot-quiz' );
-		$placeholder_name  = ! empty( $i18n['placeholderName'] ) ? $i18n['placeholderName'] : __( 'Digite seu nome', 'alvobot-quiz' );
-		$label_email       = ! empty( $i18n['labelEmail'] ) ? $i18n['labelEmail'] : __( 'E-mail', 'alvobot-quiz' );
-		$placeholder_email = ! empty( $i18n['placeholderEmail'] ) ? $i18n['placeholderEmail'] : __( 'seu@email.com', 'alvobot-quiz' );
-		$label_phone       = ! empty( $i18n['labelPhone'] ) ? $i18n['labelPhone'] : __( 'Telefone / WhatsApp', 'alvobot-quiz' );
-		$placeholder_phone = ! empty( $i18n['placeholderPhone'] ) ? $i18n['placeholderPhone'] : __( 'Seu número', 'alvobot-quiz' );
+		$label_name        = ! empty( $i18n['labelName'] ) ? $i18n['labelName'] : __( 'Nome completo', 'alvobot-pro' );
+		$placeholder_name  = ! empty( $i18n['placeholderName'] ) ? $i18n['placeholderName'] : __( 'Digite seu nome', 'alvobot-pro' );
+		$label_email       = ! empty( $i18n['labelEmail'] ) ? $i18n['labelEmail'] : __( 'E-mail', 'alvobot-pro' );
+		$placeholder_email = ! empty( $i18n['placeholderEmail'] ) ? $i18n['placeholderEmail'] : __( 'seu@email.com', 'alvobot-pro' );
+		$label_phone       = ! empty( $i18n['labelPhone'] ) ? $i18n['labelPhone'] : __( 'Telefone / WhatsApp', 'alvobot-pro' );
+		$placeholder_phone = ! empty( $i18n['placeholderPhone'] ) ? $i18n['placeholderPhone'] : __( 'Seu número', 'alvobot-pro' );
 
 		$output = '<div id="wp-quiz-' . esc_attr( $quiz_id ) . '" class="wp-quiz-container wp-quiz-style-' . esc_attr( $atts['style'] ) . '">';
 
@@ -898,7 +913,7 @@ class Alvobot_Quiz_Shortcode {
 
 		$output .= '</div>'; // .lead-form-fields
 
-		$submit_text = ! empty( $question['submitText'] ) ? $question['submitText'] : __( 'Continuar', 'alvobot-quiz' );
+		$submit_text = ! empty( $question['submitText'] ) ? $question['submitText'] : __( 'Continuar', 'alvobot-pro' );
 		$output     .= '<button type="submit" class="quiz-submit-btn">';
 		$output     .= '<span class="btn-text">' . esc_html( $submit_text ) . '</span>';
 		$output     .= '<span class="btn-icon">→</span>';
@@ -925,10 +940,10 @@ class Alvobot_Quiz_Shortcode {
 
 		// Use defaults if not provided
 		if ( empty( $label ) ) {
-			$label = __( 'Telefone / WhatsApp', 'alvobot-quiz' );
+			$label = __( 'Telefone / WhatsApp', 'alvobot-pro' );
 		}
 		if ( empty( $placeholder ) ) {
-			$placeholder = __( 'Seu número', 'alvobot-quiz' );
+			$placeholder = __( 'Seu número', 'alvobot-pro' );
 		}
 
 		$output  = '<div class="form-group phone-field-group">';
@@ -1538,7 +1553,7 @@ class Alvobot_Quiz_Shortcode {
 	 * Get phone validation script
 	 */
 	private function get_phone_validation_script() {
-		$countries_json = json_encode( $this->get_country_phone_data() );
+		$countries_json = wp_json_encode( $this->get_country_phone_data() );
 
 		return <<<SCRIPT
 <script>
@@ -1937,9 +1952,10 @@ SCRIPT;
 		// 3. quiz_step (legacy parameter)
 		// 4. q (legacy parameter)
 
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading URL parameters for quiz step navigation, no data modification.
 		if ( isset( $_GET['quiz_display_step'] ) ) {
 			// quiz_display_step já vem 0-based do JavaScript
-			return max( 0, intval( $_GET['quiz_display_step'] ) );
+			return max( 0, intval( wp_unslash( $_GET['quiz_display_step'] ) ) );
 		}
 
 		$quiz_step_suffix = get_query_var( 'quiz_step_suffix' );
@@ -1948,12 +1964,13 @@ SCRIPT;
 		}
 
 		if ( isset( $_GET['quiz_step'] ) ) {
-			return max( 0, intval( $_GET['quiz_step'] ) - 1 );
+			return max( 0, intval( wp_unslash( $_GET['quiz_step'] ) ) - 1 );
 		}
 
 		if ( isset( $_GET['q'] ) ) {
-			return max( 0, intval( $_GET['q'] ) - 1 );
+			return max( 0, intval( wp_unslash( $_GET['q'] ) ) - 1 );
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		return 0;
 	}
@@ -2076,7 +2093,7 @@ SCRIPT;
 	 * @return array Original URL parameters
 	 */
 	private function get_original_url_params() {
-		$original_params = $_GET;
+		$original_params = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserving existing URL parameters for quiz navigation, no data modification.
 
 		// Remove parâmetros específicos do quiz
 		$quiz_params = array(
@@ -2197,7 +2214,7 @@ SCRIPT;
 							( get_query_var( 'quiz_step_suffix' ) &&
 							get_query_var( 'pagename' ) &&
 							strpos( get_query_var( 'pagename' ), 'pre/' ) === 0 ) ||
-							strpos( $_SERVER['REQUEST_URI'], '/pre/' ) !== false;
+							( isset( $_SERVER['REQUEST_URI'] ) && strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), '/pre/' ) !== false );
 
 		// Se não estamos em pré-artigo, retornar URL original
 		if ( ! $is_pre_article ) {

@@ -41,441 +41,443 @@ class AlvoBotPro_Rest_Api_Service {
 	 * Registra todas as rotas da API REST
 	 */
 	public function register_rest_routes() {
+		$auth_permission_callback = array( $this, 'permissions_check' );
+
 		// Rota para listar idiomas disponíveis
 		register_rest_route(
 			$this->namespace,
 			'/languages',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_languages' ),
-				'permission_callback' => '__return_true',
-			]
+				'permission_callback' => $auth_permission_callback,
+			)
 		);
 
 		// Rota para obter URL de um post em um idioma específico
 		register_rest_route(
 			$this->namespace,
 			'/language-url',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_language_url' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'post_id'       => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'post_id'       => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'language_code' => [
+					),
+					'language_code' => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_string( $param ) && ! empty( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rotas para tradução de posts
 		register_rest_route(
 			$this->namespace,
 			'/translate',
-			[
-				[
+			array(
+				array(
 					'methods'             => 'POST',
 					'callback'            => array( $this, 'create_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'PUT',
 					'callback'            => array( $this, 'update_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'DELETE',
 					'callback'            => array( $this, 'delete_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
-					'args'                => [
-						'post_id'       => [
+					'permission_callback' => $auth_permission_callback,
+					'args'                => array(
+						'post_id'       => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_numeric( $param );
 							},
-						],
-						'language_code' => [
+						),
+						'language_code' => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_string( $param ) && ! empty( $param );
 							},
-						],
-					],
-				],
-			]
+						),
+					),
+				),
+			)
 		);
 
 		// Rota para verificar existência de tradução
 		register_rest_route(
 			$this->namespace,
 			'/translations/check',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'check_translation_existence' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'post_id'       => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'post_id'       => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'language_code' => [
+					),
+					'language_code' => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_string( $param ) && ! empty( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para estatísticas de tradução
 		register_rest_route(
 			$this->namespace,
 			'/translation-stats',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_translation_stats' ),
-				'permission_callback' => '__return_true',
-			]
+				'permission_callback' => $auth_permission_callback,
+			)
 		);
 
 		// Rota para alterar idioma de um post existente
 		register_rest_route(
 			$this->namespace,
 			'/change-post-language',
-			[
+			array(
 				'methods'             => 'PUT',
 				'callback'            => array( $this, 'change_post_language' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
-				'args'                => [
-					'post_id'             => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'post_id'             => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'language_code'       => [
+					),
+					'language_code'       => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_string( $param ) && ! empty( $param );
 						},
-					],
-					'update_translations' => [
+					),
+					'update_translations' => array(
 						'required'          => false,
 						'default'           => true,
 						'validate_callback' => function ( $param ) {
 							return is_bool( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para listar todas as traduções
 		register_rest_route(
 			$this->namespace,
 			'/translations',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_translations' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'page'      => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'page'      => array(
 						'default'           => 1,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'per_page'  => [
+					),
+					'per_page'  => array(
 						'default'           => 10,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param ) && $param <= 100;
 						},
-					],
-					'post_type' => [
+					),
+					'post_type' => array(
 						'default'           => 'post',
 						'validate_callback' => function ( $param ) {
 							return post_type_exists( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para listar posts sem tradução
 		register_rest_route(
 			$this->namespace,
 			'/translations/missing',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_missing_translations' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'page'          => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'page'          => array(
 						'default'           => 1,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'per_page'      => [
+					),
+					'per_page'      => array(
 						'default'           => 10,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param ) && $param <= 100;
 						},
-					],
-					'post_type'     => [
+					),
+					'post_type'     => array(
 						'default'           => 'post',
 						'validate_callback' => function ( $param ) {
 							return post_type_exists( $param );
 						},
-					],
-					'language_code' => [
+					),
+					'language_code' => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_string( $param ) && ! empty( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rotas para categorias
 		register_rest_route(
 			$this->namespace,
 			'/translate/category',
-			[
-				[
+			array(
+				array(
 					'methods'             => 'POST',
 					'callback'            => array( $this, 'create_category_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_category_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'PUT',
 					'callback'            => array( $this, 'update_category_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_category_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'DELETE',
 					'callback'            => array( $this, 'delete_category_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
-					'args'                => [
-						'category_id'   => [
+					'permission_callback' => $auth_permission_callback,
+					'args'                => array(
+						'category_id'   => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_numeric( $param );
 							},
-						],
-						'language_code' => [
+						),
+						'language_code' => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_string( $param ) && ! empty( $param );
 							},
-						],
-					],
-				],
-			]
+						),
+					),
+				),
+			)
 		);
 
 		// Rota para listar traduções de categorias
 		register_rest_route(
 			$this->namespace,
 			'/translations/categories',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_category_translations' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'page'     => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'page'     => array(
 						'default'           => 1,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'per_page' => [
+					),
+					'per_page' => array(
 						'default'           => 10,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param ) && $param <= 100;
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para listar slugs
 		register_rest_route(
 			$this->namespace,
 			'/slugs',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_slugs' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'post_type' => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'post_type' => array(
 						'default'           => 'post',
 						'validate_callback' => function ( $param ) {
 							return post_type_exists( $param );
 						},
-					],
-					'page'      => [
+					),
+					'page'      => array(
 						'default'           => 1,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'per_page'  => [
+					),
+					'per_page'  => array(
 						'default'           => 10,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param ) && $param <= 100;
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rotas para traduções de slug
 		register_rest_route(
 			$this->namespace,
 			'/translate/slug',
-			[
-				[
+			array(
+				array(
 					'methods'             => 'POST',
 					'callback'            => array( $this, 'create_slug_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_slug_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'PUT',
 					'callback'            => array( $this, 'update_slug_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
+					'permission_callback' => $auth_permission_callback,
 					'args'                => $this->get_slug_translation_args(),
-				],
-				[
+				),
+				array(
 					'methods'             => 'DELETE',
 					'callback'            => array( $this, 'delete_slug_translation' ),
-					'permission_callback' => array( $this, 'permissions_check' ),
-					'args'                => [
-						'post_id'       => [
+					'permission_callback' => $auth_permission_callback,
+					'args'                => array(
+						'post_id'       => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_numeric( $param );
 							},
-						],
-						'language_code' => [
+						),
+						'language_code' => array(
 							'required'          => true,
 							'validate_callback' => function ( $param ) {
 								return is_string( $param ) && ! empty( $param );
 							},
-						],
-					],
-				],
-			]
+						),
+					),
+				),
+			)
 		);
 
 		// Rota para listar taxonomias
 		register_rest_route(
 			$this->namespace,
 			'/taxonomies',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_taxonomies' ),
-				'permission_callback' => '__return_true',
-			]
+				'permission_callback' => $auth_permission_callback,
+			)
 		);
 
 		// Rota para listar termos de taxonomia
 		register_rest_route(
 			$this->namespace,
 			'/taxonomy/terms',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_taxonomy_terms' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'taxonomy'   => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'taxonomy'   => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return taxonomy_exists( $param );
 						},
-					],
-					'page'       => [
+					),
+					'page'       => array(
 						'default'           => 1,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param );
 						},
-					],
-					'per_page'   => [
+					),
+					'per_page'   => array(
 						'default'           => 10,
 						'validate_callback' => function ( $param ) {
 							return is_numeric( $param ) && $param <= 100;
 						},
-					],
-					'hide_empty' => [
+					),
+					'hide_empty' => array(
 						'default'           => false,
 						'validate_callback' => function ( $param ) {
 							return is_bool( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para termos não traduzidos
 		register_rest_route(
 			$this->namespace,
 			'/taxonomy/untranslated',
-			[
+			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_untranslated_terms' ),
-				'permission_callback' => '__return_true',
-				'args'                => [
-					'taxonomy'      => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'taxonomy'      => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return taxonomy_exists( $param );
 						},
-					],
-					'language_code' => [
+					),
+					'language_code' => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_string( $param ) && ! empty( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 
 		// Rota para sincronizar traduções
 		register_rest_route(
 			$this->namespace,
 			'/sync-translations',
-			[
+			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'sync_translations' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
-				'args'                => [
-					'translations' => [
+				'permission_callback' => $auth_permission_callback,
+				'args'                => array(
+					'translations' => array(
 						'required'          => true,
 						'validate_callback' => function ( $param ) {
 							return is_array( $param );
 						},
-					],
-				],
-			]
+					),
+				),
+			)
 		);
 	}
 
@@ -513,7 +515,7 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function get_language_url( $request ) {
 		if ( ! function_exists( 'pll_get_post' ) || ! function_exists( 'get_permalink' ) ) {
-			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		$params        = $request->get_params();
@@ -523,29 +525,29 @@ class AlvoBotPro_Rest_Api_Service {
 		// Verifica se o post existe
 		$post = get_post( $post_id );
 		if ( ! $post ) {
-			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Verifica se o idioma existe
 		if ( ! PLL()->model->get_language( $language_code ) ) {
-			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Obtém o ID do post traduzido
 		$translated_post_id = pll_get_post( $post_id, $language_code );
 
 		if ( ! $translated_post_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada para este idioma.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada para este idioma.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Obtém a URL do post traduzido
 		$url = get_permalink( $translated_post_id );
 
 		return new WP_REST_Response(
-			[
+			array(
 				'post_id' => $translated_post_id,
 				'url'     => $url,
-			]
+			)
 		);
 	}
 
@@ -554,7 +556,7 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function create_translation( $request ) {
 		if ( ! $this->translation_service ) {
-			return new WP_Error( 'service_not_available', __( 'Serviço de tradução não disponível.', 'alvobot-pro' ), [ 'status' => 500 ] );
+			return new WP_Error( 'service_not_available', __( 'Serviço de tradução não disponível.', 'alvobot-pro' ), array( 'status' => 500 ) );
 		}
 
 		return $this->translation_service->create_translation( $request );
@@ -565,7 +567,7 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function check_translation_existence( $request ) {
 		if ( ! function_exists( 'pll_get_post_translations' ) ) {
-			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		$params        = $request->get_params();
@@ -575,12 +577,12 @@ class AlvoBotPro_Rest_Api_Service {
 		// Verifica se o post existe
 		$post = get_post( $post_id );
 		if ( ! $post ) {
-			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Verifica se o idioma existe
 		if ( ! PLL()->model->get_language( $language_code ) ) {
-			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Obtém as traduções existentes
@@ -588,10 +590,10 @@ class AlvoBotPro_Rest_Api_Service {
 		$exists       = isset( $translations[ $language_code ] );
 
 		return new WP_REST_Response(
-			[
+			array(
 				'exists'  => $exists,
 				'post_id' => $exists ? $translations[ $language_code ] : null,
-			]
+			)
 		);
 	}
 
@@ -600,43 +602,43 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function get_translation_stats() {
 		if ( ! function_exists( 'pll_languages_list' ) ) {
-			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		$languages        = pll_languages_list();
 		$default_language = pll_default_language();
 
-		$post_types = [ 'post', 'page' ];
-		$taxonomies = [ 'category', 'post_tag' ];
+		$post_types = array( 'post', 'page' );
+		$taxonomies = array( 'category', 'post_tag' );
 
-		$stats = [
+		$stats = array(
 			'languages'        => count( $languages ),
 			'default_language' => $default_language,
-			'post_types'       => [],
-			'taxonomies'       => [],
-		];
+			'post_types'       => array(),
+			'taxonomies'       => array(),
+		);
 
 		// Estatísticas para tipos de post
 		foreach ( $post_types as $post_type ) {
 			$total_posts      = wp_count_posts( $post_type )->publish;
-			$translated_posts = [];
+			$translated_posts = array();
 
 			foreach ( $languages as $language ) {
-				$args = [
+				$args = array(
 					'post_type'      => $post_type,
 					'post_status'    => 'publish',
 					'posts_per_page' => -1,
 					'lang'           => $language,
-				];
+				);
 
 				$query                         = new WP_Query( $args );
 				$translated_posts[ $language ] = $query->found_posts;
 			}
 
-			$stats['post_types'][ $post_type ] = [
+			$stats['post_types'][ $post_type ] = array(
 				'total'       => $total_posts,
 				'by_language' => $translated_posts,
-			];
+			);
 		}
 
 		return new WP_REST_Response( $stats );
@@ -647,7 +649,7 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function change_post_language( $request ) {
 		if ( ! function_exists( 'pll_set_post_language' ) ) {
-			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'polylang_not_active', __( 'O plugin Polylang não está ativo.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		$params              = $request->get_params();
@@ -658,17 +660,17 @@ class AlvoBotPro_Rest_Api_Service {
 		// Verifica se o post existe
 		$post = get_post( $post_id );
 		if ( ! $post ) {
-			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'post_not_found', __( 'Post não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Verifica se o usuário pode editar o post
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return new WP_Error( 'forbidden', __( 'Você não tem permissão para editar este post.', 'alvobot-pro' ), [ 'status' => 403 ] );
+			return new WP_Error( 'forbidden', __( 'Você não tem permissão para editar este post.', 'alvobot-pro' ), array( 'status' => 403 ) );
 		}
 
 		// Verifica se o idioma existe
 		if ( ! PLL()->model->get_language( $language_code ) ) {
-			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'language_not_found', __( 'Idioma não encontrado.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Obtém o idioma atual do post
@@ -677,7 +679,7 @@ class AlvoBotPro_Rest_Api_Service {
 		// Se já está no idioma correto, retorna sucesso
 		if ( $current_language === $language_code ) {
 			return new WP_REST_Response(
-				[
+				array(
 					'success'              => true,
 					'post_id'              => $post_id,
 					'previous_language'    => $current_language,
@@ -685,7 +687,7 @@ class AlvoBotPro_Rest_Api_Service {
 					'translations_updated' => false,
 					'message'              => __( 'O post já estava neste idioma.', 'alvobot-pro' ),
 					'no_change_needed'     => true,
-				],
+				),
 				200
 			);
 		}
@@ -698,10 +700,10 @@ class AlvoBotPro_Rest_Api_Service {
 			return new WP_Error(
 				'translation_exists',
 				__( 'Já existe uma tradução deste post para o idioma selecionado.', 'alvobot-pro' ),
-				[
+				array(
 					'status'           => 400,
 					'existing_post_id' => $existing_translations[ $language_code ],
-				]
+				)
 			);
 		}
 
@@ -732,7 +734,7 @@ class AlvoBotPro_Rest_Api_Service {
 		);
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success'              => true,
 				'post_id'              => $post_id,
 				'previous_language'    => $current_language,
@@ -743,7 +745,7 @@ class AlvoBotPro_Rest_Api_Service {
 					$current_language,
 					$language_code
 				),
-			],
+			),
 			200
 		);
 	}
@@ -759,19 +761,19 @@ class AlvoBotPro_Rest_Api_Service {
 
 		// Verifica autenticação Basic
 		if ( ! isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-			return new WP_Error( 'missing_auth', __( 'Autorização necessária.', 'alvobot-pro' ), [ 'status' => 401 ] );
+			return new WP_Error( 'missing_auth', __( 'Autorização necessária.', 'alvobot-pro' ), array( 'status' => 401 ) );
 		}
 
-		$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+		$auth_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
 
 		// Verifica se é Basic Auth
 		if ( ! preg_match( '/^Basic\s+(.*)$/i', $auth_header, $matches ) ) {
-			return new WP_Error( 'invalid_auth', __( 'Tipo de autorização inválido.', 'alvobot-pro' ), [ 'status' => 401 ] );
+			return new WP_Error( 'invalid_auth', __( 'Tipo de autorização inválido.', 'alvobot-pro' ), array( 'status' => 401 ) );
 		}
 
 		$credentials = base64_decode( $matches[1] );
 		if ( ! $credentials ) {
-			return new WP_Error( 'invalid_credentials', __( 'Credenciais inválidas.', 'alvobot-pro' ), [ 'status' => 401 ] );
+			return new WP_Error( 'invalid_credentials', __( 'Credenciais inválidas.', 'alvobot-pro' ), array( 'status' => 401 ) );
 		}
 
 		list($username, $password) = explode( ':', $credentials, 2 );
@@ -783,13 +785,13 @@ class AlvoBotPro_Rest_Api_Service {
 			// Fallback: verifica se é um token de aplicação válido
 			$user = $this->authenticate_with_application_token( $username, $password );
 			if ( is_wp_error( $user ) ) {
-				return new WP_Error( 'auth_failed', __( 'Falha na autenticação.', 'alvobot-pro' ), [ 'status' => 401 ] );
+				return new WP_Error( 'auth_failed', __( 'Falha na autenticação.', 'alvobot-pro' ), array( 'status' => 401 ) );
 			}
 		}
 
 		// Verifica se o usuário pode editar posts
 		if ( ! user_can( $user, 'edit_posts' ) ) {
-			return new WP_Error( 'insufficient_permissions', __( 'Permissões insuficientes.', 'alvobot-pro' ), [ 'status' => 403 ] );
+			return new WP_Error( 'insufficient_permissions', __( 'Permissões insuficientes.', 'alvobot-pro' ), array( 'status' => 403 ) );
 		}
 
 		// Define o usuário atual para o contexto da requisição
@@ -827,53 +829,39 @@ class AlvoBotPro_Rest_Api_Service {
 			return $user;
 		}
 
-		// Fallback: verifica alguns tokens conhecidos para o usuário alvobot
-		if ( $username === 'alvobot' ) {
-			$known_tokens = [
-				'BxSmMbQr40wJmn6RhFpGkd9BJ3XHjLql',
-				'FrWV68fusPwrour9ABpaA1Wv',
-			];
-
-			if ( in_array( $token, $known_tokens ) ) {
-				// Salva este token como válido
-				update_user_meta( $user->ID, 'alvobot_api_token', $token );
-				return $user;
-			}
-		}
-
-		return new WP_Error( 'invalid_token', __( 'Token inválido.', 'alvobot-pro' ) );
+			return new WP_Error( 'invalid_token', __( 'Token inválido.', 'alvobot-pro' ) );
 	}
 
 	/**
 	 * Argumentos comuns para tradução de posts
 	 */
 	private function get_translation_args() {
-		return [
-			'post_id'       => [
+		return array(
+			'post_id'       => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_numeric( $param );
 				},
-			],
-			'language_code' => [
+			),
+			'language_code' => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param ) && strlen( $param ) === 2;
 				},
-			],
-			'title'         => [
+			),
+			'title'         => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-			'content'       => [
+			),
+			'content'       => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -881,7 +869,7 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function update_translation( $request ) {
 		if ( ! $this->translation_service ) {
-			return new WP_Error( 'service_not_available', __( 'Serviço de tradução não disponível.', 'alvobot-pro' ), [ 'status' => 500 ] );
+			return new WP_Error( 'service_not_available', __( 'Serviço de tradução não disponível.', 'alvobot-pro' ), array( 'status' => 500 ) );
 		}
 
 		$params        = $request->get_params();
@@ -892,15 +880,15 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_post_id = pll_get_post( $post_id, $language_code );
 
 		if ( ! $translated_post_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Atualiza o post traduzido
-		$update_data = [
+		$update_data = array(
 			'ID'           => $translated_post_id,
 			'post_title'   => sanitize_text_field( $params['title'] ),
 			'post_content' => wp_kses_post( $params['content'] ),
-		];
+		);
 
 		if ( isset( $params['excerpt'] ) ) {
 			$update_data['post_excerpt'] = sanitize_textarea_field( $params['excerpt'] );
@@ -917,11 +905,11 @@ class AlvoBotPro_Rest_Api_Service {
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success' => true,
 				'post_id' => $translated_post_id,
 				'message' => __( 'Tradução atualizada com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -938,26 +926,26 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_post_id = pll_get_post( $post_id, $language_code );
 
 		if ( ! $translated_post_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Verifica permissões
 		if ( ! current_user_can( 'delete_post', $translated_post_id ) ) {
-			return new WP_Error( 'forbidden', __( 'Você não tem permissão para excluir esta tradução.', 'alvobot-pro' ), [ 'status' => 403 ] );
+			return new WP_Error( 'forbidden', __( 'Você não tem permissão para excluir esta tradução.', 'alvobot-pro' ), array( 'status' => 403 ) );
 		}
 
 		// Exclui o post
 		$result = wp_delete_post( $translated_post_id, false ); // Move para lixeira
 
 		if ( ! $result ) {
-			return new WP_Error( 'delete_failed', __( 'Falha ao excluir a tradução.', 'alvobot-pro' ), [ 'status' => 500 ] );
+			return new WP_Error( 'delete_failed', __( 'Falha ao excluir a tradução.', 'alvobot-pro' ), array( 'status' => 500 ) );
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success' => true,
 				'message' => __( 'Tradução excluída com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -971,40 +959,40 @@ class AlvoBotPro_Rest_Api_Service {
 		$per_page  = intval( $params['per_page'] );
 		$post_type = sanitize_text_field( $params['post_type'] );
 
-		$args = [
+		$args = array(
 			'post_type'      => $post_type,
 			'post_status'    => 'publish',
 			'posts_per_page' => $per_page,
 			'paged'          => $page,
-			'meta_query'     => [
-				[
+			'meta_query'     => array(
+				array(
 					'key'     => '_language',
 					'compare' => 'EXISTS',
-				],
-			],
-		];
+				),
+			),
+		);
 
 		$query = new WP_Query( $args );
-		$posts = [];
+		$posts = array();
 
 		foreach ( $query->posts as $post ) {
 			$translations = pll_get_post_translations( $post->ID );
-			$posts[]      = [
+			$posts[]      = array(
 				'id'           => $post->ID,
 				'title'        => $post->post_title,
 				'slug'         => $post->post_name,
 				'language'     => pll_get_post_language( $post->ID ),
 				'translations' => $translations,
-			];
+			);
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'posts'        => $posts,
 				'total'        => $query->found_posts,
 				'pages'        => $query->max_num_pages,
 				'current_page' => $page,
-			],
+			),
 			200
 		);
 	}
@@ -1020,15 +1008,15 @@ class AlvoBotPro_Rest_Api_Service {
 		$language_code = sanitize_text_field( $params['language_code'] );
 
 		// Primeiro, pega todos os posts do tipo especificado
-		$args = [
+		$args = array(
 			'post_type'      => $post_type,
 			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
-		];
+		);
 
 		$all_posts     = get_posts( $args );
-		$missing_posts = [];
+		$missing_posts = array();
 
 		foreach ( $all_posts as $post_id ) {
 			$translations = pll_get_post_translations( $post_id );
@@ -1042,25 +1030,25 @@ class AlvoBotPro_Rest_Api_Service {
 		$offset      = ( $page - 1 ) * $per_page;
 		$paged_posts = array_slice( $missing_posts, $offset, $per_page );
 
-		$posts = [];
+		$posts = array();
 		foreach ( $paged_posts as $post_id ) {
 			$post    = get_post( $post_id );
-			$posts[] = [
+			$posts[] = array(
 				'id'           => $post->ID,
 				'title'        => $post->post_title,
 				'slug'         => $post->post_name,
 				'language'     => pll_get_post_language( $post->ID ),
 				'translations' => pll_get_post_translations( $post->ID ),
-			];
+			);
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'posts'        => $posts,
 				'total'        => $total,
 				'pages'        => ceil( $total / $per_page ),
 				'current_page' => $page,
-			],
+			),
 			200
 		);
 	}
@@ -1069,38 +1057,38 @@ class AlvoBotPro_Rest_Api_Service {
 	 * Argumentos para tradução de categorias
 	 */
 	private function get_category_translation_args() {
-		return [
-			'category_id'   => [
+		return array(
+			'category_id'   => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_numeric( $param );
 				},
-			],
-			'language_code' => [
+			),
+			'language_code' => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param ) && ! empty( $param );
 				},
-			],
-			'name'          => [
+			),
+			'name'          => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-			'description'   => [
+			),
+			'description'   => array(
 				'required'          => false,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-			'slug'          => [
+			),
+			'slug'          => array(
 				'required'          => false,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1114,23 +1102,23 @@ class AlvoBotPro_Rest_Api_Service {
 		// Verifica se a categoria existe
 		$category = get_term( $category_id, 'category' );
 		if ( ! $category || is_wp_error( $category ) ) {
-			return new WP_Error( 'category_not_found', __( 'Categoria não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'category_not_found', __( 'Categoria não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Verifica se já existe tradução
 		$existing_translation = pll_get_term( $category_id, $language_code );
 		if ( $existing_translation ) {
-			return new WP_Error( 'translation_exists', __( 'Já existe uma tradução desta categoria.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'translation_exists', __( 'Já existe uma tradução desta categoria.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		// Cria a nova categoria
 		$new_category = wp_insert_term(
 			sanitize_text_field( $params['name'] ),
 			'category',
-			[
+			array(
 				'description' => isset( $params['description'] ) ? sanitize_textarea_field( $params['description'] ) : '',
 				'slug'        => isset( $params['slug'] ) ? sanitize_title( $params['slug'] ) : '',
-			]
+			)
 		);
 
 		if ( is_wp_error( $new_category ) ) {
@@ -1146,11 +1134,11 @@ class AlvoBotPro_Rest_Api_Service {
 		pll_save_term_translations( $translations );
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success'     => true,
 				'category_id' => $new_category['term_id'],
 				'message'     => __( 'Tradução de categoria criada com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			201
 		);
 	}
@@ -1167,13 +1155,13 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_category_id = pll_get_term( $category_id, $language_code );
 
 		if ( ! $translated_category_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução de categoria não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução de categoria não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Atualiza a categoria
-		$update_data = [
+		$update_data = array(
 			'name' => sanitize_text_field( $params['name'] ),
-		];
+		);
 
 		if ( isset( $params['description'] ) ) {
 			$update_data['description'] = sanitize_textarea_field( $params['description'] );
@@ -1190,11 +1178,11 @@ class AlvoBotPro_Rest_Api_Service {
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success'     => true,
 				'category_id' => $translated_category_id,
 				'message'     => __( 'Tradução de categoria atualizada com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -1211,7 +1199,7 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_category_id = pll_get_term( $category_id, $language_code );
 
 		if ( ! $translated_category_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução de categoria não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução de categoria não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Exclui a categoria
@@ -1222,10 +1210,10 @@ class AlvoBotPro_Rest_Api_Service {
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success' => true,
 				'message' => __( 'Tradução de categoria excluída com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -1238,35 +1226,35 @@ class AlvoBotPro_Rest_Api_Service {
 		$page     = intval( $params['page'] );
 		$per_page = intval( $params['per_page'] );
 
-		$args = [
+		$args = array(
 			'taxonomy'   => 'category',
 			'hide_empty' => false,
 			'number'     => $per_page,
 			'offset'     => ( $page - 1 ) * $per_page,
-		];
+		);
 
 		$categories = get_terms( $args );
-		$total      = wp_count_terms( 'category', [ 'hide_empty' => false ] );
+		$total      = wp_count_terms( 'category', array( 'hide_empty' => false ) );
 
-		$data = [];
+		$data = array();
 		foreach ( $categories as $category ) {
 			$translations = pll_get_term_translations( $category->term_id );
-			$data[]       = [
+			$data[]       = array(
 				'id'           => $category->term_id,
 				'name'         => $category->name,
 				'slug'         => $category->slug,
 				'language'     => pll_get_term_language( $category->term_id ),
 				'translations' => $translations,
-			];
+			);
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'categories'   => $data,
 				'total'        => $total,
 				'pages'        => ceil( $total / $per_page ),
 				'current_page' => $page,
-			],
+			),
 			200
 		);
 	}
@@ -1280,43 +1268,43 @@ class AlvoBotPro_Rest_Api_Service {
 		$page      = intval( $params['page'] );
 		$per_page  = intval( $params['per_page'] );
 
-		$args = [
+		$args = array(
 			'post_type'      => $post_type,
 			'post_status'    => 'publish',
 			'posts_per_page' => $per_page,
 			'paged'          => $page,
 			'fields'         => 'ids',
-		];
+		);
 
 		$query = new WP_Query( $args );
-		$slugs = [];
+		$slugs = array();
 
 		foreach ( $query->posts as $post_id ) {
 			$post             = get_post( $post_id );
 			$translations     = pll_get_post_translations( $post_id );
-			$translated_slugs = [];
+			$translated_slugs = array();
 
 			foreach ( $translations as $lang => $trans_id ) {
 				$trans_post                = get_post( $trans_id );
 				$translated_slugs[ $lang ] = $trans_post->post_name;
 			}
 
-			$slugs[] = [
+			$slugs[] = array(
 				'post_id'          => $post_id,
 				'title'            => $post->post_title,
 				'slug'             => $post->post_name,
 				'language'         => pll_get_post_language( $post_id ),
 				'translated_slugs' => $translated_slugs,
-			];
+			);
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'slugs'        => $slugs,
 				'total'        => $query->found_posts,
 				'pages'        => $query->max_num_pages,
 				'current_page' => $page,
-			],
+			),
 			200
 		);
 	}
@@ -1325,26 +1313,26 @@ class AlvoBotPro_Rest_Api_Service {
 	 * Argumentos para tradução de slug
 	 */
 	private function get_slug_translation_args() {
-		return [
-			'post_id'       => [
+		return array(
+			'post_id'       => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_numeric( $param );
 				},
-			],
-			'language_code' => [
+			),
+			'language_code' => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param ) && ! empty( $param );
 				},
-			],
-			'slug'          => [
+			),
+			'slug'          => array(
 				'required'          => true,
 				'validate_callback' => function ( $param ) {
 					return is_string( $param );
 				},
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -1360,15 +1348,15 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_post_id = pll_get_post( $post_id, $language_code );
 
 		if ( ! $translated_post_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Atualiza o slug
 		$result = wp_update_post(
-			[
+			array(
 				'ID'        => $translated_post_id,
 				'post_name' => $slug,
-			]
+			)
 		);
 
 		if ( is_wp_error( $result ) ) {
@@ -1376,12 +1364,12 @@ class AlvoBotPro_Rest_Api_Service {
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success' => true,
 				'post_id' => $translated_post_id,
 				'slug'    => $slug,
 				'message' => __( 'Slug traduzido com sucesso.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -1406,7 +1394,7 @@ class AlvoBotPro_Rest_Api_Service {
 		$translated_post_id = pll_get_post( $post_id, $language_code );
 
 		if ( ! $translated_post_id ) {
-			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), [ 'status' => 404 ] );
+			return new WP_Error( 'translation_not_found', __( 'Tradução não encontrada.', 'alvobot-pro' ), array( 'status' => 404 ) );
 		}
 
 		// Gera um slug baseado no título
@@ -1415,10 +1403,10 @@ class AlvoBotPro_Rest_Api_Service {
 
 		// Atualiza para o slug padrão
 		$result = wp_update_post(
-			[
+			array(
 				'ID'        => $translated_post_id,
 				'post_name' => $default_slug,
-			]
+			)
 		);
 
 		if ( is_wp_error( $result ) ) {
@@ -1426,12 +1414,12 @@ class AlvoBotPro_Rest_Api_Service {
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success' => true,
 				'post_id' => $translated_post_id,
 				'slug'    => $default_slug,
 				'message' => __( 'Slug restaurado para o padrão.', 'alvobot-pro' ),
-			],
+			),
 			200
 		);
 	}
@@ -1440,17 +1428,17 @@ class AlvoBotPro_Rest_Api_Service {
 	 * Lista taxonomias disponíveis
 	 */
 	public function get_taxonomies() {
-		$taxonomies = get_taxonomies( [ 'public' => true ], 'objects' );
-		$data       = [];
+		$taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+		$data       = array();
 
 		foreach ( $taxonomies as $taxonomy ) {
 			if ( pll_is_translated_taxonomy( $taxonomy->name ) ) {
-				$data[] = [
+				$data[] = array(
 					'name'           => $taxonomy->name,
 					'label'          => $taxonomy->label,
 					'singular_label' => $taxonomy->labels->singular_name,
 					'hierarchical'   => $taxonomy->hierarchical,
-				];
+				);
 			}
 		}
 
@@ -1467,35 +1455,35 @@ class AlvoBotPro_Rest_Api_Service {
 		$per_page   = intval( $params['per_page'] );
 		$hide_empty = (bool) $params['hide_empty'];
 
-		$args = [
+		$args = array(
 			'taxonomy'   => $taxonomy,
 			'hide_empty' => $hide_empty,
 			'number'     => $per_page,
 			'offset'     => ( $page - 1 ) * $per_page,
-		];
+		);
 
 		$terms = get_terms( $args );
-		$total = wp_count_terms( $taxonomy, [ 'hide_empty' => $hide_empty ] );
+		$total = wp_count_terms( $taxonomy, array( 'hide_empty' => $hide_empty ) );
 
-		$data = [];
+		$data = array();
 		foreach ( $terms as $term ) {
 			$translations = pll_get_term_translations( $term->term_id );
-			$data[]       = [
+			$data[]       = array(
 				'id'           => $term->term_id,
 				'name'         => $term->name,
 				'slug'         => $term->slug,
 				'language'     => pll_get_term_language( $term->term_id ),
 				'translations' => $translations,
-			];
+			);
 		}
 
 		return new WP_REST_Response(
-			[
+			array(
 				'terms'        => $data,
 				'total'        => $total,
 				'pages'        => ceil( $total / $per_page ),
 				'current_page' => $page,
-			],
+			),
 			200
 		);
 	}
@@ -1509,23 +1497,23 @@ class AlvoBotPro_Rest_Api_Service {
 		$language_code = sanitize_text_field( $params['language_code'] );
 
 		$terms = get_terms(
-			[
+			array(
 				'taxonomy'   => $taxonomy,
 				'hide_empty' => false,
-			]
+			)
 		);
 
-		$untranslated = [];
+		$untranslated = array();
 		foreach ( $terms as $term ) {
 			$translations = pll_get_term_translations( $term->term_id );
 			if ( ! isset( $translations[ $language_code ] ) ) {
-				$untranslated[] = [
+				$untranslated[] = array(
 					'id'           => $term->term_id,
 					'name'         => $term->name,
 					'slug'         => $term->slug,
 					'language'     => pll_get_term_language( $term->term_id ),
 					'translations' => $translations,
-				];
+				);
 			}
 		}
 
@@ -1540,13 +1528,13 @@ class AlvoBotPro_Rest_Api_Service {
 		$translations = $params['translations'];
 
 		if ( empty( $translations ) || count( $translations ) < 2 ) {
-			return new WP_Error( 'invalid_translations', __( 'São necessárias pelo menos 2 traduções para sincronizar.', 'alvobot-pro' ), [ 'status' => 400 ] );
+			return new WP_Error( 'invalid_translations', __( 'São necessárias pelo menos 2 traduções para sincronizar.', 'alvobot-pro' ), array( 'status' => 400 ) );
 		}
 
 		// Verifica se todos os posts existem
 		foreach ( $translations as $lang => $post_id ) {
 			if ( ! get_post( $post_id ) ) {
-				return new WP_Error( 'post_not_found', sprintf( __( 'Post #%d não encontrado.', 'alvobot-pro' ), $post_id ), [ 'status' => 404 ] );
+				return new WP_Error( 'post_not_found', sprintf( __( 'Post #%d não encontrado.', 'alvobot-pro' ), $post_id ), array( 'status' => 404 ) );
 			}
 		}
 
@@ -1554,11 +1542,11 @@ class AlvoBotPro_Rest_Api_Service {
 		pll_save_post_translations( $translations );
 
 		return new WP_REST_Response(
-			[
+			array(
 				'success'      => true,
 				'message'      => __( 'Traduções sincronizadas com sucesso.', 'alvobot-pro' ),
 				'translations' => $translations,
-			],
+			),
 			200
 		);
 	}
@@ -1568,9 +1556,9 @@ class AlvoBotPro_Rest_Api_Service {
 	 */
 	public function add_language_field_to_posts() {
 		register_rest_field(
-			[ 'post', 'page' ],
+			array( 'post', 'page' ),
 			'language',
-			[
+			array(
 				'get_callback'    => function ( $object ) {
 					if ( function_exists( 'pll_get_post_language' ) ) {
 						$language_code = pll_get_post_language( $object['id'], 'slug' );
@@ -1579,12 +1567,12 @@ class AlvoBotPro_Rest_Api_Service {
 					return null;
 				},
 				'update_callback' => null,
-				'schema'          => [
+				'schema'          => array(
 					'description' => __( 'Código do idioma do post (Polylang)', 'alvobot-pro' ),
 					'type'        => 'string',
-					'context'     => [ 'view', 'edit' ],
-				],
-			]
+					'context'     => array( 'view', 'edit' ),
+				),
+			)
 		);
 	}
 }

@@ -171,7 +171,7 @@ class AlvoBotPro_TemporaryLogin_Options {
 	 */
 	public static function get_site_token() {
 		// Use the main site token from the plugin manager
-		return get_option( 'grp_site_token', '' );
+		return get_option( 'alvobot_site_token', '' );
 	}
 
 	/**

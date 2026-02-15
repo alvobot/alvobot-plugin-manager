@@ -209,7 +209,7 @@ class ApiIntegrationTest extends TestCase
         ];
         
         // Gerar chave de cache
-        $cache_key = $cache_config['key_prefix'] . md5(json_encode($api_request));
+        $cache_key = $cache_config['key_prefix'] . md5(wp_json_encode($api_request));
         
         $this->assertStringStartsWith($cache_config['key_prefix'], $cache_key);
         $this->assertEquals(32 + strlen($cache_config['key_prefix']), strlen($cache_key));

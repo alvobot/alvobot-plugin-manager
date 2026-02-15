@@ -248,6 +248,7 @@ class AlvoBotPro_MultiLanguages {
 	public function enqueue_admin_assets( $hook ) {
 		// Páginas onde o módulo deve estar ativo
 		$allowed_hooks  = array( 'edit.php', 'post.php', 'post-new.php' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
 		$is_module_page = ( isset( $_GET['page'] ) && $_GET['page'] === 'alvobot-pro-multi-languages' );
 
 		if ( ! in_array( $hook, $allowed_hooks ) && ! $is_module_page ) {
@@ -400,7 +401,7 @@ class AlvoBotPro_MultiLanguages {
 					}
 				},
 				'schema'          => [
-					'description' => __( 'Polylang translations for the post.' ),
+					'description' => __( 'Polylang translations for the post.', 'alvobot-pro' ),
 					'type'        => 'object',
 				],
 			]

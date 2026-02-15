@@ -22,7 +22,7 @@ define( 'ALVOBOT_PRO_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ALVOBOT_PRO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ALVOBOT_PRO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ALVOBOT_PRO_PLUGIN_FILE', __FILE__ );
-define( 'GRP_SERVER_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/api_plugin' );
+define( 'ALVOBOT_SERVER_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/api_plugin' );
 define( 'ALVOBOT_AI_URL', 'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/ai_plugin' );
 
 // Carrega autoload do Composer se existir
@@ -36,7 +36,7 @@ require_once ALVOBOT_PRO_PLUGIN_DIR . 'includes/class-alvobot-pro.php';
 require_once ALVOBOT_PRO_PLUGIN_DIR . 'includes/class-alvobot-pro-updater.php';
 
 // Inicializa o plugin
-$GLOBALS['alvobot_pro'] = new AlvoBotPro();
+AlvoBotPro::get_instance();
 
 // Inicializa o sistema de atualizações
 if ( is_admin() ) {
@@ -45,21 +45,18 @@ if ( is_admin() ) {
 
 // Hook para inicialização completa do plugin
 function alvobot_pro_init() {
-	global $alvobot_pro;
-	$alvobot_pro->init();
+	AlvoBotPro::get_instance()->init();
 }
 add_action( 'init', 'alvobot_pro_init' );
 
 // Ativação do plugin
 register_activation_hook( __FILE__, 'alvobot_pro_activate' );
 function alvobot_pro_activate() {
-	global $alvobot_pro;
-	$alvobot_pro->activate();
+	AlvoBotPro::get_instance()->activate();
 }
 
 // Desativação do plugin
 register_deactivation_hook( __FILE__, 'alvobot_pro_deactivate' );
 function alvobot_pro_deactivate() {
-	global $alvobot_pro;
-	$alvobot_pro->deactivate();
+	AlvoBotPro::get_instance()->deactivate();
 }

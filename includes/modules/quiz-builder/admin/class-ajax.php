@@ -44,7 +44,7 @@ class Alvobot_Quiz_Ajax {
 
 		// Sanitize questions data with comprehensive validation
 		$questions     = array();
-		$raw_questions = $_POST['questions'];
+		$raw_questions = wp_unslash( $_POST['questions'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Complex array sanitized per-field below.
 
 		if ( is_array( $raw_questions ) && ! empty( $raw_questions ) ) {
 			foreach ( $raw_questions as $index => $question ) {
@@ -97,7 +97,7 @@ class Alvobot_Quiz_Ajax {
 
 		// Sanitize settings with validation
 		$settings     = array();
-		$raw_settings = $_POST['settings'];
+		$raw_settings = wp_unslash( $_POST['settings'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Complex array sanitized per-field below.
 
 		if ( is_array( $raw_settings ) ) {
 			$allowed_settings = array(
@@ -151,7 +151,7 @@ class Alvobot_Quiz_Ajax {
 
 		// Generate clean JSON with consistent formatting
 		$json_flags  = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-		$json_string = json_encode( $questions, $json_flags );
+		$json_string = wp_json_encode( $questions, $json_flags );
 
 		// Add extra protection against WordPress mangling
 		// Escape problematic characters that WordPress might interpret
@@ -164,11 +164,12 @@ class Alvobot_Quiz_Ajax {
 
 		// Generate preview HTML
 		echo '<html><head>';
-		echo '<link rel="stylesheet" href="' . ALVOBOT_QUIZ_URL . 'assets/css/quiz-frontend.css">';
+		echo '<link rel="stylesheet" href="' . esc_url( ALVOBOT_QUIZ_URL . 'assets/css/quiz-frontend.css' ) . '">';
 		echo '</head><body style="padding: 20px;">';
 
 		// Process shortcode
 		$result = do_shortcode( $shortcode );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $result is the output of do_shortcode() which returns trusted HTML
 		echo $result;
 
 		echo '</body></html>';

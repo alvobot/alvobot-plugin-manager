@@ -202,10 +202,16 @@ Gere introduções automáticas para seus artigos.
 
 ### Autenticação
 
-Todas as APIs usam autenticação por token:
+Os endpoints usam estratégias diferentes:
 
 ```bash
-Authorization: Bearer YOUR_API_TOKEN
+# Plugin Manager / Logo Generator / Author Box
+# Envie o token do site no header "token" ou no JSON (campo "token")
+token: YOUR_SITE_TOKEN
+
+# Multi-Languages
+# Requer usuário autenticado com permissão edit_posts
+# (sessão WordPress + nonce ou Basic Auth válido)
 ```
 
 ### Endpoints Principais
@@ -214,21 +220,24 @@ Authorization: Bearer YOUR_API_TOKEN
 ```bash
 # Listar plugins
 curl -X POST https://seusite.com/wp-json/alvobot-pro/v1/plugins/commands \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{"action": "list"}'
+  -H "Content-Type: application/json" \
+  -H "token: YOUR_SITE_TOKEN" \
+  -d '{"command":"get_plugins"}'
 
 # Ativar plugin
 curl -X POST https://seusite.com/wp-json/alvobot-pro/v1/plugins/commands \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{"action": "activate", "plugin": "plugin-name/plugin.php"}'
+  -H "Content-Type: application/json" \
+  -H "token: YOUR_SITE_TOKEN" \
+  -d '{"command":"activate_plugin","plugin":"plugin-name/plugin.php"}'
 ```
 
 #### Logo Generator
 ```bash
 # Gerar logo
 curl -X POST https://seusite.com/wp-json/alvobot-pro/v1/logos \
-  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
   -d '{
+    "token": "YOUR_SITE_TOKEN",
     "name": "Minha Empresa",
     "icon": "computer",
     "background_color": "#CD9042",
@@ -240,12 +249,24 @@ curl -X POST https://seusite.com/wp-json/alvobot-pro/v1/logos \
 ```bash
 # Atualizar autor
 curl -X PUT https://seusite.com/wp-json/alvobot-pro/v1/authors/username \
-  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
   -d '{
+    "token": "YOUR_SITE_TOKEN",
     "display_name": "Novo Nome",
     "description": "Nova descrição",
     "avatar": "base64_image_data"
   }'
+```
+
+#### Multi-Languages (REST)
+```bash
+# Endpoint principal de tradução (autenticado)
+POST /wp-json/alvobot-pro/v1/translate
+
+# Endpoints administrativos (internos)
+POST /wp-json/alvobot-pro/v1/admin/translate
+GET  /wp-json/alvobot-pro/v1/admin/queue/status
+POST /wp-json/alvobot-pro/v1/admin/queue/add
 ```
 
 ### Códigos de Resposta

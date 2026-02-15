@@ -108,9 +108,9 @@ wp db query "DELETE FROM wp_options WHERE option_name LIKE '_transient_alvobot_t
 - **Solução**: Unificado para um handler único no checkbox change
 - **Status**: Contagem correta funcionando
 
-#### ✅ AG Grid Warnings - CONHECIDO
-- **Avisos**: `new Grid()` e `setRowData()` depreciados
-- **Status**: Funcionais, mas podem ser atualizados futuramente para `createGrid()` e `updateGridOptions()`
+#### ✅ AG Grid - ATUALIZADO
+- **Alteração**: Uso de `agGrid.createGrid()` em vez de `new agGrid.Grid()` e `api.setGridOption('rowData', data)` em vez de `api.setRowData(data)` (AG Grid 31)
+- **Status**: Código alinhado à API atual do AG Grid
 
 #### ✅ Sistema de Logs Detalhados - IMPLEMENTADO
 - **Interface Simplificada**: Removido ícone de engrenagem duplicado, consolidado no olho

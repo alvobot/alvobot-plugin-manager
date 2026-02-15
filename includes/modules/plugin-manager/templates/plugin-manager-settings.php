@@ -15,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<i data-lucide="server" class="alvobot-icon"></i>
 			</div>
 			<div class="alvobot-header-content">
-				<h1><?php _e( 'Status do Sistema', 'alvobot-pro' ); ?></h1>
-				<p><?php _e( 'Monitore o status da conexão e gerencie a integração com a plataforma AlvoBot.', 'alvobot-pro' ); ?></p>
+				<h1><?php esc_html_e( 'Status do Sistema', 'alvobot-pro' ); ?></h1>
+				<p><?php esc_html_e( 'Monitore o status da conexão e gerencie a integração com a plataforma AlvoBot.', 'alvobot-pro' ); ?></p>
 			</div>
 		</div>
 
@@ -28,67 +28,58 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="alvobot-card">
 		<div class="alvobot-card-header">
 			<div>
-				<h2 class="alvobot-card-title"><?php _e( 'Status do Sistema', 'alvobot-pro' ); ?></h2>
-				<p class="alvobot-card-subtitle"><?php _e( 'Verifique o status da conexão com a plataforma AlvoBot', 'alvobot-pro' ); ?></p>
+				<h2 class="alvobot-card-title"><?php esc_html_e( 'Status do Sistema', 'alvobot-pro' ); ?></h2>
+				<p class="alvobot-card-subtitle"><?php esc_html_e( 'Verifique o status da conexão com a plataforma AlvoBot', 'alvobot-pro' ); ?></p>
 			</div>
 		</div>
 		
 		<div class="alvobot-card-content">
-			<!-- VERSÃO 2.6.0 - ARQUIVO ATUALIZADO -->
-			<?php
-			// DEBUG - Mostra versão do arquivo
-			echo '<div style="background: #0073aa; color: #fff; padding: 10px; margin-bottom: 10px; font-weight: bold;">';
-			echo 'ARQUIVO ATUALIZADO v2.6.0 - ' . date( 'Y-m-d H:i:s' );
-			echo '<br>has_app_password: ' . ( isset( $has_app_password ) ? ( $has_app_password ? 'SIM' : 'NÃO' ) : 'UNDEFINED' );
-			echo '<br>connection_status: ' . ( isset( $connection_status ) ? 'SET' : 'UNDEFINED' );
-			echo '</div>';
-			?>
 			<table class="alvobot-form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php _e( 'Usuário AlvoBot', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Usuário AlvoBot', 'alvobot-pro' ); ?></th>
 					<td>
 						<?php if ( $alvobot_user ) : ?>
 							<span class="alvobot-badge alvobot-badge-success">
 								<span class="alvobot-status-indicator success"></span>
-								<?php _e( 'Criado', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Criado', 'alvobot-pro' ); ?>
 							</span>
 						<?php else : ?>
 							<span class="alvobot-badge alvobot-badge-error">
 								<span class="alvobot-status-indicator error"></span>
-								<?php _e( 'Não Criado', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Não Criado', 'alvobot-pro' ); ?>
 							</span>
 						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php _e( 'Application Password', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Application Password', 'alvobot-pro' ); ?></th>
 					<td>
 						<?php if ( $has_app_password ) : ?>
 							<span class="alvobot-badge alvobot-badge-success">
 								<span class="alvobot-status-indicator success"></span>
-								<?php printf( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ), $app_password_count ); ?>
+								<?php printf( esc_html( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ) ), intval( $app_password_count ) ); ?>
 							</span>
 							<p class="description" style="margin-top: 8px;">
-								<?php _e( 'Application Password ativo para autenticação API', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Application Password ativo para autenticação API', 'alvobot-pro' ); ?>
 							</p>
 						<?php else : ?>
 							<span class="alvobot-badge alvobot-badge-error">
 								<span class="alvobot-status-indicator error"></span>
-								<?php _e( 'Não Criado', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Não Criado', 'alvobot-pro' ); ?>
 							</span>
 							<p class="description" style="margin-top: 8px; color: #d63638;">
-								<i data-lucide="alert-triangle" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><?php _e( 'Sem Application Password - verifique se plugins de segurança não estão bloqueando', 'alvobot-pro' ); ?>
+								<i data-lucide="alert-triangle" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><?php esc_html_e( 'Sem Application Password - verifique se plugins de segurança não estão bloqueando', 'alvobot-pro' ); ?>
 							</p>
 						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php _e( 'Token do Site', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Token do Site', 'alvobot-pro' ); ?></th>
 					<td>
 						<?php if ( $site_token ) : ?>
 							<span class="alvobot-badge alvobot-badge-success">
 								<span class="alvobot-status-indicator success"></span>
-								<?php _e( 'Gerado', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Gerado', 'alvobot-pro' ); ?>
 							</span>
 							<div class="alvobot-token-field alvobot-mt-sm">
 								<code class="alvobot-token-value" data-token="<?php echo esc_attr( $site_token ); ?>">••••••••••••••••••••••••••••••••</code>
@@ -105,13 +96,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<?php else : ?>
 							<span class="alvobot-badge alvobot-badge-error">
 								<span class="alvobot-status-indicator error"></span>
-								<?php _e( 'Não Gerado', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Não Gerado', 'alvobot-pro' ); ?>
 							</span>
 						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php _e( 'Status da Conexão', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Status da Conexão', 'alvobot-pro' ); ?></th>
 					<td>
 						<?php
 						if ( $connection_status && is_array( $connection_status ) ) :
@@ -124,7 +115,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 								?>
 								<span class="alvobot-badge alvobot-badge-success">
 									<span class="alvobot-status-indicator success"></span>
-									<?php _e( 'Conectado', 'alvobot-pro' ); ?>
+									<?php esc_html_e( 'Conectado', 'alvobot-pro' ); ?>
 								</span>
 								<p class="description" style="margin-top: 8px;">
 									<?php echo esc_html( $message ); ?>
@@ -132,7 +123,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<?php else : ?>
 								<span class="alvobot-badge alvobot-badge-error">
 									<span class="alvobot-status-indicator error"></span>
-									<?php _e( 'Erro de Conexão', 'alvobot-pro' ); ?>
+									<?php esc_html_e( 'Erro de Conexão', 'alvobot-pro' ); ?>
 									<?php if ( $http_status ) : ?>
 										<code style="margin-left: 5px;">HTTP <?php echo esc_html( $http_status ); ?></code>
 									<?php endif; ?>
@@ -160,19 +151,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<?php else : ?>
 							<span class="alvobot-badge alvobot-badge-warning">
 								<span class="alvobot-status-indicator warning"></span>
-								<?php _e( 'Aguardando Inicialização', 'alvobot-pro' ); ?>
+								<?php esc_html_e( 'Aguardando Inicialização', 'alvobot-pro' ); ?>
 							</span>
 						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php _e( 'URL do Site', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'URL do Site', 'alvobot-pro' ); ?></th>
 					<td>
 						<code><?php echo esc_html( get_site_url() ); ?></code>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php _e( 'Versão do WordPress', 'alvobot-pro' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Versão do WordPress', 'alvobot-pro' ); ?></th>
 					<td>
 						<code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code>
 					</td>
@@ -191,7 +182,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</form>
 			<?php else : ?>
 				<form method="post" action="" id="retry-registration-form">
-					<?php wp_nonce_field( 'retry_registration', 'retry_registration_nonce' ); ?>
+					<?php wp_nonce_field( 'alvobot_retry_registration', 'alvobot_retry_registration_nonce' ); ?>
 					<input type="hidden" name="action" value="retry_registration">
 					<div class="alvobot-btn-group">
 						<input type="submit" name="submit" class="alvobot-btn alvobot-btn-secondary retry-registration-btn" value="<?php esc_attr_e( 'Refazer Registro', 'alvobot-pro' ); ?>">

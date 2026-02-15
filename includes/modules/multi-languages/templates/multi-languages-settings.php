@@ -2,25 +2,7 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-?>
 
-<div class="alvobot-admin-wrap">
-	<div class="alvobot-admin-container">
-		<div class="alvobot-admin-header">
-			<div class="alvobot-header-icon">
-				<i data-lucide="languages" class="alvobot-icon"></i>
-			</div>
-			<div class="alvobot-header-content">
-				<h1><?php echo esc_html__( 'Gerenciamento Multilíngue', 'alvobot-pro' ); ?></h1>
-				<p><?php echo esc_html__( 'Gerencie conteúdo multilíngue usando o plugin Polylang e tradução automática avançada.', 'alvobot-pro' ); ?></p>
-			</div>
-		</div>
-		
-		<div class="alvobot-notice-container">
-			<!-- Notificações serão inseridas aqui -->
-		</div>
-	
-	<?php
 	// Garantir que a função get_plugins esteja disponível
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	$all_plugins = get_plugins();
@@ -30,65 +12,65 @@ if ( ! defined( 'ABSPATH' ) ) {
 						! class_exists( 'Automatic_Polylang' ) && // Exclui AutoPoly especificamente
 						( function_exists( 'PLL' ) || function_exists( 'pll_current_language' ) );
 
-	if ( ! $polylang_active ) : // Se o Polylang não estiver ativo
-		?>
+if ( ! $polylang_active ) : // Se o Polylang não estiver ativo
+	?>
 		<!-- Estado: Polylang não instalado -->
 		<div class="alvobot-card">
 			<div class="alvobot-card-header">
 				<div>
 					<h2 class="alvobot-card-title">
-						<?php echo esc_html__( 'Plugin Necessário: Polylang', 'alvobot-pro' ); ?>
+					<?php echo esc_html__( 'Plugin Necessário: Polylang', 'alvobot-pro' ); ?>
 					</h2>
 					<p class="alvobot-card-subtitle">
-						<?php echo esc_html__( 'O módulo Multi Languages requer o plugin Polylang para funcionar', 'alvobot-pro' ); ?>
+					<?php echo esc_html__( 'O módulo Multi Languages requer o plugin Polylang para funcionar', 'alvobot-pro' ); ?>
 					</p>
 				</div>
 				<div>
-					<?php
-					// Verificar se o Polylang oficial está instalado mas não ativo
-					$polylang_installed   = false;
-					$polylang_plugin_path = '';
+				<?php
+				// Verificar se o Polylang oficial está instalado mas não ativo
+				$polylang_installed   = false;
+				$polylang_plugin_path = '';
 
-					// Lista de possíveis paths do Polylang oficial
-					$polylang_paths = [
-						'polylang/polylang.php',                    // Versão gratuita
-						'polylang-pro/polylang.php',               // Versão Pro
-						'polylang/polylang.php',                    // Fallback
-					];
+				// Lista de possíveis paths do Polylang oficial
+				$polylang_paths = [
+					'polylang/polylang.php',                    // Versão gratuita
+					'polylang-pro/polylang.php',               // Versão Pro
+					'polylang/polylang.php',                    // Fallback
+				];
 
-					// Procura especificamente pelo Polylang oficial
-					foreach ( $polylang_paths as $path ) {
-						if ( isset( $all_plugins[ $path ] ) ) {
+				// Procura especificamente pelo Polylang oficial
+				foreach ( $polylang_paths as $path ) {
+					if ( isset( $all_plugins[ $path ] ) ) {
+						$polylang_installed   = true;
+						$polylang_plugin_path = $path;
+						break;
+					}
+				}
+
+				// Se não encontrou pelos paths específicos, procura por nome/descrição exatos
+				if ( ! $polylang_installed ) {
+					foreach ( $all_plugins as $plugin_path => $plugin_data ) {
+						if ( ( $plugin_data['Name'] === 'Polylang' || $plugin_data['Name'] === 'Polylang Pro' ) &&
+							strpos( $plugin_data['Description'], 'Polylang' ) !== false &&
+							strpos( strtolower( $plugin_path ), 'autopoly' ) === false ) {
 							$polylang_installed   = true;
-							$polylang_plugin_path = $path;
+							$polylang_plugin_path = $plugin_path;
 							break;
 						}
 					}
+				}
 
-					// Se não encontrou pelos paths específicos, procura por nome/descrição exatos
-					if ( ! $polylang_installed ) {
-						foreach ( $all_plugins as $plugin_path => $plugin_data ) {
-							if ( ( $plugin_data['Name'] === 'Polylang' || $plugin_data['Name'] === 'Polylang Pro' ) &&
-								strpos( $plugin_data['Description'], 'Polylang' ) !== false &&
-								strpos( strtolower( $plugin_path ), 'autopoly' ) === false ) {
-								$polylang_installed   = true;
-								$polylang_plugin_path = $plugin_path;
-								break;
-							}
-						}
-					}
-
-					if ( $polylang_active ) {
-						echo '<span class="alvobot-badge alvobot-badge-success"><span class="alvobot-status-indicator success"></span>' .
-							esc_html__( 'Ativo', 'alvobot-pro' ) . '</span>';
-					} elseif ( $polylang_installed ) {
-						echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' .
-							esc_html__( 'Instalado (Não Ativo)', 'alvobot-pro' ) . '</span>';
-					} else {
-						echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' .
-							esc_html__( 'Não Instalado', 'alvobot-pro' ) . '</span>';
-					}
-					?>
+				if ( $polylang_active ) {
+					echo '<span class="alvobot-badge alvobot-badge-success"><span class="alvobot-status-indicator success"></span>' .
+						esc_html__( 'Ativo', 'alvobot-pro' ) . '</span>';
+				} elseif ( $polylang_installed ) {
+					echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' .
+						esc_html__( 'Instalado (Não Ativo)', 'alvobot-pro' ) . '</span>';
+				} else {
+					echo '<span class="alvobot-badge alvobot-badge-warning"><span class="alvobot-status-indicator warning"></span>' .
+						esc_html__( 'Não Instalado', 'alvobot-pro' ) . '</span>';
+				}
+				?>
 				</div>
 			</div>
 			
@@ -97,43 +79,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 			
 			<div class="alvobot-card-footer">
 				<div class="alvobot-btn-group">
-					<?php
-					// Verificar status novamente para mostrar os botões corretos
-					if ( $polylang_active ) {
-						// Se já estiver ativo, mostrar link para configurações
-						$settings_url = admin_url( 'admin.php?page=mlang' );
-						?>
-						<a href="<?php echo esc_url( $settings_url ); ?>" class="alvobot-btn alvobot-btn-primary">
-							<?php echo esc_html__( 'Configurar Polylang', 'alvobot-pro' ); ?>
-						</a>
-						<?php
-					} elseif ( $polylang_installed && ! empty( $polylang_plugin_path ) ) {
-						// Se instalado mas não ativo, mostrar botão para ativar
-						// Usar o caminho já detectado acima
-						$activate_url = wp_nonce_url(
-							self_admin_url( 'plugins.php?action=activate&plugin=' . urlencode( $polylang_plugin_path ) ),
-							'activate-plugin_' . $polylang_plugin_path
-						);
-						?>
-						<a href="<?php echo esc_url( $activate_url ); ?>" class="alvobot-btn alvobot-btn-primary">
-							<?php echo esc_html__( 'Ativar Polylang', 'alvobot-pro' ); ?>
-						</a>
-						<?php
-					} else {
-						// Se não instalado, mostrar botão para instalar
-						$install_url = wp_nonce_url(
-							self_admin_url( 'update.php?action=install-plugin&plugin=polylang' ),
-							'install-plugin_polylang'
-						);
-						?>
-						<a href="<?php echo esc_url( $install_url ); ?>" class="alvobot-btn alvobot-btn-primary">
-							<?php echo esc_html__( 'Instalar Polylang', 'alvobot-pro' ); ?>
-						</a>
-						<?php
-					}
+				<?php
+				// Verificar status novamente para mostrar os botões corretos
+				if ( $polylang_active ) {
+					// Se já estiver ativo, mostrar link para configurações
+					$settings_url = admin_url( 'admin.php?page=mlang' );
 					?>
+						<a href="<?php echo esc_url( $settings_url ); ?>" class="alvobot-btn alvobot-btn-primary">
+						<?php echo esc_html__( 'Configurar Polylang', 'alvobot-pro' ); ?>
+						</a>
+						<?php
+				} elseif ( $polylang_installed && ! empty( $polylang_plugin_path ) ) {
+					// Se instalado mas não ativo, mostrar botão para ativar
+					// Usar o caminho já detectado acima
+					$activate_url = wp_nonce_url(
+						self_admin_url( 'plugins.php?action=activate&plugin=' . urlencode( $polylang_plugin_path ) ),
+						'activate-plugin_' . $polylang_plugin_path
+					);
+					?>
+						<a href="<?php echo esc_url( $activate_url ); ?>" class="alvobot-btn alvobot-btn-primary">
+						<?php echo esc_html__( 'Ativar Polylang', 'alvobot-pro' ); ?>
+						</a>
+						<?php
+				} else {
+					// Se não instalado, mostrar botão para instalar
+					$install_url = wp_nonce_url(
+						self_admin_url( 'update.php?action=install-plugin&plugin=polylang' ),
+						'install-plugin_polylang'
+					);
+					?>
+						<a href="<?php echo esc_url( $install_url ); ?>" class="alvobot-btn alvobot-btn-primary">
+						<?php echo esc_html__( 'Instalar Polylang', 'alvobot-pro' ); ?>
+						</a>
+						<?php
+				}
+				?>
 					<a href="https://wordpress.org/plugins/polylang/" target="_blank" class="alvobot-btn alvobot-btn-outline">
-						<?php echo esc_html__( 'Ver no WordPress.org', 'alvobot-pro' ); ?>
+					<?php echo esc_html__( 'Ver no WordPress.org', 'alvobot-pro' ); ?>
 					</a>
 				</div>
 			</div>
@@ -151,6 +133,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			global $wpdb;
 
 			// Verificar se a tabela de termos do Polylang existe
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$language_terms = $wpdb->get_results(
 				"
                 SELECT t.term_id, t.name, t.slug, tm.meta_value
@@ -201,6 +184,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 							$term_ids     = array_column( $language_terms, 'term_id' );
 							$placeholders = implode( ',', array_fill( 0, count( $term_ids ), '%d' ) );
 
+							// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $placeholders is safe array_fill of %d; $wpdb table props are safe.
 							$counts_query = $wpdb->prepare(
 								"
                                 SELECT tt.term_id, p.post_type, COUNT(*) as count
@@ -214,7 +198,9 @@ if ( ! defined( 'ABSPATH' ) ) {
                             ",
 								...$term_ids
 							);
+							// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 
+							// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 							$counts_results = $wpdb->get_results( $counts_query );
 
 							// Organiza os resultados em array indexado por term_id e post_type
@@ -241,6 +227,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 							// Método 2: verificar na tabela de termmeta
 							if ( ! $is_default ) {
+								// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 								$is_default_meta = $wpdb->get_var(
 									$wpdb->prepare(
 										"SELECT meta_value FROM {$wpdb->termmeta} 
@@ -359,7 +346,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</tr>
 				</thead>
 				<tbody>
-					<?php foreach ( $stats as $type => $data ) : ?>
+				<?php foreach ( $stats as $type => $data ) : ?>
 						<tr>
 							<td><?php echo esc_html( ucfirst( $type ) ); ?></td>
 							<td><?php echo esc_html( $data['total'] ); ?></td>
@@ -404,5 +391,3 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 	<?php endif; ?>
-	</div>
-</div>

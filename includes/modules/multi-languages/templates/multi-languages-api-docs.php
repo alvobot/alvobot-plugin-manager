@@ -4,13 +4,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 
-<div class="wrap">
-	<h1><?php echo esc_html__( 'Documentação da API Multi Languages', 'alvobot-pro' ); ?></h1>
+	<h2><?php echo esc_html__( 'Documentação da API Multi Languages', 'alvobot-pro' ); ?></h2>
 	
 	<div class="notice notice-info">
 		<p>
 			<?php echo esc_html__( 'Esta página contém a documentação completa da API REST do módulo Multi Languages.', 'alvobot-pro' ); ?>
 			<?php echo esc_html__( 'Todos os endpoints estão disponíveis no namespace', 'alvobot-pro' ); ?> <code>/wp-json/alvobot-pro/v1/</code>.
+		</p>
+		<p>
+			<?php echo esc_html__( 'Todos os endpoints exigem autenticação e permissões de edição (edit_posts) via sessão WordPress ou Basic Auth válido.', 'alvobot-pro' ); ?>
 		</p>
 	</div>
 	
@@ -26,8 +28,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<th width="20%"><?php echo esc_html__( 'Permissão', 'alvobot-pro' ); ?></th>
 				</tr>
 			</thead>
-			<tbody>
-				<!-- Endpoints para Posts -->
+				<tbody>
+					<!-- Endpoints Administrativos -->
+					<tr>
+						<td><code>/admin/translate</code></td>
+						<td><code>POST</code></td>
+						<td><?php echo esc_html__( 'Endpoint administrativo para tradução de conteúdo no painel.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/admin/queue/status</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Retorna status da fila de tradução para uso administrativo.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/admin/queue/add</code></td>
+						<td><code>POST</code></td>
+						<td><?php echo esc_html__( 'Adiciona item na fila de tradução via endpoint administrativo.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+
+					<!-- Endpoints para Posts -->
 				<tr>
 					<td><code>/translate</code></td>
 					<td><code>POST</code></td>
@@ -52,24 +74,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<td><?php echo esc_html__( 'Altera o idioma de um post existente sem criar uma nova tradução.', 'alvobot-pro' ); ?></td>
 					<td><?php echo esc_html__( 'Editor', 'alvobot-pro' ); ?></td>
 				</tr>
-				<tr>
-					<td><code>/translations</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém todas as traduções de posts com paginação.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
-				<tr>
-					<td><code>/translations/check</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Verifica se existe uma tradução para um post em um determinado idioma.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
-				<tr>
-					<td><code>/translations/missing</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Lista posts sem traduções com paginação.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/translations</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém todas as traduções de posts com paginação.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/translations/check</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Verifica se existe uma tradução para um post em um determinado idioma.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/translations/missing</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Lista posts sem traduções com paginação.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 				
 				<!-- Endpoints para Categorias -->
 				<tr>
@@ -90,20 +112,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<td><?php echo esc_html__( 'Exclui uma tradução existente de uma categoria.', 'alvobot-pro' ); ?></td>
 					<td><?php echo esc_html__( 'Editor', 'alvobot-pro' ); ?></td>
 				</tr>
-				<tr>
-					<td><code>/translations/categories</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém todas as traduções de categorias com paginação.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/translations/categories</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém todas as traduções de categorias com paginação.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 				
 				<!-- Endpoints para Slugs -->
-				<tr>
-					<td><code>/slugs</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém todos os slugs de um tipo de post com paginação.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/slugs</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém todos os slugs de um tipo de post com paginação.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 				<tr>
 					<td><code>/translate/slug</code></td>
 					<td><code>POST</code></td>
@@ -124,38 +146,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 				
 				<!-- Endpoints de Utilidade -->
-				<tr>
-					<td><code>/languages</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Lista todos os idiomas configurados no Polylang.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
-				<tr>
-					<td><code>/language-url</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém a URL de um post em um idioma específico.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/languages</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Lista todos os idiomas configurados no Polylang.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/language-url</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém a URL de um post em um idioma específico.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 				
 				<!-- Endpoints para Taxonomias -->
-				<tr>
-					<td><code>/taxonomies</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Lista todas as taxonomias disponíveis para tradução.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
-				<tr>
-					<td><code>/taxonomy/terms</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém todos os termos de uma taxonomia com suas traduções.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
-				<tr>
-					<td><code>/taxonomy/untranslated</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém termos sem traduções completas.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/taxonomies</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Lista todas as taxonomias disponíveis para tradução.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/taxonomy/terms</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém todos os termos de uma taxonomia com suas traduções.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
+					<tr>
+						<td><code>/taxonomy/untranslated</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém termos sem traduções completas.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 				
 				<!-- Endpoints de Sincronização e Estatísticas -->
 				<tr>
@@ -164,12 +186,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<td><?php echo esc_html__( 'Sincroniza as traduções de um post com o Polylang.', 'alvobot-pro' ); ?></td>
 					<td><?php echo esc_html__( 'Editor', 'alvobot-pro' ); ?></td>
 				</tr>
-				<tr>
-					<td><code>/translation-stats</code></td>
-					<td><code>GET</code></td>
-					<td><?php echo esc_html__( 'Obtém estatísticas de tradução para o site.', 'alvobot-pro' ); ?></td>
-					<td><?php echo esc_html__( 'Público', 'alvobot-pro' ); ?></td>
-				</tr>
+					<tr>
+						<td><code>/translation-stats</code></td>
+						<td><code>GET</code></td>
+						<td><?php echo esc_html__( 'Obtém estatísticas de tradução para o site.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+					</tr>
 			</tbody>
 		</table>
 	</div>
@@ -332,4 +354,3 @@ if ( ! defined( 'ABSPATH' ) ) {
 			margin-bottom: 20px;
 		}
 	</style>
-</div>

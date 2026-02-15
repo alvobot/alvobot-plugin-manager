@@ -1112,7 +1112,7 @@ class AlvoBotPro_Translation_Engine {
 		// Salva por 5 minutos
 		set_transient( $api_rate_limit_key, $rate_limit_info, 300 );
 
-		AlvoBotPro::debug_log( 'multi-languages', 'Rate Limit atualizado: ' . json_encode( $rate_limit_info ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Rate Limit atualizado: ' . wp_json_encode( $rate_limit_info ) );
 	}
 
 	/**
@@ -1229,9 +1229,9 @@ class AlvoBotPro_Translation_Engine {
 		// SEGURANÇA: Validar e sanitizar inputs
 		$post_id      = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
 		$target_langs = isset( $_POST['target_langs'] ) && is_array( $_POST['target_langs'] )
-			? array_map( 'sanitize_text_field', $_POST['target_langs'] )
+			? array_map( 'sanitize_text_field', wp_unslash( $_POST['target_langs'] ) )
 			: array();
-		$options      = isset( $_POST['options'] ) && is_array( $_POST['options'] ) ? $_POST['options'] : array();
+		$options      = isset( $_POST['options'] ) && is_array( $_POST['options'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['options'] ) ) : array();
 
 		if ( ! $post_id || empty( $target_langs ) ) {
 			wp_send_json_error( [ 'message' => 'Post ID e idiomas de destino são obrigatórios' ] );

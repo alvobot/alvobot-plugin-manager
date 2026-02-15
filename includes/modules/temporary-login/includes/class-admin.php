@@ -69,16 +69,19 @@ class AlvoBotPro_TemporaryLogin_Admin {
 	 * Handle temporary user login
 	 */
 	public static function maybe_login_temporary_user() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Token-based authentication, not a form submission.
 		if ( empty( $_GET['temp-login-token'] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Token-based authentication, not a form submission.
 		$token = sanitize_key( $_GET['temp-login-token'] );
 
 		$is_site_token_validated = true;
 
 		$site_token = AlvoBotPro_TemporaryLogin_Options::get_site_token();
 		if ( ! empty( $site_token ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Token-based authentication, not a form submission.
 			$is_site_token_validated = ! empty( $_GET['tl-site'] ) && $site_token === $_GET['tl-site'];
 		}
 
@@ -97,7 +100,9 @@ class AlvoBotPro_TemporaryLogin_Admin {
 		}
 
 		$action = '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Token-based authentication action, validated via login token above.
 		if ( ! empty( $_GET['temp-login-action'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Token-based authentication action, validated via login token above.
 			$action = sanitize_key( $_GET['temp-login-action'] );
 		}
 

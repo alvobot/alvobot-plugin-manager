@@ -13,18 +13,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <div class="examples-container">
 	<div class="examples-header">
-		<h2><?php _e( 'Templates Disponíveis', 'alvobot-pro' ); ?></h2>
-		<p><?php _e( 'Escolha entre os templates abaixo e personalize com seus próprios conteúdos:', 'alvobot-pro' ); ?></p>
+		<h2><?php esc_html_e( 'Templates Disponíveis', 'alvobot-pro' ); ?></h2>
+		<p><?php esc_html_e( 'Escolha entre os templates abaixo e personalize com seus próprios conteúdos:', 'alvobot-pro' ); ?></p>
 	</div>
 
 	<div class="examples-grid">
 		<!-- Vertical Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '1. Template Vertical', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge"><?php _e( 'Popular', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '1. Template Vertical', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge"><?php esc_html_e( 'Popular', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Ideal para destaque no meio do conteúdo, com layout vertical centralizado.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Ideal para destaque no meio do conteúdo, com layout vertical centralizado.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="vertical" title="Confira nosso novo produto" subtitle="Lançamento especial com desconto" description="Uma solução completa para suas necessidades. Não perca esta oportunidade única!" button="Ver Mais" url="#"]' ); ?>
@@ -32,8 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="vertical-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="vertical-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="vertical-code" readonly>[cta_card template="vertical" title="Confira nosso novo produto" subtitle="Lançamento especial com desconto" description="Uma solução completa para suas necessidades. Não perca esta oportunidade única!" button="Ver Mais" url="/produto"]</textarea>
 			</div>
@@ -42,10 +42,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Horizontal Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '2. Template Horizontal', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--secondary"><?php _e( 'Versátil', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '2. Template Horizontal', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--secondary"><?php esc_html_e( 'Versátil', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Perfeito para artigos relacionados, com imagem à esquerda e conteúdo à direita.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Perfeito para artigos relacionados, com imagem à esquerda e conteúdo à direita.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="horizontal" title="Artigo Relacionado" description="Leia também este conteúdo que pode ser do seu interesse." image="https://images.unsplash.com/photo-1754220820888-e6f7e610a7a2?q=80&w=1472&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" button="Ler Artigo" url="#"]' ); ?>
@@ -53,8 +53,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="horizontal-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="horizontal-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="horizontal-code" readonly>[cta_card template="horizontal" title="Artigo Relacionado" description="Leia também este conteúdo que pode ser do seu interesse." image="/wp-content/uploads/sua-imagem.jpg" button="Ler Artigo" url="/artigo-relacionado"]</textarea>
 			</div>
@@ -63,10 +63,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Minimal Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '3. Template Minimalista', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--success"><?php _e( 'Rápido', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '3. Template Minimalista', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--success"><?php esc_html_e( 'Rápido', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Design limpo e simples, ideal para downloads ou links rápidos.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Design limpo e simples, ideal para downloads ou links rápidos.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="minimal" title="Download Gratuito" subtitle="Guia completo em PDF" tag="PDF" button="Baixar Agora" url="#"]' ); ?>
@@ -74,8 +74,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="minimal-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="minimal-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="minimal-code" readonly>[cta_card template="minimal" title="Download Gratuito" subtitle="Guia completo em PDF" tag="PDF" button="Baixar Agora" url="/download.pdf" target="_blank"]</textarea>
 			</div>
@@ -84,10 +84,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Banner Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '4. Template Banner', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--warning"><?php _e( 'Destaque', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '4. Template Banner', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--warning"><?php esc_html_e( 'Destaque', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Banner destacado com imagem de fundo, ideal para promoções especiais.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Banner destacado com imagem de fundo, ideal para promoções especiais.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="banner" title="Oferta Especial!" description="Aproveite nossa promoção exclusiva com até 50% de desconto." button="Aproveitar Oferta" url="#" color_button="#ff6b6b"]' ); ?>
@@ -95,8 +95,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="banner-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="banner-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="banner-code" readonly>[cta_card template="banner" title="Oferta Especial!" description="Aproveite nossa promoção exclusiva com até 50% de desconto." button="Aproveitar Oferta" url="/promocao" background="/wp-content/uploads/banner-bg.jpg" color_button="#ff6b6b"]</textarea>
 			</div>
@@ -105,9 +105,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Simple Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '5. Template Simples', 'alvobot-pro' ); ?></h3>
+				<h3><?php esc_html_e( '5. Template Simples', 'alvobot-pro' ); ?></h3>
 			</div>
-			<p class="example-description"><?php _e( 'Card simples com ícone/emoji, título e link, perfeito para listas de recursos.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Card simples com ícone/emoji, título e link, perfeito para listas de recursos.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="simple" title="Recursos Premium" icon="🌟" url="#"]' ); ?>
@@ -115,8 +115,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="simple-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="simple-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="simple-code" readonly>[cta_card template="simple" title="Recursos Premium" icon="🌟" url="/recursos"]</textarea>
 			</div>
@@ -125,10 +125,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Pulse Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '6. Template Pulse Animado', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--danger"><?php _e( 'Novo', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '6. Template Pulse Animado', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--danger"><?php esc_html_e( 'Novo', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Template com animações pulsantes e indicador "ao vivo", perfeito para transmissões ou ofertas urgentes.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Template com animações pulsantes e indicador "ao vivo", perfeito para transmissões ou ofertas urgentes.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="pulse" title="Transmissão Ao Vivo" subtitle="Webinar Gratuito" description="Aprenda as melhores estratégias de marketing digital direto com os especialistas!" button="Participar Agora" url="#" icon="▶️" pulse_text="AO VIVO" pulse_color="#ff6b6b"]' ); ?>
@@ -136,8 +136,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="pulse-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="pulse-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="pulse-code" readonly>[cta_card template="pulse" title="Transmissão Ao Vivo" subtitle="Webinar Gratuito" description="Aprenda as melhores estratégias!" button="Participar Agora" url="/webinar" icon="▶️" pulse_text="AO VIVO" pulse_color="#ff6b6b"]</textarea>
 			</div>
@@ -146,10 +146,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- Multi-Button Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '7. Template Múltiplos Botões', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--info"><?php _e( 'Flexível', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '7. Template Múltiplos Botões', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--info"><?php esc_html_e( 'Flexível', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Template com até 3 botões de ação diferentes, ideal para oferecer múltiplas opções aos usuários.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Template com até 3 botões de ação diferentes, ideal para oferecer múltiplas opções aos usuários.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="multi-button" title="Escolha Seu Plano" subtitle="Opções flexíveis para todos os perfis" description="Encontre o plano perfeito para suas necessidades e comece hoje mesmo!" button="Plano Básico" url="#" button2="Plano Pro" url2="#" button3="Saiba Mais" url3="#" color_button="#2271b1" color_button2="#28a745" color_button3="#6c757d"]' ); ?>
@@ -157,8 +157,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="multi-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="multi-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="multi-code" readonly>[cta_card template="multi-button" title="Escolha Seu Plano" subtitle="Opções flexíveis" description="Encontre o plano perfeito!" button="Plano Básico" url="/basico" button2="Plano Pro" url2="/pro" button3="Saiba Mais" url3="/planos" color_button="#2271b1" color_button2="#28a745" color_button3="#6c757d"]</textarea>
 			</div>
@@ -167,10 +167,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<!-- LED Border Template -->
 		<div class="example-card">
 			<div class="example-header">
-				<h3><?php _e( '8. Template LED Border', 'alvobot-pro' ); ?></h3>
-				<span class="example-badge example-badge--purple"><?php _e( 'Futurista', 'alvobot-pro' ); ?></span>
+				<h3><?php esc_html_e( '8. Template LED Border', 'alvobot-pro' ); ?></h3>
+				<span class="example-badge example-badge--purple"><?php esc_html_e( 'Futurista', 'alvobot-pro' ); ?></span>
 			</div>
-			<p class="example-description"><?php _e( 'Template futurista com efeito LED colorido na borda do botão, perfeito para promoções especiais ou produtos tecnológicos.', 'alvobot-pro' ); ?></p>
+			<p class="example-description"><?php esc_html_e( 'Template futurista com efeito LED colorido na borda do botão, perfeito para promoções especiais ou produtos tecnológicos.', 'alvobot-pro' ); ?></p>
 			
 			<div class="example-preview">
 				<?php echo do_shortcode( '[cta_card template="led-border" title="Oferta Limitada" subtitle="Tecnologia de Ponta" description="Produto revolucionário com desconto especial por tempo limitado!" button="Comprar Agora" url="#" icon="⚡" led_colors="#ff0080,#00ff80,#8000ff,#ff8000" led_speed="2s"]' ); ?>
@@ -178,8 +178,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div class="example-code">
 				<div class="code-header">
-					<h4><?php _e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
-					<button class="copy-btn" data-copy="led-code"><?php _e( 'Copiar', 'alvobot-pro' ); ?></button>
+					<h4><?php esc_html_e( 'Código do Shortcode:', 'alvobot-pro' ); ?></h4>
+					<button class="copy-btn" data-copy="led-code"><?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?></button>
 				</div>
 				<textarea id="led-code" readonly>[cta_card template="led-border" title="Oferta Limitada" subtitle="Tecnologia de Ponta" description="Produto revolucionário com desconto especial!" button="Comprar Agora" url="/produto" icon="⚡" led_colors="#ff0080,#00ff80,#8000ff,#ff8000" led_speed="2s"]</textarea>
 			</div>
@@ -408,9 +408,9 @@ jQuery(document).ready(function($) {
 		try {
 			var successful = document.execCommand('copy');
 			if (successful) {
-				$button.addClass('copied').text('<?php _e( 'Copiado!', 'alvobot-pro' ); ?>');
+				$button.addClass('copied').text('<?php esc_html_e( 'Copiado!', 'alvobot-pro' ); ?>');
 				setTimeout(function() {
-					$button.removeClass('copied').text('<?php _e( 'Copiar', 'alvobot-pro' ); ?>');
+					$button.removeClass('copied').text('<?php esc_html_e( 'Copiar', 'alvobot-pro' ); ?>');
 				}, 2000);
 			}
 		} catch (err) {

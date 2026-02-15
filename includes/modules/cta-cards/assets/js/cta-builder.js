@@ -131,9 +131,9 @@
 		buildForm: function (templateName) {
 			var html = '';
 
-			// Basic fields (all templates)
+			// Content section
 			html += '<div class="form-section">';
-			html += '<h4>Conteúdo Principal</h4>';
+			html += '<h4 class="form-section-title">Conteúdo Principal</h4>';
 			html += '<div class="form-row">';
 			html += '<div class="form-group">';
 			html += '<label for="cta-title">Título:</label>';
@@ -156,14 +156,14 @@
 				html += '</div>';
 			}
 
-			html += '</div>'; // End content section
+			html += '</div>';
 
 			// Template specific fields
 			html += this.getTemplateSpecificFields(templateName);
 
 			// Action section
 			html += '<div class="form-section">';
-			html += '<h4>Ação Principal</h4>';
+			html += '<h4 class="form-section-title">Ação Principal</h4>';
 			html += '<div class="form-row">';
 			html += '<div class="form-group">';
 			html += '<label for="cta-button">Texto do Botão:</label>';
@@ -192,11 +192,11 @@
 			html += '</select>';
 			html += '</div>';
 			html += '</div>';
-			html += '</div>'; // End action section
+			html += '</div>';
 
 			// Colors section
 			html += '<div class="form-section">';
-			html += '<h4>Personalização de Cores</h4>';
+			html += '<h4 class="form-section-title">Personalização de Cores</h4>';
 			html += '<div class="form-row">';
 			html += '<div class="form-group">';
 			html += '<label for="cta-color-primary">Cor Principal:</label>';
@@ -217,7 +217,7 @@
 			html += '<input type="color" id="cta-color-bg" name="color_bg" value="#ffffff">';
 			html += '</div>';
 			html += '</div>';
-			html += '</div>'; // End colors section
+			html += '</div>';
 
 			$('#form-content').html(html);
 		},
@@ -230,7 +230,7 @@
 				case 'horizontal':
 				case 'multi-button':
 					html += '<div class="form-section">';
-					html += '<h4>Imagem</h4>';
+					html += '<h4 class="form-section-title">Imagem</h4>';
 					html += '<div class="form-row">';
 					html += '<div class="form-group full-width">';
 					html += '<label for="cta-image">URL da Imagem:</label>';
@@ -243,7 +243,7 @@
 
 				case 'banner':
 					html += '<div class="form-section">';
-					html += '<h4>Imagem de Fundo</h4>';
+					html += '<h4 class="form-section-title">Imagem de Fundo</h4>';
 					html += '<div class="form-row">';
 					html += '<div class="form-group full-width">';
 					html += '<label for="cta-background">URL da Imagem de Fundo:</label>';
@@ -256,7 +256,7 @@
 
 				case 'minimal':
 					html += '<div class="form-section">';
-					html += '<h4>Badge</h4>';
+					html += '<h4 class="form-section-title">Badge</h4>';
 					html += '<div class="form-row">';
 					html += '<div class="form-group">';
 					html += '<label for="cta-tag">Tag/Badge:</label>';
@@ -270,7 +270,7 @@
 				case 'pulse':
 				case 'led-border':
 					html += '<div class="form-section">';
-					html += '<h4>Ícone/Emoji</h4>';
+					html += '<h4 class="form-section-title">Ícone/Emoji</h4>';
 					html += '<div class="form-row">';
 					html += '<div class="form-group">';
 					html += '<label for="cta-icon">Ícone/Emoji:</label>';
@@ -287,7 +287,7 @@
 			// Template specific additional fields
 			if (templateName === 'pulse') {
 				html += '<div class="form-section">';
-				html += '<h4>Configurações do Pulse</h4>';
+				html += '<h4 class="form-section-title">Configurações do Pulse</h4>';
 				html += '<div class="form-row">';
 				html += '<div class="form-group">';
 				html += '<label for="cta-pulse-text">Texto do Pulse:</label>';
@@ -304,7 +304,7 @@
 
 			if (templateName === 'multi-button') {
 				html += '<div class="form-section">';
-				html += '<h4>Botões Adicionais</h4>';
+				html += '<h4 class="form-section-title">Botões Adicionais</h4>';
 				html += '<div class="form-row">';
 				html += '<div class="form-group">';
 				html += '<label for="cta-button2">Botão 2 (opcional):</label>';
@@ -330,7 +330,7 @@
 
 			if (templateName === 'led-border') {
 				html += '<div class="form-section">';
-				html += '<h4>Imagem (Opcional)</h4>';
+				html += '<h4 class="form-section-title">Imagem (Opcional)</h4>';
 				html += '<div class="form-row">';
 				html += '<div class="form-group full-width">';
 				html += '<label for="cta-image">URL da Imagem:</label>';
@@ -340,7 +340,7 @@
 				html += '</div>';
 
 				html += '<div class="form-section">';
-				html += '<h4>Configurações LED</h4>';
+				html += '<h4 class="form-section-title">Configurações LED</h4>';
 				html += '<div class="form-row">';
 				html += '<div class="form-group">';
 				html += '<label for="cta-led-colors">Cores LED (separadas por vírgula):</label>';
@@ -541,7 +541,7 @@
 					break;
 
 				case 'minimal':
-					html += '<div style="padding: 20px; border: 2px solid #e0e0e0;">';
+					html += '<div style="padding: 20px; border-left: 4px solid ' + (data.color_primary || '#2271b1') + ';">';
 					if (data.tag)
 						html +=
 							'<span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; background: ' +
@@ -559,9 +559,9 @@
 					if (data.subtitle) html += '<p style="margin: 0 0 15px 0; color: #666;">' + data.subtitle + '</p>';
 					if (data.button)
 						html +=
-							'<a href="#" style="color: #2271b1; text-decoration: none; font-weight: 600;">' +
+							'<a href="#" style="display: inline-block; padding: 8px 20px; background: ' + (data.color_button || data.color_primary || '#2271b1') + '; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">' +
 							data.button +
-							' →</a>';
+							'</a>';
 					html += '</div>';
 					break;
 
@@ -573,10 +573,11 @@
 						'<div style="position: relative; background: ' +
 						bannerBg +
 						'; background-size: cover; background-position: center; min-height: 200px; display: flex; align-items: center; justify-content: center; color: white; text-align: center;">';
+					html += '<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 1;"></div>';
 					html += '<div style="position: relative; z-index: 2; padding: 30px;">';
 					if (data.title)
 						html +=
-							'<h2 style="margin: 0 0 15px 0; color: white; font-size: 28px;">' + data.title + '</h2>';
+							'<h2 style="margin: 0 0 15px 0; color: white; font-size: 28px; font-weight: 700;">' + data.title + '</h2>';
 					if (data.description)
 						html +=
 							'<div style="margin: 0 0 25px 0; color: rgba(255,255,255,0.9);">' +
@@ -594,7 +595,7 @@
 				}
 
 				case 'simple':
-					html += '<div style="border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">';
+					html += '<div style="border: 2px solid ' + (data.color_primary || '#2271b1') + '; border-radius: 6px; overflow: hidden; cursor: pointer;">';
 					html += '<div style="display: flex; align-items: center; padding: 15px 20px;">';
 					if (data.icon)
 						html += '<span style="font-size: 20px; margin-right: 12px;">' + data.icon + '</span>';
@@ -605,7 +606,7 @@
 							'">' +
 							data.title +
 							'</span>';
-					html += '<span style="margin-left: 10px; color: #2271b1;">→</span>';
+					html += '<span style="margin-left: 10px; color: ' + (data.color_primary || '#2271b1') + '; font-size: 20px; font-weight: 700;">→</span>';
 					html += '</div></div>';
 					break;
 
@@ -991,7 +992,7 @@
 	// Initialize when document is ready
 	$(document).ready(function () {
 		// Only initialize on the builder page
-		if ($('.cta-builder-layout').length) {
+		if ($('.cta-config-section').length) {
 			CTABuilder.init();
 		}
 	});
@@ -1000,14 +1001,11 @@
 	$('<style>')
 		.prop('type', 'text/css')
 		.html(
-			'.preview-loading { text-align: center; padding: 40px; color: #718096; }' +
+			'.preview-loading { text-align: center; padding: 40px; color: var(--alvobot-gray-600); }' +
 				'.preview-loading .alvobot-icon { font-size: 32px; animation: spin 1s linear infinite; margin-bottom: 15px; }' +
-				'.preview-error { text-align: center; padding: 40px; color: #e53e3e; }' +
+				'.preview-error { text-align: center; padding: 40px; color: var(--alvobot-error); }' +
 				'.preview-error .alvobot-icon { font-size: 32px; margin-bottom: 15px; }' +
-				'@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }' +
-				'.btn--success { background: #27ae60 !important; }' +
-				'.mobile-frame { max-width: 320px !important; margin: 0 auto; }' +
-				'.desktop-frame { max-width: 100% !important; }',
+				'@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }',
 		)
 		.appendTo('head');
 })(jQuery);

@@ -58,15 +58,18 @@ class Alvobot_Quiz_Admin {
 	 * Handle CSV export early before any output
 	 */
 	public function handle_early_csv_export() {
-		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'alvobot-quiz-builder' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection only, no data modification.
+		if ( ! isset( $_GET['page'] ) || sanitize_text_field( wp_unslash( $_GET['page'] ) ) !== 'alvobot-quiz-builder' ) {
 			return;
 		}
 
-		if ( ! isset( $_GET['tab'] ) || $_GET['tab'] !== 'submissions' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab detection only, no data modification.
+		if ( ! isset( $_GET['tab'] ) || sanitize_text_field( wp_unslash( $_GET['tab'] ) ) !== 'submissions' ) {
 			return;
 		}
 
-		if ( ! isset( $_GET['export'] ) || $_GET['export'] !== 'csv' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Export action detection; actual permission check done in export_csv.
+		if ( ! isset( $_GET['export'] ) || sanitize_text_field( wp_unslash( $_GET['export'] ) ) !== 'csv' ) {
 			return;
 		}
 
@@ -81,7 +84,7 @@ class Alvobot_Quiz_Admin {
 			__( 'Quiz Builder', 'alvobot-pro' ),
 			__( 'Quiz Builder', 'alvobot-pro' ),
 			'manage_options',
-			'alvobot-quiz',
+			'alvobot-pro',
 			array( $this, 'admin_page' ),
 			'dashicons-forms',
 			30
@@ -89,9 +92,11 @@ class Alvobot_Quiz_Admin {
 	}
 
 	public function admin_page() {
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'builder';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab navigation display logic, no data modification.
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'builder';
 
 		// Handle bulk actions
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified inside handle_bulk_actions method.
 		if ( $active_tab === 'submissions' && isset( $_POST['bulk_action'] ) && isset( $_POST['submission_ids'] ) ) {
 			$this->handle_bulk_actions();
 		}
@@ -106,28 +111,28 @@ class Alvobot_Quiz_Admin {
 			</div>
 			<div class="alvobot-header-content">
 				<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-				<p><?php _e( 'Crie quizzes interativos com navegação por URL única, otimizados para monetização.', 'alvobot-pro' ); ?></p>
+				<p><?php esc_html_e( 'Crie quizzes interativos com navegação por URL única, otimizados para monetização.', 'alvobot-pro' ); ?></p>
 			</div>
 		</div>
 
 		<nav class="nav-tab-wrapper">
 			<a href="?page=alvobot-quiz-builder&tab=builder"
-				class="nav-tab <?php echo $active_tab == 'builder' ? 'nav-tab-active' : ''; ?>">
+				class="nav-tab <?php echo esc_attr( $active_tab == 'builder' ? 'nav-tab-active' : '' ); ?>">
 				<i data-lucide="wrench" class="alvobot-icon"></i>
-				<?php _e( 'Gerador', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Gerador', 'alvobot-pro' ); ?>
 			</a>
 			<a href="?page=alvobot-quiz-builder&tab=submissions"
-				class="nav-tab <?php echo $active_tab == 'submissions' ? 'nav-tab-active' : ''; ?>">
+				class="nav-tab <?php echo esc_attr( $active_tab == 'submissions' ? 'nav-tab-active' : '' ); ?>">
 				<i data-lucide="users" class="alvobot-icon"></i>
-				<?php _e( 'Leads Capturados', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Leads Capturados', 'alvobot-pro' ); ?>
 				<?php if ( $total_submissions > 0 ) : ?>
 					<span class="count-badge"><?php echo esc_html( $total_submissions ); ?></span>
 				<?php endif; ?>
 			</a>
 			<a href="?page=alvobot-quiz-builder&tab=docs"
-				class="nav-tab <?php echo $active_tab == 'docs' ? 'nav-tab-active' : ''; ?>">
+				class="nav-tab <?php echo esc_attr( $active_tab == 'docs' ? 'nav-tab-active' : '' ); ?>">
 				<i data-lucide="book-open" class="alvobot-icon"></i>
-				<?php _e( 'Documentação', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Documentação', 'alvobot-pro' ); ?>
 			</a>
 		</nav>
 
@@ -178,7 +183,7 @@ class Alvobot_Quiz_Admin {
 	 * Handle bulk actions
 	 */
 	private function handle_bulk_actions() {
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_quiz_bulk_action' ) ) {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_quiz_bulk_action' ) ) {
 			return;
 		}
 
@@ -186,8 +191,12 @@ class Alvobot_Quiz_Admin {
 			return;
 		}
 
-		$action = sanitize_text_field( $_POST['bulk_action'] );
-		$ids    = array_map( 'intval', $_POST['submission_ids'] );
+		if ( ! isset( $_POST['bulk_action'], $_POST['submission_ids'] ) ) {
+			return;
+		}
+
+		$action = sanitize_text_field( wp_unslash( $_POST['bulk_action'] ) );
+		$ids    = array_map( 'intval', wp_unslash( $_POST['submission_ids'] ) );
 
 		if ( empty( $ids ) ) {
 			return;
@@ -215,21 +224,25 @@ class Alvobot_Quiz_Admin {
 	 */
 	private function export_csv() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'You do not have permission to export data.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'You do not have permission to export data.', 'alvobot-pro' ) );
+		}
+
+		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'alvobot_quiz_export_csv' ) ) {
+			wp_die( esc_html__( 'Security check failed.', 'alvobot-pro' ) );
 		}
 
 		$submissions = new Alvobot_Quiz_Submissions();
 
-		// Get filters
+		// Get filters -- Nonce verified above.
 		$filters = array();
 		if ( ! empty( $_GET['quiz_id'] ) ) {
-			$filters['quiz_id'] = sanitize_text_field( $_GET['quiz_id'] );
+			$filters['quiz_id'] = sanitize_text_field( wp_unslash( $_GET['quiz_id'] ) );
 		}
 		if ( ! empty( $_GET['date_from'] ) ) {
-			$filters['date_from'] = sanitize_text_field( $_GET['date_from'] );
+			$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
 		}
 		if ( ! empty( $_GET['date_to'] ) ) {
-			$filters['date_to'] = sanitize_text_field( $_GET['date_to'] );
+			$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
 		}
 
 		$data = $submissions->get_submissions( $filters, -1, 0 ); // -1 = all

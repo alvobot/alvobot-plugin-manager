@@ -70,7 +70,7 @@ class AlvoBotPro_AuthorBox_API {
 		}
 
 		// Verifica se o token é válido consultando a opção do WordPress
-		$stored_token = get_option( 'grp_site_token' );
+		$stored_token = get_option( 'alvobot_site_token' );
 
 		if ( ! $stored_token || $token !== $stored_token ) {
 			return new WP_Error(

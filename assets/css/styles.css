@@ -114,9 +114,16 @@
 .alvobot-admin-container {
     display: flex;
     flex-direction: column;
-    gap: var(--alvobot-space-2xl);
+    gap: var(--alvobot-space-lg);
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Reset margins em filhos diretos dos flex containers — o gap cuida do espaçamento */
+.alvobot-admin-container > *,
+.alvobot-tab-content > * {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 /* Container de notificações */
@@ -136,10 +143,9 @@
     min-height: 0 !important;
 }
 
-/* Mostra quando tem conteúdo */
+/* Mostra quando tem conteúdo (gap do container cuida do espaçamento) */
 .alvobot-notice-container:not(:empty) {
     display: block;
-    margin-bottom: var(--alvobot-space-2xl);
 }
 
 /* Oculta quando só tem elementos vazios (CSS moderno com :has) */
@@ -226,7 +232,6 @@
 /* ====================================
    TABS/ABAS PADRONIZADAS — alinhadas com o App (pills style)
    ==================================== */
-.alvobot-admin-wrap .nav-tab-wrapper,
 .alvobot-admin-wrap .nav-tab-wrapper {
     display: flex;
     gap: 4px;
@@ -235,7 +240,19 @@
     border: 1px solid var(--alvobot-gray-300);
     border-radius: var(--alvobot-radius-lg);
     width: fit-content;
-    margin-bottom: var(--alvobot-space-xl);
+    margin-bottom: 0;
+}
+
+/* Layout padrão para conteúdo de abas */
+.alvobot-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--alvobot-space-xl);
+}
+
+/* Oculta divs de mensagem vazias dentro de tab content (evita gap fantasma) */
+.alvobot-tab-content > *:empty {
+    display: none;
 }
 
 .alvobot-admin-wrap .nav-tab-wrapper .nav-tab {

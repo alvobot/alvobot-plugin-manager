@@ -52,6 +52,37 @@ class AlvoBotPro_LogoGenerator {
 		return isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'];
 	}
 
+	/**
+	 * Sanitize SVG input preserving valid SVG tags and attributes.
+	 *
+	 * @param string $svg Raw SVG string.
+	 * @return string Sanitized SVG.
+	 */
+	private function sanitize_svg_input( $svg ) {
+		$allowed = array(
+			'svg'      => array(
+				'xmlns'           => true,
+				'width'           => true,
+				'height'          => true,
+				'viewbox'         => true,
+				'fill'            => true,
+				'stroke'          => true,
+				'stroke-width'    => true,
+				'stroke-linecap'  => true,
+				'stroke-linejoin' => true,
+				'class'           => true,
+			),
+			'path'     => array( 'd' => true, 'fill' => true, 'stroke' => true ),
+			'circle'   => array( 'cx' => true, 'cy' => true, 'r' => true, 'fill' => true, 'stroke' => true ),
+			'line'     => array( 'x1' => true, 'y1' => true, 'x2' => true, 'y2' => true, 'fill' => true, 'stroke' => true ),
+			'polyline' => array( 'points' => true, 'fill' => true, 'stroke' => true ),
+			'polygon'  => array( 'points' => true, 'fill' => true, 'stroke' => true ),
+			'rect'     => array( 'x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true ),
+			'ellipse'  => array( 'cx' => true, 'cy' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true ),
+		);
+		return wp_kses( $svg, $allowed );
+	}
+
 	public function enqueue_admin_scripts( $hook ) {
 		if ( strpos( $hook, 'alvobot-pro-logo' ) === false ) {
 			return;
@@ -105,7 +136,8 @@ class AlvoBotPro_LogoGenerator {
 	}
 
 	public function enqueue_google_fonts() {
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'alvobot-pro-logo' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
+		if ( isset( $_GET['page'] ) && sanitize_text_field( wp_unslash( $_GET['page'] ) ) === 'alvobot-pro-logo' ) {
 			$fonts = array(
 				'Montserrat:400,700',
 				'Playfair+Display:400,700',
@@ -134,8 +166,8 @@ class AlvoBotPro_LogoGenerator {
                     width: 100%;
                 }
                 .font-preview-select option {
-                    padding: 8px;
-                    font-size: 16px;
+                    padding: var(--alvobot-space-sm);
+                    font-size: var(--alvobot-font-size-lg);
                 }
             '
 			);
@@ -147,177 +179,177 @@ class AlvoBotPro_LogoGenerator {
 		<style>
 			.logo-generator-container {
 				max-width: 1200px;
-				margin: 20px auto;
+				margin: var(--alvobot-space-xl) auto;
 			}
-			
+
 			.preview-container {
 				display: grid;
 				grid-template-columns: 2fr 1fr;
-				gap: 20px;
-				margin-bottom: 30px;
+				gap: var(--alvobot-space-xl);
+				margin-bottom: var(--alvobot-space-3xl);
 			}
-			
+
 			.logo-preview, .favicon-preview {
-				background: #fff;
-				padding: 20px;
-				border-radius: 4px;
-				box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+				background: var(--alvobot-white);
+				padding: var(--alvobot-space-xl);
+				border-radius: var(--alvobot-radius-sm);
+				box-shadow: var(--alvobot-shadow-sm);
 			}
-			
+
 			.logo-preview h3, .favicon-preview h3 {
 				margin-top: 0;
-				padding-bottom: 10px;
-				border-bottom: 1px solid #eee;
+				padding-bottom: var(--alvobot-space-md);
+				border-bottom: 1px solid var(--alvobot-gray-300);
 			}
-			
+
 			#logo-preview-content, #favicon-preview-content {
 				min-height: 100px;
 				display: flex;
 				align-items: center;
 				justify-content: center;
-				margin: 20px 0;
+				margin: var(--alvobot-space-xl) 0;
 			}
-			
+
 			#logo-preview-content svg {
 				max-width: 100%;
 				height: auto;
 			}
-			
+
 			#favicon-preview-content svg {
 				width: 32px;
 				height: 32px;
 			}
-			
+
 			.favicon-sizes {
 				display: flex;
-				gap: 15px;
+				gap: var(--alvobot-space-lg);
 				justify-content: center;
-				margin: 15px 0;
-				font-size: 12px;
-				color: #666;
+				margin: var(--alvobot-space-lg) 0;
+				font-size: var(--alvobot-font-size-xs);
+				color: var(--alvobot-gray-600);
 			}
-			
+
 			.favicon-preview .submit {
 				text-align: center;
-				margin-top: 20px;
+				margin-top: var(--alvobot-space-xl);
 				padding: 0;
 			}
 
 			/* Icon Search */
 			.icon-search {
-				margin-bottom: 15px;
+				margin-bottom: var(--alvobot-space-lg);
 			}
 
 			.icon-search input {
 				width: 100%;
-				padding: 8px;
-				border: 1px solid #ddd;
-				border-radius: 4px;
+				padding: var(--alvobot-space-sm);
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
 			}
 
 			/* Icon Categories */
 			.icon-categories {
 				display: flex;
 				flex-wrap: wrap;
-				gap: 10px;
-				margin-bottom: 20px;
-				padding: 10px;
-				background: #f0f0f1;
-				border-radius: 4px;
+				gap: var(--alvobot-space-md);
+				margin-bottom: var(--alvobot-space-xl);
+				padding: var(--alvobot-space-md);
+				background: var(--alvobot-gray-200);
+				border-radius: var(--alvobot-radius-sm);
 			}
 
 			.icon-category {
-				padding: 6px 12px;
-				background: #fff;
-				border: 1px solid #ddd;
-				border-radius: 20px;
+				padding: 6px var(--alvobot-space-md);
+				background: var(--alvobot-white);
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-full);
 				cursor: pointer;
-				font-size: 13px;
-				transition: all 0.2s ease;
+				font-size: var(--alvobot-font-size-sm);
+				transition: all var(--alvobot-transition-normal);
 			}
 
 			.icon-category:hover {
-				border-color: #2271b1;
-				color: #2271b1;
+				border-color: var(--alvobot-accent);
+				color: var(--alvobot-accent);
 			}
 
 			.icon-category.active {
-				background: #2271b1;
-				border-color: #2271b1;
-				color: #fff;
+				background: var(--alvobot-accent);
+				border-color: var(--alvobot-accent);
+				color: var(--alvobot-white);
 			}
 
 			.icon-category .count {
 				opacity: 0.7;
-				font-size: 12px;
-				margin-left: 4px;
+				font-size: var(--alvobot-font-size-xs);
+				margin-left: var(--alvobot-space-xs);
 			}
-			
+
 			/* Icon Grid */
 			.icon-grid {
 				display: grid;
 				grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-				gap: 15px;
-				margin-top: 10px;
+				gap: var(--alvobot-space-lg);
+				margin-top: var(--alvobot-space-md);
 				max-height: 400px;
 				overflow-y: auto;
-				padding: 10px;
-				background: #fff;
-				border: 1px solid #ddd;
-				border-radius: 4px;
+				padding: var(--alvobot-space-md);
+				background: var(--alvobot-white);
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
 			}
-			
+
 			.icon-option {
 				position: relative;
-				transition: all 0.2s ease;
+				transition: all var(--alvobot-transition-normal);
 			}
-			
+
 			.icon-option label {
 				display: flex;
 				flex-direction: column;
 				align-items: center;
 				cursor: pointer;
-				padding: 10px;
-				border: 1px solid #ddd;
-				border-radius: 4px;
-				transition: all 0.2s ease;
+				padding: var(--alvobot-space-md);
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
+				transition: all var(--alvobot-transition-normal);
 			}
-			
+
 			.icon-option:hover label {
-				border-color: #2271b1;
-				background: #f6f7f7;
+				border-color: var(--alvobot-accent);
+				background: var(--alvobot-gray-100);
 				transform: translateY(-2px);
 			}
-			
+
 			.icon-option input[type="radio"] {
 				display: none;
 			}
-			
+
 			.icon-option input[type="radio"]:checked + label {
-				background: #f0f6fc;
-				border-color: #2271b1;
-				box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+				background: var(--alvobot-info-bg);
+				border-color: var(--alvobot-accent);
+				box-shadow: var(--alvobot-shadow-md);
 			}
-			
+
 			.icon-preview {
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				width: 48px;
 				height: 48px;
-				margin-bottom: 8px;
+				margin-bottom: var(--alvobot-space-sm);
 			}
-			
+
 			.icon-preview img {
 				width: 32px;
 				height: 32px;
 				object-fit: contain;
 			}
-			
+
 			.icon-name {
 				font-size: 11px;
 				text-align: center;
-				color: #50575e;
+				color: var(--alvobot-gray-600);
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
@@ -326,19 +358,19 @@ class AlvoBotPro_LogoGenerator {
 
 			.no-icons-found {
 				text-align: center;
-				padding: 20px;
-				background: #f0f6fc;
-				border-radius: 4px;
-				color: #50575e;
+				padding: var(--alvobot-space-xl);
+				background: var(--alvobot-info-bg);
+				border-radius: var(--alvobot-radius-sm);
+				color: var(--alvobot-gray-600);
 			}
 
 			/* Hide icons that don't match search or category */
 			.icon-option.hidden {
 				display: none;
 			}
-			
+
 			.notice {
-				margin: 15px 0;
+				margin: var(--alvobot-space-lg) 0;
 			}
 		</style>
 		<?php
@@ -670,7 +702,7 @@ class AlvoBotPro_LogoGenerator {
 
 	public function render_settings_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'Você não tem permissão para acessar esta página.' ) );
+			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
 		}
 		?>
 		<div class="alvobot-admin-wrap">
@@ -734,7 +766,7 @@ class AlvoBotPro_LogoGenerator {
 									<select id="font_choice" name="font_choice" class="alvobot-select font-preview-select">
 										<?php
 										$fonts        = $this->get_available_fonts();
-										$current_font = isset( $_POST['font_choice'] ) ? sanitize_text_field( $_POST['font_choice'] ) : 'montserrat';
+										$current_font = isset( $_POST['font_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['font_choice'] ) ) : 'montserrat'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Display logic for form default value.
 										foreach ( $fonts as $key => $font ) {
 											printf(
 												'<option value="%s" style="font-family: %s" %s>%s - %s</option>',
@@ -780,7 +812,7 @@ class AlvoBotPro_LogoGenerator {
 		echo '<input type="text" id="icon-search" class="icon-search-input" placeholder="Carregando ícones..." disabled>';
 
 		// Grid de ícones (populado via JavaScript)
-		echo '<div class="icon-grid" id="icon-grid"><p style="grid-column: 1/-1; text-align:center; color:#666;">Carregando ícones Lucide...</p></div>';
+		echo '<div class="icon-grid" id="icon-grid"><p style="grid-column: 1/-1; text-align:center; color:var(--alvobot-gray-600);">Carregando ícones Lucide...</p></div>';
 
 		// Hidden input para armazenar SVG do ícone selecionado
 		echo '<input type="hidden" id="selected_icon_svg" name="icon_svg" value="">';
@@ -867,11 +899,11 @@ class AlvoBotPro_LogoGenerator {
 		}
 
 		// Gera o logo
-		$blog_name        = isset( $_POST['blog_name'] ) ? sanitize_text_field( $_POST['blog_name'] ) : '';
-		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( $_POST['font_color'] ) : '#000000';
-		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( $_POST['background_color'] ) : '#FFFFFF';
-		$icon_svg         = isset( $_POST['icon_svg'] ) ? wp_unslash( $_POST['icon_svg'] ) : '';
-		$font_choice      = isset( $_POST['font_choice'] ) ? sanitize_text_field( $_POST['font_choice'] ) : 'montserrat';
+		$blog_name        = isset( $_POST['blog_name'] ) ? sanitize_text_field( wp_unslash( $_POST['blog_name'] ) ) : '';
+		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['font_color'] ) ) : '#000000';
+		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['background_color'] ) ) : '#FFFFFF';
+		$icon_svg         = isset( $_POST['icon_svg'] ) ? $this->sanitize_svg_input( wp_unslash( $_POST['icon_svg'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by custom sanitize_svg_input().
+		$font_choice      = isset( $_POST['font_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['font_choice'] ) ) : 'montserrat';
 
 		if ( empty( $icon_svg ) ) {
 			wp_send_json_error( 'Nenhum ícone selecionado' );
@@ -895,13 +927,16 @@ class AlvoBotPro_LogoGenerator {
 		$result = $this->save_logo_as_attachment( $svg_content, $blog_name . ' Logo' );
 
 		if ( $result ) {
+			$set_as_logo      = isset( $_POST['set_as_logo'] ) ? sanitize_text_field( wp_unslash( $_POST['set_as_logo'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified via check_ajax_referer above.
+			$generate_favicon = isset( $_POST['generate_favicon'] ) ? sanitize_text_field( wp_unslash( $_POST['generate_favicon'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified via check_ajax_referer above.
+
 			// Define como logo do site se solicitado
-			if ( isset( $_POST['set_as_logo'] ) && $_POST['set_as_logo'] == '1' ) {
+			if ( '1' === $set_as_logo ) {
 				set_theme_mod( 'custom_logo', $result['id'] );
 			}
 
 			// Gera e salva o favicon se solicitado
-			if ( isset( $_POST['generate_favicon'] ) && $_POST['generate_favicon'] == '1' ) {
+			if ( '1' === $generate_favicon ) {
 				$favicon_result = $this->generate_and_save_favicon(
 					$icon_svg,
 					$font_color,
@@ -911,10 +946,10 @@ class AlvoBotPro_LogoGenerator {
 
 			// Adiciona mensagem de sucesso
 			$message = 'Logo gerado e salvo com sucesso!';
-			if ( isset( $_POST['set_as_logo'] ) && $_POST['set_as_logo'] == '1' ) {
+			if ( '1' === $set_as_logo ) {
 				$message .= ' O logo foi definido como logo do site.';
 			}
-			if ( isset( $_POST['generate_favicon'] ) && $_POST['generate_favicon'] == '1' && $favicon_result ) {
+			if ( '1' === $generate_favicon && $favicon_result ) {
 				$message .= ' O favicon também foi gerado e aplicado.';
 			}
 
@@ -966,9 +1001,9 @@ class AlvoBotPro_LogoGenerator {
 			return;
 		}
 
-		$icon_svg         = isset( $_POST['icon_svg'] ) ? wp_unslash( $_POST['icon_svg'] ) : '';
-		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( $_POST['font_color'] ) : '#000000';
-		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( $_POST['background_color'] ) : '#FFFFFF';
+		$icon_svg         = isset( $_POST['icon_svg'] ) ? $this->sanitize_svg_input( wp_unslash( $_POST['icon_svg'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by custom sanitize_svg_input().
+		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['font_color'] ) ) : '#000000';
+		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['background_color'] ) ) : '#FFFFFF';
 
 		if ( empty( $icon_svg ) ) {
 			wp_send_json_error( 'Nenhum ícone selecionado' );
@@ -1015,9 +1050,9 @@ class AlvoBotPro_LogoGenerator {
 		}
 
 		// Obtém e valida os parâmetros
-		$icon_svg         = isset( $_POST['icon_svg'] ) ? wp_unslash( $_POST['icon_svg'] ) : '';
-		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( $_POST['font_color'] ) : '#000000';
-		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( $_POST['background_color'] ) : '#FFFFFF';
+		$icon_svg         = isset( $_POST['icon_svg'] ) ? $this->sanitize_svg_input( wp_unslash( $_POST['icon_svg'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by custom sanitize_svg_input().
+		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['font_color'] ) ) : '#000000';
+		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['background_color'] ) ) : '#FFFFFF';
 
 		// Verifica se o ícone foi selecionado
 		if ( empty( $icon_svg ) ) {
@@ -1049,11 +1084,11 @@ class AlvoBotPro_LogoGenerator {
 		}
 
 		// Obtém e valida os parâmetros
-		$blog_name        = isset( $_POST['blog_name'] ) ? sanitize_text_field( $_POST['blog_name'] ) : '';
-		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( $_POST['font_color'] ) : '#000000';
-		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( $_POST['background_color'] ) : '#FFFFFF';
-		$icon_svg         = isset( $_POST['icon_svg'] ) ? wp_unslash( $_POST['icon_svg'] ) : '';
-		$font_choice      = isset( $_POST['font_choice'] ) ? sanitize_text_field( $_POST['font_choice'] ) : 'montserrat';
+		$blog_name        = isset( $_POST['blog_name'] ) ? sanitize_text_field( wp_unslash( $_POST['blog_name'] ) ) : '';
+		$font_color       = isset( $_POST['font_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['font_color'] ) ) : '#000000';
+		$background_color = isset( $_POST['background_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['background_color'] ) ) : '#FFFFFF';
+		$icon_svg         = isset( $_POST['icon_svg'] ) ? $this->sanitize_svg_input( wp_unslash( $_POST['icon_svg'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by custom sanitize_svg_input().
+		$font_choice      = isset( $_POST['font_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['font_choice'] ) ) : 'montserrat';
 
 		// Verifica se o ícone foi selecionado
 		if ( empty( $icon_svg ) ) {
@@ -1077,11 +1112,11 @@ class AlvoBotPro_LogoGenerator {
 			.icon-selector {
 				display: flex;
 				flex-direction: column;
-				gap: 15px;
-				background: #fff;
-				border: 1px solid #dcdcde;
-				border-radius: 4px;
-				padding: 15px;
+				gap: var(--alvobot-space-lg);
+				background: var(--alvobot-white);
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
+				padding: var(--alvobot-space-lg);
 			}
 
 			.icon-search {
@@ -1090,66 +1125,66 @@ class AlvoBotPro_LogoGenerator {
 
 			.icon-search .alvobot-icon {
 				position: absolute;
-				left: 10px;
+				left: var(--alvobot-space-md);
 				top: 50%;
 				transform: translateY(-50%);
-				color: #787c82;
+				color: var(--alvobot-gray-500);
 			}
 
 			.icon-search input {
 				width: 100%;
-				padding: 8px 12px 8px 35px;
-				border: 1px solid #dcdcde;
-				border-radius: 4px;
-				font-size: 14px;
+				padding: var(--alvobot-space-sm) var(--alvobot-space-md) var(--alvobot-space-sm) 35px;
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
+				font-size: var(--alvobot-font-size-base);
 			}
 
 			.icon-categories {
 				display: flex;
 				flex-wrap: wrap;
-				gap: 8px;
-				padding-bottom: 10px;
-				border-bottom: 1px solid #dcdcde;
+				gap: var(--alvobot-space-sm);
+				padding-bottom: var(--alvobot-space-md);
+				border-bottom: 1px solid var(--alvobot-gray-300);
 			}
 
 			.icon-category {
-				padding: 6px 12px;
-				border-radius: 20px;
-				background: #f0f0f1;
-				font-size: 13px;
+				padding: 6px var(--alvobot-space-md);
+				border-radius: var(--alvobot-radius-full);
+				background: var(--alvobot-gray-200);
+				font-size: var(--alvobot-font-size-sm);
 				cursor: pointer;
-				transition: all 0.2s ease;
-				color: #3c434a;
+				transition: all var(--alvobot-transition-normal);
+				color: var(--alvobot-gray-800);
 			}
 
 			.icon-category:hover {
-				background: #e0e0e1;
+				background: var(--alvobot-gray-300);
 			}
 
 			.icon-category.active {
-				background: #2271b1;
-				color: #fff;
+				background: var(--alvobot-accent);
+				color: var(--alvobot-white);
 			}
 
 			.icon-category .count {
 				opacity: 0.8;
-				font-size: 12px;
-				margin-left: 4px;
+				font-size: var(--alvobot-font-size-xs);
+				margin-left: var(--alvobot-space-xs);
 			}
 
 			.icon-grid-scroll {
 				max-height: 300px;
 				overflow-y: auto;
-				padding: 10px 5px;
-				border: 1px solid #dcdcde;
-				border-radius: 4px;
-				background: #f6f7f7;
+				padding: var(--alvobot-space-md) 5px;
+				border: 1px solid var(--alvobot-gray-300);
+				border-radius: var(--alvobot-radius-sm);
+				background: var(--alvobot-gray-100);
 			}
 
 			.icon-grid {
 				display: grid;
 				grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-				gap: 10px;
+				gap: var(--alvobot-space-md);
 			}
 
 			.icon-option {
@@ -1166,20 +1201,20 @@ class AlvoBotPro_LogoGenerator {
 				align-items: center;
 				gap: 5px;
 				cursor: pointer;
-				padding: 8px;
-				border-radius: 4px;
-				transition: all 0.2s ease;
+				padding: var(--alvobot-space-sm);
+				border-radius: var(--alvobot-radius-sm);
+				transition: all var(--alvobot-transition-normal);
 			}
 
 			.icon-option label:hover {
-				background: #fff;
-				box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+				background: var(--alvobot-white);
+				box-shadow: var(--alvobot-shadow-sm);
 			}
 
 			.icon-option input[type="radio"]:checked + label {
-				background: #fff;
-				box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-				border: 1px solid #2271b1;
+				background: var(--alvobot-white);
+				box-shadow: var(--alvobot-shadow-md);
+				border: 1px solid var(--alvobot-accent);
 			}
 
 			.icon-preview {
@@ -1199,7 +1234,7 @@ class AlvoBotPro_LogoGenerator {
 
 			.icon-name {
 				font-size: 11px;
-				color: #3c434a;
+				color: var(--alvobot-gray-800);
 				max-width: 100%;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -1209,20 +1244,20 @@ class AlvoBotPro_LogoGenerator {
 			.no-icons-found {
 				display: none;
 				text-align: center;
-				padding: 20px;
-				color: #787c82;
+				padding: var(--alvobot-space-xl);
+				color: var(--alvobot-gray-500);
 			}
 
 			.no-icons-found .alvobot-icon {
 				font-size: 24px;
 				width: 24px;
 				height: 24px;
-				margin-bottom: 8px;
+				margin-bottom: var(--alvobot-space-sm);
 			}
 
 			.no-icons-found p {
 				margin: 0;
-				font-size: 13px;
+				font-size: var(--alvobot-font-size-sm);
 			}
 		</style>
 		<?php

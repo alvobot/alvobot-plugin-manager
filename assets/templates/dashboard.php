@@ -23,18 +23,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<!-- Card de Créditos IA -->
 	<?php
-	$ai_credits = AlvoBotPro_AI_API::get_instance()->get_credits();
-	$ai_token = get_option('grp_site_token');
-	$ai_total = isset($ai_credits['total_available']) ? intval($ai_credits['total_available']) : 0;
-	$ai_limit = isset($ai_credits['monthly_limit']) ? intval($ai_credits['monthly_limit']) : 0;
-	$ai_used = isset($ai_credits['monthly_used']) ? intval($ai_credits['monthly_used']) : 0;
-	$ai_extra = isset($ai_credits['extra_available']) ? intval($ai_credits['extra_available']) : 0;
-	$ai_has_plan = !empty($ai_credits['has_active_plan']);
-	$ai_has_error = isset($ai_credits['error']);
-	$ai_pct = ($ai_has_plan && $ai_limit > 0) ? min(100, round(($ai_used / $ai_limit) * 100)) : 0;
-	$ai_bar_color = $ai_pct >= 90 ? 'red' : ($ai_pct >= 75 ? 'yellow' : 'green');
+	$ai_credits   = AlvoBotPro_AI_API::get_instance()->get_credits();
+	$ai_token     = get_option( 'alvobot_site_token' );
+	$ai_total     = isset( $ai_credits['total_available'] ) ? intval( $ai_credits['total_available'] ) : 0;
+	$ai_limit     = isset( $ai_credits['monthly_limit'] ) ? intval( $ai_credits['monthly_limit'] ) : 0;
+	$ai_used      = isset( $ai_credits['monthly_used'] ) ? intval( $ai_credits['monthly_used'] ) : 0;
+	$ai_extra     = isset( $ai_credits['extra_available'] ) ? intval( $ai_credits['extra_available'] ) : 0;
+	$ai_has_plan  = ! empty( $ai_credits['has_active_plan'] );
+	$ai_has_error = isset( $ai_credits['error'] );
+	$ai_pct       = ( $ai_has_plan && $ai_limit > 0 ) ? min( 100, round( ( $ai_used / $ai_limit ) * 100 ) ) : 0;
+	$ai_bar_color = $ai_pct >= 90 ? 'red' : ( $ai_pct >= 75 ? 'yellow' : 'green' );
 	?>
-	<?php if (!empty($ai_token)) : ?>
+	<?php if ( ! empty( $ai_token ) ) : ?>
 	<div class="alvobot-card alvobot-credits-card">
 		<div class="alvobot-credits-card-inner">
 			<div class="alvobot-credits-card-info">
@@ -45,34 +45,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<i data-lucide="refresh-cw" class="alvobot-icon"></i>
 					</button>
 				</div>
-				<?php if ($ai_has_error) : ?>
+				<?php if ( $ai_has_error ) : ?>
 					<p class="alvobot-credits-card-detail alvobot-credits-card-detail--error">Erro ao carregar créditos</p>
-				<?php elseif (!$ai_has_plan) : ?>
+				<?php elseif ( ! $ai_has_plan ) : ?>
 					<p class="alvobot-credits-card-detail alvobot-credits-card-detail--muted">Sem plano ativo</p>
 				<?php else : ?>
 					<p class="alvobot-credits-card-detail">
-						<?php echo esc_html($ai_used); ?> de <?php echo esc_html($ai_limit); ?> créditos mensais usados
-						<?php if ($ai_extra > 0) : ?>
-							<span class="alvobot-credits-card-extra">+<?php echo esc_html($ai_extra); ?> extras</span>
+						<?php echo esc_html( $ai_used ); ?> de <?php echo esc_html( $ai_limit ); ?> créditos mensais usados
+						<?php if ( $ai_extra > 0 ) : ?>
+							<span class="alvobot-credits-card-extra">+<?php echo esc_html( $ai_extra ); ?> extras</span>
 						<?php endif; ?>
 					</p>
 				<?php endif; ?>
 			</div>
 			<div class="alvobot-credits-card-number">
-				<?php if ($ai_has_error) : ?>
+				<?php if ( $ai_has_error ) : ?>
 					<span class="alvobot-credits-value alvobot-credits-value--error">&mdash;</span>
-				<?php elseif (!$ai_has_plan) : ?>
+				<?php elseif ( ! $ai_has_plan ) : ?>
 					<span class="alvobot-credits-value alvobot-credits-value--muted">0</span>
 				<?php else : ?>
-					<span class="alvobot-credits-value"><?php echo esc_html($ai_total); ?></span>
+					<span class="alvobot-credits-value"><?php echo esc_html( $ai_total ); ?></span>
 					<span class="alvobot-credits-unit">disponíveis</span>
 				<?php endif; ?>
 			</div>
 		</div>
-		<?php if ($ai_has_plan && $ai_limit > 0) : ?>
+		<?php if ( $ai_has_plan && $ai_limit > 0 ) : ?>
 		<div class="alvobot-credits-card-bar">
 			<div class="alvobot-credits-bar">
-				<div class="alvobot-credits-bar-fill <?php echo esc_attr($ai_bar_color); ?>" style="width: <?php echo esc_attr($ai_pct); ?>%"></div>
+				<div class="alvobot-credits-bar-fill <?php echo esc_attr( $ai_bar_color ); ?>" style="width: <?php echo esc_attr( $ai_pct ); ?>%"></div>
 			</div>
 		</div>
 		<?php endif; ?>
@@ -85,7 +85,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="alvobot-grid alvobot-grid-auto">
 		<!-- Cartões dos Módulos -->
 		<!-- Módulo Gerador de Logo -->
-		<div class="alvobot-card <?php echo isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Gerador de Logo</h2>
@@ -100,13 +100,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-pro-logo' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-logo' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Author Box -->
-		<div class="alvobot-card <?php echo isset( $active_modules['author_box'] ) && $active_modules['author_box'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['author_box'] ) && $active_modules['author_box'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Author Box</h2>
@@ -121,13 +121,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['author_box'] ) && $active_modules['author_box'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-pro-author-box' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-author-box' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Pre Article -->
-		<div class="alvobot-card <?php echo isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Pre Article</h2>
@@ -142,13 +142,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-pro-pre-article' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-pre-article' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Essential Pages -->
-		<div class="alvobot-card <?php echo isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Páginas Essenciais</h2>
@@ -163,13 +163,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-pro-essential-pages' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-essential-pages' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Multi Languages -->
-		<div class="alvobot-card <?php echo isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Multi Languages</h2>
@@ -184,13 +184,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-pro-multi-languages' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-multi-languages' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Quiz Builder -->
-		<div class="alvobot-card <?php echo isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Quiz Builder</h2>
@@ -205,13 +205,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-quiz-builder' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-quiz-builder' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo CTA Cards -->
-		<div class="alvobot-card <?php echo isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">CTA Cards</h2>
@@ -226,13 +226,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-cta-cards' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-cta-cards' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
 
 		<!-- Módulo Smart Internal Links -->
-		<div class="alvobot-card <?php echo isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'module-enabled' : '' ); ?>">
 		<div class="alvobot-card-header">
 			<div>
 			<h2 class="alvobot-card-title">Smart Internal Links</h2>
@@ -247,7 +247,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 		<div class="alvobot-card-footer">
 			<?php if ( isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ) : ?>
-			<a href="<?php echo admin_url( 'admin.php?page=alvobot-smart-links' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-smart-links' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
 			<?php endif; ?>
 		</div>
 		</div>
@@ -265,50 +265,56 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="alvobot-card-content">
 		<table class="alvobot-form-table" role="presentation">
 			<tr>
-			<th scope="row"><?php _e( 'Usuário AlvoBot', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Usuário AlvoBot', 'alvobot-pro' ); ?></th>
 			<td>
 				<?php if ( $alvobot_user ) : ?>
 				<span class="alvobot-badge alvobot-badge-success">
 					<span class="alvobot-status-indicator success"></span>
-					<?php _e( 'Criado', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Criado', 'alvobot-pro' ); ?>
 				</span>
 				<?php else : ?>
 				<span class="alvobot-badge alvobot-badge-error">
 					<span class="alvobot-status-indicator error"></span>
-					<?php _e( 'Não Criado', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Não Criado', 'alvobot-pro' ); ?>
 				</span>
 				<?php endif; ?>
 			</td>
 			</tr>
 			<tr>
-			<th scope="row"><?php _e( 'Application Password', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Application Password', 'alvobot-pro' ); ?></th>
 			<td>
 				<?php if ( $has_app_password ) : ?>
 				<span class="alvobot-badge alvobot-badge-success">
 					<span class="alvobot-status-indicator success"></span>
-					<?php printf( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ), $app_password_count ); ?>
+					<?php
+				printf(
+					/* translators: %d: number of app passwords */
+					esc_html( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ) ),
+					intval( $app_password_count )
+				);
+				?>
 				</span>
 				<p class="description" style="margin-top: var(--alvobot-space-sm);">
-					<?php _e( 'Application Password ativo para autenticação API', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Application Password ativo para autenticação API', 'alvobot-pro' ); ?>
 				</p>
 				<?php else : ?>
 				<span class="alvobot-badge alvobot-badge-error">
 					<span class="alvobot-status-indicator error"></span>
-					<?php _e( 'Não Criado', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Não Criado', 'alvobot-pro' ); ?>
 				</span>
 				<p class="description" style="margin-top: var(--alvobot-space-sm); color: var(--alvobot-error);">
-					<i data-lucide="alert-triangle" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><?php _e( 'Sem Application Password - verifique se plugins de segurança não estão bloqueando', 'alvobot-pro' ); ?>
+					<i data-lucide="alert-triangle" class="alvobot-icon" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i><?php esc_html_e( 'Sem Application Password - verifique se plugins de segurança não estão bloqueando', 'alvobot-pro' ); ?>
 				</p>
 				<?php endif; ?>
 			</td>
 			</tr>
 			<tr>
-			<th scope="row"><?php _e( 'Token do Site', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Token do Site', 'alvobot-pro' ); ?></th>
 			<td>
 				<?php if ( $site_token ) : ?>
 				<span class="alvobot-badge alvobot-badge-success">
 					<span class="alvobot-status-indicator success"></span>
-					<?php _e( 'Gerado', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Gerado', 'alvobot-pro' ); ?>
 				</span>
 				<div class="alvobot-token-field alvobot-mt-sm">
 					<code class="alvobot-token-value" data-token="<?php echo esc_attr( $site_token ); ?>">••••••••••••••••••••••••••••••••</code>
@@ -325,13 +331,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<?php else : ?>
 				<span class="alvobot-badge alvobot-badge-error">
 					<span class="alvobot-status-indicator error"></span>
-					<?php _e( 'Não Gerado', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Não Gerado', 'alvobot-pro' ); ?>
 				</span>
 				<?php endif; ?>
 			</td>
 			</tr>
 			<tr>
-			<th scope="row"><?php _e( 'Status da Conexão', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Status da Conexão', 'alvobot-pro' ); ?></th>
 			<td>
 				<?php
 				if ( $connection_status && is_array( $connection_status ) ) :
@@ -344,7 +350,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 						?>
 					<span class="alvobot-badge alvobot-badge-success">
 					<span class="alvobot-status-indicator success"></span>
-						<?php _e( 'Conectado', 'alvobot-pro' ); ?>
+						<?php esc_html_e( 'Conectado', 'alvobot-pro' ); ?>
 					</span>
 					<p class="description" style="margin-top: var(--alvobot-space-sm);">
 						<?php echo esc_html( $message ); ?>
@@ -352,7 +358,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<?php else : ?>
 					<span class="alvobot-badge alvobot-badge-error">
 					<span class="alvobot-status-indicator error"></span>
-						<?php _e( 'Erro de Conexão', 'alvobot-pro' ); ?>
+						<?php esc_html_e( 'Erro de Conexão', 'alvobot-pro' ); ?>
 						<?php if ( $http_status ) : ?>
 						<code style="margin-left: var(--alvobot-space-xs);">HTTP <?php echo esc_html( $http_status ); ?></code>
 					<?php endif; ?>
@@ -380,19 +386,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<?php else : ?>
 				<span class="alvobot-badge alvobot-badge-warning">
 					<span class="alvobot-status-indicator warning"></span>
-					<?php _e( 'Aguardando Inicialização', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Aguardando Inicialização', 'alvobot-pro' ); ?>
 				</span>
 				<?php endif; ?>
 			</td>
 			</tr>
 			<tr>
-			<th scope="row"><?php _e( 'URL do Site', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'URL do Site', 'alvobot-pro' ); ?></th>
 			<td>
 				<code><?php echo esc_html( get_site_url() ); ?></code>
 			</td>
 			</tr>
 			<tr>
-			<th scope="row"><?php _e( 'Versão do WordPress', 'alvobot-pro' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Versão do WordPress', 'alvobot-pro' ); ?></th>
 			<td>
 				<code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code>
 			</td>
@@ -411,7 +417,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</form>
 		<?php else : ?>
 			<form method="post" action="" id="retry-registration-form">
-			<?php wp_nonce_field( 'retry_registration', 'retry_registration_nonce' ); ?>
+			<?php wp_nonce_field( 'alvobot_retry_registration', 'alvobot_retry_registration_nonce' ); ?>
 			<input type="hidden" name="action" value="retry_registration">
 			<div class="alvobot-btn-group">
 				<input type="submit" name="submit" class="alvobot-btn alvobot-btn-secondary retry-registration-btn" value="<?php esc_attr_e( 'Refazer Registro', 'alvobot-pro' ); ?>">
@@ -447,21 +453,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<table class="alvobot-form-table" role="presentation">
 			<?php
 			$debug_settings = get_option( 'alvobot_pro_debug_modules', array() );
-			$module_names   = array(
-				'logo_generator'  => 'Gerador de Logo',
-				'author_box'      => 'Author Box',
-				'pre-article'     => 'Pre Article',
-				'essential_pages' => 'Páginas Essenciais',
-				'multi-languages' => 'Multi Languages',
-				'temporary-login' => 'Login Temporário',
-				'quiz-builder'    => 'Quiz Builder',
-				'cta-cards'       => 'CTA Cards',
-				'smart-internal-links' => 'Smart Internal Links',
-				'plugin-manager'  => 'Plugin Manager',
-				'updater'         => 'Sistema de Atualizações',
-				'auth'            => 'Autenticação REST API',
-			);
-
 			foreach ( $module_names as $module_id => $module_name ) :
 				// Sempre mostrar updater, plugin-manager e auth, outros só se ativos
 				if ( $module_id === 'updater' || $module_id === 'plugin-manager' || $module_id === 'auth' || ( isset( $active_modules[ $module_id ] ) && $active_modules[ $module_id ] ) ) :
@@ -477,7 +468,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<span class="alvobot-toggle-slider"></span>
 				</label>
 				<span class="alvobot-debug-status">
-					<?php echo isset( $debug_settings[ $module_id ] ) && $debug_settings[ $module_id ] ? 'Ativo' : 'Inativo'; ?>
+					<?php echo esc_html( isset( $debug_settings[ $module_id ] ) && $debug_settings[ $module_id ] ? 'Ativo' : 'Inativo' ); ?>
 				</span>
 				</td>
 			</tr>

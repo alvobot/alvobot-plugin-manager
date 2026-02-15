@@ -660,12 +660,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="style-control">
                     <label>Peso do texto</label>
                     <select class="style-font-weight">
-                        <option value="300" ${currentStyles.fontWeight == 300 ? 'selected' : ''}>Light</option>
-                        <option value="400" ${currentStyles.fontWeight == 400 ? 'selected' : ''}>Regular</option>
-                        <option value="500" ${currentStyles.fontWeight == 500 ? 'selected' : ''}>Medium</option>
-                        <option value="600" ${currentStyles.fontWeight == 600 ? 'selected' : ''}>Semibold</option>
-                        <option value="700" ${currentStyles.fontWeight == 700 ? 'selected' : ''}>Bold</option>
-                        <option value="800" ${currentStyles.fontWeight == 800 ? 'selected' : ''}>Extra Bold</option>
+                        <option value="300" ${Number(currentStyles.fontWeight) === 300 ? 'selected' : ''}>Light</option>
+                        <option value="400" ${Number(currentStyles.fontWeight) === 400 ? 'selected' : ''}>Regular</option>
+                        <option value="500" ${Number(currentStyles.fontWeight) === 500 ? 'selected' : ''}>Medium</option>
+                        <option value="600" ${Number(currentStyles.fontWeight) === 600 ? 'selected' : ''}>Semibold</option>
+                        <option value="700" ${Number(currentStyles.fontWeight) === 700 ? 'selected' : ''}>Bold</option>
+                        <option value="800" ${Number(currentStyles.fontWeight) === 800 ? 'selected' : ''}>Extra Bold</option>
                     </select>
                 </div>
                 <div class="style-control">

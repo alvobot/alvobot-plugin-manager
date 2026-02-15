@@ -16,6 +16,8 @@ class AlvoBotPro_Translation_Queue {
 
 	private $table_name;
 
+	private $cache_group = 'alvobot_translation_queue';
+
 	/** @var array Configurações centralizadas de validação (carregadas dinamicamente) */
 	private $validation_config;
 
@@ -46,7 +48,7 @@ class AlvoBotPro_Translation_Queue {
 		$this->validation_config = array_merge( $defaults, $saved_config );
 
 		// Log da configuração carregada para debug
-		AlvoBotPro::debug_log( 'multi-languages', 'Configuração de validação carregada: ' . json_encode( $this->validation_config ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Configuração de validação carregada: ' . wp_json_encode( $this->validation_config ) );
 	}
 
 	private function init() {
@@ -65,6 +67,7 @@ class AlvoBotPro_Translation_Queue {
 	public function create_table() {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $this->table_name ) );
 
 		AlvoBotPro::debug_log( 'multi-languages', 'Verificando tabela: ' . $this->table_name . ' - Existe: ' . ( $table_exists ? 'Sim' : 'Não' ) );
@@ -110,6 +113,7 @@ class AlvoBotPro_Translation_Queue {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id, status FROM {$this->table_name} WHERE post_id = %d AND status IN ('pending', 'processing')", $post_id ) );
 		if ( $existing ) {
 			AlvoBotPro::debug_log( 'multi-languages', "Post {$post_id} já está na fila com status {$existing->status}." );
@@ -126,6 +130,7 @@ class AlvoBotPro_Translation_Queue {
 
 		AlvoBotPro::debug_log( 'multi-languages', "Post {$post_id} será traduzido de '{$source_lang}' para: " . implode( ', ', $target_langs ) );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert(
 			$this->table_name,
 			[
@@ -133,10 +138,10 @@ class AlvoBotPro_Translation_Queue {
 				'post_type'    => $post->post_type,
 				'post_title'   => $post->post_title,
 				'source_lang'  => $source_lang,
-				'target_langs' => json_encode( array_values( $target_langs ) ),
-				'options'      => json_encode( $options ),
+				'target_langs' => wp_json_encode( array_values( $target_langs ) ),
+				'options'      => wp_json_encode( $options ),
 				'priority'     => $priority,
-				'logs'         => json_encode(
+				'logs'         => wp_json_encode(
 					[
 						[
 							'timestamp' => current_time( 'mysql' ),
@@ -167,10 +172,15 @@ class AlvoBotPro_Translation_Queue {
 		global $wpdb;
 		$this->create_table();
 
+		$cached = wp_cache_get( 'queue_status', $this->cache_group );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
 		AlvoBotPro::debug_log( 'multi-languages', 'Obtendo status da fila - Tabela: ' . $this->table_name );
 
 		$query = "
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 SUM(IF(status = 'pending', 1, 0)) as pending,
                 SUM(IF(status = 'processing', 1, 0)) as processing,
@@ -182,6 +192,7 @@ class AlvoBotPro_Translation_Queue {
 
 		AlvoBotPro::debug_log( 'multi-languages', 'Query: ' . $query );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Table name is a class property, not user input.
 		$stats = $wpdb->get_row( $query );
 
 		if ( $wpdb->last_error ) {
@@ -196,13 +207,14 @@ class AlvoBotPro_Translation_Queue {
 			);
 		}
 
-		AlvoBotPro::debug_log( 'multi-languages', 'Resultado: ' . json_encode( $stats ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Resultado: ' . wp_json_encode( $stats ) );
 
 		// Converte valores nulos para 0
 		foreach ( $stats as $key => $value ) {
 			$stats->$key = (int) $value;
 		}
 
+		wp_cache_set( 'queue_status', $stats, $this->cache_group, 30 );
 		return $stats;
 	}
 
@@ -220,6 +232,13 @@ class AlvoBotPro_Translation_Queue {
 
 		AlvoBotPro::debug_log( 'multi-languages', 'Query: ' . $query );
 
+		$cache_key = 'queue_items';
+		$cached    = wp_cache_get( $cache_key, $this->cache_group );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Table name is a class property, not user input.
 		$items = $wpdb->get_results( $query );
 
 		if ( $wpdb->last_error ) {
@@ -237,10 +256,13 @@ class AlvoBotPro_Translation_Queue {
 			$item->post_type = $post_type_obj ? $post_type_obj->labels->singular_name : $item->post_type;
 		}
 
-		return array(
+		$result = array(
 			'items' => $items,
 			'total' => count( $items ),
 		);
+
+		wp_cache_set( $cache_key, $result, $this->cache_group, 30 );
+		return $result;
 	}
 
 	/**
@@ -290,16 +312,18 @@ class AlvoBotPro_Translation_Queue {
 		);
 
 		// Atomic update: busca item pendente E marca como processing em uma operação
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$affected_rows = $wpdb->query(
 			$wpdb->prepare(
-				"UPDATE {$this->table_name} 
-             SET status = 'processing', started_at = %s 
-             WHERE status = 'pending' 
-             ORDER BY priority DESC, id ASC 
+				"UPDATE {$this->table_name}
+             SET status = 'processing', started_at = %s
+             WHERE status = 'pending'
+             ORDER BY priority DESC, id ASC
              LIMIT 1",
 				current_time( 'mysql' )
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$query_time = microtime( true ) - $start_time;
 
@@ -317,12 +341,14 @@ class AlvoBotPro_Translation_Queue {
 		}
 
 		// Agora busca o item que acabamos de marcar como processing
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$item = $wpdb->get_row(
-			"SELECT * FROM {$this->table_name} 
-             WHERE status = 'processing' AND started_at IS NOT NULL 
-             ORDER BY started_at DESC 
+			"SELECT * FROM {$this->table_name}
+             WHERE status = 'processing' AND started_at IS NOT NULL
+             ORDER BY started_at DESC
              LIMIT 1"
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( ! $item ) {
 			$this->log_progress( 'system', 'error', '[FAIL]Falha ao recuperar item após lock atomic', [] );
@@ -413,12 +439,13 @@ class AlvoBotPro_Translation_Queue {
 			AlvoBotPro::debug_log( 'multi-languages', "Erro ao processar item {$item->id}: {$error_message}" );
 
 			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$this->table_name,
 				[
 					'status'       => 'failed',
 					'progress'     => 0,
-					'logs'         => json_encode(
+					'logs'         => wp_json_encode(
 						[
 							[
 								'timestamp' => current_time( 'mysql' ),
@@ -461,6 +488,7 @@ class AlvoBotPro_Translation_Queue {
 		}
 
 		// Marca como processando atomicamente
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$updated = $wpdb->update(
 			$this->table_name,
 			[
@@ -608,12 +636,13 @@ class AlvoBotPro_Translation_Queue {
 			}
 
 			// Salvar logs e status final
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$this->table_name,
 				[
 					'status'       => $final_status,
 					'progress'     => $final_progress,
-					'logs'         => json_encode( $logs ),
+					'logs'         => wp_json_encode( $logs ),
 					'completed_at' => current_time( 'mysql' ),
 				],
 				[ 'id' => $item->id ]
@@ -627,12 +656,13 @@ class AlvoBotPro_Translation_Queue {
 			$error_message = $e->getMessage();
 			AlvoBotPro::debug_log( 'multi-languages', "Erro ao processar item {$item->id}: {$error_message}" );
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$this->table_name,
 				[
 					'status'       => 'failed',
 					'progress'     => 0,
-					'logs'         => json_encode(
+					'logs'         => wp_json_encode(
 						[
 							[
 								'timestamp' => current_time( 'mysql' ),
@@ -667,7 +697,7 @@ class AlvoBotPro_Translation_Queue {
 		$status     = $this->get_queue_status();
 		$queue_data = $this->get_queue_items();
 
-		AlvoBotPro::debug_log( 'multi-languages', 'AJAX: Status - ' . json_encode( $status ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'AJAX: Status - ' . wp_json_encode( $status ) );
 		AlvoBotPro::debug_log( 'multi-languages', 'AJAX: Queue data - Total itens: ' . count( $queue_data['items'] ) );
 
 		wp_send_json_success(
@@ -715,6 +745,7 @@ class AlvoBotPro_Translation_Queue {
 		$this->create_table();
 
 		// SEGURANÇA: Usar prepared statement
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$this->table_name} WHERE status IN (%s, %s, %s)",
@@ -723,6 +754,7 @@ class AlvoBotPro_Translation_Queue {
 				'partial'
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		wp_send_json_success( [ 'message' => 'Itens finalizados foram limpos.' ] );
 	}
@@ -747,6 +779,7 @@ class AlvoBotPro_Translation_Queue {
 
 		global $wpdb;
 		$this->create_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->delete( $this->table_name, [ 'id' => $id ], [ '%d' ] );
 
 		if ( $deleted ) {
@@ -776,6 +809,7 @@ class AlvoBotPro_Translation_Queue {
 
 		global $wpdb;
 		$this->create_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE id = %d", $id ) );
 		if ( $item ) {
 			$logs = $item->logs ? json_decode( $item->logs, true ) : [];
@@ -808,6 +842,7 @@ class AlvoBotPro_Translation_Queue {
 
 		global $wpdb;
 		$this->create_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE id = %d", $id ) );
 
 		if ( ! $item ) {
@@ -915,12 +950,13 @@ class AlvoBotPro_Translation_Queue {
 	private function get_item_position_in_queue( $item_id ) {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$position = $wpdb->get_var(
 			$wpdb->prepare(
 				"
-            SELECT COUNT(*) + 1 
-            FROM {$this->table_name} 
-            WHERE status = 'pending' 
+            SELECT COUNT(*) + 1
+            FROM {$this->table_name}
+            WHERE status = 'pending'
             AND priority >= (SELECT priority FROM {$this->table_name} WHERE id = %d)
             AND created_at < (SELECT created_at FROM {$this->table_name} WHERE id = %d)
         ",
@@ -928,13 +964,14 @@ class AlvoBotPro_Translation_Queue {
 				$item_id
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		return $position ?: 1;
 	}
 
 	public function download_logs_handler() {
 		// SEGURANÇA: Verificar nonce e permissões
-		$nonce = $_GET['nonce'] ?? $_GET['_wpnonce'] ?? '';
+		$nonce = isset( $_GET['nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['nonce'] ) ) : ( isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '' );
 		if ( ! wp_verify_nonce( $nonce, 'alvobot_nonce' ) ) {
 			wp_die( 'Nonce inválido' );
 		}
@@ -951,6 +988,7 @@ class AlvoBotPro_Translation_Queue {
 
 		global $wpdb;
 		$this->create_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$logs_json = $wpdb->get_var( $wpdb->prepare( "SELECT logs FROM {$this->table_name} WHERE id = %d", $id ) );
 
 		// SEGURANÇA: Sanitizar nome do arquivo
@@ -960,6 +998,7 @@ class AlvoBotPro_Translation_Queue {
 		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $filename ) . '"' );
 
 		// Busca todos os dados do item para log detalhado
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$item = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$this->table_name} WHERE id = %d",
@@ -967,31 +1006,32 @@ class AlvoBotPro_Translation_Queue {
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( ! $item ) {
-			echo "Item não encontrado na fila.\n";
+			echo esc_html( "Item não encontrado na fila.\n" );
 			exit;
 		}
 
 		// Cabeçalho do relatório
-		echo "================================================================================\n";
-		echo "                    RELATÓRIO DETALHADO DE TRADUÇÃO\n";
-		echo "================================================================================\n\n";
+		echo esc_html( "================================================================================\n" );
+		echo esc_html( "                    RELATÓRIO DETALHADO DE TRADUÇÃO\n" );
+		echo esc_html( "================================================================================\n\n" );
 
 		// Informações gerais do item
-		echo "INFORMAÇÕES GERAIS:\n";
-		echo "─────────────────────────────────────────────────────────────────────────────\n";
-		echo "Queue ID: {$item['id']}\n";
-		echo "Post ID: {$item['post_id']}\n";
-		echo "Status: {$item['status']}\n";
-		echo "Criado em: {$item['created_at']}\n";
-		echo "Atualizado em: {$item['updated_at']}\n";
+		echo esc_html( "INFORMAÇÕES GERAIS:\n" );
+		echo esc_html( "─────────────────────────────────────────────────────────────────────────────\n" );
+		echo esc_html( "Queue ID: {$item['id']}\n" );
+		echo esc_html( "Post ID: {$item['post_id']}\n" );
+		echo esc_html( "Status: {$item['status']}\n" );
+		echo esc_html( "Criado em: {$item['created_at']}\n" );
+		echo esc_html( "Atualizado em: {$item['updated_at']}\n" );
 
 		if ( ! empty( $item['started_at'] ) ) {
-			echo "Iniciado em: {$item['started_at']}\n";
+			echo esc_html( "Iniciado em: {$item['started_at']}\n" );
 		}
 		if ( ! empty( $item['completed_at'] ) ) {
-			echo "Concluído em: {$item['completed_at']}\n";
+			echo esc_html( "Concluído em: {$item['completed_at']}\n" );
 		}
 
 		echo "\n";
@@ -1003,37 +1043,39 @@ class AlvoBotPro_Translation_Queue {
 		$logs             = json_decode( $logs_json, true );
 
 		// Idiomas de destino
-		echo "IDIOMAS DE DESTINO:\n";
-		echo "─────────────────────────────────────────────────────────────────────────────\n";
+		echo esc_html( "IDIOMAS DE DESTINO:\n" );
+		echo esc_html( "─────────────────────────────────────────────────────────────────────────────\n" );
 		if ( is_array( $target_languages ) ) {
 			foreach ( $target_languages as $index => $lang ) {
-				printf( "  %d. %s\n", $index + 1, $lang );
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- printf with esc_html on each variable
+				printf( "  %d. %s\n", intval( $index + 1 ), esc_html( $lang ) );
 			}
 		}
 		echo "\n";
 
 		// Opções de tradução
-		echo "OPÇÕES DE TRADUÇÃO:\n";
-		echo "─────────────────────────────────────────────────────────────────────────────\n";
+		echo esc_html( "OPÇÕES DE TRADUÇÃO:\n" );
+		echo esc_html( "─────────────────────────────────────────────────────────────────────────────\n" );
 		if ( is_array( $options ) ) {
 			foreach ( $options as $key => $value ) {
 				$display_value = is_bool( $value ) ? ( $value ? 'SIM' : 'NÃO' ) : $value;
-				printf( "  %-25s: %s\n", $key, $display_value );
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- printf with esc_html on each variable
+				printf( "  %-25s: %s\n", esc_html( $key ), esc_html( $display_value ) );
 			}
 		}
 		echo "\n";
 
 		// Dados de resultado (se disponíveis)
 		if ( is_array( $result_data ) && ! empty( $result_data ) ) {
-			echo "DADOS DE RESULTADO:\n";
-			echo "─────────────────────────────────────────────────────────────────────────────\n";
+			echo esc_html( "DADOS DE RESULTADO:\n" );
+			echo esc_html( "─────────────────────────────────────────────────────────────────────────────\n" );
 			$this->print_array_detailed( $result_data, '  ' );
 			echo "\n";
 		}
 
 		// Logs cronológicos detalhados
-		echo "LOGS CRONOLÓGICOS DETALHADOS:\n";
-		echo "─────────────────────────────────────────────────────────────────────────────\n";
+		echo esc_html( "LOGS CRONOLÓGICOS DETALHADOS:\n" );
+		echo esc_html( "─────────────────────────────────────────────────────────────────────────────\n" );
 
 		if ( is_array( $logs ) && ! empty( $logs ) ) {
 			foreach ( $logs as $index => $log ) {
@@ -1042,59 +1084,61 @@ class AlvoBotPro_Translation_Queue {
 				$level     = isset( $log['level'] ) ? strtoupper( $log['level'] ) : 'INFO';
 				$message   = isset( $log['message'] ) ? $log['message'] : '';
 
-				printf( "[%s] [%s:%s] %s\n", $timestamp, $category, $level, $message );
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- printf with esc_html on each variable
+				printf( "[%s] [%s:%s] %s\n", esc_html( $timestamp ), esc_html( $category ), esc_html( $level ), esc_html( $message ) );
 
 				// Mostra TODOS os dados armazenados no campo 'data'
 				if ( isset( $log['data'] ) && is_array( $log['data'] ) && ! empty( $log['data'] ) ) {
-					echo "    ┌─ DADOS DETALHADOS:\n";
+					echo esc_html( "    ┌─ DADOS DETALHADOS:\n" );
 					foreach ( $log['data'] as $key => $value ) {
 						if ( $key === 'queue_id' ) {
 							continue; // Skip queue_id pois já temos
 						}
 
 						if ( is_array( $value ) ) {
-							echo "    │  {$key}:\n";
+							echo esc_html( "    │  {$key}:\n" );
 							$this->print_array_detailed( $value, '    │    ' );
 						} elseif ( is_bool( $value ) ) {
-							echo "    │  {$key}: " . ( $value ? 'SIM' : 'NÃO' ) . "\n";
+							echo esc_html( "    │  {$key}: " . ( $value ? 'SIM' : 'NÃO' ) . "\n" );
 						} elseif ( is_numeric( $value ) ) {
 							// Formata números grandes (como timestamps) de forma legível
 							if ( $key === 'query_time' && $value > 1000000000 ) {
-								echo "    │  {$key}: " . date( 'Y-m-d H:i:s', (int) $value ) . " ({$value})\n";
+								echo esc_html( "    │  {$key}: " . date( 'Y-m-d H:i:s', (int) $value ) . " ({$value})\n" );
 							} else {
-								echo "    │  {$key}: {$value}\n";
+								echo esc_html( "    │  {$key}: {$value}\n" );
 							}
 						} elseif ( is_string( $value ) ) {
 							// Mostra strings completas para logs detalhados
 							if ( strlen( $value ) > 500 ) {
-								echo "    │  {$key}: " . substr( $value, 0, 500 ) . "...\n";
-								echo '    │    [CONTEÚDO TRUNCADO - Total: ' . strlen( $value ) . " caracteres]\n";
+								echo esc_html( "    │  {$key}: " . substr( $value, 0, 500 ) . "...\n" );
+								echo esc_html( '    │    [CONTEÚDO TRUNCADO - Total: ' . strlen( $value ) . " caracteres]\n" );
 							} else {
-								echo "    │  {$key}: {$value}\n";
+								echo esc_html( "    │  {$key}: {$value}\n" );
 							}
 						} else {
-							echo "    │  {$key}: " . print_r( $value, true ) . "\n";
+							// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- used for debug log output
+							echo esc_html( "    │  {$key}: " . print_r( $value, true ) . "\n" );
 						}
 					}
-					echo "    └─\n";
+					echo esc_html( "    └─\n" );
 				}
 
 				// Adiciona dados extras se existirem (compatibilidade)
 				if ( isset( $log['extra_data'] ) && is_array( $log['extra_data'] ) ) {
-					echo "    ┌─ DADOS EXTRAS LEGADOS:\n";
+					echo esc_html( "    ┌─ DADOS EXTRAS LEGADOS:\n" );
 					$this->print_array_detailed( $log['extra_data'], '    │  ' );
-					echo "    └─\n";
+					echo esc_html( "    └─\n" );
 				}
 
 				echo "\n";
 			}
 		} else {
-			echo "Nenhum log encontrado para este item.\n";
+			echo esc_html( "Nenhum log encontrado para este item.\n" );
 		}
 
-		echo "\n================================================================================\n";
-		echo "                           FIM DO RELATÓRIO\n";
-		echo "================================================================================\n";
+		echo esc_html( "\n================================================================================\n" );
+		echo esc_html( "                           FIM DO RELATÓRIO\n" );
+		echo esc_html( "================================================================================\n" );
 		exit;
 	}
 
@@ -1104,18 +1148,19 @@ class AlvoBotPro_Translation_Queue {
 	private function print_array_detailed( $array, $indent = '' ) {
 		foreach ( $array as $key => $value ) {
 			if ( is_array( $value ) ) {
-				echo "{$indent}{$key}:\n";
+				echo esc_html( "{$indent}{$key}:\n" );
 				$this->print_array_detailed( $value, $indent . '  ' );
 			} elseif ( is_bool( $value ) ) {
-				echo "{$indent}{$key}: " . ( $value ? 'SIM' : 'NÃO' ) . "\n";
+				echo esc_html( "{$indent}{$key}: " . ( $value ? 'SIM' : 'NÃO' ) . "\n" );
 			} elseif ( is_numeric( $value ) ) {
-				echo "{$indent}{$key}: {$value}\n";
+				echo esc_html( "{$indent}{$key}: {$value}\n" );
 			} elseif ( is_string( $value ) ) {
 				// Trunca strings muito longas para legibilidade
 				$display_value = strlen( $value ) > 200 ? substr( $value, 0, 200 ) . '...[TRUNCADO]' : $value;
-				echo "{$indent}{$key}: {$display_value}\n";
+				echo esc_html( "{$indent}{$key}: {$display_value}\n" );
 			} else {
-				echo "{$indent}{$key}: " . print_r( $value, true ) . "\n";
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- used for debug log output
+				echo esc_html( "{$indent}{$key}: " . print_r( $value, true ) . "\n" );
 			}
 		}
 	}
@@ -1134,12 +1179,14 @@ class AlvoBotPro_Translation_Queue {
 		$timeout_minutes = $this->validation_config['orphan_timeout_minutes'];
 		$timeout         = date( 'Y-m-d H:i:s', strtotime( "-{$timeout_minutes} minutes" ) );
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$orphaned_items = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT id, post_id, started_at FROM {$this->table_name} WHERE status = 'processing' AND started_at < %s",
 				$timeout
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( ! empty( $orphaned_items ) ) {
 			AlvoBotPro::debug_log( 'multi-languages', 'Encontrados ' . count( $orphaned_items ) . ' itens orfãos para resetar' );
@@ -1148,12 +1195,14 @@ class AlvoBotPro_Translation_Queue {
 				AlvoBotPro::debug_log( 'multi-languages', "Resetando item orfão {$item->id} (post {$item->post_id}) - iniciado em {$item->started_at}" );
 
 				// Adiciona log do reset
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 				$current_logs = $wpdb->get_var(
 					$wpdb->prepare(
 						"SELECT logs FROM {$this->table_name} WHERE id = %d",
 						$item->id
 					)
 				);
+				// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 				$logs   = $current_logs ? json_decode( $current_logs, true ) : [];
 				$logs[] = [
@@ -1163,13 +1212,14 @@ class AlvoBotPro_Translation_Queue {
 				];
 
 				// Reseta para pending
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$this->table_name,
 					[
 						'status'     => 'pending',
 						'started_at' => null,
 						'progress'   => 0,
-						'logs'       => json_encode( $logs ),
+						'logs'       => wp_json_encode( $logs ),
 					],
 					[ 'id' => $item->id ]
 				);
@@ -1196,20 +1246,24 @@ class AlvoBotPro_Translation_Queue {
 		global $wpdb;
 		$this->create_table();
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 		$stuck_items = $wpdb->get_results(
 			"SELECT id, post_id, status, started_at FROM {$this->table_name} WHERE status IN ('processing', 'failed')"
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( ! empty( $stuck_items ) ) {
 			foreach ( $stuck_items as $item ) {
 				AlvoBotPro::debug_log( 'multi-languages', "Forçando reset do item {$item->id} (post {$item->post_id}, status: {$item->status})" );
 
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 				$current_logs = $wpdb->get_var(
 					$wpdb->prepare(
 						"SELECT logs FROM {$this->table_name} WHERE id = %d",
 						$item->id
 					)
 				);
+				// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 				$logs   = $current_logs ? json_decode( $current_logs, true ) : [];
 				$logs[] = [
@@ -1218,13 +1272,14 @@ class AlvoBotPro_Translation_Queue {
 					'message'   => 'Item resetado manualmente via AJAX',
 				];
 
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$this->table_name,
 					[
 						'status'     => 'pending',
 						'started_at' => null,
 						'progress'   => 0,
-						'logs'       => json_encode( $logs ),
+						'logs'       => wp_json_encode( $logs ),
 					],
 					[ 'id' => $item->id ]
 				);
@@ -1300,6 +1355,7 @@ class AlvoBotPro_Translation_Queue {
 
 		try {
 			// ROBUSTEZ: Iniciar transação para garantir atomicidade
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query( 'START TRANSACTION' );
 
 			// Dados do novo post
@@ -1364,6 +1420,7 @@ class AlvoBotPro_Translation_Queue {
 			}
 
 			// ROBUSTEZ: Confirmar transação se tudo deu certo
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query( 'COMMIT' );
 			AlvoBotPro::debug_log( 'multi-languages', "Transação confirmada para post {$translated_post_id}" );
 
@@ -1371,6 +1428,7 @@ class AlvoBotPro_Translation_Queue {
 
 		} catch ( Exception $e ) {
 			// ROBUSTEZ: Reverter transação em caso de erro
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query( 'ROLLBACK' );
 			AlvoBotPro::debug_log( 'multi-languages', 'Transação revertida devido ao erro: ' . $e->getMessage() );
 			return false;
@@ -2239,12 +2297,14 @@ class AlvoBotPro_Translation_Queue {
 			$queue_id = intval( $data['queue_id'] );
 
 			// Busca logs existentes
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a class property, not user input.
 			$item = $wpdb->get_row(
 				$wpdb->prepare(
 					"SELECT logs FROM {$this->table_name} WHERE id = %d",
 					$queue_id
 				)
 			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 			// Decodifica logs existentes ou inicia array vazio
 			$logs = $item && $item->logs ? json_decode( $item->logs, true ) : [];
@@ -2262,9 +2322,10 @@ class AlvoBotPro_Translation_Queue {
 			];
 
 			// Atualiza na tabela
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$this->table_name,
-				[ 'logs' => json_encode( $logs ) ],
+				[ 'logs' => wp_json_encode( $logs ) ],
 				[ 'id' => $queue_id ],
 				[ '%s' ],
 				[ '%d' ]
@@ -2282,6 +2343,7 @@ class AlvoBotPro_Translation_Queue {
 	private function update_progress_realtime( $queue_id, $progress, $status_message = '' ) {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$this->table_name,
 			[ 'progress' => min( 100, max( 0, $progress ) ) ],
@@ -2344,12 +2406,14 @@ class AlvoBotPro_Translation_Queue {
 
 		$table_name = $wpdb->prefix . 'alvobot_translation_queue';
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a safe local variable from $wpdb->prefix, not user input.
 		$result = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$table_name} WHERE id = %d",
 				$queue_id
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		return $result;
 	}
@@ -2372,19 +2436,21 @@ class AlvoBotPro_Translation_Queue {
 
 		$table_name = $wpdb->prefix . 'alvobot_translation_queue';
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a safe local variable from $wpdb->prefix, not user input.
 		$result = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) + 1 
-             FROM {$table_name} 
-             WHERE status IN ('pending', 'processing') 
+				"SELECT COUNT(*) + 1
+             FROM {$table_name}
+             WHERE status IN ('pending', 'processing')
              AND (priority > (SELECT priority FROM {$table_name} WHERE id = %d)
-                 OR (priority = (SELECT priority FROM {$table_name} WHERE id = %d) 
+                 OR (priority = (SELECT priority FROM {$table_name} WHERE id = %d)
                      AND created_at < (SELECT created_at FROM {$table_name} WHERE id = %d)))",
 				$queue_id,
 				$queue_id,
 				$queue_id
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		return (int) $result;
 	}
@@ -2420,6 +2486,7 @@ class AlvoBotPro_Translation_Queue {
 
 		$table_name = $wpdb->prefix . 'alvobot_translation_queue';
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
 	}
 

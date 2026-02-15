@@ -66,8 +66,8 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	 * Carrega assets do admin
 	 */
 	public function enqueue_admin_assets( $hook ) {
-		// Carrega apenas nas páginas do plugin
-		if ( strpos( $hook, 'alvobot-pro' ) === false ) {
+		// Carrega apenas na página de configurações do Multi Languages
+		if ( strpos( $hook, 'alvobot-pro-multi-languages' ) === false ) {
 			return;
 		}
 
@@ -167,16 +167,16 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	 * Registra rotas da REST API
 	 */
 	public function register_rest_routes() {
+		$admin_permission_callback = array( $this, 'can_edit_posts_permission' );
+
 		// Rota para traduzir conteúdo
 		register_rest_route(
 			$this->namespace,
-			'/translate',
+			'/admin/translate',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'rest_translate_content' ),
-				'permission_callback' => function () {
-					return current_user_can( 'edit_posts' );
-				},
+				'permission_callback' => $admin_permission_callback,
 				'args'                => array(
 					'text'        => array(
 						'required'          => true,
@@ -197,28 +197,31 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 		// Rota para status da fila
 		register_rest_route(
 			$this->namespace,
-			'/queue/status',
+			'/admin/queue/status',
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'rest_get_queue_status' ),
-				'permission_callback' => function () {
-					return current_user_can( 'edit_posts' );
-				},
+				'permission_callback' => $admin_permission_callback,
 			)
 		);
 
 		// Rota para adicionar à fila
 		register_rest_route(
 			$this->namespace,
-			'/queue/add',
+			'/admin/queue/add',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'rest_add_to_queue' ),
-				'permission_callback' => function () {
-					return current_user_can( 'edit_posts' );
-				},
+				'permission_callback' => $admin_permission_callback,
 			)
 		);
+	}
+
+	/**
+	 * Callback de permissão padronizado para endpoints administrativos REST.
+	 */
+	public function can_edit_posts_permission() {
+		return current_user_can( 'edit_posts' );
 	}
 
 	/**
@@ -321,7 +324,7 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 			);
 
 			if ( ! empty( $context ) ) {
-				$formatted_message .= ' - Context: ' . json_encode( $context );
+				$formatted_message .= ' - Context: ' . wp_json_encode( $context );
 			}
 
 			AlvoBotPro::debug_log( 'multi-languages', $formatted_message );
@@ -366,7 +369,8 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	public function render_settings_page() {
 		AlvoBotPro::debug_log( 'multi-languages', 'Iniciando render_settings_page' );
 
-		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'settings';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab navigation display logic, no data modification.
+		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'settings';
 		// Redirect legacy 'openai' tab to 'credits'
 		if ( $current_tab === 'openai' ) {
 			$current_tab = 'credits';
@@ -391,13 +395,36 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	 */
 	private function render_tab_navigation( $current_tab ) {
 		$tabs = array(
-			'settings' => array( 'label' => __( 'Configurações', 'alvobot-pro' ), 'icon' => 'settings' ),
-			'credits'  => array( 'label' => __( 'Créditos IA', 'alvobot-pro' ),   'icon' => 'ticket' ),
-			'queue'    => array( 'label' => __( 'Fila de Traduções', 'alvobot-pro' ), 'icon' => 'list-ordered' ),
-			'api-docs' => array( 'label' => __( 'API Docs', 'alvobot-pro' ),       'icon' => 'book-open' ),
+			'settings' => array(
+				'label' => __( 'Configurações', 'alvobot-pro' ),
+				'icon'  => 'settings',
+			),
+			'credits'  => array(
+				'label' => __( 'Créditos IA', 'alvobot-pro' ),
+				'icon'  => 'ticket',
+			),
+			'queue'    => array(
+				'label' => __( 'Fila de Traduções', 'alvobot-pro' ),
+				'icon'  => 'list-ordered',
+			),
+			'api-docs' => array(
+				'label' => __( 'API Docs', 'alvobot-pro' ),
+				'icon'  => 'book-open',
+			),
 		);
 
 		echo '<div class="alvobot-admin-wrap">';
+		echo '<div class="alvobot-admin-container">';
+
+		// Header compartilhado (acima das tabs)
+		echo '<div class="alvobot-admin-header">';
+		echo '<div class="alvobot-header-icon"><i data-lucide="languages" class="alvobot-icon"></i></div>';
+		echo '<div class="alvobot-header-content">';
+		echo '<h1>' . esc_html__( 'Gerenciamento Multilíngue', 'alvobot-pro' ) . '</h1>';
+		echo '<p>' . esc_html__( 'Gerencie conteúdo multilíngue usando o plugin Polylang e tradução automática avançada.', 'alvobot-pro' ) . '</p>';
+		echo '</div>';
+		echo '</div>';
+
 		echo '<nav class="nav-tab-wrapper">';
 
 		foreach ( $tabs as $tab_key => $tab_data ) {
@@ -440,6 +467,7 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 				echo '</div>';            }
 		}
 
+		echo '</div>'; // Fecha .alvobot-admin-container
 		echo '</div>'; // Fecha .alvobot-admin-wrap
 	}
 }

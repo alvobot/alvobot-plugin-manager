@@ -15,9 +15,18 @@ if (!defined('WP_DEBUG')) {
     define('WP_DEBUG', true);
 }
 
-// Definir constantes do plugin
-define('ALVOBOT_PRO_VERSION', '2.3.0');
-define('ALVOBOT_PRO_PLUGIN_FILE', dirname(__DIR__) . '/alvobot-plugin-manager.php');
+// Definir constantes do plugin (versão lida do arquivo principal para manter sincronia)
+$plugin_main = dirname(__DIR__) . '/alvobot-pro.php';
+if (file_exists($plugin_main)) {
+    $header = file_get_contents($plugin_main, false, null, 0, 1024);
+    if (preg_match("/define\s*\(\s*['\"]ALVOBOT_PRO_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $header, $m)) {
+        define('ALVOBOT_PRO_VERSION', $m[1]);
+    }
+}
+if (!defined('ALVOBOT_PRO_VERSION')) {
+    define('ALVOBOT_PRO_VERSION', '2.8.1');
+}
+define('ALVOBOT_PRO_PLUGIN_FILE', dirname(__DIR__) . '/alvobot-pro.php');
 define('ALVOBOT_PRO_PLUGIN_DIR', dirname(__DIR__) . '/');
 define('ALVOBOT_PRO_PLUGIN_URL', 'http://localhost/wp-content/plugins/alvobot-plugin-manager/');
 
@@ -89,10 +98,6 @@ function is_admin() {
 
 function admin_url($path = '') {
     return 'http://localhost/wp-admin/' . $path;
-}
-
-function wp_json_encode($data) {
-    return json_encode($data);
 }
 
 function wp_die($message = '', $title = '') {

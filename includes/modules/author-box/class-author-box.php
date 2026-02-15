@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once __DIR__ . '/php/countries-languages.php';
+require_once dirname( __DIR__, 2 ) . '/shared/countries-languages.php';
 
 class AlvoBotPro_AuthorBox {
 	private $version;
@@ -74,13 +74,13 @@ class AlvoBotPro_AuthorBox {
 			: __( 'Sobre o Autor', 'alvobot-pro' );
 
 		return array(
-			'display_on_posts'          => 1,
-			'display_on_pages'          => 0,
-			'show_description'          => 1,
-			'hide_theme_author_box'     => 1,
+			'display_on_posts'           => 1,
+			'display_on_pages'           => 0,
+			'show_description'           => 1,
+			'hide_theme_author_box'      => 1,
 			'title_use_auto_translation' => 1,
-			'avatar_size'               => 96,
-			'title_text'                => $default_title,
+			'avatar_size'                => 96,
+			'title_text'                 => $default_title,
 		);
 	}
 
@@ -91,13 +91,9 @@ class AlvoBotPro_AuthorBox {
 			array( $this, 'sanitize_options' )
 		);
 
-		$section_title = class_exists( 'Alvobot_AuthorBox_Translations' )
-			? Alvobot_AuthorBox_Translations::get_translation( 'author_box_settings' )
-			: __( 'Configurações do Author Box', 'alvobot-pro' );
-
 		add_settings_section(
 			'author_box_section',
-			$section_title,
+			'',
 			null,
 			$this->option_name
 		);
@@ -123,19 +119,21 @@ class AlvoBotPro_AuthorBox {
 			)
 		);
 
-		// Tradução automática do título
-		add_settings_field(
-			'title_use_auto_translation',
-			$t ? $t::get_translation( 'auto_translate_title' ) : __( 'Traduzir título automaticamente', 'alvobot-pro' ),
-			array( $this, 'render_checkbox_field' ),
-			$this->option_name,
-			'author_box_section',
-			array(
-				'label_for'   => 'title_use_auto_translation',
-				'name'        => 'title_use_auto_translation',
-				'description' => $t ? $t::get_translation( 'auto_translate_title_desc' ) : __( 'Quando ativo, o título se adapta automaticamente ao idioma da página.', 'alvobot-pro' ),
-			)
-		);
+		// Tradução automática do título — só exibe quando Polylang ou WPML está ativo
+		if ( function_exists( 'PLL' ) || function_exists( 'icl_get_languages' ) ) {
+			add_settings_field(
+				'title_use_auto_translation',
+				$t ? $t::get_translation( 'auto_translate_title' ) : __( 'Traduzir título automaticamente', 'alvobot-pro' ),
+				array( $this, 'render_checkbox_field' ),
+				$this->option_name,
+				'author_box_section',
+				array(
+					'label_for'   => 'title_use_auto_translation',
+					'name'        => 'title_use_auto_translation',
+					'description' => $t ? $t::get_translation( 'auto_translate_title_desc' ) : __( 'Quando ativo, o título se adapta automaticamente ao idioma da página.', 'alvobot-pro' ),
+				)
+			);
+		}
 
 		// Exibir em Posts
 		add_settings_field(
@@ -165,7 +163,7 @@ class AlvoBotPro_AuthorBox {
 	}
 
 	public function render_settings_section() {
-		echo '<p>' . __( 'Configure as opções do Author Box abaixo.', 'alvobot-pro' ) . '</p>';
+		echo wp_kses_post( '<p>' . esc_html__( 'Configure as opções do Author Box abaixo.', 'alvobot-pro' ) . '</p>' );
 	}
 
 	public function render_text_field( $args ) {
@@ -224,7 +222,7 @@ class AlvoBotPro_AuthorBox {
 						id="display_on_posts"
 						name="<?php echo esc_attr( $this->option_name ); ?>[display_on_posts]"
 						<?php checked( ! empty( $options['display_on_posts'] ) ); ?>>
-				<?php echo $t ? $t::get_translation( 'display_on_posts' ) : __( 'Exibir em Posts', 'alvobot-pro' ); ?>
+				<?php echo esc_html( $t ? $t::get_translation( 'display_on_posts' ) : __( 'Exibir em Posts', 'alvobot-pro' ) ); ?>
 			</label>
 			<br>
 			<label>
@@ -232,7 +230,7 @@ class AlvoBotPro_AuthorBox {
 						id="display_on_pages"
 						name="<?php echo esc_attr( $this->option_name ); ?>[display_on_pages]"
 						<?php checked( ! empty( $options['display_on_pages'] ) ); ?>>
-				<?php echo $t ? $t::get_translation( 'display_on_pages' ) : __( 'Exibir em Páginas', 'alvobot-pro' ); ?>
+				<?php echo esc_html( $t ? $t::get_translation( 'display_on_pages' ) : __( 'Exibir em Páginas', 'alvobot-pro' ) ); ?>
 			</label>
 			<br>
 			<label>
@@ -240,10 +238,10 @@ class AlvoBotPro_AuthorBox {
 						id="hide_theme_author_box"
 						name="<?php echo esc_attr( $this->option_name ); ?>[hide_theme_author_box]"
 						<?php checked( ! empty( $options['hide_theme_author_box'] ) ); ?>>
-				<?php _e( 'Ocultar Author Box do tema', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Ocultar Author Box do tema', 'alvobot-pro' ); ?>
 			</label>
 			<p class="description">
-				<?php echo $t ? $t::get_translation( 'select_display_location' ) : __( 'Selecione onde o Author Box será exibido.', 'alvobot-pro' ); ?>
+				<?php echo esc_html( $t ? $t::get_translation( 'select_display_location' ) : __( 'Selecione onde o Author Box será exibido.', 'alvobot-pro' ) ); ?>
 			</p>
 		</div>
 		<?php
@@ -288,13 +286,13 @@ class AlvoBotPro_AuthorBox {
 		?>
 		<div class="alvobot-pro-wrap">
 			<div class="alvobot-pro-header">
-				<h1><?php echo $t ? $t::get_translation( 'author_box_settings' ) : __( 'Configurações do Author Box', 'alvobot-pro' ); ?></h1>
-				<p><?php echo $t ? $t::get_translation( 'personalize_info' ) : __( 'Personalize como suas informações de autor aparecem no Author Box.', 'alvobot-pro' ); ?></p>
+				<h1><?php echo esc_html( $t ? $t::get_translation( 'author_box_settings' ) : __( 'Configurações do Author Box', 'alvobot-pro' ) ); ?></h1>
+				<p><?php echo esc_html( $t ? $t::get_translation( 'personalize_info' ) : __( 'Personalize como suas informações de autor aparecem no Author Box.', 'alvobot-pro' ) ); ?></p>
 			</div>
 
 			<!-- Preview Card -->
 			<div class="alvobot-pro-preview-card">
-				<h3><?php echo $t ? $t::get_translation( 'live_preview' ) : __( 'Preview em Tempo Real', 'alvobot-pro' ); ?></h3>
+				<h3><?php echo esc_html( $t ? $t::get_translation( 'live_preview' ) : __( 'Preview em Tempo Real', 'alvobot-pro' ) ); ?></h3>
 				<div class="ab-avatar-preview" style="margin-bottom: 10px;">
 					<?php
 					$custom_avatar_id = get_user_meta( $user->ID, 'ab_custom_avatar_id', true );
@@ -307,25 +305,25 @@ class AlvoBotPro_AuthorBox {
 			<!-- Settings Card -->
 			<div class="alvobot-pro-card">
 				<div class="alvobot-pro-card-header">
-					<h2><?php echo $t ? $t::get_translation( 'avatar_settings' ) : __( 'Configurações do Avatar', 'alvobot-pro' ); ?></h2>
+					<h2><?php echo esc_html( $t ? $t::get_translation( 'avatar_settings' ) : __( 'Configurações do Avatar', 'alvobot-pro' ) ); ?></h2>
 				</div>
 
 				<table class="form-table" role="presentation">
 					<tr>
 						<th>
-							<label for="ab_custom_avatar"><?php echo $t ? $t::get_translation( 'custom_avatar' ) : __( 'Avatar Personalizado', 'alvobot-pro' ); ?></label>
+							<label for="ab_custom_avatar"><?php echo esc_html( $t ? $t::get_translation( 'custom_avatar' ) : __( 'Avatar Personalizado', 'alvobot-pro' ) ); ?></label>
 						</th>
 						<td>
 							<input type="hidden" name="ab_custom_avatar_id" id="ab_custom_avatar_id"
 									value="<?php echo esc_attr( $custom_avatar_id ); ?>" />
 							<input type="button" class="button" id="ab_upload_avatar_button"
-									value="<?php echo $t ? $t::get_translation( 'select_image' ) : __( 'Selecionar Imagem', 'alvobot-pro' ); ?>" />
+									value="<?php echo esc_attr( $t ? $t::get_translation( 'select_image' ) : __( 'Selecionar Imagem', 'alvobot-pro' ) ); ?>" />
 							<?php if ( $custom_avatar_id ) : ?>
 								<input type="button" class="button" id="ab_remove_avatar_button"
-										value="<?php echo $t ? $t::get_translation( 'remove_image' ) : __( 'Remover Imagem', 'alvobot-pro' ); ?>" />
+										value="<?php echo esc_attr( $t ? $t::get_translation( 'remove_image' ) : __( 'Remover Imagem', 'alvobot-pro' ) ); ?>" />
 							<?php endif; ?>
 							<p class="description">
-								<?php echo $t ? $t::get_translation( 'avatar_description' ) : __( 'Esta imagem será usada no Author Box em vez do seu Gravatar.', 'alvobot-pro' ); ?>
+								<?php echo esc_html( $t ? $t::get_translation( 'avatar_description' ) : __( 'Esta imagem será usada no Author Box em vez do seu Gravatar.', 'alvobot-pro' ) ); ?>
 							</p>
 						</td>
 					</tr>
@@ -341,8 +339,10 @@ class AlvoBotPro_AuthorBox {
 		}
 
 		// Salva o avatar personalizado
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by WordPress core in user profile update handler.
 		if ( isset( $_POST['ab_custom_avatar_id'] ) ) {
-			update_user_meta( $user_id, 'ab_custom_avatar_id', sanitize_text_field( $_POST['ab_custom_avatar_id'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by WordPress core in user profile update handler.
+			update_user_meta( $user_id, 'ab_custom_avatar_id', sanitize_text_field( wp_unslash( $_POST['ab_custom_avatar_id'] ) ) );
 		}
 	}
 
@@ -457,7 +457,7 @@ class AlvoBotPro_AuthorBox {
 			
 			<div class="author-content">
 				<div class="author-avatar">
-					<?php echo $avatar_html; ?>
+					<?php echo wp_kses_post( $avatar_html ); ?>
 				</div>
 				
 				<div class="author-info">
@@ -494,7 +494,7 @@ class AlvoBotPro_AuthorBox {
 					</div>
 					<div class="alvobot-header-content">
 						<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-						<p><?php echo $t ? $t::get_translation( 'display_settings' ) : __( 'Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro' ); ?></p>
+						<p><?php echo esc_html( $t ? $t::get_translation( 'display_settings' ) : __( 'Configure as opções de exibição do Author Box em seus posts e páginas.', 'alvobot-pro' ) ); ?></p>
 					</div>
 				</div>
 
@@ -506,7 +506,7 @@ class AlvoBotPro_AuthorBox {
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
 						<div>
-							<h2 class="alvobot-card-title"><?php echo $t ? $t::get_translation( 'settings' ) : __( 'Configurações', 'alvobot-pro' ); ?></h2>
+							<h2 class="alvobot-card-title"><?php echo esc_html( $t ? $t::get_translation( 'settings' ) : __( 'Configurações', 'alvobot-pro' ) ); ?></h2>
 						</div>
 					</div>
 					<div class="alvobot-card-body">
@@ -524,8 +524,8 @@ class AlvoBotPro_AuthorBox {
 				</div>
 
 				<!-- AI Author Generation Card -->
-				<?php if ( get_option( 'grp_site_token' ) ) : ?>
-				<?php
+				<?php if ( get_option( 'alvobot_site_token' ) ) : ?>
+					<?php
 					$ai_api            = class_exists( 'AlvoBotPro_AI_API' ) ? AlvoBotPro_AI_API::get_instance() : null;
 					$ai_cost_generate  = $ai_api ? $ai_api->get_action_cost( 'generate_author' ) : 3;
 					$ai_cost_translate = $ai_api ? ( $ai_api->get_action_cost( 'translate_bio' ) ?: 1 ) : 1;
@@ -537,19 +537,32 @@ class AlvoBotPro_AuthorBox {
 					$ai_cost           = $ai_multilingual && $ai_num_langs > 1
 						? $ai_cost_generate + ( $ai_num_langs - 1 ) * $ai_cost_translate
 						: $ai_cost_generate;
-					$wp_users   = get_users( array( 'role__in' => array( 'administrator', 'editor', 'author' ), 'orderby' => 'display_name' ) );
-					$locale          = get_locale();
-					$default_lang    = substr( $locale, 0, 2 );
-					$locale_country  = array( 'pt_BR' => 'BR', 'en_US' => 'US', 'en_GB' => 'GB', 'es_ES' => 'ES', 'fr_FR' => 'FR', 'de_DE' => 'DE', 'it_IT' => 'IT' );
-					$default_country = isset( $locale_country[ $locale ] ) ? $locale_country[ $locale ] : 'BR';
-					$countries       = alvobot_get_countries();
-					$all_languages   = alvobot_get_languages();
-				?>
+					$wp_users          = get_users(
+						array(
+							'role__in' => array( 'administrator', 'editor', 'author' ),
+							'orderby'  => 'display_name',
+						)
+					);
+					$locale            = get_locale();
+					$default_lang      = substr( $locale, 0, 2 );
+					$locale_country    = array(
+						'pt_BR' => 'BR',
+						'en_US' => 'US',
+						'en_GB' => 'GB',
+						'es_ES' => 'ES',
+						'fr_FR' => 'FR',
+						'de_DE' => 'DE',
+						'it_IT' => 'IT',
+					);
+					$default_country   = isset( $locale_country[ $locale ] ) ? $locale_country[ $locale ] : 'BR';
+					$countries         = alvobot_get_countries();
+					$all_languages     = alvobot_get_languages();
+					?>
 				<div class="alvobot-card alvobot-ai-section">
 					<div class="alvobot-card-header">
 						<div>
 							<h2 class="alvobot-card-title"><?php esc_html_e( 'Gerar Autor com IA', 'alvobot-pro' ); ?></h2>
-							<p style="margin: 4px 0 0; font-size: 13px; opacity: 0.8;"><?php esc_html_e( 'Crie um perfil de autor fictício completo usando inteligência artificial.', 'alvobot-pro' ); ?></p>
+							<p class="alvobot-card-subtitle"><?php esc_html_e( 'Crie um perfil de autor fictício completo usando inteligência artificial.', 'alvobot-pro' ); ?></p>
 						</div>
 						<span class="alvobot-ai-cost-badge">
 							<i data-lucide="coins" class="alvobot-icon" style="width: 14px; height: 14px;"></i>
@@ -562,7 +575,7 @@ class AlvoBotPro_AuthorBox {
 							<table class="form-table" role="presentation">
 								<tr>
 									<th scope="row">
-										<label for="ai-author-niche"><?php esc_html_e( 'Nicho do site', 'alvobot-pro' ); ?> <span style="color: #e74c3c;">*</span></label>
+										<label for="ai-author-niche"><?php esc_html_e( 'Nicho do site', 'alvobot-pro' ); ?> <span style="color: var(--alvobot-error);">*</span></label>
 									</th>
 									<td>
 										<input type="text" id="ai-author-niche" class="regular-text" placeholder="<?php esc_attr_e( 'Ex: tecnologia, saúde, finanças, culinária...', 'alvobot-pro' ); ?>" />
@@ -592,10 +605,10 @@ class AlvoBotPro_AuthorBox {
 									<td>
 										<div style="display: flex; gap: 6px; flex-wrap: wrap;">
 											<?php foreach ( $ai_languages as $code => $name ) : ?>
-												<span class="alvobot-badge" style="font-size: 12px; padding: 4px 10px;"><?php echo esc_html( strtoupper( $code ) . ' — ' . $name ); ?></span>
+												<span class="alvobot-badge" style="font-size: var(--alvobot-font-size-xs); padding: var(--alvobot-space-xs) var(--alvobot-space-md);"><?php echo esc_html( strtoupper( $code ) . ' — ' . $name ); ?></span>
 											<?php endforeach; ?>
 										</div>
-										<p class="description"><?php printf( esc_html__( 'O autor será gerado no primeiro idioma (%d créditos) e a bio traduzida automaticamente para os demais (%d crédito por tradução).', 'alvobot-pro' ), $ai_cost_generate, $ai_cost_translate ); ?></p>
+										<p class="description"><?php printf( esc_html__( 'O autor será gerado no primeiro idioma (%1$d créditos) e a bio traduzida automaticamente para os demais (%2$d crédito por tradução).', 'alvobot-pro' ), intval( $ai_cost_generate ), intval( $ai_cost_translate ) ); ?></p>
 										<!-- Hidden select for JS compatibility -->
 										<select id="ai-author-language" style="display: none;">
 											<?php foreach ( $all_languages as $code => $label ) : ?>
@@ -643,8 +656,8 @@ class AlvoBotPro_AuthorBox {
 									</td>
 								</tr>
 							</table>
-							<div style="padding: 0 0 10px;">
-								<button type="button" id="alvobot-ai-generate-author" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+							<div style="padding: 0 0 var(--alvobot-space-md);">
+								<button type="button" id="alvobot-ai-generate-author" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: var(--alvobot-space-sm);">
 									<i data-lucide="sparkles" class="alvobot-icon" style="width: 18px; height: 18px;"></i>
 									<?php esc_html_e( 'Gerar Autor', 'alvobot-pro' ); ?>
 								</button>
@@ -652,9 +665,9 @@ class AlvoBotPro_AuthorBox {
 						</div>
 
 						<!-- AI Loading -->
-						<div id="alvobot-ai-author-loading" style="display: none; text-align: center; padding: 40px 20px;">
+						<div id="alvobot-ai-author-loading" style="display: none; text-align: center; padding: var(--alvobot-space-3xl) var(--alvobot-space-xl);">
 							<div class="alvobot-ai-loading-spinner"></div>
-							<p style="margin-top: 16px; font-size: 14px; color: #666;"><?php esc_html_e( 'Gerando perfil de autor com IA... Isso pode levar alguns segundos.', 'alvobot-pro' ); ?></p>
+							<p style="margin-top: var(--alvobot-space-lg); font-size: var(--alvobot-font-size-base); color: var(--alvobot-gray-600);"><?php esc_html_e( 'Gerando perfil de autor com IA... Isso pode levar alguns segundos.', 'alvobot-pro' ); ?></p>
 						</div>
 
 						<!-- AI Preview (generated result) -->
@@ -662,7 +675,7 @@ class AlvoBotPro_AuthorBox {
 							<h3 style="margin-top: 0;"><?php esc_html_e( 'Autor Gerado — Revise e edite antes de aplicar', 'alvobot-pro' ); ?></h3>
 							<div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
 								<div style="flex-shrink: 0; text-align: center;">
-									<img id="alvobot-ai-author-avatar" src="" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #e0e0e0;" />
+									<img id="alvobot-ai-author-avatar" src="" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--alvobot-gray-300);" />
 								</div>
 								<div style="flex: 1; min-width: 280px;">
 									<table class="form-table" role="presentation" style="margin-top: 0;">
@@ -681,12 +694,12 @@ class AlvoBotPro_AuthorBox {
 								</div>
 							</div>
 							<input type="hidden" id="ai-preview-avatar-url" value="" />
-							<div style="padding: 16px 0 0; display: flex; gap: 12px; flex-wrap: wrap;">
-								<button type="button" id="alvobot-ai-apply-author" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+							<div style="padding: var(--alvobot-space-lg) 0 0; display: flex; gap: var(--alvobot-space-md); flex-wrap: wrap;">
+								<button type="button" id="alvobot-ai-apply-author" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: var(--alvobot-space-sm);">
 									<i data-lucide="check-circle" class="alvobot-icon" style="width: 18px; height: 18px;"></i>
 									<?php esc_html_e( 'Aplicar ao Autor', 'alvobot-pro' ); ?>
 								</button>
-								<button type="button" id="alvobot-ai-regenerate-author" class="alvobot-btn alvobot-btn-secondary" style="display: inline-flex; align-items: center; gap: 8px;">
+								<button type="button" id="alvobot-ai-regenerate-author" class="alvobot-btn alvobot-btn-secondary" style="display: inline-flex; align-items: center; gap: var(--alvobot-space-sm);">
 									<i data-lucide="refresh-cw" class="alvobot-icon" style="width: 18px; height: 18px;"></i>
 									<?php esc_html_e( 'Gerar Outro', 'alvobot-pro' ); ?>
 								</button>
@@ -694,12 +707,12 @@ class AlvoBotPro_AuthorBox {
 						</div>
 
 						<!-- AI Error -->
-						<div id="alvobot-ai-author-error" style="display: none; padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b;">
+						<div id="alvobot-ai-author-error" style="display: none; padding: var(--alvobot-space-lg); background: var(--alvobot-error-bg); border: 1px solid var(--alvobot-error); border-radius: var(--alvobot-radius-md); color: var(--alvobot-error-dark);">
 							<strong><?php esc_html_e( 'Erro:', 'alvobot-pro' ); ?></strong> <span id="alvobot-ai-author-error-msg"></span>
 						</div>
 
 						<!-- AI Success -->
-						<div id="alvobot-ai-author-success" style="display: none; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534;">
+						<div id="alvobot-ai-author-success" style="display: none; padding: var(--alvobot-space-lg); background: var(--alvobot-success-bg); border: 1px solid var(--alvobot-success); border-radius: var(--alvobot-radius-md); color: var(--alvobot-success-dark);">
 							<strong><?php esc_html_e( 'Sucesso!', 'alvobot-pro' ); ?></strong> <span id="alvobot-ai-author-success-msg"></span>
 						</div>
 					</div>
@@ -712,7 +725,7 @@ class AlvoBotPro_AuthorBox {
 						</div>
 					</div>
 					<div class="alvobot-card-body">
-						<p style="color: #666;">
+						<p style="color: var(--alvobot-gray-600);">
 							<?php esc_html_e( 'Conecte seu site ao AlvoBot para utilizar a geração de autor com IA.', 'alvobot-pro' ); ?>
 							<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro' ) ); ?>"><?php esc_html_e( 'Ir para o Dashboard', 'alvobot-pro' ); ?></a>
 						</p>
@@ -724,12 +737,20 @@ class AlvoBotPro_AuthorBox {
 				<?php
 				$is_multilingual = function_exists( 'PLL' ) || function_exists( 'icl_get_languages' );
 				if ( $is_multilingual ) :
-				$bio_users      = get_users( array( 'role__in' => array( 'administrator', 'editor', 'author' ), 'orderby' => 'display_name' ) );
-				$site_languages = class_exists( 'Alvobot_AuthorBox_Translations' )
+					$bio_users      = get_users(
+						array(
+							'role__in' => array( 'administrator', 'editor', 'author' ),
+							'orderby'  => 'display_name',
+						)
+					);
+					$site_languages = class_exists( 'Alvobot_AuthorBox_Translations' )
 					? Alvobot_AuthorBox_Translations::get_site_languages()
-					: array( 'pt' => 'Português', 'en' => 'English' );
-				$first_user_id  = ! empty( $bio_users ) ? $bio_users[0]->ID : 0;
-				?>
+					: array(
+						'pt' => 'Português',
+						'en' => 'English',
+					);
+					$first_user_id  = ! empty( $bio_users ) ? $bio_users[0]->ID : 0;
+					?>
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
 						<div>
@@ -737,7 +758,7 @@ class AlvoBotPro_AuthorBox {
 								<i data-lucide="languages" class="alvobot-icon" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>
 								<?php echo $t ? esc_html( $t::get_translation( 'multilingual_bios' ) ) : esc_html__( 'Biografias Multilíngues', 'alvobot-pro' ); ?>
 							</h2>
-							<p style="margin: 4px 0 0; font-size: 13px; opacity: 0.8;">
+							<p class="alvobot-card-subtitle">
 								<?php echo $t ? esc_html( $t::get_translation( 'multilingual_bios_desc' ) ) : esc_html__( 'Gerencie biografias do autor por idioma.', 'alvobot-pro' ); ?>
 							</p>
 						</div>
@@ -763,31 +784,37 @@ class AlvoBotPro_AuthorBox {
 						<div class="ab-bio-lang-tabs">
 							<div class="ab-bio-lang-tab-headers" role="tablist">
 								<?php $first = true; foreach ( $site_languages as $code => $name ) : ?>
-									<button type="button" class="ab-bio-lang-tab-btn <?php echo $first ? 'active' : ''; ?>"
+									<button type="button" class="ab-bio-lang-tab-btn <?php echo esc_attr( $first ? 'active' : '' ); ?>"
 											data-lang="<?php echo esc_attr( $code ); ?>"
-											role="tab" aria-selected="<?php echo $first ? 'true' : 'false'; ?>">
+											role="tab" aria-selected="<?php echo esc_attr( $first ? 'true' : 'false' ); ?>">
 										<?php echo esc_html( strtoupper( $code ) . ' — ' . $name ); ?>
 									</button>
-								<?php $first = false; endforeach; ?>
+									<?php
+									$first = false;
+endforeach;
+								?>
 							</div>
 							<?php $first = true; foreach ( $site_languages as $code => $name ) : ?>
-								<div class="ab-bio-lang-tab-content <?php echo $first ? 'active' : ''; ?>"
-									 data-lang="<?php echo esc_attr( $code ); ?>" role="tabpanel">
+								<div class="ab-bio-lang-tab-content <?php echo esc_attr( $first ? 'active' : '' ); ?>"
+									data-lang="<?php echo esc_attr( $code ); ?>" role="tabpanel">
 									<textarea id="ab-bio-<?php echo esc_attr( $code ); ?>"
-											  class="large-text ab-bio-textarea" rows="4"
-											  data-lang="<?php echo esc_attr( $code ); ?>"
-											  placeholder="<?php echo esc_attr( sprintf( __( 'Biografia em %s...', 'alvobot-pro' ), $name ) ); ?>"
+												class="large-text ab-bio-textarea" rows="4"
+												data-lang="<?php echo esc_attr( $code ); ?>"
+												placeholder="<?php echo esc_attr( sprintf( __( 'Biografia em %s...', 'alvobot-pro' ), $name ) ); ?>"
 									><?php echo esc_textarea( get_user_meta( $first_user_id, 'ab_bio_' . $code, true ) ); ?></textarea>
 								</div>
-							<?php $first = false; endforeach; ?>
+								<?php
+								$first = false;
+endforeach;
+							?>
 						</div>
 
-						<div style="padding: 16px 0 0; display: flex; gap: 12px; align-items: center;">
-							<button type="button" id="ab-save-bios" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+						<div style="padding: var(--alvobot-space-lg) 0 0; display: flex; gap: var(--alvobot-space-md); align-items: center;">
+							<button type="button" id="ab-save-bios" class="alvobot-btn alvobot-btn-primary" style="display: inline-flex; align-items: center; gap: var(--alvobot-space-sm);">
 								<i data-lucide="save" class="alvobot-icon" style="width:18px;height:18px;"></i>
 								<?php echo $t ? esc_html( $t::get_translation( 'save_bios' ) ) : esc_html__( 'Salvar Biografias', 'alvobot-pro' ); ?>
 							</button>
-							<span id="ab-bio-save-status" style="display: none; font-size: 14px; color: #166534;"></span>
+							<span id="ab-bio-save-status" style="display: none; font-size: var(--alvobot-font-size-base); color: var(--alvobot-success-dark);"></span>
 						</div>
 					</div>
 				</div>
@@ -797,11 +824,11 @@ class AlvoBotPro_AuthorBox {
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
 						<div>
-							<h2 class="alvobot-card-title"><?php echo $t ? $t::get_translation( 'preview_author_box' ) : __( 'Preview do Author Box', 'alvobot-pro' ); ?></h2>
+							<h2 class="alvobot-card-title"><?php echo esc_html( $t ? $t::get_translation( 'preview_author_box' ) : __( 'Preview do Author Box', 'alvobot-pro' ) ); ?></h2>
 						</div>
 					</div>
 					<div class="alvobot-card-body">
-						<?php echo $this->get_author_box_html(); ?>
+						<?php echo wp_kses_post( $this->get_author_box_html() ); ?>
 					</div>
 				</div>
 			</div>
@@ -870,7 +897,15 @@ class AlvoBotPro_AuthorBox {
 	}
 
 	public function enqueue_admin_assets( $hook ) {
-		// Enqueue the main AlvoBot styles for admin - standard across all modules
+		$is_profile_page = ( 'profile.php' === $hook || 'user-edit.php' === $hook );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
+		$is_module_page  = ( isset( $_GET['page'] ) && sanitize_text_field( wp_unslash( $_GET['page'] ) ) === 'alvobot-pro-author-box' );
+
+		if ( ! $is_profile_page && ! $is_module_page ) {
+			return;
+		}
+
+		// Enqueue the main AlvoBot styles for admin
 		wp_enqueue_style(
 			'alvobot-admin',
 			plugin_dir_url( dirname( dirname( __DIR__ ) ) ) . 'assets/css/styles.css',
@@ -879,7 +914,7 @@ class AlvoBotPro_AuthorBox {
 		);
 
 		// Carrega os scripts necessários para o media uploader em páginas de perfil
-		if ( 'profile.php' === $hook || 'user-edit.php' === $hook ) {
+		if ( $is_profile_page ) {
 			wp_enqueue_media();
 			wp_enqueue_script(
 				'ab-custom-avatar',
@@ -891,7 +926,7 @@ class AlvoBotPro_AuthorBox {
 		}
 
 		// Enfileira o Color Picker e seus scripts específicos somente na página de configurações do módulo
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'alvobot-pro-author-box' ) {
+		if ( $is_module_page ) {
 			// Enqueue module-specific CSS with dependency on main styles
 			wp_enqueue_style(
 				'alvobot-author-box-admin',
@@ -922,12 +957,16 @@ class AlvoBotPro_AuthorBox {
 				? Alvobot_AuthorBox_Translations::get_site_languages()
 				: array();
 
-			wp_localize_script( 'alvobot-author-box-admin-js', 'alvobotAuthorBox', array(
-				'ajaxurl'        => admin_url( 'admin-ajax.php' ),
-				'nonce'          => wp_create_nonce( 'ab_multilingual_nonce' ),
-				'isMultilingual' => $ab_is_multilingual,
-				'siteLanguages'  => $ab_site_languages,
-			) );
+			wp_localize_script(
+				'alvobot-author-box-admin-js',
+				'alvobotAuthorBox',
+				array(
+					'ajaxurl'        => admin_url( 'admin-ajax.php' ),
+					'nonce'          => wp_create_nonce( 'ab_multilingual_nonce' ),
+					'isMultilingual' => $ab_is_multilingual,
+					'siteLanguages'  => $ab_site_languages,
+				)
+			);
 		}
 	}
 
@@ -938,7 +977,7 @@ class AlvoBotPro_AuthorBox {
 		}
 
 		$user_id = isset( $_POST['user_id'] ) ? intval( $_POST['user_id'] ) : 0;
-		$bios    = isset( $_POST['bios'] ) ? $_POST['bios'] : array();
+		$bios    = isset( $_POST['bios'] ) ? wp_unslash( $_POST['bios'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per-key below with sanitize_key and wp_kses_post.
 
 		if ( ! $user_id || ! get_user_by( 'ID', $user_id ) ) {
 			wp_send_json_error( array( 'message' => 'Usuário inválido' ) );
@@ -959,9 +998,11 @@ class AlvoBotPro_AuthorBox {
 		}
 
 		$t = class_exists( 'Alvobot_AuthorBox_Translations' ) ? 'Alvobot_AuthorBox_Translations' : null;
-		wp_send_json_success( array(
-			'message' => $t ? $t::get_translation( 'bios_saved' ) : 'Biografias salvas com sucesso.',
-		) );
+		wp_send_json_success(
+			array(
+				'message' => $t ? $t::get_translation( 'bios_saved' ) : 'Biografias salvas com sucesso.',
+			)
+		);
 	}
 
 	public function ajax_load_user_bios() {

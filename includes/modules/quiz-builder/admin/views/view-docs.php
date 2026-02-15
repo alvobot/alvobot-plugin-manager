@@ -13,10 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="quiz-docs-container">
 	<div class="docs-content">
 		<div class="docs-section">
-			<h2><?php _e( 'Como Usar o Quiz Builder', 'alvobot-pro' ); ?></h2>
-			<p><?php _e( 'O Quiz Builder AlvoBot Pro permite criar quizzes interativos e formulários usando shortcodes simples. Totalmente integrado ao sistema AlvoBot com navegação por URLs únicas.', 'alvobot-pro' ); ?></p>
+			<h2><?php esc_html_e( 'Como Usar o Quiz Builder', 'alvobot-pro' ); ?></h2>
+			<p><?php esc_html_e( 'O Quiz Builder AlvoBot Pro permite criar quizzes interativos e formulários usando shortcodes simples. Totalmente integrado ao sistema AlvoBot com navegação por URLs únicas.', 'alvobot-pro' ); ?></p>
 			
-			<h3><?php _e( 'Sintaxe Básica', 'alvobot-pro' ); ?></h3>
+			<h3><?php esc_html_e( 'Sintaxe Básica', 'alvobot-pro' ); ?></h3>
 			<pre><code>[quiz redirect_url="/obrigado" style="modern" url_mode="suffix"]
 [
 	{
@@ -34,81 +34,81 @@ if ( ! defined( 'ABSPATH' ) ) {
 ]
 [/quiz]</code></pre>
 			
-			<h3><?php _e( 'Parâmetros Disponíveis', 'alvobot-pro' ); ?></h3>
+			<h3><?php esc_html_e( 'Parâmetros Disponíveis', 'alvobot-pro' ); ?></h3>
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
 					<tr>
-						<th><?php _e( 'Parâmetro', 'alvobot-pro' ); ?></th>
-						<th><?php _e( 'Padrão', 'alvobot-pro' ); ?></th>
-						<th><?php _e( 'Descrição', 'alvobot-pro' ); ?></th>
+						<th><?php esc_html_e( 'Parâmetro', 'alvobot-pro' ); ?></th>
+						<th><?php esc_html_e( 'Padrão', 'alvobot-pro' ); ?></th>
+						<th><?php esc_html_e( 'Descrição', 'alvobot-pro' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr>
 						<td><code>redirect_url</code></td>
 						<td>-</td>
-						<td><?php _e( 'URL para redirecionar após completar', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'URL para redirecionar após completar', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>style</code></td>
 						<td>default</td>
-						<td><?php _e( 'Estilo visual: default, modern, minimal', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Estilo visual: default, modern, minimal', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>show_progress</code></td>
 						<td>true</td>
-						<td><?php _e( 'Exibe barra de progresso (formato 1/5, 2/5...)', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Exibe barra de progresso (formato 1/5, 2/5...)', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>allow_back</code></td>
 						<td>true</td>
-						<td><?php _e( 'Permite voltar às questões anteriores', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Permite voltar às questões anteriores', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>randomize</code></td>
 						<td>false</td>
-						<td><?php _e( 'Embaralha a ordem das questões', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Embaralha a ordem das questões', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>auto_advance</code></td>
 						<td>true</td>
-						<td><?php _e( 'Avança automaticamente ao selecionar (sempre ativo)', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Avança automaticamente ao selecionar (sempre ativo)', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>show_score</code></td>
 						<td>true</td>
-						<td><?php _e( 'Exibe pontuação ao final (modo quiz)', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Exibe pontuação ao final (modo quiz)', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>show_nav_buttons</code></td>
 						<td>false</td>
-						<td><?php _e( 'Exibe botões de navegação', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Exibe botões de navegação', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
 						<td><code>url_mode</code></td>
 						<td>params</td>
-						<td><?php _e( 'Modo de URL: "params" ou "suffix" (compatível com AdSense)', 'alvobot-pro' ); ?></td>
+						<td><?php esc_html_e( 'Modo de URL: "params" ou "suffix" (compatível com AdSense)', 'alvobot-pro' ); ?></td>
 					</tr>
 				</tbody>
 			</table>
 			
-			<h3><?php _e( 'Modos de Operação', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'O plugin detecta automaticamente o modo baseado na presença do campo "correct":', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Modos de Operação', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'O plugin detecta automaticamente o modo baseado na presença do campo "correct":', 'alvobot-pro' ); ?></p>
 			<ul>
-				<li><strong><?php _e( 'Modo Quiz:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quando as questões possuem respostas corretas. Suporte a múltiplas respostas corretas (array de índices). Calcula pontuação e pode exibir explicações.', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Modo Formulário:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quando as questões não possuem respostas corretas. Apenas coleta respostas.', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Modo Quiz:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Quando as questões possuem respostas corretas. Suporte a múltiplas respostas corretas (array de índices). Calcula pontuação e pode exibir explicações.', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Modo Formulário:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Quando as questões não possuem respostas corretas. Apenas coleta respostas.', 'alvobot-pro' ); ?></li>
 			</ul>
 			
-			<h3><?php _e( 'Personalização Visual de Respostas', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'Cada resposta pode ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Personalização Visual de Respostas', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'Cada resposta pode ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
 			<ul>
-				<li><strong><?php _e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor de fundo da opção de resposta', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor do texto da resposta', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define o tamanho em pixels (10-32px)', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a cor de fundo da opção de resposta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a cor do texto da resposta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define o tamanho em pixels (10-32px)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
 			</ul>
 			
-			<h4><?php _e( 'Exemplo com Estilos Personalizados:', 'alvobot-pro' ); ?></h4>
+			<h4><?php esc_html_e( 'Exemplo com Estilos Personalizados:', 'alvobot-pro' ); ?></h4>
 			<pre><code>[quiz style="modern"]
 [
 	{
@@ -138,16 +138,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 ]
 [/quiz]</code></pre>
 
-			<h3><?php _e( 'Personalização de Perguntas', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'As perguntas também podem ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Personalização de Perguntas', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'As perguntas também podem ter estilo personalizado com as seguintes opções:', 'alvobot-pro' ); ?></p>
 			<ul>
-				<li><strong><?php _e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor de fundo da pergunta', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a cor do texto da pergunta', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define o tamanho em pixels (12-36px)', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php _e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Cor de fundo:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a cor de fundo da pergunta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Cor do texto:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a cor do texto da pergunta', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Tamanho da fonte:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define o tamanho em pixels (12-36px)', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Peso da fonte:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Define a espessura da fonte (300-800)', 'alvobot-pro' ); ?></li>
 			</ul>
 			
-			<h4><?php _e( 'Exemplo com Pergunta Estilizada:', 'alvobot-pro' ); ?></h4>
+			<h4><?php esc_html_e( 'Exemplo com Pergunta Estilizada:', 'alvobot-pro' ); ?></h4>
 			<pre><code>{
 	"question": "Pergunta importante com destaque",
 	"answers": ["Sim", "Não"],
@@ -159,14 +159,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	}
 }</code></pre>
 
-			<h3><?php _e( 'Gerador de Quiz com IA', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'Use este prompt completo com qualquer IA (ChatGPT, Claude, Gemini, etc.) para gerar automaticamente um quiz WordPress:', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Gerador de Quiz com IA', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'Use este prompt completo com qualquer IA (ChatGPT, Claude, Gemini, etc.) para gerar automaticamente um quiz WordPress:', 'alvobot-pro' ); ?></p>
 			<div class="docs-ai-prompt">
 				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-					<h4 style="margin: 0;"><?php _e( 'Prompt Completo para IA:', 'alvobot-pro' ); ?></h4>
+					<h4 style="margin: 0;"><?php esc_html_e( 'Prompt Completo para IA:', 'alvobot-pro' ); ?></h4>
 					<button type="button" id="copy-ai-prompt" class="alvobot-btn alvobot-btn-secondary">
 						<i data-lucide="clipboard" class="alvobot-icon"></i>
-						<?php _e( 'Copiar Prompt', 'alvobot-pro' ); ?>
+						<?php esc_html_e( 'Copiar Prompt', 'alvobot-pro' ); ?>
 					</button>
 				</div>
 				<div id="ai-prompt-content" style="background: #f5f5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;">
@@ -1279,63 +1279,63 @@ Agora, com base nas informações fornecidas acima, gere o shortcode perfeito:
 				</div>
 			</div>
 
-			<h3><?php _e( 'Recursos do Builder Visual', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'O Alvobot Quiz inclui um builder visual completo com:', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Recursos do Builder Visual', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'O Alvobot Quiz inclui um builder visual completo com:', 'alvobot-pro' ); ?></p>
 			<ul>
-				<li><strong><?php _e( 'Drag & Drop:', 'alvobot-pro' ); ?></strong> <?php _e( 'Arraste componentes para criar questões rapidamente', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Preview em Tempo Real:', 'alvobot-pro' ); ?></strong> <?php _e( 'Veja como o quiz aparecerá no frontend', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Templates Prontos:', 'alvobot-pro' ); ?></strong> <?php _e( 'Quiz educacional, pesquisa de satisfação, geração de leads e teste de personalidade', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Importação/Exportação:', 'alvobot-pro' ); ?></strong> <?php _e( 'Importe questões via JSON ou shortcode completo', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Duplicação de Elementos:', 'alvobot-pro' ); ?></strong> <?php _e( 'Duplique questões e respostas com todos os estilos preservados', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Personalização Individual:', 'alvobot-pro' ); ?></strong> <?php _e( 'Cada pergunta e resposta pode ter seu próprio estilo', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Múltiplas Respostas Corretas:', 'alvobot-pro' ); ?></strong> <?php _e( 'Marque múltiplas respostas como corretas usando checkboxes simples', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Configurações Avançadas:', 'alvobot-pro' ); ?></strong> <?php _e( 'Controle completo sobre navegação, progresso e comportamento', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Drag & Drop:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Arraste componentes para criar questões rapidamente', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Preview em Tempo Real:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Veja como o quiz aparecerá no frontend', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Templates Prontos:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Quiz educacional, pesquisa de satisfação, geração de leads e teste de personalidade', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Importação/Exportação:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Importe questões via JSON ou shortcode completo', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Duplicação de Elementos:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Duplique questões e respostas com todos os estilos preservados', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Personalização Individual:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Cada pergunta e resposta pode ter seu próprio estilo', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Múltiplas Respostas Corretas:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Marque múltiplas respostas como corretas usando checkboxes simples', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Configurações Avançadas:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Controle completo sobre navegação, progresso e comportamento', 'alvobot-pro' ); ?></li>
 			</ul>
 
-			<h3><?php _e( 'Compatibilidade com AdSense', 'alvobot-pro' ); ?></h3>
-			<p><?php _e( 'O plugin oferece duas opções de navegação:', 'alvobot-pro' ); ?></p>
+			<h3><?php esc_html_e( 'Compatibilidade com AdSense', 'alvobot-pro' ); ?></h3>
+			<p><?php esc_html_e( 'O plugin oferece duas opções de navegação:', 'alvobot-pro' ); ?></p>
 			<ul>
-				<li><strong><?php _e( 'Modo Parâmetros (padrão):', 'alvobot-pro' ); ?></strong> <?php _e( 'Usa parâmetros GET (?question=2) - mais rápido', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( 'Modo Sufixo:', 'alvobot-pro' ); ?></strong> <?php _e( 'URLs amigáveis (/post-name-1/, /post-name-2/) - compatível com AdSense', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Modo Parâmetros (padrão):', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Usa parâmetros GET (?question=2) - mais rápido', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( 'Modo Sufixo:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'URLs amigáveis (/post-name-1/, /post-name-2/) - compatível com AdSense', 'alvobot-pro' ); ?></li>
 			</ul>O
 
-			<h3><?php _e( 'Dicas Importantes', 'alvobot-pro' ); ?></h3>
+			<h3><?php esc_html_e( 'Dicas Importantes', 'alvobot-pro' ); ?></h3>
 			<ul>
-				<li><?php _e( 'Sempre use o editor de Texto do WordPress (nunca o Visual) ao editar shortcodes', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'O plugin funciona sem JavaScript para acessibilidade', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'Cada quiz gera um ID único baseado em suas questões', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'As respostas são passadas via parâmetros GET na URL', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'Use estilos personalizados para criar experiências visuais atrativas', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'O contraste de texto é calculado automaticamente quando apenas a cor de fundo é definida', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( '✅ NOVO: Uma pergunta pode ter apenas uma opção de resposta', 'alvobot-pro' ); ?></strong></li>
-				<li><?php _e( 'Use o modo "suffix" para sites com AdSense que precisam de recarregamento completo', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'O formato de progresso foi simplificado para 1/5, 2/5, etc. para ser universal', 'alvobot-pro' ); ?></li>
-				<li><?php _e( 'Auto-avanço está sempre ativo para melhor experiência do usuário', 'alvobot-pro' ); ?></li>
-				<li><strong><?php _e( '🔧 Sistema integrado ao AlvoBot Pro para máxima compatibilidade', 'alvobot-pro' ); ?></strong></li>
+				<li><?php esc_html_e( 'Sempre use o editor de Texto do WordPress (nunca o Visual) ao editar shortcodes', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'O plugin funciona sem JavaScript para acessibilidade', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'Cada quiz gera um ID único baseado em suas questões', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'As respostas são passadas via parâmetros GET na URL', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'Use estilos personalizados para criar experiências visuais atrativas', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'O contraste de texto é calculado automaticamente quando apenas a cor de fundo é definida', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( '✅ NOVO: Uma pergunta pode ter apenas uma opção de resposta', 'alvobot-pro' ); ?></strong></li>
+				<li><?php esc_html_e( 'Use o modo "suffix" para sites com AdSense que precisam de recarregamento completo', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'O formato de progresso foi simplificado para 1/5, 2/5, etc. para ser universal', 'alvobot-pro' ); ?></li>
+				<li><?php esc_html_e( 'Auto-avanço está sempre ativo para melhor experiência do usuário', 'alvobot-pro' ); ?></li>
+				<li><strong><?php esc_html_e( '🔧 Sistema integrado ao AlvoBot Pro para máxima compatibilidade', 'alvobot-pro' ); ?></strong></li>
 			</ul>
 
-			<h3><?php _e( 'Troubleshooting - Problemas Comuns', 'alvobot-pro' ); ?></h3>
+			<h3><?php esc_html_e( 'Troubleshooting - Problemas Comuns', 'alvobot-pro' ); ?></h3>
 			<div class="alvobot-card" style="margin: 20px 0; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
-				<h4 style="color: #856404; margin: 0 0 15px;"><?php _e( '⚠️ Soluções para Problemas Comuns', 'alvobot-pro' ); ?></h4>
+				<h4 style="color: #856404; margin: 0 0 15px;"><?php esc_html_e( '⚠️ Soluções para Problemas Comuns', 'alvobot-pro' ); ?></h4>
 				
-				<h5><?php _e( 'Botões não funcionam no Builder:', 'alvobot-pro' ); ?></h5>
+				<h5><?php esc_html_e( 'Botões não funcionam no Builder:', 'alvobot-pro' ); ?></h5>
 				<ul>
-					<li><?php _e( 'Verifique se está na página ?page=alvobot-quiz-builder', 'alvobot-pro' ); ?></li>
-					<li><?php _e( 'Limpe cache do navegador (Ctrl+F5)', 'alvobot-pro' ); ?></li>
-					<li><?php _e( 'Verifique console do navegador para erros JavaScript', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Verifique se está na página ?page=alvobot-quiz-builder', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Limpe cache do navegador (Ctrl+F5)', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Verifique console do navegador para erros JavaScript', 'alvobot-pro' ); ?></li>
 				</ul>
 
-				<h5><?php _e( 'Quiz não aparece no frontend:', 'alvobot-pro' ); ?></h5>
+				<h5><?php esc_html_e( 'Quiz não aparece no frontend:', 'alvobot-pro' ); ?></h5>
 				<ul>
-					<li><?php _e( 'Certifique-se que o módulo Quiz Builder está ativo no dashboard AlvoBot Pro', 'alvobot-pro' ); ?></li>
-					<li><?php _e( 'Verifique se o shortcode está no editor de Texto (não Visual)', 'alvobot-pro' ); ?></li>
-					<li><?php _e( 'Valide o JSON em jsonlint.com', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Certifique-se que o módulo Quiz Builder está ativo no dashboard AlvoBot Pro', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Verifique se o shortcode está no editor de Texto (não Visual)', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Valide o JSON em jsonlint.com', 'alvobot-pro' ); ?></li>
 				</ul>
 
-				<h5><?php _e( 'Navegação entre questões não funciona:', 'alvobot-pro' ); ?></h5>
+				<h5><?php esc_html_e( 'Navegação entre questões não funciona:', 'alvobot-pro' ); ?></h5>
 				<ul>
-					<li><?php _e( 'Para sites com AdSense, use url_mode="suffix"', 'alvobot-pro' ); ?></li>
-					<li><?php _e( 'Verifique se as rewrite rules foram atualizadas (vá em Configurações > Links Permanentes e clique Salvar)', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Para sites com AdSense, use url_mode="suffix"', 'alvobot-pro' ); ?></li>
+					<li><?php esc_html_e( 'Verifique se as rewrite rules foram atualizadas (vá em Configurações > Links Permanentes e clique Salvar)', 'alvobot-pro' ); ?></li>
 				</ul>
 			</div>
 		</div>
@@ -1363,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				if (successful) {
 					// Update button text and style
 					const originalHTML = copyButton.innerHTML;
-					copyButton.innerHTML = '<i data-lucide="check" class="alvobot-icon"></i> <?php _e( 'Copiado!', 'alvobot-pro' ); ?>';
+					copyButton.innerHTML = '<i data-lucide="check" class="alvobot-icon"></i> <?php esc_html_e( 'Copiado!', 'alvobot-pro' ); ?>';
 					copyButton.style.backgroundColor = '#4CAF50';
 					copyButton.style.borderColor = '#4CAF50';
 					copyButton.style.color = '#fff';
@@ -1376,11 +1376,11 @@ document.addEventListener('DOMContentLoaded', function() {
 						copyButton.style.color = '';
 					}, 3000);
 				} else {
-					alert('<?php _e( 'Erro ao copiar. Tente selecionar o texto manualmente.', 'alvobot-pro' ); ?>');
+					alert('<?php esc_html_e( 'Erro ao copiar. Tente selecionar o texto manualmente.', 'alvobot-pro' ); ?>');
 				}
 			} catch (err) {
 				// Fallback for older browsers
-				alert('<?php _e( 'Use Ctrl+C para copiar o texto selecionado.', 'alvobot-pro' ); ?>');
+				alert('<?php esc_html_e( 'Use Ctrl+C para copiar o texto selecionado.', 'alvobot-pro' ); ?>');
 			}
 			
 			// Remove temporary textarea

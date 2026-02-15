@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $polylang_active = class_exists( 'Polylang' ) || function_exists( 'pll_the_languages' );
-$site_token      = get_option( 'grp_site_token' );
+$site_token      = get_option( 'alvobot_site_token' );
 $is_connected    = ! empty( $site_token );
 
 // Carrega creditos
@@ -35,49 +35,37 @@ $translation_stats = get_option(
 );
 
 // Salva configuracoes de cache se solicitado
-if ( isset( $_POST['save_credits_settings'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_credits_settings' ) ) {
-	$openai_settings = get_option( 'alvobot_openai_settings', array() );
+if ( isset( $_POST['save_credits_settings'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_credits_settings' ) ) {
+	$openai_settings                  = get_option( 'alvobot_openai_settings', array() );
 	$openai_settings['disable_cache'] = isset( $_POST['disable_cache'] ) ? true : false;
 	update_option( 'alvobot_openai_settings', $openai_settings );
 
-	echo '<div class="alvobot-notice alvobot-notice-success"><p>Configuracoes salvas com sucesso!</p></div>';
+	echo '<div class="alvobot-notice alvobot-notice-success"><p>' . esc_html__( 'Configuracoes salvas com sucesso!', 'alvobot-pro' ) . '</p></div>';
 }
 
 // Limpa caches se solicitado
-if ( isset( $_POST['clear_all_caches'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'alvobot_credits_settings' ) ) {
+if ( isset( $_POST['clear_all_caches'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'alvobot_credits_settings' ) ) {
 	delete_transient( 'alvobot_translation_cache' );
 	delete_transient( 'alvobot_multi_languages_logs' );
 	delete_transient( 'alvobot_ai_credits' );
-	echo '<div class="alvobot-notice alvobot-notice-success"><p>Todos os caches foram limpos com sucesso!</p></div>';
+	echo '<div class="alvobot-notice alvobot-notice-success"><p>' . esc_html__( 'Todos os caches foram limpos com sucesso!', 'alvobot-pro' ) . '</p></div>';
 }
 
 $openai_settings = get_option( 'alvobot_openai_settings', array() );
 $cache_disabled  = isset( $openai_settings['disable_cache'] ) && $openai_settings['disable_cache'];
 ?>
 
-<div class="alvobot-admin-wrap">
-	<div class="alvobot-admin-container">
-		<div class="alvobot-admin-header">
-			<div class="alvobot-header-icon">
-				<i data-lucide="ticket" class="alvobot-icon"></i>
-			</div>
-			<div class="alvobot-header-content">
-				<h1><?php echo esc_html__( 'Traducao com Creditos AlvoBot', 'alvobot-pro' ); ?></h1>
-				<p><?php echo esc_html__( 'Traduza posts automaticamente usando creditos do seu plano AlvoBot. Cada chunk de traducao consome 1 credito.', 'alvobot-pro' ); ?></p>
-			</div>
-		</div>
-
 		<?php if ( ! $is_connected ) : ?>
 			<div class="alvobot-notice alvobot-notice-error">
 				<p><strong>Site nao conectado:</strong> Registre este site no AlvoBot para usar o sistema de traducao com creditos.</p>
-				<p><a href="<?php echo admin_url( 'admin.php?page=alvobot-pro' ); ?>" class="button">Conectar ao AlvoBot</a></p>
+				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro' ) ); ?>" class="button">Conectar ao AlvoBot</a></p>
 			</div>
 		<?php endif; ?>
 
 		<?php if ( ! $polylang_active ) : ?>
 			<div class="alvobot-notice alvobot-notice-error">
 				<p><strong>Plugin Necessario:</strong> O Polylang deve estar instalado e ativo para usar o sistema de traducao.</p>
-				<p><a href="<?php echo admin_url( 'plugin-install.php?s=polylang&tab=search&type=term' ); ?>" class="button">Instalar Polylang</a></p>
+				<p><a href="<?php echo esc_url( admin_url( 'plugin-install.php?s=polylang&tab=search&type=term' ) ); ?>" class="button">Instalar Polylang</a></p>
 			</div>
 		<?php endif; ?>
 
@@ -113,7 +101,7 @@ $cache_disabled  = isset( $openai_settings['disable_cache'] ) && $openai_setting
 								<i data-lucide="languages" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number"><?php echo count( $polylang_languages ); ?></div>
+								<div class="alvobot-stat-number"><?php echo intval( count( $polylang_languages ) ); ?></div>
 								<div class="alvobot-stat-label">Idiomas Configurados</div>
 							</div>
 						</div>
@@ -133,7 +121,7 @@ $cache_disabled  = isset( $openai_settings['disable_cache'] ) && $openai_setting
 								<i data-lucide="line-chart" class="alvobot-icon"></i>
 							</div>
 							<div>
-								<div class="alvobot-stat-number"><?php echo number_format( $translation_stats['total_translations'] ); ?></div>
+								<div class="alvobot-stat-number"><?php echo esc_html( number_format( $translation_stats['total_translations'] ) ); ?></div>
 								<div class="alvobot-stat-label">Posts Traduzidos</div>
 							</div>
 						</div>
@@ -148,7 +136,7 @@ $cache_disabled  = isset( $openai_settings['disable_cache'] ) && $openai_setting
 					<h2 class="alvobot-card-title">Idiomas Disponiveis para Traducao</h2>
 					<p class="alvobot-card-subtitle">
 						Configurados no Polylang
-						<a href="<?php echo admin_url( 'admin.php?page=mlang' ); ?>" class="alvobot-link-inline" title="Configurar idiomas no Polylang">
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=mlang' ) ); ?>" class="alvobot-link-inline" title="Configurar idiomas no Polylang">
 							<i data-lucide="settings" class="alvobot-icon" style="font-size: 14px; vertical-align: middle;"></i>
 						</a>
 					</p>
@@ -232,8 +220,6 @@ $cache_disabled  = isset( $openai_settings['disable_cache'] ) && $openai_setting
 			</div>
 
 		</div>
-	</div>
-</div>
 
 <!-- Modal de Teste de Conexao -->
 <div id="connection-test-modal" class="alvobot-modal" style="display: none;">
@@ -312,7 +298,7 @@ jQuery(document).ready(function($) {
 			type: 'POST',
 			data: {
 				action: 'alvobot_test_translation_connection',
-				nonce: '<?php echo wp_create_nonce( 'alvobot_nonce' ); ?>'
+				nonce: '<?php echo esc_js( wp_create_nonce( 'alvobot_nonce' ) ); ?>'
 			},
 			success: function(response) {
 				$('#connection-test-loading').hide();

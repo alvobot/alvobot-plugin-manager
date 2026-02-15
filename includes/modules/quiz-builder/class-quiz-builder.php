@@ -126,7 +126,7 @@ class AlvoBotPro_QuizBuilder {
 	 */
 	public function admin_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
+			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
 		}
 
 		// Use the existing admin class if available
@@ -198,7 +198,7 @@ class AlvoBotPro_QuizBuilder {
 	 */
 	public function enqueue_admin_assets( $hook ) {
 		// Only load on quiz builder pages
-		if ( strpos( $hook, 'alvobot-quiz-builder' ) === false && strpos( $hook, 'alvobot-quiz' ) === false ) {
+		if ( strpos( $hook, 'alvobot-quiz-builder' ) === false ) {
 			return;
 		}
 
@@ -224,6 +224,15 @@ class AlvoBotPro_QuizBuilder {
 		// Load quiz builder JavaScript
 		$quiz_js = plugin_dir_path( __FILE__ ) . 'assets/js/quiz-builder.js';
 		if ( file_exists( $quiz_js ) ) {
+			// Ensure Lucide icons are available for quiz builder
+			wp_enqueue_script(
+				'lucide-icons',
+				'https://unpkg.com/lucide@0.564.0/dist/umd/lucide.min.js',
+				array(),
+				'0.564.0',
+				true
+			);
+
 			// Sortable.js for drag and drop
 			wp_enqueue_script(
 				'sortable-js',
@@ -236,7 +245,7 @@ class AlvoBotPro_QuizBuilder {
 			wp_enqueue_script(
 				'alvobot-quiz-builder',
 				plugin_dir_url( __FILE__ ) . 'assets/js/quiz-builder.js',
-				array( 'jquery', 'sortable-js' ),
+				array( 'jquery', 'sortable-js', 'lucide-icons' ),
 				ALVOBOT_PRO_VERSION,
 				true
 			);
@@ -250,6 +259,12 @@ class AlvoBotPro_QuizBuilder {
 					'nonce'    => wp_create_nonce( 'alvobot_quiz_nonce' ),
 					'quiz_url' => ALVOBOT_QUIZ_URL,
 				)
+			);
+
+			// Re-init Lucide icons after quiz builder JS renders dynamic content
+			wp_add_inline_script(
+				'alvobot-quiz-builder',
+				'if (typeof lucide !== "undefined") { lucide.createIcons(); }'
 			);
 		}
 	}

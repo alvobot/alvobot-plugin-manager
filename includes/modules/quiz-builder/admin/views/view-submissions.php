@@ -15,11 +15,13 @@ $submissions_handler = new Alvobot_Quiz_Submissions();
 $submissions_handler->create_table();
 
 // Get filters from URL
-$current_quiz_id   = isset( $_GET['quiz_id'] ) ? sanitize_text_field( $_GET['quiz_id'] ) : '';
-$current_search    = isset( $_GET['search'] ) ? sanitize_text_field( $_GET['search'] ) : '';
-$current_date_from = isset( $_GET['date_from'] ) ? sanitize_text_field( $_GET['date_from'] ) : '';
-$current_date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( $_GET['date_to'] ) : '';
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Display logic for admin list table filters, no data modification.
+$current_quiz_id   = isset( $_GET['quiz_id'] ) ? sanitize_text_field( wp_unslash( $_GET['quiz_id'] ) ) : '';
+$current_search    = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
+$current_date_from = isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '';
+$current_date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '';
 $current_page      = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
 $per_page          = 20;
 
 $filters = array(
@@ -37,16 +39,19 @@ $submissions = $submissions_handler->get_submissions( $filters, $per_page, $offs
 $quiz_ids    = $submissions_handler->get_quiz_ids();
 
 // Build export URL with current filters
-$export_url = add_query_arg(
-	array_merge(
-		array(
-			'page'   => 'alvobot-quiz-builder',
-			'tab'    => 'submissions',
-			'export' => 'csv',
+$export_url = wp_nonce_url(
+	add_query_arg(
+		array_merge(
+			array(
+				'page'   => 'alvobot-quiz-builder',
+				'tab'    => 'submissions',
+				'export' => 'csv',
+			),
+			array_filter( $filters )
 		),
-		array_filter( $filters )
+		admin_url( 'admin.php' )
 	),
-	admin_url( 'admin.php' )
+	'alvobot_quiz_export_csv'
 );
 ?>
 
@@ -56,13 +61,13 @@ $export_url = add_query_arg(
 	<!-- Header Actions -->
 	<div class="alvobot-submissions-header">
 		<div class="header-info">
-			<h2><?php _e( 'Leads Capturados', 'alvobot-pro' ); ?></h2>
-			<span class="alvobot-badge alvobot-badge-info"><?php printf( __( '%d registro(s)', 'alvobot-pro' ), $total_items ); ?></span>
+			<h2><?php esc_html_e( 'Leads Capturados', 'alvobot-pro' ); ?></h2>
+			<span class="alvobot-badge alvobot-badge-info"><?php printf( esc_html__( '%d registro(s)', 'alvobot-pro' ), intval( $total_items ) ); ?></span>
 		</div>
 		<div class="header-actions">
 			<a href="<?php echo esc_url( $export_url ); ?>" class="alvobot-btn alvobot-btn-outline">
 				<i data-lucide="download" class="alvobot-icon"></i>
-				<?php _e( 'Exportar CSV', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Exportar CSV', 'alvobot-pro' ); ?>
 			</a>
 		</div>
 	</div>
@@ -75,9 +80,9 @@ $export_url = add_query_arg(
 
 			<div class="alvobot-filter-row">
 				<div class="alvobot-filter-group">
-					<label for="quiz_id"><?php _e( 'Quiz:', 'alvobot-pro' ); ?></label>
+					<label for="quiz_id"><?php esc_html_e( 'Quiz:', 'alvobot-pro' ); ?></label>
 					<select name="quiz_id" id="quiz_id" class="alvobot-select">
-						<option value=""><?php _e( 'Todos os quizzes', 'alvobot-pro' ); ?></option>
+						<option value=""><?php esc_html_e( 'Todos os quizzes', 'alvobot-pro' ); ?></option>
 						<?php foreach ( $quiz_ids as $quiz_id ) : ?>
 							<option value="<?php echo esc_attr( $quiz_id ); ?>" <?php selected( $current_quiz_id, $quiz_id ); ?>>
 								<?php echo esc_html( substr( $quiz_id, 0, 12 ) . '...' ); ?>
@@ -87,27 +92,27 @@ $export_url = add_query_arg(
 				</div>
 
 				<div class="alvobot-filter-group">
-					<label for="search"><?php _e( 'Buscar:', 'alvobot-pro' ); ?></label>
+					<label for="search"><?php esc_html_e( 'Buscar:', 'alvobot-pro' ); ?></label>
 					<input type="text" name="search" id="search" class="alvobot-input"
-							placeholder="<?php _e( 'Nome, email ou telefone...', 'alvobot-pro' ); ?>"
+							placeholder="<?php esc_attr_e( 'Nome, email ou telefone...', 'alvobot-pro' ); ?>"
 							value="<?php echo esc_attr( $current_search ); ?>">
 				</div>
 
 				<div class="alvobot-filter-group">
-					<label for="date_from"><?php _e( 'De:', 'alvobot-pro' ); ?></label>
+					<label for="date_from"><?php esc_html_e( 'De:', 'alvobot-pro' ); ?></label>
 					<input type="date" name="date_from" id="date_from" class="alvobot-input"
 							value="<?php echo esc_attr( $current_date_from ); ?>">
 				</div>
 
 				<div class="alvobot-filter-group">
-					<label for="date_to"><?php _e( 'Até:', 'alvobot-pro' ); ?></label>
+					<label for="date_to"><?php esc_html_e( 'Até:', 'alvobot-pro' ); ?></label>
 					<input type="date" name="date_to" id="date_to" class="alvobot-input"
 							value="<?php echo esc_attr( $current_date_to ); ?>">
 				</div>
 
 				<div class="alvobot-filter-actions">
-					<button type="submit" class="alvobot-btn alvobot-btn-primary"><?php _e( 'Filtrar', 'alvobot-pro' ); ?></button>
-					<a href="?page=alvobot-quiz-builder&tab=submissions" class="alvobot-btn alvobot-btn-ghost"><?php _e( 'Limpar', 'alvobot-pro' ); ?></a>
+					<button type="submit" class="alvobot-btn alvobot-btn-primary"><?php esc_html_e( 'Filtrar', 'alvobot-pro' ); ?></button>
+					<a href="?page=alvobot-quiz-builder&tab=submissions" class="alvobot-btn alvobot-btn-ghost"><?php esc_html_e( 'Limpar', 'alvobot-pro' ); ?></a>
 				</div>
 			</div>
 		</form>
@@ -120,14 +125,14 @@ $export_url = add_query_arg(
 		<!-- Bulk Actions -->
 		<div class="alvobot-bulk-actions">
 			<select name="bulk_action" class="alvobot-select">
-				<option value=""><?php _e( 'Ações em massa', 'alvobot-pro' ); ?></option>
-				<option value="delete"><?php _e( 'Excluir selecionados', 'alvobot-pro' ); ?></option>
+				<option value=""><?php esc_html_e( 'Ações em massa', 'alvobot-pro' ); ?></option>
+				<option value="delete"><?php esc_html_e( 'Excluir selecionados', 'alvobot-pro' ); ?></option>
 			</select>
-			<button type="submit" class="alvobot-btn alvobot-btn-outline" onclick="return confirm('<?php _e( 'Tem certeza que deseja executar esta ação?', 'alvobot-pro' ); ?>');">
-				<?php _e( 'Aplicar', 'alvobot-pro' ); ?>
+			<button type="submit" class="alvobot-btn alvobot-btn-outline" onclick="return confirm('<?php esc_html_e( 'Tem certeza que deseja executar esta ação?', 'alvobot-pro' ); ?>');">
+				<?php esc_html_e( 'Aplicar', 'alvobot-pro' ); ?>
 			</button>
 			<span class="alvobot-selected-count" style="display: none;">
-				<span class="count">0</span> <?php _e( 'selecionado(s)', 'alvobot-pro' ); ?>
+				<span class="count">0</span> <?php esc_html_e( 'selecionado(s)', 'alvobot-pro' ); ?>
 			</span>
 		</div>
 
@@ -138,8 +143,8 @@ $export_url = add_query_arg(
 					<div class="alvobot-empty-icon">
 						<i data-lucide="users" class="alvobot-icon"></i>
 					</div>
-					<h3><?php _e( 'Nenhum lead capturado ainda', 'alvobot-pro' ); ?></h3>
-					<p><?php _e( 'Os leads aparecerão aqui quando usuários preencherem os formulários do quiz.', 'alvobot-pro' ); ?></p>
+					<h3><?php esc_html_e( 'Nenhum lead capturado ainda', 'alvobot-pro' ); ?></h3>
+					<p><?php esc_html_e( 'Os leads aparecerão aqui quando usuários preencherem os formulários do quiz.', 'alvobot-pro' ); ?></p>
 				</div>
 			<?php else : ?>
 				<table class="alvobot-table">
@@ -148,13 +153,13 @@ $export_url = add_query_arg(
 							<th class="check-column">
 								<input type="checkbox" id="select-all">
 							</th>
-							<th class="column-name"><?php _e( 'Nome', 'alvobot-pro' ); ?></th>
-							<th class="column-email"><?php _e( 'Email', 'alvobot-pro' ); ?></th>
-							<th class="column-phone"><?php _e( 'Telefone', 'alvobot-pro' ); ?></th>
-							<th class="column-quiz"><?php _e( 'Quiz ID', 'alvobot-pro' ); ?></th>
-							<th class="column-page"><?php _e( 'Página', 'alvobot-pro' ); ?></th>
-							<th class="column-date"><?php _e( 'Data', 'alvobot-pro' ); ?></th>
-							<th class="column-actions"><?php _e( 'Ações', 'alvobot-pro' ); ?></th>
+							<th class="column-name"><?php esc_html_e( 'Nome', 'alvobot-pro' ); ?></th>
+							<th class="column-email"><?php esc_html_e( 'Email', 'alvobot-pro' ); ?></th>
+							<th class="column-phone"><?php esc_html_e( 'Telefone', 'alvobot-pro' ); ?></th>
+							<th class="column-quiz"><?php esc_html_e( 'Quiz ID', 'alvobot-pro' ); ?></th>
+							<th class="column-page"><?php esc_html_e( 'Página', 'alvobot-pro' ); ?></th>
+							<th class="column-date"><?php esc_html_e( 'Data', 'alvobot-pro' ); ?></th>
+							<th class="column-actions"><?php esc_html_e( 'Ações', 'alvobot-pro' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -177,7 +182,7 @@ $export_url = add_query_arg(
 								</td>
 								<td class="column-phone">
 									<?php if ( $submission->phone ) : ?>
-										<a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $submission->phone ) ); ?>" target="_blank" class="alvobot-link alvobot-whatsapp-link" title="<?php _e( 'Abrir no WhatsApp', 'alvobot-pro' ); ?>">
+										<a href="https://wa.me/<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $submission->phone ) ); ?>" target="_blank" class="alvobot-link alvobot-whatsapp-link" title="<?php esc_attr_e( 'Abrir no WhatsApp', 'alvobot-pro' ); ?>">
 											<i data-lucide="message-circle" class="alvobot-icon"></i>
 											<?php echo esc_html( $submission->phone ); ?>
 										</a>
@@ -208,7 +213,7 @@ $export_url = add_query_arg(
 									<button type="button" class="alvobot-btn alvobot-btn-ghost alvobot-btn-sm view-details"
 											data-id="<?php echo esc_attr( $submission->id ); ?>"
 											data-answers="<?php echo esc_attr( $submission->answers ); ?>"
-											title="<?php _e( 'Ver detalhes', 'alvobot-pro' ); ?>">
+											title="<?php esc_attr_e( 'Ver detalhes', 'alvobot-pro' ); ?>">
 										<i data-lucide="eye" class="alvobot-icon"></i>
 									</button>
 								</td>
@@ -224,7 +229,7 @@ $export_url = add_query_arg(
 	<?php if ( $total_pages > 1 ) : ?>
 		<div class="alvobot-pagination">
 			<span class="alvobot-pagination-info">
-				<?php printf( __( '%d itens', 'alvobot-pro' ), $total_items ); ?>
+				<?php printf( esc_html__( '%d itens', 'alvobot-pro' ), intval( $total_items ) ); ?>
 			</span>
 			<div class="alvobot-pagination-links">
 				<?php
@@ -253,7 +258,7 @@ $export_url = add_query_arg(
 				<?php endif; ?>
 
 				<span class="alvobot-pagination-current">
-					<?php echo $current_page; ?> / <?php echo $total_pages; ?>
+					<?php echo intval( $current_page ); ?> / <?php echo intval( $total_pages ); ?>
 				</span>
 
 				<?php if ( $current_page < $total_pages ) : ?>
@@ -277,11 +282,11 @@ $export_url = add_query_arg(
 	<div class="alvobot-modal-overlay"></div>
 	<div class="alvobot-modal-content">
 		<div class="alvobot-modal-header">
-			<h3><?php _e( 'Detalhes do Lead', 'alvobot-pro' ); ?></h3>
+			<h3><?php esc_html_e( 'Detalhes do Lead', 'alvobot-pro' ); ?></h3>
 			<button type="button" class="alvobot-modal-close">&times;</button>
 		</div>
 		<div class="alvobot-modal-body">
-			<h4><?php _e( 'Respostas do Quiz:', 'alvobot-pro' ); ?></h4>
+			<h4><?php esc_html_e( 'Respostas do Quiz:', 'alvobot-pro' ); ?></h4>
 			<pre id="answers-content" class="alvobot-code-block"></pre>
 		</div>
 	</div>
@@ -750,7 +755,7 @@ jQuery(document).ready(function($) {
 				formatted = answers;
 			}
 		} else {
-			formatted = '<?php _e( 'Nenhuma resposta registrada', 'alvobot-pro' ); ?>';
+			formatted = '<?php esc_html_e( 'Nenhuma resposta registrada', 'alvobot-pro' ); ?>';
 		}
 
 		$('#answers-content').text(formatted);

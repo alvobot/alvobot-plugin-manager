@@ -315,7 +315,7 @@
 
 	// Initialize when document is ready
 	$(document).ready(function () {
-		CTACardsAdmin.init();
+		CTACardsBuilder.init();
 	});
 
 	// Add CSS for enhanced styling

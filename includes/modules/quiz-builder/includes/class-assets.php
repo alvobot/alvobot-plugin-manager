@@ -78,7 +78,7 @@ class Alvobot_Quiz_Assets {
 	 */
 	public function enqueue_admin_assets( $hook ) {
 		// Only load on quiz builder admin pages
-		if ( strpos( $hook, 'alvobot-quiz' ) === false ) {
+		if ( strpos( $hook, 'alvobot-quiz-builder' ) === false ) {
 			return;
 		}
 
@@ -116,10 +116,10 @@ class Alvobot_Quiz_Assets {
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'alvobot_quiz_admin_nonce' ),
 				'strings' => array(
-					'confirm_delete' => __( 'Are you sure you want to delete this question?', 'alvobot-quiz' ),
-					'confirm_clear'  => __( 'Are you sure you want to clear everything?', 'alvobot-quiz' ),
-					'copied'         => __( 'Copied!', 'alvobot-quiz' ),
-					'copy_error'     => __( 'Error copying', 'alvobot-quiz' ),
+					'confirm_delete' => __( 'Are you sure you want to delete this question?', 'alvobot-pro' ),
+					'confirm_clear'  => __( 'Are you sure you want to clear everything?', 'alvobot-pro' ),
+					'copied'         => __( 'Copied!', 'alvobot-pro' ),
+					'copy_error'     => __( 'Error copying', 'alvobot-pro' ),
 				),
 			)
 		);
