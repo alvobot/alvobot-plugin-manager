@@ -616,6 +616,7 @@
                             
                             <div class="alvobot-selected-count" style="margin-top: 16px; padding: 12px; background: #f6f7f7; border-radius: 6px; display: none;">
                                 <strong>Idiomas selecionados:</strong> <span id="selected-lang-count">0</span>
+                                <span id="alvobot-credit-cost-info" style="margin-left: 12px; color: #666;"></span>
                             </div>
                         </div>
                     </div>
@@ -681,11 +682,19 @@
 			updateSelectionCount(selectedLanguages.length);
 		});
 
-		// Update selection count and enable/disable translate button
+		// Update selection count, credit cost, and enable/disable translate button
 		function updateSelectionCount(count) {
 			$('#selected-lang-count').text(count);
 			$('.alvobot-selected-count').toggle(count > 0);
 			$('#alvobot-start-bulk-translation').prop('disabled', count === 0);
+
+			// Show estimated credit cost (title + excerpt + ~3 chunks per language = ~5 credits/lang)
+			if (count > 0) {
+				var estimatedCost = count * 5;
+				$('#alvobot-credit-cost-info').html('| Custo estimado: ~<strong>' + estimatedCost + '</strong> creditos');
+			} else {
+				$('#alvobot-credit-cost-info').text('');
+			}
 		}
 
 		// Cancel button

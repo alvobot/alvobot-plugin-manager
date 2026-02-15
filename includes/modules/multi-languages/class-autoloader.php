@@ -68,6 +68,7 @@ class AlvoBotPro_MultiLanguages_Autoloader {
 			// Core Classes
 			'AlvoBotPro_Translation_Engine'              => 'includes/class-translation-engine.php',
 			'AlvoBotPro_Translation_Queue'               => 'includes/class-translation-queue.php',
+			'AlvoBotPro_Credit_Translation_Provider'     => 'includes/class-credit-translation-provider.php',
 			'AlvoBotPro_OpenAI_Translation_Provider'     => 'includes/class-translation-providers.php',
 		);
 	}

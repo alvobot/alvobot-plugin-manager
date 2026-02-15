@@ -157,12 +157,41 @@
         },
 
         /**
-         * Atualiza todos os badges de creditos na pagina
+         * Atualiza todos os badges e cards de creditos na pagina
          */
         _updateAllBadges: function() {
+            var credits = alvobotAI.credits || {};
+
             $('.alvobot-credits-badge-container').each(function() {
                 AlvobotAI.renderCreditsBadge($(this));
             });
+
+            // Atualiza o card principal da dashboard (se existir)
+            var $card = $('.alvobot-credits-card');
+            if ($card.length && credits.has_active_plan) {
+                var total = parseInt(credits.total_available) || 0;
+                var limit = parseInt(credits.monthly_limit) || 0;
+                var used = parseInt(credits.monthly_used) || 0;
+                var extra = parseInt(credits.extra_available) || 0;
+                var pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                var barColor = pct >= 90 ? 'red' : (pct >= 75 ? 'yellow' : 'green');
+
+                // Atualiza texto de uso
+                var detailText = used + ' de ' + limit + ' créditos mensais usados';
+                if (extra > 0) {
+                    detailText += ' <span class="alvobot-credits-card-extra">+' + extra + ' extras</span>';
+                }
+                $card.find('.alvobot-credits-card-detail').html(detailText);
+
+                // Atualiza número grande
+                $card.find('.alvobot-credits-value').text(total);
+
+                // Atualiza barra de progresso
+                var $fill = $card.find('.alvobot-credits-bar-fill');
+                $fill.css('width', pct + '%')
+                    .removeClass('red yellow green')
+                    .addClass(barColor);
+            }
         }
     };
 

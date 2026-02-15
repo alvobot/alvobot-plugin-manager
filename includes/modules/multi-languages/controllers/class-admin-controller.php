@@ -324,7 +324,7 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 				$formatted_message .= ' - Context: ' . json_encode( $context );
 			}
 
-			error_log( $formatted_message );
+			AlvoBotPro::debug_log( 'multi-languages', $formatted_message );
 		}
 
 		// Armazena logs em transient para exibição no admin
@@ -367,7 +367,11 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 		AlvoBotPro::debug_log( 'multi-languages', 'Iniciando render_settings_page' );
 
 		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'settings';
-		$valid_tabs  = array( 'settings', 'openai', 'queue', 'api-docs' );
+		// Redirect legacy 'openai' tab to 'credits'
+		if ( $current_tab === 'openai' ) {
+			$current_tab = 'credits';
+		}
+		$valid_tabs = array( 'settings', 'credits', 'queue', 'api-docs' );
 
 		if ( ! in_array( $current_tab, $valid_tabs ) ) {
 			$current_tab = 'settings';
@@ -388,7 +392,7 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	private function render_tab_navigation( $current_tab ) {
 		$tabs = array(
 			'settings' => array( 'label' => __( 'Configurações', 'alvobot-pro' ), 'icon' => 'settings' ),
-			'openai'   => array( 'label' => __( 'OpenAI', 'alvobot-pro' ),         'icon' => 'bot' ),
+			'credits'  => array( 'label' => __( 'Créditos IA', 'alvobot-pro' ),   'icon' => 'ticket' ),
 			'queue'    => array( 'label' => __( 'Fila de Traduções', 'alvobot-pro' ), 'icon' => 'list-ordered' ),
 			'api-docs' => array( 'label' => __( 'API Docs', 'alvobot-pro' ),       'icon' => 'book-open' ),
 		);
@@ -419,7 +423,7 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 		$template_dir = __DIR__ . '/../templates/';
 		$template_map = array(
 			'settings' => 'multi-languages-settings.php',
-			'openai'   => 'multi-languages-openai-settings.php',
+			'credits'  => 'multi-languages-credits-settings.php',
 			'queue'    => 'translation-queue.php',
 			'api-docs' => 'multi-languages-api-docs.php',
 		);

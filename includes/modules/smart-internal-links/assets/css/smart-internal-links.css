@@ -1,0 +1,138 @@
+/* Smart Internal Links - Frontend Styles */
+
+.alvobot-sil {
+	margin: 2em 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-sizing: border-box;
+}
+
+.alvobot-sil__list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6em;
+}
+
+.alvobot-sil__btn {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.9em 1.4em;
+	border-radius: 50px;
+	text-decoration: none !important;
+	font-size: 1em;
+	font-weight: 600;
+	line-height: 1.3;
+	transition: filter 0.2s ease, transform 0.2s ease;
+	box-sizing: border-box;
+	border: none;
+	cursor: pointer;
+}
+
+.alvobot-sil__btn:visited {
+	color: inherit;
+}
+
+.alvobot-sil__btn:hover,
+.alvobot-sil__btn:focus {
+	filter: brightness(1.15);
+	transform: translateX(3px);
+	text-decoration: none !important;
+	color: inherit;
+}
+
+.alvobot-sil__btn:focus-visible {
+	outline: 2px solid #D4A843;
+	outline-offset: 2px;
+}
+
+.alvobot-sil__text {
+	flex: 1;
+	margin-right: 0.8em;
+}
+
+.alvobot-sil__arrow {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	animation: sil-nudge 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.alvobot-sil__btn:nth-child(2) .alvobot-sil__arrow {
+	animation-duration: 11s;
+	animation-delay: 3.7s;
+}
+
+.alvobot-sil__btn:nth-child(3) .alvobot-sil__arrow {
+	animation-duration: 13s;
+	animation-delay: 7.1s;
+}
+
+.alvobot-sil__btn:nth-child(4) .alvobot-sil__arrow {
+	animation-duration: 9s;
+	animation-delay: 5.3s;
+}
+
+.alvobot-sil__btn:nth-child(5) .alvobot-sil__arrow {
+	animation-duration: 14s;
+	animation-delay: 1.9s;
+}
+
+@keyframes sil-nudge {
+	0%, 86%, 100% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+	89% {
+		transform: translateX(5px);
+		opacity: 0.7;
+	}
+	92% {
+		transform: translateX(-1px);
+		opacity: 1;
+	}
+	94% {
+		transform: translateX(3px);
+		opacity: 0.85;
+	}
+}
+
+.alvobot-sil__btn:hover .alvobot-sil__arrow {
+	animation: none;
+}
+
+.alvobot-sil__disclaimer {
+	margin: 0.8em 0 0;
+	padding: 0;
+	font-size: 0.8em;
+	text-align: center;
+	color: #888;
+	font-weight: 400;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+	.alvobot-sil {
+		margin: 1.5em 0;
+		padding: 0.8em;
+		border-radius: 8px;
+	}
+
+	.alvobot-sil__btn {
+		padding: 0.75em 1em;
+		font-size: 0.9em;
+		border-radius: 40px;
+	}
+
+	.alvobot-sil__text {
+		margin-right: 0.5em;
+	}
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+	.alvobot-sil__arrow {
+		animation: none;
+	}
+}

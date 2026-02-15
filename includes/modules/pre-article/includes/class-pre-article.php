@@ -989,12 +989,6 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 							<h1><?php _e( 'Páginas de Pré-Artigo', 'alvobot-pre-artigo' ); ?></h1>
 							<p><?php _e( 'Configure as opções do módulo de pré-artigo para melhorar a experiência dos seus leitores e aumentar o engajamento.', 'alvobot-pre-artigo' ); ?></p>
 						</div>
-						<?php if ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) : ?>
-						<a href="<?php echo esc_url( add_query_arg( 'debug_translations', '1' ) ); ?>" class="alvobot-btn alvobot-btn-secondary" style="margin-left: auto;">
-							<i data-lucide="wrench" class="alvobot-icon"></i>
-							<?php _e( 'Debug Traduções', 'alvobot-pre-artigo' ); ?>
-						</a>
-						<?php endif; ?>
 					</div>
 					
 					<div class="alvobot-notice-container">
@@ -1242,12 +1236,6 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 			}
 
 			AlvoBotPro::debug_log( 'pre-article', 'Permissões OK, renderizando página' );
-
-			// Debug de traduções se solicitado
-			if ( isset( $_GET['debug_translations'] ) ) {
-				include dirname( __DIR__ ) . '/debug-translations.php';
-				return;
-			}
 
 			// Renderiza a página de configurações
 			$this->create_admin_page();

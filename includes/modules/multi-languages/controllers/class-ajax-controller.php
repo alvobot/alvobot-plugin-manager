@@ -109,7 +109,8 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 		add_action( 'wp_ajax_alvobot_remove_queue_item', array( $this, 'remove_queue_item' ) );
 		add_action( 'wp_ajax_alvobot_download_queue_item_logs', array( $this, 'download_queue_item_logs' ) );
 		add_action( 'wp_ajax_alvobot_reset_orphaned_items', array( $this, 'reset_orphaned_items' ) );
-		add_action( 'wp_ajax_alvobot_test_openai_connection', array( $this, 'test_openai_connection' ) );
+		add_action( 'wp_ajax_alvobot_test_translation_connection', array( $this, 'test_translation_connection' ) );
+		add_action( 'wp_ajax_alvobot_test_openai_connection', array( $this, 'test_translation_connection' ) ); // backward-compat alias
 		add_action( 'wp_ajax_alvobot_reset_usage_stats', array( $this, 'reset_usage_stats' ) );
 		add_action( 'wp_ajax_alvobot_get_queue_item_details', array( $this, 'get_queue_item_details' ) );
 
@@ -358,25 +359,37 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 	}
 
 	/**
-	 * Testa conexão com OpenAI
+	 * Testa conexao com o servico de traducao (creditos AlvoBot ou OpenAI fallback)
 	 */
-	public function test_openai_connection() {
+	public function test_translation_connection() {
 		try {
 			check_ajax_referer( 'alvobot_nonce', 'nonce' );
 
 			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_send_json_error( array( 'message' => 'Permissão negada' ) );
+				wp_send_json_error( array( 'message' => 'Permissao negada' ) );
 			}
 
-			// Carrega provider OpenAI
-			if ( ! class_exists( 'AlvoBotPro_OpenAI_Translation_Provider' ) ) {
-				require_once plugin_dir_path( __FILE__ ) . '../includes/class-translation-providers.php';
+			// Tenta o provider de creditos primeiro
+			if ( class_exists( 'AlvoBotPro_Credit_Translation_Provider' ) ) {
+				$credit_provider = new AlvoBotPro_Credit_Translation_Provider();
+				if ( $credit_provider->is_configured() ) {
+					$result = $credit_provider->test_connection();
+					wp_send_json_success( $result );
+					return;
+				}
 			}
 
-			$openai_provider = new AlvoBotPro_OpenAI_Translation_Provider();
-			$result          = $openai_provider->test_connection();
+			// Fallback para OpenAI
+			if ( class_exists( 'AlvoBotPro_OpenAI_Translation_Provider' ) ) {
+				$openai_provider = new AlvoBotPro_OpenAI_Translation_Provider();
+				if ( $openai_provider->is_configured() ) {
+					$result = $openai_provider->test_connection();
+					wp_send_json_success( $result );
+					return;
+				}
+			}
 
-			wp_send_json_success( $result );
+			wp_send_json_error( array( 'message' => 'Nenhum provider de traducao configurado. Conecte o site ao AlvoBot.' ) );
 
 		} catch ( Exception $e ) {
 			wp_send_json_error( array( 'message' => 'Erro interno: ' . $e->getMessage() ) );

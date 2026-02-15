@@ -36,6 +36,7 @@ class AlvoBotPro {
 			'temporary-login' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/temporary-login/class-temporary-login.php',
 			'quiz-builder'    => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder/class-quiz-builder.php',
 			'cta-cards'       => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/cta-cards/class-cta-cards.php',
+			'smart-internal-links' => ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/smart-internal-links/class-smart-internal-links.php',
 		);
 
 		foreach ( $module_files as $module => $file ) {
@@ -78,6 +79,7 @@ class AlvoBotPro {
 			'temporary-login' => true,
 			'quiz-builder'    => true,
 			'cta-cards'       => true,
+			'smart-internal-links' => true,
 		);
 
 		// Obtém os módulos ativos do banco de dados
@@ -112,6 +114,7 @@ class AlvoBotPro {
 			'temporary-login' => 'AlvoBotPro_TemporaryLogin',
 			'quiz-builder'    => 'AlvoBotPro_QuizBuilder',
 			'cta-cards'       => 'AlvoBotPro_CTACards',
+			'smart-internal-links' => 'AlvoBotPro_Smart_Internal_Links',
 		);
 
 		// Instancia apenas os módulos ativos
@@ -152,7 +155,7 @@ class AlvoBotPro {
 
 		// Converte para formato booleano
 		$debug_settings = array();
-		$module_ids     = array( 'logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards', 'auth' );
+		$module_ids     = array( 'logo_generator', 'author_box', 'pre-article', 'essential_pages', 'multi-languages', 'temporary-login', 'plugin-manager', 'quiz-builder', 'cta-cards', 'smart-internal-links', 'auth' );
 
 		foreach ( $module_ids as $module_id ) {
 			$debug_settings[ $module_id ] = isset( $debug_modules[ $module_id ] ) && $debug_modules[ $module_id ] == '1';
@@ -524,7 +527,8 @@ class AlvoBotPro {
 		// Verifica se estamos em uma página do plugin para carregar assets específicos
 		$is_plugin_page = ( strpos( $hook, 'alvobot-pro' ) !== false
 			|| strpos( $hook, 'alvobot-quiz' ) !== false
-			|| strpos( $hook, 'alvobot-cta' ) !== false );
+			|| strpos( $hook, 'alvobot-cta' ) !== false
+			|| strpos( $hook, 'alvobot-smart-links' ) !== false );
 
 		if ( $is_plugin_page ) {
 			// Lucide Icons (mesma CDN do Logo Generator)

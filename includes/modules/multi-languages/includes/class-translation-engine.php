@@ -49,20 +49,19 @@ class AlvoBotPro_Translation_Engine {
 	 * Carrega as configurações do motor de tradução
 	 */
 	private function load_settings() {
-		// Carrega configurações do OpenAI
 		$openai_settings = get_option( 'alvobot_openai_settings', array() );
 
 		$default_settings = array(
-			'active_provider'      => 'openai',
+			'active_provider'      => 'credits',
 			'cache_enabled'        => ! ( isset( $openai_settings['disable_cache'] ) && $openai_settings['disable_cache'] ),
-			'cache_duration'       => DAY_IN_SECONDS * 7, // 7 dias
-			'batch_size'           => 5, // Menor para OpenAI por causa dos custos
+			'cache_duration'       => DAY_IN_SECONDS * 7,
+			'batch_size'           => 5,
 			'max_string_length'    => 8000,
 			'preserve_formatting'  => true,
 			'translate_links'      => true,
 			'auto_detect_language' => true,
 			'rate_limiting'        => true,
-			'rate_limit_requests'  => 60, // Limitação mais restritiva para OpenAI
+			'rate_limit_requests'  => 60,
 			'rate_limit_period'    => HOUR_IN_SECONDS,
 		);
 
@@ -78,15 +77,37 @@ class AlvoBotPro_Translation_Engine {
 	 */
 	private function init_providers() {
 		try {
-			// Inicializa apenas o provider OpenAI diretamente
+			// Provider principal: creditos AlvoBot
+			if ( class_exists( 'AlvoBotPro_Credit_Translation_Provider' ) ) {
+				$credit_provider = new AlvoBotPro_Credit_Translation_Provider();
+				if ( $credit_provider->is_configured() ) {
+					$this->providers['credits'] = $credit_provider;
+					AlvoBotPro::debug_log( 'multi-languages', 'Provider AlvoBot Credits inicializado' );
+				} else {
+					AlvoBotPro::debug_log( 'multi-languages', 'Provider Credits: site nao registrado no AlvoBot' );
+				}
+			}
+
+			// Fallback: OpenAI direto (para sites com chave propria)
 			if ( class_exists( 'AlvoBotPro_OpenAI_Translation_Provider' ) ) {
-				$this->providers['openai'] = new AlvoBotPro_OpenAI_Translation_Provider();
-				AlvoBotPro::debug_log( 'multi-languages', 'Provider OpenAI inicializado' );
-			} else {
-				AlvoBotPro::debug_log( 'multi-languages', 'Classe OpenAI Provider não encontrada' );
+				$openai_provider = new AlvoBotPro_OpenAI_Translation_Provider();
+				if ( $openai_provider->is_configured() ) {
+					$this->providers['openai'] = $openai_provider;
+					AlvoBotPro::debug_log( 'multi-languages', 'Provider OpenAI inicializado (fallback)' );
+				}
+			}
+
+			// Auto-seleciona provider se o ativo nao esta disponivel
+			if ( ! isset( $this->providers[ $this->active_provider ] ) ) {
+				if ( isset( $this->providers['credits'] ) ) {
+					$this->active_provider = 'credits';
+				} elseif ( isset( $this->providers['openai'] ) ) {
+					$this->active_provider = 'openai';
+				}
+				AlvoBotPro::debug_log( 'multi-languages', 'Provider auto-selecionado: ' . $this->active_provider );
 			}
 		} catch ( Exception $e ) {
-			AlvoBotPro::debug_log( 'multi-languages', 'Erro ao inicializar provider: ' . $e->getMessage() );
+			AlvoBotPro::debug_log( 'multi-languages', 'Erro ao inicializar providers: ' . $e->getMessage() );
 		}
 	}
 
@@ -205,8 +226,8 @@ class AlvoBotPro_Translation_Engine {
 					$this->save_cache();
 				}
 
-				// Atualiza estatísticas de uso se for OpenAI
-				if ( $this->active_provider === 'openai' && isset( $result['usage'] ) ) {
+				// Atualiza estatisticas de uso
+				if ( isset( $result['usage'] ) ) {
 					$provider->update_usage_stats( $result['usage'] );
 				}
 
@@ -268,12 +289,7 @@ class AlvoBotPro_Translation_Engine {
 	 * @return array Resultados das traduções
 	 */
 	public function batch_translate( $texts, $source_lang, $target_lang, $options = array() ) {
-		// ===== DEBUG: Log início do batch_translate =====
-		error_log( '====== BATCH TRANSLATE DEBUG START ======' );
-		error_log( 'Total texts to translate: ' . count( $texts ) );
-		error_log( 'Source language: ' . $source_lang );
-		error_log( 'Target language: ' . $target_lang );
-		error_log( 'Options: ' . json_encode( $options ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Batch translate: ' . count( $texts ) . ' texts, ' . $source_lang . ' -> ' . $target_lang );
 
 		$results    = array();
 		$batch_size = $this->settings['batch_size'];
@@ -300,15 +316,13 @@ class AlvoBotPro_Translation_Engine {
 			}
 		}
 
-		error_log( 'Valid texts: ' . $valid_texts );
-		error_log( 'Empty texts: ' . $empty_texts );
-		error_log( 'Sample texts: ' . json_encode( $sample_texts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Batch: ' . $valid_texts . ' valid, ' . $empty_texts . ' empty texts' );
 
 		// Processa em lotes
 		$text_chunks = array_chunk( $texts, $batch_size );
 
 		foreach ( $text_chunks as $chunk_index => $chunk ) {
-			error_log( "Processing chunk {$chunk_index} with " . count( $chunk ) . ' texts' );
+			AlvoBotPro::debug_log( 'multi-languages', "Processing chunk {$chunk_index} with " . count( $chunk ) . ' texts' );
 			$chunk_results = array();
 
 			foreach ( $chunk as $text_index => $text_data ) {
@@ -322,21 +336,12 @@ class AlvoBotPro_Translation_Engine {
 					)
 				);
 
-				// Debug: Log cada texto antes de traduzir
-				error_log( "====== TRANSLATING TEXT {$text_index} ======" );
-				error_log( 'Text content: ' . substr( $text_content, 0, 200 ) . ( strlen( $text_content ) > 200 ? '...' : '' ) );
-				error_log( 'Text length: ' . strlen( $text_content ) );
-				error_log( 'Context: ' . ( $text_options['context'] ?? 'None' ) );
-				error_log( 'Preserve HTML: ' . ( $text_options['preserve_html'] ? 'YES' : 'NO' ) );
+				AlvoBotPro::debug_log( 'multi-languages', "Translating text {$text_index}: " . strlen( $text_content ) . ' chars, context: ' . ( $text_options['context'] ?? 'None' ) );
 
 				$result = $this->translate_text( $text_content, $source_lang, $target_lang, $text_options );
 
-				// Debug: Log resultado de cada tradução
-				error_log( 'Translation result success: ' . ( $result['success'] ? 'YES' : 'NO' ) );
-				if ( $result['success'] ) {
-					error_log( 'Translated text: ' . substr( $result['translated_text'] ?? '', 0, 200 ) );
-				} else {
-					error_log( 'Translation error: ' . ( $result['error'] ?? 'Unknown error' ) );
+				if ( ! $result['success'] ) {
+					AlvoBotPro::debug_log( 'multi-languages', 'Translation error for text ' . $text_index . ': ' . ( $result['error'] ?? 'Unknown error' ) );
 				}
 
 				$chunk_results[ $text_index ] = $result;
@@ -355,8 +360,7 @@ class AlvoBotPro_Translation_Engine {
 			}
 		}
 
-		error_log( '====== BATCH TRANSLATE DEBUG END ======' );
-		error_log( 'Total results: ' . count( $results ) );
+		AlvoBotPro::debug_log( 'multi-languages', 'Batch translate complete: ' . count( $results ) . ' results' );
 
 		return $results;
 	}
@@ -573,7 +577,7 @@ class AlvoBotPro_Translation_Engine {
 	 * Limpeza profunda do conteúdo para remover blocos complexos
 	 */
 	private function deep_clean_content( $content ) {
-		error_log( 'Deep cleaning content - before: ' . strlen( $content ) . ' chars' );
+		AlvoBotPro::debug_log( 'multi-languages', 'Deep cleaning content - before: ' . strlen( $content ) . ' chars' );
 
 		// Remove blocos inteiros que contêm anúncios
 		$patterns = array(
@@ -610,7 +614,7 @@ class AlvoBotPro_Translation_Engine {
 			$old_content = $content;
 			$content     = preg_replace( $pattern, '', $content );
 			if ( $old_content !== $content ) {
-				error_log( 'Pattern matched and removed content: ' . ( strlen( $old_content ) - strlen( $content ) ) . ' chars' );
+				AlvoBotPro::debug_log( 'multi-languages', 'Pattern matched and removed content: ' . ( strlen( $old_content ) - strlen( $content ) ) . ' chars' );
 			}
 		}
 
@@ -641,7 +645,7 @@ class AlvoBotPro_Translation_Engine {
 			++$iteration;
 		}
 
-		error_log( 'Deep cleaning content - after: ' . strlen( $content ) . ' chars, iterations: ' . $iteration );
+		AlvoBotPro::debug_log( 'multi-languages', 'Deep cleaning content - after: ' . strlen( $content ) . ' chars, iterations: ' . $iteration );
 
 		return $content;
 	}
@@ -951,7 +955,7 @@ class AlvoBotPro_Translation_Engine {
 
 		// Aplica limpeza de conteúdo se o texto contém HTML
 		if ( strpos( $text_string, '<' ) !== false ) {
-			error_log( 'Preprocessing: Detected HTML content, applying content cleaning' );
+			AlvoBotPro::debug_log( 'multi-languages', 'Preprocessing: Detected HTML content, applying content cleaning' );
 			$original_length = strlen( $text_string );
 
 			// Aplica limpeza básica
@@ -963,7 +967,7 @@ class AlvoBotPro_Translation_Engine {
 			}
 
 			$cleaned_length = strlen( $text_string );
-			error_log( "Content cleaning: {$original_length} -> {$cleaned_length} chars (" . round( ( ( $original_length - $cleaned_length ) / $original_length ) * 100, 1 ) . '% reduction)' );
+			AlvoBotPro::debug_log( 'multi-languages', "Content cleaning: {$original_length} -> {$cleaned_length} chars (" . round( ( ( $original_length - $cleaned_length ) / $original_length ) * 100, 1 ) . '% reduction)' );
 		}
 
 		// Preserva formatação HTML se necessário
@@ -1194,8 +1198,7 @@ class AlvoBotPro_Translation_Engine {
 		try {
 			do_action( 'alvobot_multi_languages_log', $log_entry );
 		} catch ( Exception $e ) {
-			// Fallback para error_log direto se o action falhar
-			error_log( '[Translation Engine] ' . strtoupper( $level ) . ': ' . $message );
+			AlvoBotPro::debug_log( 'multi-languages', strtoupper( $level ) . ': ' . $message );
 		}
 	}
 

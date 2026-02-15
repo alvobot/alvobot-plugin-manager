@@ -230,6 +230,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php endif; ?>
 		</div>
 		</div>
+
+		<!-- Módulo Smart Internal Links -->
+		<div class="alvobot-card <?php echo isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'module-enabled' : ''; ?>">
+		<div class="alvobot-card-header">
+			<div>
+			<h2 class="alvobot-card-title">Smart Internal Links</h2>
+			<p class="alvobot-card-subtitle">Links internos inteligentes com copy gerada por IA para aumentar o engajamento.</p>
+			</div>
+			<label class="alvobot-toggle">
+			<input type="checkbox"
+					data-module="smart-internal-links"
+					<?php echo isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'checked="checked"' : ''; ?>>
+			<span class="alvobot-toggle-slider"></span>
+			</label>
+		</div>
+		<div class="alvobot-card-footer">
+			<?php if ( isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ) : ?>
+			<a href="<?php echo admin_url( 'admin.php?page=alvobot-smart-links' ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
+			<?php endif; ?>
+		</div>
+		</div>
 	</div>
 
 	<!-- Seção Status do Sistema -->
@@ -435,6 +456,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'temporary-login' => 'Login Temporário',
 				'quiz-builder'    => 'Quiz Builder',
 				'cta-cards'       => 'CTA Cards',
+				'smart-internal-links' => 'Smart Internal Links',
 				'plugin-manager'  => 'Plugin Manager',
 				'updater'         => 'Sistema de Atualizações',
 				'auth'            => 'Autenticação REST API',

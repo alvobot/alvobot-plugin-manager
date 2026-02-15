@@ -355,6 +355,172 @@ if (button) {
 - Usar constantes globais do plugin: `ALVOBOT_PRO_VERSION`, `ALVOBOT_PRO_PLUGIN_URL`, etc.
 - Evitar criar constantes específicas do módulo quando possível
 
+## Design System — Padrão Obrigatório
+
+O plugin usa um design system unificado definido em `assets/css/styles.css`, alinhado com o App (`alvobot-app`). **Todo CSS admin deve usar variáveis CSS — nunca hardcode de cores, tamanhos ou espaçamentos.**
+
+### Paleta de Cores
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--alvobot-primary` | `#fbbf24` (amarelo) | Botões primários, destaques, ícones ativos |
+| `--alvobot-primary-dark` | `#d4970a` | Hover de primários |
+| `--alvobot-primary-light` | `#FFFBEC` | Backgrounds de seleção/destaque |
+| `--alvobot-secondary` | `#0E100D` | Texto em botão secundário |
+| `--alvobot-accent` | `#269AFF` (azul) | Links, elementos de ação |
+| `--alvobot-success` | `#12B76A` | Status positivo |
+| `--alvobot-error` | `#F63D68` | Erros, ações destrutivas |
+| `--alvobot-warning` | `#FDB022` | Alertas |
+| `--alvobot-info` | `#269AFF` | Informativos |
+
+**Neutros (Zinc scale):**
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--alvobot-white` | `#ffffff` | Fundo de cards |
+| `--alvobot-gray-50` | `#FCFCFD` | Fundo de headers/footers internos |
+| `--alvobot-gray-100` | `#F9FAFB` | Backgrounds sutis |
+| `--alvobot-gray-200` | `#F2F4F7` | **Apenas backgrounds** (nunca para borders) |
+| `--alvobot-gray-300` | `#E4E4E7` | **Todas as borders** (padrão obrigatório) |
+| `--alvobot-gray-400` | `#D4D4D8` | Placeholders, ícones inativos |
+| `--alvobot-gray-500` | `#A1A1AA` | Borders de elementos interativos (toggles, estados ativos) |
+| `--alvobot-gray-600` | `#6B7280` | Texto secundário |
+| `--alvobot-gray-700` | `#52525B` | Labels de formulário |
+| `--alvobot-gray-800` | `#344054` | Texto de ênfase |
+| `--alvobot-gray-900` | `#18181B` | Títulos, texto principal |
+
+### Borders — Regra Obrigatória
+
+**Todas as borders estruturais usam `var(--alvobot-gray-300)`:**
+
+```css
+/* Cards, containers, inputs, dividers — sempre gray-300 */
+border: 1px solid var(--alvobot-gray-300);
+
+/* NUNCA usar: */
+border: 1px solid var(--alvobot-gray-200);  /* ❌ */
+border: 1px solid #e5e5e5;                   /* ❌ */
+border: 1px solid #dcdcde;                   /* ❌ */
+```
+
+Exceção: `gray-500` para borders de elementos interativos (toggles, switches, estados ativos).
+
+### Tipografia
+
+```
+Família: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+```
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--alvobot-font-size-xs` | `12px` | Labels pequenos, badges |
+| `--alvobot-font-size-sm` | `13px` | Texto secundário, botões |
+| `--alvobot-font-size-base` | `14px` | Texto padrão |
+| `--alvobot-font-size-lg` | `16px` | Subtítulos |
+| `--alvobot-font-size-xl` | `18px` | Títulos de seção |
+| `--alvobot-font-size-2xl` | `20px` | Títulos de card |
+| `--alvobot-font-size-3xl` | `24px` | Título da página |
+
+### Espaçamento
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--alvobot-space-xs` | `4px` | Gaps internos mínimos |
+| `--alvobot-space-sm` | `8px` | Padding de badges, gaps entre elementos |
+| `--alvobot-space-md` | `12px` | Padding de inputs, gap de grids |
+| `--alvobot-space-lg` | `16px` | Padding de cards, gaps de seção |
+| `--alvobot-space-xl` | `20px` | Padding de containers |
+| `--alvobot-space-2xl` | `24px` | Gap entre cards |
+| `--alvobot-space-3xl` | `32px` | Margem entre seções |
+
+### Border Radius
+
+| Token | Valor | Uso |
+|-------|-------|-----|
+| `--alvobot-radius-sm` | `4px` | Inputs, badges |
+| `--alvobot-radius-md` | `8px` | Botões, dropdowns |
+| `--alvobot-radius-lg` | `12px` | Cards, containers |
+| `--alvobot-radius-xl` | `16px` | Modais |
+| `--alvobot-radius-full` | `9999px` | Pills, avatares |
+
+### Sombras
+
+| Token | Uso |
+|-------|-----|
+| `--alvobot-shadow-sm` | Cards padrão |
+| `--alvobot-shadow-md` | Cards hover, dropdowns |
+| `--alvobot-shadow-lg` | Modais, popovers |
+| `--alvobot-shadow-xl` | Overlays |
+
+### Componentes Padrão
+
+**Card:**
+```css
+.alvobot-card {
+    background: var(--alvobot-white);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-lg);
+    padding: var(--alvobot-space-2xl);
+}
+```
+
+**Input:**
+```css
+.alvobot-input {
+    height: 40px;
+    padding: 0 var(--alvobot-space-md);
+    border: 1px solid var(--alvobot-gray-300);
+    border-radius: var(--alvobot-radius-md);
+    font-size: var(--alvobot-font-size-base);
+}
+```
+
+**Botão primário:**
+```css
+.alvobot-btn-primary {
+    background: var(--alvobot-primary);
+    color: var(--alvobot-secondary);
+    border: none;
+    border-radius: var(--alvobot-radius-md);
+    padding: var(--alvobot-space-sm) var(--alvobot-space-lg);
+    font-weight: 600;
+}
+```
+
+### Ícones
+
+O plugin usa **Lucide Icons** (SVG inline via JS). Nunca usar Dashicons do WordPress nos módulos admin.
+
+```php
+// No PHP: usar data-lucide attribute
+<i data-lucide="icon-name" class="alvobot-icon"></i>
+
+// No JS: inicializar com lucide.createIcons()
+```
+
+### CSS de Módulos
+
+Cada módulo pode ter CSS próprio em `modules/<nome>/assets/css/`. As regras:
+
+1. **Sempre importar ou depender de** `assets/css/styles.css` (carregado globalmente)
+2. **Sempre usar variáveis CSS** do design system
+3. **Nunca hardcodar cores** — usar `var(--alvobot-gray-300)`, não `#e5e5e5`
+4. **Borders sempre `gray-300`** — padronizado em todo o plugin
+5. **Frontend CSS (public-facing)** pode usar hardcoded se variáveis CSS não estiverem disponíveis
+
+### Color Picker (WordPress Iris)
+
+O plugin usa o color picker nativo do WordPress com overrides mínimos:
+- Popover posicionado com backdrop
+- Hex input e botão "Limpar" estilizados para match do design system
+- Border-radius no iris-picker box
+- Internos do Iris mantêm estilo padrão do WordPress (não sobrescrever)
+
+Seletores de override precisam de 3+ níveis para vencer a especificidade do WP core:
+```css
+.alvobot-admin-wrap .wp-picker-container input[type="text"].wp-color-picker { ... }
+```
+
 ## Módulos Específicos
 
 ### Login Temporário
