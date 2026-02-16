@@ -251,11 +251,16 @@ class AlvoBotPro_NomeDoModulo {
 ```
 
 ### Registro do Módulo
-1. Adicionar em `class-alvobot-pro.php`:
-   - Array `$module_files` com caminho do arquivo principal
-   - Array `$default_modules` com status padrão (true/false)
-   - Array `$module_classes` com mapeamento classe => id
-   - Array `$module_names` no dashboard
+1. Adicionar uma ÚNICA entrada em `self::$module_registry` dentro de `class-alvobot-pro.php`:
+   ```php
+   'meu-modulo' => array(
+       'file'    => 'includes/modules/meu-modulo/class-meu-modulo.php',
+       'class'   => 'AlvoBotPro_MeuModulo',
+       'name'    => 'Meu Módulo',
+       'default' => true,
+   ),
+   ```
+   Isso é tudo — file paths, defaults, class mapping e display names são derivados automaticamente do registry.
 
 2. NÃO criar menus duplicados - use apenas um dos padrões:
    - Submenu via módulo: `add_submenu_page('alvobot-pro', ...)`

@@ -29,13 +29,13 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	background: #f8f9fa;
+	background: var(--alvobot-gray-100);
 	border-radius: 8px 8px 0 0;
 }
 
 .alvobot-modal-header h2 {
 	margin: 0;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-size: 24px;
 	font-weight: 600;
 }
@@ -43,7 +43,7 @@
 .alvobot-modal-close {
 	font-size: 28px;
 	font-weight: bold;
-	color: #666;
+	color: var(--alvobot-gray-600);
 	cursor: pointer;
 	line-height: 1;
 	padding: 4px 8px;
@@ -52,8 +52,8 @@
 }
 
 .alvobot-modal-close:hover {
-	background: #e1e5e9;
-	color: #2c3338;
+	background: var(--alvobot-gray-300);
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-modal-body {
@@ -67,21 +67,21 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: 12px;
-	background: #f8f9fa;
+	background: var(--alvobot-gray-100);
 	border-radius: 0 0 8px 8px;
 }
 
 /* Etapas da Tradução */
 .alvobot-translation-step h3 {
 	margin: 0 0 16px 0;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-size: 20px;
 	font-weight: 600;
 }
 
 .alvobot-translation-step p {
 	margin: 0 0 20px 0;
-	color: #646970;
+	color: var(--alvobot-gray-600);
 	line-height: 1.6;
 }
 
@@ -106,13 +106,13 @@
 }
 
 .alvobot-language-option:hover {
-	border-color: #cd9042;
-	background: #fef9f3;
+	border-color: var(--alvobot-primary-dark);
+	background: var(--alvobot-primary-light);
 }
 
 .alvobot-language-option.selected {
-	border-color: #cd9042;
-	background: #cd9042;
+	border-color: var(--alvobot-primary-dark);
+	background: var(--alvobot-primary-dark);
 	color: white;
 }
 
@@ -157,12 +157,12 @@
 }
 
 .alvobot-option-item:hover {
-	border-color: #cd9042;
-	background: #fef9f3;
+	border-color: var(--alvobot-primary-dark);
+	background: var(--alvobot-primary-light);
 }
 
 .alvobot-option-item input:checked + .alvobot-checkmark + .alvobot-option-content {
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-checkmark {
@@ -176,8 +176,8 @@
 }
 
 .alvobot-option-item input:checked + .alvobot-checkmark {
-	background: #cd9042;
-	border-color: #cd9042;
+	background: var(--alvobot-primary-dark);
+	border-color: var(--alvobot-primary-dark);
 }
 
 .alvobot-option-item input:checked + .alvobot-checkmark::after {
@@ -198,12 +198,12 @@
 .alvobot-option-content strong {
 	display: block;
 	margin-bottom: 4px;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-weight: 600;
 }
 
 .alvobot-option-content small {
-	color: #646970;
+	color: var(--alvobot-gray-600);
 	line-height: 1.4;
 }
 
@@ -215,7 +215,7 @@
 .alvobot-progress-bar {
 	width: 100%;
 	height: 8px;
-	background: #e1e5e9;
+	background: var(--alvobot-gray-300);
 	border-radius: 4px;
 	overflow: hidden;
 	margin-bottom: 8px;
@@ -223,14 +223,14 @@
 
 .alvobot-progress-fill {
 	height: 100%;
-	background: linear-gradient(90deg, #cd9042, #b8803a);
+	background: linear-gradient(90deg, var(--alvobot-primary-dark), var(--alvobot-primary-dark));
 	border-radius: 4px;
 	transition: width 0.3s ease;
 }
 
 .alvobot-progress-text {
 	text-align: center;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-weight: 500;
 	margin-bottom: 20px;
 }
@@ -247,23 +247,23 @@
 	justify-content: space-between;
 	align-items: center;
 	padding: 12px;
-	background: #f6f7f7;
+	background: var(--alvobot-gray-100);
 	border-radius: 6px;
 }
 
 .alvobot-progress-label {
-	color: #646970;
+	color: var(--alvobot-gray-600);
 	font-weight: 500;
 }
 
 .alvobot-progress-value {
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-weight: 600;
 }
 
 /* Log de Tradução */
 .alvobot-progress-log {
-	background: #f6f7f7;
+	background: var(--alvobot-gray-100);
 	border-radius: 6px;
 	padding: 16px;
 	max-height: 200px;
@@ -272,7 +272,7 @@
 
 .alvobot-progress-log h4 {
 	margin: 0 0 12px 0;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 	font-size: 16px;
 	font-weight: 600;
 }
@@ -292,18 +292,18 @@
 }
 
 .alvobot-log-info {
-	background: #e7f3ff;
-	color: #004085;
+	background: var(--alvobot-info-bg);
+	color: var(--alvobot-info-dark);
 }
 
 .alvobot-log-success {
-	background: #d4edda;
-	color: #155724;
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success-dark);
 }
 
 .alvobot-log-error {
-	background: #f8d7da;
-	color: #721c24;
+	background: var(--alvobot-error-bg);
+	color: var(--alvobot-error-dark);
 }
 
 .alvobot-log-time {
@@ -326,7 +326,7 @@
 .alvobot-stat-item {
 	text-align: center;
 	padding: 20px;
-	background: #f6f7f7;
+	background: var(--alvobot-gray-100);
 	border-radius: 8px;
 	border: 1px solid var(--alvobot-gray-300);
 }
@@ -334,13 +334,13 @@
 .alvobot-stat-number {
 	font-size: 32px;
 	font-weight: bold;
-	color: #cd9042;
+	color: var(--alvobot-primary-dark);
 	line-height: 1;
 	margin-bottom: 8px;
 }
 
 .alvobot-stat-label {
-	color: #646970;
+	color: var(--alvobot-gray-600);
 	font-weight: 500;
 	font-size: 14px;
 }
@@ -371,27 +371,27 @@
 }
 
 .alvobot-btn-primary {
-	background: #cd9042;
-	border-color: #cd9042;
+	background: var(--alvobot-primary-dark);
+	border-color: var(--alvobot-primary-dark);
 	color: white;
 }
 
 .alvobot-btn-primary:hover:not(:disabled) {
-	background: #b8803a;
-	border-color: #b8803a;
+	background: var(--alvobot-primary-dark);
+	border-color: var(--alvobot-primary-dark);
 	color: white;
 }
 
 .alvobot-btn-outline {
 	background: transparent;
 	border-color: var(--alvobot-gray-300);
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn-outline:hover:not(:disabled) {
-	background: #f6f7f7;
-	border-color: #c3c4c7;
-	color: #2c3338;
+	background: var(--alvobot-gray-100);
+	border-color: var(--alvobot-gray-400);
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-btn:disabled {
@@ -477,20 +477,20 @@
 	right: 12px;
 	height: 20px;
 	width: 20px;
-	background-color: #f6f7f7;
+	background-color: var(--alvobot-gray-100);
 	border: 2px solid var(--alvobot-gray-300);
 	border-radius: 4px;
 	transition: all 0.2s ease;
 }
 
 .alvobot-language-option:hover .alvobot-checkmark {
-	border-color: #cd9042;
-	background-color: #fef9f3;
+	border-color: var(--alvobot-primary-dark);
+	background-color: var(--alvobot-primary-light);
 }
 
 .alvobot-language-option.selected .alvobot-checkmark {
-	background-color: #cd9042;
-	border-color: #cd9042;
+	background-color: var(--alvobot-primary-dark);
+	border-color: var(--alvobot-primary-dark);
 }
 
 .alvobot-language-option.selected .alvobot-checkmark:after {
@@ -534,11 +534,11 @@
 .alvobot-language-name {
 	flex: 1;
 	font-weight: 500;
-	color: #2c3338;
+	color: var(--alvobot-gray-900);
 }
 
 .alvobot-language-option small {
-	color: #646970;
+	color: var(--alvobot-gray-600);
 	font-size: 12px;
 	display: block;
 	margin-top: 2px;
@@ -546,9 +546,9 @@
 
 /* Estados de seleção */
 .alvobot-language-option.selected {
-	background: linear-gradient(135deg, #cd9042, #b8803a);
+	background: linear-gradient(135deg, var(--alvobot-primary-dark), var(--alvobot-primary-dark));
 	color: white;
-	border-color: #cd9042;
+	border-color: var(--alvobot-primary-dark);
 }
 
 .alvobot-language-option.selected .alvobot-language-name,
@@ -586,15 +586,15 @@
 }
 
 .alvobot-notification-success {
-	border-left: 4px solid #00a32a;
+	border-left: 4px solid var(--alvobot-success);
 }
 
 .alvobot-notification-error {
-	border-left: 4px solid #d63638;
+	border-left: 4px solid var(--alvobot-error);
 }
 
 .alvobot-notification-info {
-	border-left: 4px solid #0073aa;
+	border-left: 4px solid var(--alvobot-info);
 }
 
 .alvobot-notification-content {
@@ -611,15 +611,15 @@
 }
 
 .alvobot-notification-success .alvobot-icon {
-	color: #00a32a;
+	color: var(--alvobot-success);
 }
 
 .alvobot-notification-error .alvobot-icon {
-	color: #d63638;
+	color: var(--alvobot-error);
 }
 
 .alvobot-notification-info .alvobot-icon {
-	color: #0073aa;
+	color: var(--alvobot-info);
 }
 
 @keyframes slideInFromRight {
@@ -655,7 +655,7 @@
 	width: 32px;
 	height: 32px;
 	margin-bottom: 16px;
-	color: #0073aa;
+	color: var(--alvobot-info);
 }
 
 .alvobot-spin {
@@ -699,12 +699,12 @@
 
 .alvobot-result-content p {
 	margin: 0 0 16px 0;
-	color: #555;
+	color: var(--alvobot-gray-700);
 	line-height: 1.5;
 }
 
 #result-details {
-	background: #f8f9fa;
+	background: var(--alvobot-gray-100);
 	border: 1px solid var(--alvobot-gray-300);
 	border-radius: 4px;
 	padding: 12px 16px;
@@ -720,7 +720,7 @@
 #result-details-list li {
 	margin: 0;
 	padding: 4px 0;
-	color: #555;
+	color: var(--alvobot-gray-700);
 }
 
 .alvobot-modal-footer {
@@ -729,7 +729,7 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: 12px;
-	background: #f8f9fa;
+	background: var(--alvobot-gray-100);
 }
 
 /* Botão sutil de reset no Status do Sistema */
@@ -745,14 +745,14 @@
 	padding: 6px;
 	border-radius: 4px;
 	cursor: pointer;
-	color: #666;
+	color: var(--alvobot-gray-600);
 	transition: all 0.2s ease;
 	opacity: 0.7;
 }
 
 .alvobot-reset-stats-btn:hover {
-	background: #f0f0f0;
-	color: #dc3232;
+	background: var(--alvobot-gray-200);
+	color: var(--alvobot-error);
 	opacity: 1;
 	transform: rotate(180deg);
 }
@@ -783,7 +783,7 @@
 .alvobot-warning-icon .alvobot-icon {
 	width: 32px;
 	height: 32px;
-	color: #ffb900;
+	color: var(--alvobot-warning);
 }
 
 .alvobot-warning-content {
@@ -797,7 +797,7 @@
 
 .alvobot-warning-content ul {
 	margin: 8px 0 12px 20px;
-	color: #666;
+	color: var(--alvobot-gray-600);
 }
 
 .alvobot-warning-content li {
@@ -805,24 +805,24 @@
 }
 
 .alvobot-warning-content em {
-	color: #dc3232;
+	color: var(--alvobot-error);
 	font-weight: 500;
 }
 
 /* Botão de perigo */
 .alvobot-btn-danger {
-	background: #dc3232;
+	background: var(--alvobot-error);
 	color: white;
-	border: 1px solid #dc3232;
+	border: 1px solid var(--alvobot-error);
 }
 
 .alvobot-btn-danger:hover {
-	background: #c62d2d;
-	border-color: #c62d2d;
+	background: var(--alvobot-error-dark);
+	border-color: var(--alvobot-error-dark);
 }
 
 .alvobot-btn-danger:disabled {
-	background: #ccc;
-	border-color: #ccc;
+	background: var(--alvobot-gray-400);
+	border-color: var(--alvobot-gray-400);
 	cursor: not-allowed;
 }

@@ -39,27 +39,18 @@ class AlvoBotPro_Ajax {
 			$active_modules[ $key ] = filter_var( $value, FILTER_VALIDATE_BOOLEAN );
 		}
 
-		// Define os valores padrão se necessário
-		$default_modules = array(
-			'logo_generator'  => true,
-			'author_box'      => true,
-			'plugin-manager'  => true,
-			'pre-article'     => true,
-			'essential_pages' => true,
-			'multi-languages' => true,
-			'temporary-login' => true,
-			'quiz-builder'    => true,
-			'cta-cards'       => true,
-		);
-
-		// Mescla com os valores padrão
-		$active_modules = wp_parse_args( $active_modules, $default_modules );
+		// Mescla com os valores padrão do registry centralizado
+		$active_modules = wp_parse_args( $active_modules, AlvoBotPro::get_default_modules() );
 
 		// Atualiza o estado do módulo específico
 		$active_modules[ $module ] = $enabled;
 
-		// Garante que o plugin-manager sempre esteja ativo
-		$active_modules['plugin-manager'] = true;
+		// Garante que módulos force_active não sejam desativados
+		foreach ( AlvoBotPro::get_module_registry() as $id => $meta ) {
+			if ( ! empty( $meta['force_active'] ) ) {
+				$active_modules[ $id ] = true;
+			}
+		}
 
 		// Força a atualização da opção (terceiro parâmetro true força update mesmo se o valor for o mesmo)
 		delete_option( 'alvobot_pro_active_modules' );
@@ -70,10 +61,10 @@ class AlvoBotPro_Ajax {
 			$updated = update_option( 'alvobot_pro_active_modules', $active_modules );
 		}
 
-		// Limpa todos os caches possíveis
+		// Limpa caches relevantes (object cache + cache estático da classe)
 		wp_cache_delete( 'alvobot_pro_active_modules', 'options' );
 		wp_cache_delete( 'alvobot_pro_active_modules', 'alloptions' );
-		wp_cache_flush();
+		AlvoBotPro::clear_options_cache();
 
 		// Verifica o estado final
 		$final_state   = get_option( 'alvobot_pro_active_modules', array() );

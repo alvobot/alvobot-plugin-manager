@@ -3,6 +3,19 @@
  * Frontend styles for CTA cards
  */
 
+:root {
+	--alvobot-white: #ffffff;
+	--alvobot-gray-100: #F9FAFB;
+	--alvobot-gray-200: #F2F4F7;
+	--alvobot-gray-300: #E4E4E7;
+	--alvobot-gray-400: #D4D4D8;
+	--alvobot-gray-600: #6B7280;
+	--alvobot-gray-700: #52525B;
+	--alvobot-gray-800: #344054;
+	--alvobot-accent: #2271b1;
+	--alvobot-accent-dark: #135e96;
+}
+
 /* Base CTA Card Styles */
 .alvobot-cta-card {
 	margin: 20px auto;
@@ -11,7 +24,7 @@
 	overflow: hidden;
 	transition: all 0.3s ease;
 	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	background-color: #ffffff;
+	background-color: var(--alvobot-white);
 }
 
 .alvobot-cta-card:hover {
@@ -43,19 +56,19 @@
 	font-weight: 600;
 	margin: 0 0 10px 0;
 	line-height: 1.3;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-vertical .cta-subtitle {
 	font-size: 16px;
-	color: #666666;
+	color: var(--alvobot-gray-600);
 	margin: 0 0 15px 0;
 	font-weight: 400;
 }
 
 .alvobot-cta-vertical .cta-description {
 	font-size: 14px;
-	color: #555555;
+	color: var(--alvobot-gray-700);
 	margin: 0 0 25px 0;
 	line-height: 1.5;
 }
@@ -110,12 +123,12 @@
 	font-size: 20px;
 	font-weight: 600;
 	margin: 0 0 10px 0;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-horizontal .cta-description {
 	font-size: 14px;
-	color: #555555;
+	color: var(--alvobot-gray-700);
 	margin: 0 0 15px 0;
 	line-height: 1.4;
 }
@@ -138,8 +151,8 @@
 /* Minimal Template */
 .alvobot-cta-minimal {
 	padding: 20px;
-	border: 2px solid #e0e0e0;
-	background-color: #fafafa;
+	border: 2px solid var(--alvobot-gray-300);
+	background-color: var(--alvobot-gray-100);
 	max-width: 400px;
 	position: relative;
 }
@@ -159,17 +172,17 @@
 	font-size: 18px;
 	font-weight: 600;
 	margin: 0 0 8px 0;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-minimal .cta-subtitle {
 	font-size: 14px;
-	color: #666666;
+	color: var(--alvobot-gray-600);
 	margin: 0 0 15px 0;
 }
 
 .alvobot-cta-minimal .cta-button-minimal {
-	color: #2271b1;
+	color: var(--alvobot-accent);
 	text-decoration: none;
 	font-weight: 600;
 	font-size: 14px;
@@ -177,7 +190,7 @@
 }
 
 .alvobot-cta-minimal .cta-button-minimal:hover {
-	color: #135e96;
+	color: var(--alvobot-accent-dark);
 	text-decoration: underline;
 }
 
@@ -249,7 +262,7 @@
 
 /* Simple Template */
 .alvobot-cta-simple {
-	border: 1px solid #e0e0e0;
+	border: 1px solid var(--alvobot-gray-300);
 	border-radius: 6px;
 	overflow: hidden;
 	max-width: 300px;
@@ -257,8 +270,8 @@
 }
 
 .alvobot-cta-simple:hover {
-	border-color: #2271b1;
-	background-color: #f8f9fa;
+	border-color: var(--alvobot-accent);
+	background-color: var(--alvobot-gray-100);
 }
 
 .alvobot-cta-simple .cta-link {
@@ -281,13 +294,13 @@
 	font-size: 16px;
 	font-weight: 600;
 	margin: 0;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-simple .cta-arrow {
 	margin-left: 10px;
 	transition: transform 0.3s ease;
-	color: #2271b1;
+	color: var(--alvobot-accent);
 }
 
 .alvobot-cta-simple:hover .cta-arrow {
@@ -433,19 +446,19 @@
 	font-weight: 600;
 	margin: 0 0 10px 0;
 	line-height: 1.3;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-pulse .cta-subtitle {
 	font-size: 16px;
-	color: #666666;
+	color: var(--alvobot-gray-600);
 	margin: 0 0 15px 0;
 	font-weight: 400;
 }
 
 .alvobot-cta-pulse .cta-description {
 	font-size: 14px;
-	color: #555555;
+	color: var(--alvobot-gray-700);
 	margin: 0 0 25px 0;
 	line-height: 1.5;
 }
@@ -517,19 +530,19 @@
 	font-weight: 600;
 	margin: 0 0 10px 0;
 	line-height: 1.3;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-multi-button .cta-subtitle {
 	font-size: 16px;
-	color: #666666;
+	color: var(--alvobot-gray-600);
 	margin: 0 0 15px 0;
 	font-weight: 400;
 }
 
 .alvobot-cta-multi-button .cta-description {
 	font-size: 14px;
-	color: #555555;
+	color: var(--alvobot-gray-700);
 	margin: 0 0 25px 0;
 	line-height: 1.5;
 }
@@ -636,19 +649,19 @@
 	font-weight: 600;
 	margin: 0 0 10px 0;
 	line-height: 1.3;
-	color: #333333;
+	color: var(--alvobot-gray-800);
 }
 
 .alvobot-cta-led-border .cta-subtitle {
 	font-size: 16px;
-	color: #666666;
+	color: var(--alvobot-gray-600);
 	margin: 0 0 15px 0;
 	font-weight: 400;
 }
 
 .alvobot-cta-led-border .cta-description {
 	font-size: 14px;
-	color: #555555;
+	color: var(--alvobot-gray-700);
 	margin: 0 0 25px 0;
 	line-height: 1.5;
 }
@@ -812,14 +825,14 @@
 
 /* Focus states for accessibility */
 .alvobot-cta-card a:focus {
-	outline: 2px solid #2271b1;
+	outline: 2px solid var(--alvobot-accent);
 	outline-offset: 2px;
 }
 
 .alvobot-cta-card .cta-button:focus,
 .alvobot-cta-card .cta-button-minimal:focus,
 .alvobot-cta-card .cta-link:focus {
-	outline: 2px solid #ffffff;
+	outline: 2px solid var(--alvobot-white);
 	outline-offset: 2px;
 	box-shadow: 0 0 0 4px rgba(34, 113, 177, 0.3);
 }
@@ -829,7 +842,7 @@
 	.alvobot-cta-card {
 		break-inside: avoid;
 		box-shadow: none;
-		border: 1px solid #ddd;
+		border: 1px solid var(--alvobot-gray-400);
 	}
 
 	.alvobot-cta-card:hover {

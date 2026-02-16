@@ -83,174 +83,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php endif; ?>
 
 	<div class="alvobot-grid alvobot-grid-auto">
-		<!-- Cartões dos Módulos -->
-		<!-- Módulo Gerador de Logo -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Gerador de Logo</h2>
-			<p class="alvobot-card-subtitle">Crie logos profissionais para seus sites WordPress automaticamente.</p>
+		<?php
+		$registry = AlvoBotPro::get_module_registry();
+		foreach ( $registry as $module_id => $meta ) :
+			// Módulos sem settings_slug não aparecem como cards no dashboard
+			if ( empty( $meta['settings_slug'] ) ) {
+				continue;
+			}
+			$is_active = ! empty( $active_modules[ $module_id ] );
+			?>
+		<div class="alvobot-card <?php echo esc_attr( $is_active ? 'module-enabled' : '' ); ?>">
+			<div class="alvobot-card-header">
+				<div>
+					<h2 class="alvobot-card-title"><?php echo esc_html( $meta['name'] ); ?></h2>
+					<p class="alvobot-card-subtitle"><?php echo esc_html( $meta['description'] ); ?></p>
+				</div>
+				<label class="alvobot-toggle">
+					<input type="checkbox"
+						data-module="<?php echo esc_attr( $module_id ); ?>"
+						<?php echo $is_active ? 'checked="checked"' : ''; ?>>
+					<span class="alvobot-toggle-slider"></span>
+				</label>
 			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="logo_generator" 
-					<?php echo isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['logo_generator'] ) && $active_modules['logo_generator'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-logo' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Author Box -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['author_box'] ) && $active_modules['author_box'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Author Box</h2>
-			<p class="alvobot-card-subtitle">Exiba uma elegante caixa de autor no final dos seus posts.</p>
+			<div class="alvobot-card-footer">
+				<?php if ( $is_active ) : ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $meta['settings_slug'] ) ); ?>" class="alvobot-btn alvobot-btn-secondary"><?php esc_html_e( 'Configurações', 'alvobot-pro' ); ?></a>
+				<?php endif; ?>
 			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="author_box" 
-					<?php echo isset( $active_modules['author_box'] ) && $active_modules['author_box'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
 		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['author_box'] ) && $active_modules['author_box'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-author-box' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Pre Article -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Pre Article</h2>
-			<p class="alvobot-card-subtitle">Gere páginas de pré-artigo automaticamente para seus posts existentes.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="pre-article" 
-					<?php echo isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['pre-article'] ) && $active_modules['pre-article'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-pre-article' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Essential Pages -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Páginas Essenciais</h2>
-			<p class="alvobot-card-subtitle">Crie e gerencie páginas essenciais como Termos de Uso, Política de Privacidade e Contato.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="essential_pages" 
-					<?php echo isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['essential_pages'] ) && $active_modules['essential_pages'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-essential-pages' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Multi Languages -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Multi Languages</h2>
-			<p class="alvobot-card-subtitle">Gerencie traduções e conteúdo multilíngue para seu site WordPress com Polylang.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="multi-languages" 
-					<?php echo isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['multi-languages'] ) && $active_modules['multi-languages'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-pro-multi-languages' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Quiz Builder -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Quiz Builder</h2>
-			<p class="alvobot-card-subtitle">Crie quizzes interativos com navegação por URL única, otimizados para monetização.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="quiz-builder" 
-					<?php echo isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['quiz-builder'] ) && $active_modules['quiz-builder'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-quiz-builder' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo CTA Cards -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">CTA Cards</h2>
-			<p class="alvobot-card-subtitle">Crie cards de CTA (Call-to-Action) personalizados para aumentar conversões.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox" 
-					data-module="cta-cards" 
-					<?php echo isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['cta-cards'] ) && $active_modules['cta-cards'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-cta-cards' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
-
-		<!-- Módulo Smart Internal Links -->
-		<div class="alvobot-card <?php echo esc_attr( isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'module-enabled' : '' ); ?>">
-		<div class="alvobot-card-header">
-			<div>
-			<h2 class="alvobot-card-title">Smart Internal Links</h2>
-			<p class="alvobot-card-subtitle">Links internos inteligentes com copy gerada por IA para aumentar o engajamento.</p>
-			</div>
-			<label class="alvobot-toggle">
-			<input type="checkbox"
-					data-module="smart-internal-links"
-					<?php echo isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ? 'checked="checked"' : ''; ?>>
-			<span class="alvobot-toggle-slider"></span>
-			</label>
-		</div>
-		<div class="alvobot-card-footer">
-			<?php if ( isset( $active_modules['smart-internal-links'] ) && $active_modules['smart-internal-links'] ) : ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=alvobot-smart-links' ) ); ?>" class="alvobot-btn alvobot-btn-secondary">Configurações</a>
-			<?php endif; ?>
-		</div>
-		</div>
+		<?php endforeach; ?>
 	</div>
 
 	<!-- Seção Status do Sistema -->

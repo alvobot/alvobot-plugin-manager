@@ -1,0 +1,624 @@
+/**
+ * Pixel Tracking Module - Admin Styles
+ */
+
+/* ========================
+	Mode section toggle
+	======================== */
+.alvobot-pixel-mode-section {
+	margin-top: 12px;
+	padding: 16px;
+	background: var(--alvobot-gray-100);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+}
+
+.alvobot-mode-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+	font-size: 14px;
+	margin-bottom: 12px;
+	color: var(--alvobot-gray-700);
+}
+
+.alvobot-mode-header .alvobot-icon {
+	width: 16px;
+	height: 16px;
+	color: var(--alvobot-gray-500);
+}
+
+/* ========================
+	Radio group (enhanced)
+	======================== */
+.alvobot-radio-group {
+	display: flex;
+	gap: 12px;
+	margin-top: 6px;
+}
+
+.alvobot-radio-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	cursor: pointer;
+	font-weight: 400;
+	padding: 12px 16px;
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+	background: var(--alvobot-white);
+	flex: 1;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.alvobot-radio-label:hover {
+	border-color: var(--alvobot-primary);
+}
+
+.alvobot-radio-label input:checked ~ .alvobot-radio-text {
+	color: var(--alvobot-primary);
+}
+
+.alvobot-radio-label:has(input:checked) {
+	border-color: var(--alvobot-primary);
+	box-shadow: 0 0 0 1px var(--alvobot-primary);
+}
+
+.alvobot-radio-text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.alvobot-radio-text strong {
+	font-size: 14px;
+}
+
+.alvobot-radio-text small {
+	font-size: 12px;
+	color: var(--alvobot-gray-500);
+}
+
+/* ========================
+	Configured pixels table
+	======================== */
+.alvobot-table {
+	border-collapse: collapse;
+	margin-top: 8px;
+}
+
+.alvobot-table th,
+.alvobot-table td {
+	padding: 8px 12px;
+	text-align: left;
+	border-bottom: 1px solid var(--alvobot-gray-300);
+}
+
+.alvobot-table th {
+	font-weight: 600;
+	font-size: 12px;
+	text-transform: uppercase;
+	color: var(--alvobot-gray-600);
+}
+
+.alvobot-table td code {
+	font-size: 13px;
+}
+
+.alvobot-configured-pixels-section {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid var(--alvobot-gray-300);
+}
+
+/* Token expired warning */
+.alvobot-pixel-expired {
+	color: var(--alvobot-error);
+	font-weight: 600;
+}
+
+.alvobot-pixel-expired-banner {
+	background: var(--alvobot-error-bg);
+	border: 1px solid var(--alvobot-error);
+	border-radius: 4px;
+	padding: 8px 12px;
+	margin-bottom: 12px;
+	color: var(--alvobot-error);
+}
+
+/* ========================
+	Manual pixel fields
+	======================== */
+.alvobot-manual-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* ========================
+	Badges
+	======================== */
+.alvobot-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.6;
+}
+
+.alvobot-badge-info {
+	background: var(--alvobot-primary-bg, #e8f0fe);
+	color: var(--alvobot-primary, #1a73e8);
+}
+
+.alvobot-badge-success {
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success-dark);
+}
+
+.alvobot-badge-warning {
+	background: var(--alvobot-warning-bg, #fff3cd);
+	color: var(--alvobot-warning-dark, #856404);
+}
+
+.alvobot-badge-error {
+	background: var(--alvobot-error-bg);
+	color: var(--alvobot-error);
+}
+
+.alvobot-badge-neutral {
+	background: var(--alvobot-gray-200);
+	color: var(--alvobot-gray-600);
+}
+
+/* ========================
+	Conversion rules table
+	======================== */
+.alvobot-conversions-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 12px;
+}
+
+.alvobot-conversions-table th,
+.alvobot-conversions-table td {
+	padding: 10px 12px;
+	text-align: left;
+	border-bottom: 1px solid var(--alvobot-gray-300);
+}
+
+.alvobot-conversions-table th {
+	font-weight: 600;
+	font-size: 12px;
+	text-transform: uppercase;
+	color: var(--alvobot-gray-600);
+	background: var(--alvobot-gray-100);
+}
+
+.alvobot-conversions-table .status-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.alvobot-conversions-table .status-badge.active {
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success-dark);
+}
+
+.alvobot-conversions-table .status-badge.inactive {
+	background: var(--alvobot-gray-200);
+	color: var(--alvobot-gray-600);
+}
+
+/* ========================
+	Conversion form
+	======================== */
+.alvobot-conversion-form {
+	background: var(--alvobot-gray-100);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 16px;
+}
+
+.alvobot-conversion-form .alvobot-form-field {
+	margin-bottom: 12px;
+}
+
+.alvobot-conversion-form-title {
+	font-size: 15px;
+	font-weight: 600;
+	margin-bottom: 16px;
+}
+
+.alvobot-conversion-form-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.alvobot-conversion-form-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+/* Conditional fields */
+.alvobot-conditional-field {
+	display: none;
+}
+
+.alvobot-conditional-field.visible {
+	display: block;
+}
+
+/* ========================
+	Buttons
+	======================== */
+.alvobot-btn-sm {
+	padding: 4px 8px;
+	font-size: 12px;
+}
+
+/* .alvobot-btn-danger inherits from global styles.css (solid red bg + white icon) */
+
+/* ========================
+	Empty state
+	======================== */
+.alvobot-empty-state {
+	text-align: center;
+	padding: 32px;
+	color: var(--alvobot-gray-500);
+}
+
+.alvobot-empty-state p {
+	margin: 8px 0;
+}
+
+.alvobot-empty-state-compact {
+	padding: 24px 16px;
+}
+
+.alvobot-empty-state-compact .alvobot-icon {
+	margin-bottom: 8px;
+}
+
+/* ========================
+	Toggle row (label + toggle alignment)
+	Toggle switch itself is defined in shared styles.css
+	======================== */
+.alvobot-toggle-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+}
+
+.alvobot-toggle-label {
+	font-weight: 500;
+	font-size: 14px;
+}
+
+/* ========================
+	Tab content card spacing
+	Cards inside <form> need explicit gap since
+	.alvobot-tab-content gap only applies to direct children
+	======================== */
+.alvobot-tab-content .alvobot-module-form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--alvobot-space-xl);
+}
+
+.alvobot-tab-content .alvobot-module-form .alvobot-card-footer-standalone {
+	margin-top: 0;
+}
+
+/* ========================
+	Checkbox grid
+	======================== */
+.alvobot-checkbox-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 6px;
+}
+
+.alvobot-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+/* ========================
+	Divider
+	======================== */
+.alvobot-divider {
+	border: none;
+	border-top: 1px solid var(--alvobot-gray-300);
+	margin: 16px 0;
+}
+
+/* ========================
+	Retention grid
+	======================== */
+.alvobot-retention-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 16px;
+}
+
+/* ========================
+	Card footer standalone
+	======================== */
+.alvobot-card-footer-standalone {
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+	padding: 16px 24px;
+	margin-top: 16px;
+}
+
+/* ========================
+	Status Dashboard
+	======================== */
+
+/* Stats grid: 4 cards */
+.alvobot-pixel-status-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.alvobot-stat-card {
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+	padding: 20px;
+	text-align: center;
+}
+
+.alvobot-stat-card-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	margin-bottom: 12px;
+}
+
+.alvobot-stat-card-icon .alvobot-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.alvobot-stat-icon-primary {
+	background: var(--alvobot-primary-bg, #e8f0fe);
+	color: var(--alvobot-primary, #1a73e8);
+}
+
+.alvobot-stat-icon-warning {
+	background: var(--alvobot-warning-bg, #fff3cd);
+	color: var(--alvobot-warning-dark, #856404);
+}
+
+.alvobot-stat-icon-success {
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success-dark);
+}
+
+.alvobot-stat-icon-info {
+	background: var(--alvobot-primary-bg, #e8f0fe);
+	color: var(--alvobot-accent);
+}
+
+.alvobot-stat-card-value {
+	font-size: 28px;
+	font-weight: 700;
+	color: var(--alvobot-gray-900);
+	margin-bottom: 4px;
+	min-height: 36px;
+}
+
+.alvobot-stat-card-label {
+	font-size: 12px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--alvobot-gray-500);
+}
+
+/* Skeleton loading animation */
+.alvobot-skeleton {
+	display: inline-block;
+	width: 48px;
+	height: 28px;
+	background: linear-gradient(90deg, var(--alvobot-gray-200) 25%, var(--alvobot-gray-100) 50%, var(--alvobot-gray-200) 75%);
+	background-size: 200% 100%;
+	animation: alvobot-skeleton-pulse 1.5s ease-in-out infinite;
+	border-radius: 4px;
+	vertical-align: middle;
+}
+
+.alvobot-skeleton-sm {
+	width: 32px;
+	height: 18px;
+}
+
+@keyframes alvobot-skeleton-pulse {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+
+/* Info + Actions row: 2 columns */
+.alvobot-pixel-status-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+/* Info list (key-value pairs) */
+.alvobot-info-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.alvobot-info-list li {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 0;
+	border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-info-list li:last-child {
+	border-bottom: none;
+}
+
+.alvobot-info-label {
+	font-size: 13px;
+	color: var(--alvobot-gray-600);
+	font-weight: 500;
+}
+
+/* Action grid: 2x2 */
+.alvobot-action-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.alvobot-action-btn {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: 8px;
+	cursor: pointer;
+	text-align: left;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.alvobot-action-btn:hover {
+	border-color: var(--alvobot-primary);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.alvobot-action-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.alvobot-action-btn .alvobot-icon {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	color: var(--alvobot-gray-500);
+}
+
+.alvobot-action-btn div {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.alvobot-action-btn strong {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--alvobot-gray-800);
+}
+
+.alvobot-action-btn small {
+	font-size: 11px;
+	color: var(--alvobot-gray-500);
+}
+
+/* Action feedback */
+#alvobot-action-feedback {
+	border-radius: 6px;
+	padding: 10px 14px;
+	font-size: 13px;
+}
+
+#alvobot-action-feedback.feedback-success {
+	background: var(--alvobot-success-bg);
+	color: var(--alvobot-success-dark);
+	border: 1px solid var(--alvobot-success-dark);
+}
+
+#alvobot-action-feedback.feedback-error {
+	background: var(--alvobot-error-bg);
+	color: var(--alvobot-error);
+	border: 1px solid var(--alvobot-error);
+}
+
+/* ========================
+	Loading overlay for AJAX
+	======================== */
+.alvobot-loading-overlay {
+	position: relative;
+}
+
+.alvobot-loading-overlay::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: rgba(255, 255, 255, 0.7);
+	display: none;
+}
+
+.alvobot-loading-overlay.loading::after {
+	display: block;
+}
+
+/* ========================
+	Responsive
+	======================== */
+@media (max-width: 960px) {
+	.alvobot-pixel-status-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.alvobot-radio-group {
+		flex-direction: column;
+	}
+
+	.alvobot-retention-grid {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.alvobot-conversion-form-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 782px) {
+	.alvobot-pixel-status-row {
+		grid-template-columns: 1fr;
+	}
+
+	.alvobot-retention-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 480px) {
+	.alvobot-pixel-status-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.alvobot-action-grid {
+		grid-template-columns: 1fr;
+	}
+}

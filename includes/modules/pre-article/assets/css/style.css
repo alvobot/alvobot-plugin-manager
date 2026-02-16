@@ -1,7 +1,10 @@
 /* Estilos Globais */
 :root {
-	--primary-color: #007bff;
-	--primary-color-dark: #0069d9;
+	--alvobot-accent: #007bff;
+	--alvobot-accent-dark: #0069d9;
+	--alvobot-white: #ffffff;
+	--alvobot-gray-500: #A1A1AA;
+	--alvobot-gray-600: #6B7280;
 	--font-family: 'Arial', sans-serif;
 	--transition-duration: 0.2s;
 	--transition-ease: ease-in-out;
@@ -57,7 +60,7 @@ body {
 .excerpt a.continue-reading,
 .excerpt-continuation a.continue-reading {
 	display: inline !important;
-	color: var(--primary-color) !important;
+	color: var(--alvobot-accent) !important;
 	text-decoration: none !important;
 	font-size: 18px !important;
 	transition: color var(--transition-duration) var(--transition-ease) !important;
@@ -67,7 +70,7 @@ body {
 .excerpt a.continue-reading:hover,
 .excerpt-continuation a.continue-reading:hover {
 	text-decoration: underline !important;
-	color: var(--primary-color-dark) !important;
+	color: var(--alvobot-accent-dark) !important;
 }
 
 /* Impedir quebra de linha antes do '...continue' */
@@ -88,12 +91,12 @@ body {
 	align-items: center;
 	gap: 15px;
 	margin-bottom: 10px;
-	color: #fff;
+	color: var(--alvobot-white);
 }
 
 .cta-button {
 	padding: 15px 25px;
-	color: #fff;
+	color: var(--alvobot-white);
 	text-decoration: none;
 	border-radius: 5px;
 	font-size: 1em;
@@ -104,7 +107,7 @@ body {
 
 .cta-button:hover {
 	transform: scale(1.05);
-	color: #fff;
+	color: var(--alvobot-white);
 }
 
 .pre-article-footer .legal-disclaimer {
@@ -112,7 +115,7 @@ body {
 	margin: 0 auto;
 	text-align: center;
 	font-size: 0.75rem;
-	color: #999;
+	color: var(--alvobot-gray-500);
 }
 
 .pre-article-footer .footer-links {
@@ -121,7 +124,7 @@ body {
 }
 
 .pre-article-footer .footer-link {
-	color: #999;
+	color: var(--alvobot-gray-500);
 	text-decoration: none;
 	font-size: 0.75rem;
 	transition: color 0.2s ease;
@@ -129,14 +132,14 @@ body {
 }
 
 .pre-article-footer .footer-link:hover {
-	color: #666;
+	color: var(--alvobot-gray-600);
 	text-decoration: underline;
 }
 
 .pre-article-footer .copyright-section {
 	text-align: center;
 	font-size: 0.75rem;
-	color: #999;
+	color: var(--alvobot-gray-500);
 }
 
 .pre-article-footer .copyright {
