@@ -10,6 +10,18 @@
 	var extra     = window.alvobot_pixel_tracking_extra || {};
 	var activeTab = extra.active_tab || 'pixels';
 
+	// Prevent double-submit on all module forms (race condition guard).
+	$( '.alvobot-module-form' ).on(
+		'submit',
+		function () {
+			var $btn = $( this ).find( 'button[type="submit"]' );
+			if ($btn.prop( 'disabled' )) {
+				return false;
+			}
+			$btn.prop( 'disabled', true ).css( 'opacity', '0.6' );
+		}
+	);
+
 	// ========================
 	// Pixels Tab
 	// ========================
@@ -104,7 +116,7 @@
 			}
 		);
 
-		// Render AlvoBot pixel list with select buttons
+		// Render AlvoBot pixel list with select/update buttons
 		function renderAlvobotPixelList(pixels) {
 			var $list = $( '#alvobot-pixel-list' );
 			$list.empty();
@@ -119,24 +131,35 @@
 			var html =
 			'<table class="alvobot-table" style="width:100%"><thead><tr><th>Pixel</th><th>Conexao</th><th></th></tr></thead><tbody>';
 			for (var i = 0; i < pixels.length; i++) {
-				var p            = pixels[i];
-				var alreadyAdded = pixelsData.some(
-					function (existing) {
-						return existing.pixel_id === p.pixel_id;
+				var p       = pixels[i];
+				var existing = null;
+				for (var j = 0; j < pixelsData.length; j++) {
+					if (pixelsData[j].pixel_id === p.pixel_id) {
+						existing = pixelsData[j];
+						break;
 					}
-				);
-				html            += '<tr>';
-				html            +=
+				}
+				html += '<tr>';
+				html +=
 				'<td><code>' +
 				escHtml( p.pixel_id ) +
 				'</code> ' +
 				escHtml( p.pixel_name || '' ) +
 				'</td>';
-				html            += '<td>' + escHtml( p.connection_name || '' ) + '</td>';
-				html            += '<td>';
-				if (alreadyAdded) {
-					html +=
+				html += '<td>' + escHtml( p.connection_name || '' ) + '</td>';
+				html += '<td>';
+				if (existing) {
+					// Already added — show update button if token changed or expired.
+					var tokenChanged = existing.token_expired || (p.access_token && p.access_token !== existing.api_token);
+					if (tokenChanged) {
+						html +=
+						'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-update-alvobot-pixel" data-pixel=\'' +
+						escAttr( JSON.stringify( p ) ) +
+						"'>Atualizar Token</button>";
+					} else {
+						html +=
 						'<span class="alvobot-badge alvobot-badge-success">Adicionado</span>';
+					}
 				} else {
 					html +=
 					'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-select-alvobot-pixel" data-pixel=\'' +
@@ -147,7 +170,33 @@
 			}
 			html += '</tbody></table>';
 			$list.html( html );
+
+			if (window.lucide) {
+				window.lucide.createIcons();
+			}
 		}
+
+		// Update AlvoBot pixel token (expired or changed)
+		$( document ).on(
+			'click',
+			'.alvobot-update-alvobot-pixel',
+			function () {
+				var pixel = JSON.parse( $( this ).attr( 'data-pixel' ) );
+				for (var i = 0; i < pixelsData.length; i++) {
+					if (pixelsData[i].pixel_id === pixel.pixel_id) {
+						pixelsData[i].api_token      = pixel.access_token || '';
+						pixelsData[i].token_expired   = false;
+						pixelsData[i].label           = pixel.pixel_name || pixelsData[i].label;
+						pixelsData[i].connection_id   = pixel.connection_id || pixelsData[i].connection_id;
+						break;
+					}
+				}
+				updatePixelsHiddenField();
+				renderConfiguredPixels();
+				// Re-render AlvoBot list to reflect update
+				$( '#alvobot-fetch-pixels-btn' ).trigger( 'click' );
+			}
+		);
 
 		// Select AlvoBot pixel → add to configured list
 		$( document ).on(
@@ -266,8 +315,16 @@
 					'<span class="alvobot-badge alvobot-badge-warning">Sem Token</span>';
 				}
 				html += '</td>';
+				html += '<td>';
+				// Renew token button for AlvoBot-sourced expired pixels.
+				if (p.token_expired && p.source === 'alvobot') {
+					html +=
+					'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-refresh-pixel-btn" data-pixel-id="' +
+					escAttr( p.pixel_id ) + '" data-index="' + i +
+					'" style="margin-right:4px;"><i data-lucide="refresh-cw" class="alvobot-icon"></i> Renovar</button>';
+				}
 				html +=
-				'<td><button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger alvobot-remove-pixel-btn" data-index="' +
+				'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger alvobot-remove-pixel-btn" data-index="' +
 				i +
 				'"><i data-lucide="trash-2" class="alvobot-icon"></i></button></td>';
 				html += '</tr>';
@@ -280,6 +337,52 @@
 				window.lucide.createIcons();
 			}
 		}
+
+		// Refresh expired pixel token via AJAX
+		$( document ).on(
+			'click',
+			'.alvobot-refresh-pixel-btn',
+			function () {
+				var $btn    = $( this );
+				var pixelId = $btn.data( 'pixel-id' );
+				var idx     = parseInt( $btn.data( 'index' ), 10 );
+
+				$btn.prop( 'disabled', true ).text( 'Renovando...' );
+
+				$.ajax(
+					{
+						url: config.ajaxurl,
+						method: 'POST',
+						data: {
+							action: 'alvobot_pixel_tracking_refresh_token',
+							nonce: config.nonce,
+							pixel_id: pixelId,
+						},
+						success: function (response) {
+							if (response.success && response.data) {
+								// Update local pixelsData with fresh token.
+								if ( ! isNaN( idx ) && idx >= 0 && idx < pixelsData.length) {
+									pixelsData[idx].api_token     = response.data.api_token || '';
+									pixelsData[idx].token_expired = false;
+									if (response.data.label) {
+										pixelsData[idx].label = response.data.label;
+									}
+								}
+								updatePixelsHiddenField();
+								renderConfiguredPixels();
+							} else {
+								alert( response.data || 'Erro ao renovar token.' );
+								$btn.prop( 'disabled', false ).text( 'Renovar' );
+							}
+						},
+						error: function () {
+							alert( 'Erro de conexao ao renovar token.' );
+							$btn.prop( 'disabled', false ).text( 'Renovar' );
+						},
+					}
+				);
+			}
+		);
 
 		// Sync pixels data to hidden field for form submission
 		function updatePixelsHiddenField() {
@@ -529,8 +632,11 @@
 			'change',
 			'.alvobot-toggle-conversion',
 			function () {
-				var id     = $( this ).data( 'id' );
-				var active = $( this ).is( ':checked' ) ? '1' : '0';
+				var $toggle = $( this );
+				var id      = $toggle.data( 'id' );
+				var active  = $toggle.is( ':checked' ) ? '1' : '0';
+
+				$toggle.prop( 'disabled', true );
 
 				$.ajax(
 					{
@@ -541,6 +647,20 @@
 							nonce: config.nonce,
 							conversion_id: id,
 							active: active,
+						},
+						success: function (response) {
+							$toggle.prop( 'disabled', false );
+							if ( ! response.success) {
+								// Revert on failure
+								$toggle.prop( 'checked', active !== '1' );
+								alert( response.data || 'Erro ao alterar status.' );
+							}
+						},
+						error: function () {
+							$toggle.prop( 'disabled', false );
+							// Revert on network failure
+							$toggle.prop( 'checked', active !== '1' );
+							alert( 'Erro de conexao ao alterar status.' );
 						},
 					}
 				);

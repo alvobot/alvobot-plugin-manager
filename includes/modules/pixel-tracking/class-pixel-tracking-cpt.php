@@ -3,12 +3,17 @@
  * Pixel Tracking Module - Custom Post Types
  *
  * Registers CPTs for events, leads, and conversion rules.
+ *
+ * @package AlvoBotPro
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 		exit;
 }
 
+/**
+ * Data access layer for pixel-tracking CPT entities.
+ */
 class AlvoBotPro_PixelTracking_CPT {
 
 	public function __construct() {
@@ -335,38 +340,38 @@ class AlvoBotPro_PixelTracking_CPT {
 	}
 
 	public function find_lead_by_email( $email ) {
-			$query = new WP_Query(
-				array(
-					'post_type'      => 'alvobot_pixel_lead',
-					'post_status'    => 'publish',
-					'posts_per_page' => 1,
-					'meta_query'     => array(
-						array(
-							'key'   => '_email',
-							'value' => $email,
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'alvobot_pixel_lead',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_email',
+						'value' => $email,
 						),
-					),
-					'fields'         => 'ids',
-				)
-			);
+				),
+				'fields'         => 'ids',
+			)
+		);
 			return ! empty( $query->posts ) ? $query->posts[0] : null;
 	}
 
 	public function find_lead_by_fbp( $fbp ) {
-			$query = new WP_Query(
-				array(
-					'post_type'      => 'alvobot_pixel_lead',
-					'post_status'    => 'publish',
-					'posts_per_page' => 1,
-					'meta_query'     => array(
-						array(
-							'key'   => '_fbp',
-							'value' => $fbp,
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'alvobot_pixel_lead',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_fbp',
+						'value' => $fbp,
 						),
-					),
-					'fields'         => 'ids',
-				)
-			);
+				),
+				'fields'         => 'ids',
+			)
+		);
 			return ! empty( $query->posts ) ? $query->posts[0] : null;
 	}
 

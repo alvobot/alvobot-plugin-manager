@@ -80,12 +80,16 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// AJAX handler for pixel fetch (AlvoBot mode)
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_pixels', array( $this, 'ajax_fetch_pixels' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_refresh_token', array( $this, 'ajax_refresh_token' ) );
 
 		// AJAX handlers for conversion CRUD
 		add_action( 'wp_ajax_alvobot_pixel_tracking_save_conversion', array( $this, 'ajax_save_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion', array( $this, 'ajax_delete_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_toggle_conversion', array( $this, 'ajax_toggle_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_get_conversions', array( $this, 'ajax_get_conversions' ) );
+
+		// Admin notice for expired tokens.
+		add_action( 'admin_notices', array( $this, 'admin_notice_expired_tokens' ) );
 
 		AlvoBotPro::debug_log( 'pixel-tracking', 'Module initialized' );
 	}
@@ -178,6 +182,178 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		wp_send_json_success( array( 'pixels' => $pixels ) );
+	}
+
+	/**
+	 * AJAX handler to refresh a single pixel's token from AlvoBot.
+	 *
+	 * Fetches fresh data from the platform and updates the stored token
+	 * for the specified pixel_id. Clears token_expired flag on success.
+	 */
+	public function ajax_refresh_token() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$pixel_id = isset( $_POST['pixel_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_id'] ) ) : '';
+		if ( empty( $pixel_id ) ) {
+			wp_send_json_error( __( 'Pixel ID obrigatorio.', 'alvobot-pro' ) );
+		}
+
+		$fresh_pixels = $this->fetch_alvobot_pixels( true );
+		if ( is_wp_error( $fresh_pixels ) ) {
+			wp_send_json_error( $fresh_pixels->get_error_message() );
+		}
+
+		// Find the pixel in the fresh data.
+		$new_token = '';
+		$new_label = '';
+		foreach ( $fresh_pixels as $fp ) {
+			if ( isset( $fp['pixel_id'] ) && $fp['pixel_id'] === $pixel_id ) {
+				$new_token = isset( $fp['access_token'] ) ? $fp['access_token'] : '';
+				$new_label = isset( $fp['pixel_name'] ) ? $fp['pixel_name'] : '';
+				break;
+			}
+		}
+
+		if ( empty( $new_token ) ) {
+			wp_send_json_error( __( 'Pixel nao encontrado no AlvoBot ou token indisponivel.', 'alvobot-pro' ) );
+		}
+
+		// Update the token in saved settings.
+		$settings = $this->get_settings();
+		$updated  = false;
+		if ( isset( $settings['pixels'] ) ) {
+			foreach ( $settings['pixels'] as &$pixel ) {
+				if ( isset( $pixel['pixel_id'] ) && $pixel['pixel_id'] === $pixel_id ) {
+					$pixel['api_token']     = sanitize_text_field( $new_token );
+					$pixel['token_expired'] = false;
+					if ( $new_label ) {
+						$pixel['label'] = sanitize_text_field( $new_label );
+					}
+					$updated = true;
+					break;
+				}
+			}
+		}
+
+		if ( $updated ) {
+			$this->save_settings( $settings );
+			// Trigger immediate CAPI dispatch for pending event backlog.
+			$this->capi->schedule_immediate_dispatch();
+		}
+
+		wp_send_json_success(
+			array(
+				'message'   => __( 'Token renovado com sucesso!', 'alvobot-pro' ),
+				'api_token' => $new_token,
+				'label'     => $new_label,
+			)
+		);
+	}
+
+	/**
+	 * Show admin notice when any configured pixel has an expired token.
+	 */
+	public function admin_notice_expired_tokens() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$settings = $this->get_settings();
+		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+
+		$expired = array();
+		foreach ( $pixels as $pixel ) {
+			if ( ! empty( $pixel['token_expired'] ) ) {
+				$expired[] = isset( $pixel['label'] ) && $pixel['label'] ? $pixel['label'] : $pixel['pixel_id'];
+			}
+		}
+
+		if ( empty( $expired ) ) {
+			return;
+		}
+
+		$page_url = admin_url( 'admin.php?page=alvobot-pro-pixel-tracking&tab=pixels' );
+		printf(
+			'<div class="notice notice-error"><p><strong>%s</strong> %s: %s. <a href="%s">%s</a></p></div>',
+			esc_html__( 'Pixel Tracking:', 'alvobot-pro' ),
+			esc_html__( 'Token expirado para', 'alvobot-pro' ),
+			esc_html( implode( ', ', $expired ) ),
+			esc_url( $page_url ),
+			esc_html__( 'Renovar token', 'alvobot-pro' )
+		);
+	}
+
+	/**
+	 * Sync tokens from AlvoBot for all AlvoBot-sourced pixels on settings page load.
+	 *
+	 * Runs once per hour (throttled via transient) when admin visits the Pixels tab.
+	 * Updates tokens and clears token_expired flags for any pixel with a fresh token.
+	 */
+	public function maybe_sync_tokens() {
+		// Throttle: run once per hour.
+		$cache_key = 'alvobot_pixel_token_sync';
+		if ( false !== get_transient( $cache_key ) ) {
+			return;
+		}
+
+		$settings    = $this->get_settings();
+		$pixels      = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$has_alvobot = false;
+		$has_expired = false;
+
+		foreach ( $pixels as $pixel ) {
+			if ( 'alvobot' === ( isset( $pixel['source'] ) ? $pixel['source'] : '' ) ) {
+				$has_alvobot = true;
+			}
+			if ( ! empty( $pixel['token_expired'] ) ) {
+				$has_expired = true;
+			}
+		}
+
+		// Only sync if we have AlvoBot pixels AND at least one is expired.
+		if ( ! $has_alvobot || ! $has_expired ) {
+			set_transient( $cache_key, 1, HOUR_IN_SECONDS );
+			return;
+		}
+
+		AlvoBotPro::debug_log( 'pixel-tracking', 'Auto-syncing tokens from AlvoBot (expired tokens detected)...' );
+
+		$fresh_pixels = $this->fetch_alvobot_pixels( true );
+		if ( is_wp_error( $fresh_pixels ) || ! is_array( $fresh_pixels ) ) {
+			set_transient( $cache_key, 1, HOUR_IN_SECONDS );
+			return;
+		}
+
+		// Build lookup: pixel_id → access_token.
+		$token_map = array();
+		foreach ( $fresh_pixels as $fp ) {
+			if ( ! empty( $fp['pixel_id'] ) && ! empty( $fp['access_token'] ) ) {
+				$token_map[ $fp['pixel_id'] ] = $fp['access_token'];
+			}
+		}
+
+		$changed = false;
+		foreach ( $settings['pixels'] as &$pixel ) {
+			$pid = isset( $pixel['pixel_id'] ) ? $pixel['pixel_id'] : '';
+			if ( ! empty( $pixel['token_expired'] ) && isset( $token_map[ $pid ] ) ) {
+				$pixel['api_token']     = sanitize_text_field( $token_map[ $pid ] );
+				$pixel['token_expired'] = false;
+				$changed                = true;
+				AlvoBotPro::debug_log( 'pixel-tracking', "Auto-sync: token refreshed for pixel {$pid}" );
+			}
+		}
+
+		if ( $changed ) {
+			$this->save_settings( $settings );
+			// Trigger immediate CAPI dispatch for pending event backlog.
+			$this->capi->schedule_immediate_dispatch();
+		}
+
+		set_transient( $cache_key, 1, HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -346,6 +522,9 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	 * Override base: use tab-based admin page template.
 	 */
 	protected function render_settings_template() {
+		// Auto-sync expired tokens from AlvoBot (throttled, once per hour).
+		$this->maybe_sync_tokens();
+
 		$settings = $this->get_settings();
 		include plugin_dir_path( __FILE__ ) . 'views/admin-page.php';
 	}
@@ -465,7 +644,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['test_mode']       = ! empty( $settings['test_mode'] );
 		$sanitized['test_event_code'] = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
 
-		$sanitized['consent_check']  = ! empty( $settings['consent_check'] );
+		$sanitized['consent_check']  = ! isset( $settings['consent_check'] ) || ! empty( $settings['consent_check'] );
 		$sanitized['consent_cookie'] = isset( $settings['consent_cookie'] ) ? sanitize_text_field( $settings['consent_cookie'] ) : 'alvobot_tracking_consent';
 
 		$sanitized['excluded_roles'] = array();

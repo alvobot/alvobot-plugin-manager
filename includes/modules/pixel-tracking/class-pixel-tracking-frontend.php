@@ -244,10 +244,12 @@ class AlvoBotPro_PixelTracking_Frontend {
 		if ( ! empty( $scripts ) ) {
 			echo "\n<script>\n";
 			echo "document.addEventListener('DOMContentLoaded', function() {\n";
-			echo "  if (!window.alvobot_pixel) return;\n";
+			echo "  if (!window.alvobot_pixel || !window.alvobot_pixel.ready) return;\n";
+			echo "  window.alvobot_pixel.ready().then(function() {\n";
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $scripts contains generated JS snippets for inline execution.
 			echo implode( "\n", $scripts );
-			echo "\n});\n";
+			echo "\n  });\n";
+			echo "});\n";
 			echo "</script>\n";
 		}
 	}
@@ -267,11 +269,17 @@ class AlvoBotPro_PixelTracking_Frontend {
 				return "  setTimeout(function() { window.alvobot_pixel.send_event({$event_config}); }, " . ( $seconds * 1000 ) . ');';
 
 			case 'form_submit':
-				$esc_selector = esc_js( $selector );
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
 				return "  (function() {
     var tracked_{$safe_id} = false;
     function bind_{$safe_id}() {
-      document.querySelectorAll('{$esc_selector}').forEach(function(el) {
+      var elements = [];
+      try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
+      elements.forEach(function(el) {
         if (el.classList.contains('alvobot_tracked_{$safe_id}')) return;
         el.classList.add('alvobot_tracked_{$safe_id}');
         el.addEventListener('submit', function() {
@@ -284,10 +292,18 @@ class AlvoBotPro_PixelTracking_Frontend {
   })();";
 
 			case 'click':
-				$esc_selector = esc_js( $selector );
-				return "  document.querySelectorAll('{$esc_selector}').forEach(function(el) {
-    el.addEventListener('click', function() { window.alvobot_pixel.send_event({$event_config}); });
-  });";
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
+				return "  (function() {
+    var elements = [];
+    try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
+    elements.forEach(function(el) {
+      el.addEventListener('click', function() { window.alvobot_pixel.send_event({$event_config}); });
+    });
+  })();";
 
 			case 'scroll':
 				$pct = max( 1, min( 100, absint( $trigger_val ) ) );
@@ -301,9 +317,14 @@ class AlvoBotPro_PixelTracking_Frontend {
   })();";
 
 			case 'view_element':
-				$esc_selector = esc_js( $selector );
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
 				return "  (function() {
-    var el = document.querySelector('{$esc_selector}');
+    var el;
+    try { el = document.querySelector({$selector_literal}); } catch (e) { return; }
     if (!el) return;
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {

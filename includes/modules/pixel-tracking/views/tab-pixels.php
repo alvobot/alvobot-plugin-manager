@@ -73,13 +73,13 @@ $alvobot_pt_test_code = isset( $settings['test_event_code'] ) ? $settings['test_
 				<div class="alvobot-mode-header">
 					<i data-lucide="cloud-download" class="alvobot-icon"></i>
 					<span><?php esc_html_e( 'Pixels Conectados no AlvoBot', 'alvobot-pro' ); ?></span>
+					<button type="button" id="alvobot-fetch-pixels-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline" style="margin-left:auto;">
+						<i data-lucide="refresh-cw" class="alvobot-icon"></i>
+						<?php esc_html_e( 'Buscar Pixels', 'alvobot-pro' ); ?>
+					</button>
 				</div>
 				<div class="alvobot-form-field">
 					<div id="alvobot-pixel-selector">
-						<button type="button" id="alvobot-fetch-pixels-btn" class="alvobot-btn alvobot-btn-outline">
-							<i data-lucide="refresh-cw" class="alvobot-icon"></i>
-							<?php esc_html_e( 'Buscar Pixels', 'alvobot-pro' ); ?>
-						</button>
 						<div id="alvobot-pixel-list-loading" style="display:none;">
 							<span class="spinner is-active" style="float:none;"></span>
 							<?php esc_html_e( 'Buscando pixels...', 'alvobot-pro' ); ?>

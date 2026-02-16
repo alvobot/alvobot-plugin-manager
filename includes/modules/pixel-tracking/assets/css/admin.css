@@ -257,15 +257,7 @@
 	display: block;
 }
 
-/* ========================
-	Buttons
-	======================== */
-.alvobot-btn-sm {
-	padding: 4px 8px;
-	font-size: 12px;
-}
-
-/* .alvobot-btn-danger inherits from global styles.css (solid red bg + white icon) */
+/* Button overrides: .alvobot-btn-sm and .alvobot-btn-danger inherit from global styles.css */
 
 /* ========================
 	Empty state

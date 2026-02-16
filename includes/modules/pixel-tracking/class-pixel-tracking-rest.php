@@ -277,6 +277,9 @@ class AlvoBotPro_PixelTracking_REST {
 		set_transient( $rate_key, $rate_count + 1, MINUTE_IN_SECONDS );
 
 		$data = $request->get_json_params();
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
 
 		// Server-side IP/UA override (always more reliable than browser-reported).
 		$data['ip']         = $ip;
@@ -335,7 +338,24 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 		set_transient( $rate_key, $rate_count + 1, MINUTE_IN_SECONDS );
 
-		$data    = $request->get_json_params();
+		$data = $request->get_json_params();
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
+
+		// Server-side IP/UA override (always more reliable than browser-reported).
+		$data['ip']         = $ip;
+		$data['user_agent'] = (string) $request->get_header( 'User-Agent' );
+
+		// Server-side geo fallback when browser geo is missing or empty.
+		$has_browser_geo = ! empty( $data['geo'] ) && is_array( $data['geo'] ) && ! empty( $data['geo']['city'] );
+		if ( ! $has_browser_geo && $ip && '0.0.0.0' !== $ip ) {
+			$server_geo = $this->lookup_geo_by_ip( $ip );
+			if ( $server_geo ) {
+				$data['geo'] = $server_geo;
+			}
+		}
+
 		$post_id = $this->module->cpt->create_lead( $data );
 
 		if ( is_wp_error( $post_id ) ) {
@@ -950,8 +970,7 @@ class AlvoBotPro_PixelTracking_REST {
 	 * Authenticated: Force cleanup.
 	 */
 	public function action_cleanup() {
-		$this->module->cleanup = isset( $this->module->cleanup ) ? $this->module->cleanup : null;
-		// Trigger cleanup directly through the CAPI class if cleanup is available
+		// Trigger cleanup scheduler hook directly.
 		do_action( 'alvobot_pixel_cleanup' );
 		return rest_ensure_response( array( 'success' => true ) );
 	}

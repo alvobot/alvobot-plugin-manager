@@ -11,6 +11,24 @@
 			this.data        = {};
 			this.config      = {};
 			this.initialized = false;
+			this._readyPromise = null;
+			this._resolveReady = null;
+		}
+
+		/**
+		 * Returns a promise that resolves when the tracker has finished initializing.
+		 */
+		ready() {
+			if (this.initialized) {
+				return Promise.resolve();
+			}
+			if ( ! this._readyPromise) {
+				var self = this;
+				this._readyPromise = new Promise( function (resolve) {
+					self._resolveReady = resolve;
+				});
+			}
+			return this._readyPromise;
 		}
 
 		/**
@@ -59,6 +77,9 @@
 			this.monitor_forms();
 
 			this.initialized = true;
+			if (this._resolveReady) {
+				this._resolveReady();
+			}
 		}
 
 		/**
@@ -368,20 +389,22 @@
 			}
 
 			// 1. Fire browser-side via fbq with enriched data
-			if (window.fbq) {
-				var fbq_method = params.event_custom ? 'trackCustom' : 'track';
-				window.fbq(
-					fbq_method,
-					event_name,
-					{
-						content_name: params.content_name || '',
-						content_type: custom_data.content_type || '',
-						content_category: custom_data.content_category || '',
-						currency: custom_data.currency || '',
-						event_id: event_id,
-					}
-				);
-			}
+				if (window.fbq) {
+					var fbq_method = params.event_custom ? 'trackCustom' : 'track';
+					window.fbq(
+						fbq_method,
+						event_name,
+						{
+							content_name: params.content_name || '',
+							content_type: custom_data.content_type || '',
+							content_category: custom_data.content_category || '',
+							currency: custom_data.currency || '',
+						},
+						{
+							eventID: event_id,
+						}
+					);
+				}
 
 			// 2. POST to WordPress for server-side dispatch
 			try {
@@ -558,9 +581,13 @@
 		set_cookie(name, value) {
 			var expires = new Date();
 			expires.setTime( expires.getTime() + (180 * 24 * 60 * 60 * 1000) ); // 180 days
-			document.cookie = name + '=' + encodeURIComponent( value ) +
+			var cookie = name + '=' + encodeURIComponent( value ) +
 			';expires=' + expires.toUTCString() +
 			';path=/;SameSite=Lax';
+			if (window.location.protocol === 'https:') {
+				cookie += ';Secure';
+			}
+			document.cookie = cookie;
 		}
 	}
 

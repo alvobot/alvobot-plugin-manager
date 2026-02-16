@@ -63,7 +63,11 @@ class AlvoBotPro_PixelTracking_Cleanup {
 
 		$total_deleted = 0;
 
-		// Only delete sent/error events — never pending.
+		// Stale pending events: Meta CAPI rejects events older than 7 days — irrecoverable.
+		$deleted_stale  = $this->cleanup_stale_pending( $total_deleted );
+		$total_deleted += $deleted_stale;
+
+		// Only delete sent/error events — never pending (except stale above).
 		$deleted_events = $this->cleanup_events_by_age( $retention_days, $total_deleted );
 		$total_deleted += $deleted_events;
 
@@ -120,6 +124,58 @@ class AlvoBotPro_PixelTracking_Cleanup {
 
 			$posts_count = count( $query->posts );
 		} while ( $posts_count === $limit && $deleted < $cap );
+
+		return $deleted;
+	}
+
+	/**
+	 * Delete pending events older than 7 days.
+	 *
+	 * Meta Conversion API rejects events where (now - event_time) > 7 days.
+	 * These events are irrecoverable regardless of token status, so we clean
+	 * them up to prevent unbounded growth during long token outages.
+	 */
+	private function cleanup_stale_pending( $already_deleted = 0 ) {
+		$deleted = 0;
+		$batch   = 100;
+		$cap     = $this->max_deletions_per_run - $already_deleted;
+
+		if ( $cap <= 0 ) {
+			return 0;
+		}
+
+		$posts_count = 0;
+		do {
+			$limit = min( $batch, $cap - $deleted );
+			$query = new WP_Query(
+				array(
+					'post_type'      => 'alvobot_pixel_event',
+					'post_status'    => 'pixel_pending',
+					'posts_per_page' => $limit,
+					'date_query'     => array(
+						array(
+							'before' => '7 days ago',
+						),
+					),
+					'fields'         => 'ids',
+				)
+			);
+
+			if ( empty( $query->posts ) ) {
+				break;
+			}
+
+			foreach ( $query->posts as $post_id ) {
+				wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			$posts_count = count( $query->posts );
+		} while ( $posts_count === $limit && $deleted < $cap );
+
+		if ( $deleted > 0 ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', "Cleanup: deleted {$deleted} stale pending events (older than 7 days — Meta CAPI window expired)" );
+		}
 
 		return $deleted;
 	}
