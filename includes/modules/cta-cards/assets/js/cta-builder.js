@@ -418,12 +418,8 @@
 			});
 			shortcode += ']';
 
-			// For now, use static preview always for reliability
-			// TODO: Enable AJAX preview when debugging is complete
-			this.renderStaticPreview(shortcode, $previewContent);
-
-			// Try AJAX in background for comparison
-			// this.renderPreview(shortcode);
+			// Try AJAX preview first, with static fallback on error
+			this.renderPreview(shortcode);
 		},
 
 		renderPreview: function (shortcode) {
@@ -435,11 +431,7 @@
 				'<div class="preview-loading"><i data-lucide="refresh-cw" class="alvobot-icon"></i><p>Atualizando preview...</p></div>',
 			);
 
-			console.log('Rendering preview for shortcode:', shortcode);
-			console.log('AJAX URL:', alvobotCTACards.ajaxurl || ajaxurl);
-			console.log('Nonce:', alvobotCTACards.nonce);
-
-			// Make AJAX request to render shortcode
+			// Make AJAX request to render shortcode server-side
 			$.ajax({
 				url: alvobotCTACards.ajaxurl || ajaxurl,
 				type: 'POST',
@@ -449,21 +441,15 @@
 					nonce: alvobotCTACards.nonce || '',
 				},
 				success: function (response) {
-					console.log('AJAX Response:', response);
 					if (response.success) {
 						$previewContent.html(response.data);
 					} else {
-						console.error('Preview error:', response.data);
-						$previewContent.html(
-							'<div class="preview-error"><i data-lucide="alert-triangle" class="alvobot-icon"></i><p>Erro: ' +
-								(response.data || 'Erro desconhecido') +
-								'</p></div>',
-						);
+						// AJAX worked but shortcode rendering failed — use static fallback
+						self.renderStaticPreview(shortcode, $previewContent);
 					}
 				},
-				error: function (xhr, status, error) {
-					console.error('AJAX Error:', status, error, xhr.responseText);
-					// Try fallback - render a static preview
+				error: function () {
+					// Network/server error — use static fallback
 					self.renderStaticPreview(shortcode, $previewContent);
 				},
 			});

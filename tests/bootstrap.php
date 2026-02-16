@@ -24,7 +24,7 @@ if (file_exists($plugin_main)) {
     }
 }
 if (!defined('ALVOBOT_PRO_VERSION')) {
-    define('ALVOBOT_PRO_VERSION', '2.8.1');
+    define('ALVOBOT_PRO_VERSION', '2.9.0');
 }
 define('ALVOBOT_PRO_PLUGIN_FILE', dirname(__DIR__) . '/alvobot-pro.php');
 define('ALVOBOT_PRO_PLUGIN_DIR', dirname(__DIR__) . '/');
@@ -103,6 +103,44 @@ function admin_url($path = '') {
 function wp_die($message = '', $title = '') {
     echo $message;
     exit;
+}
+
+function sanitize_text_field($str) {
+    return is_string($str) ? trim(strip_tags($str)) : '';
+}
+
+function absint($maybeint) {
+    return abs((int) $maybeint);
+}
+
+function esc_url_raw($url) {
+    return filter_var($url, FILTER_SANITIZE_URL) ?: '';
+}
+
+function wp_strip_all_tags($string) {
+    return strip_tags($string);
+}
+
+function wp_parse_args($args, $defaults = array()) {
+    if (is_object($args)) {
+        $parsed = get_object_vars($args);
+    } elseif (is_array($args)) {
+        $parsed = &$args;
+    } else {
+        parse_str($args, $parsed);
+    }
+    return array_merge($defaults, $parsed);
+}
+
+function sanitize_hex_color($color) {
+    if (preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+        return $color;
+    }
+    return null;
+}
+
+function wp_json_encode($data) {
+    return json_encode($data);
 }
 
 echo "Sistema de Testes AlvoBot Pro - PHPUnit\n";

@@ -1,10 +1,10 @@
 # AlvoBot Pro - Plugin Manager Suite
 
-[![Version](https://img.shields.io/badge/version-2.5.9-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
+[![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-brightgreen.svg)](https://wordpress.org/)
 [![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
-[![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]()
 
 > Suite completa de ferramentas AlvoBot para WordPress incluindo gerador de logo, author box, gerenciamento de plugins e muito mais.
 
@@ -35,7 +35,7 @@ O **AlvoBot Pro** é uma suite completa de ferramentas profissionais para WordPr
 - 🔧 **Modular**: Ative apenas os módulos que precisar
 - 🛡️ **Seguro**: Validação rigorosa e sanitização de dados
 - 🌍 **Multilíngue**: Suporte completo à internacionalização
-- 🧪 **Testado**: 58 testes automatizados com 456+ assertions
+- 🧪 **Testado**: Testes automatizados com 500+ assertions
 
 ## 🚀 Recursos
 
@@ -76,6 +76,30 @@ O **AlvoBot Pro** é uma suite completa de ferramentas profissionais para WordPr
 - Templates personalizáveis
 - Otimização para SEO
 - Integração com editores
+
+### 🔗 **Smart Internal Links**
+- Links internos inteligentes gerados por IA
+- Inserção automática no conteúdo (after_first, middle, before_last)
+- Editor visual com busca de posts e autocomplete
+- API REST completa para integração
+- Suporte a page builders (Elementor, Divi, etc.)
+
+### 🎯 **CTA Cards**
+- 8 templates de cards de Call-to-Action
+- Shortcode system com personalização completa
+- Preview em tempo real no admin
+- Suporte multilíngue integrado
+
+### 📊 **Quiz Builder**
+- Construção de quizzes interativos
+- Múltiplos tipos de perguntas
+- Shortcode para embed em posts/páginas
+- Sistema de pontuação automático
+
+### 📄 **Essential Pages**
+- Criação automática de páginas essenciais (Privacidade, Termos, etc.)
+- Configuração automática no menu do rodapé
+- Templates pré-definidos por tipo de página
 
 ## 💻 Instalação
 
@@ -198,6 +222,73 @@ Gere introduções automáticas para seus artigos.
 - ✅ Otimização SEO
 - ✅ Integração com editores
 
+### 🔗 Smart Internal Links
+
+Links internos inteligentes com textos gerados por IA para aumentar o engajamento e SEO.
+
+**Funcionalidades:**
+- ✅ Geração automática de links via IA
+- ✅ Inserção inteligente no conteúdo (3 posições configuráveis)
+- ✅ Editor visual de links com busca de posts
+- ✅ Geração em massa por categoria/idioma
+- ✅ API REST completa (10 endpoints)
+- ✅ Compatibilidade com page builders
+- ✅ Suporte multilíngue (Polylang)
+- ✅ Personalização de cores e bordas dos botões
+- ✅ Disclaimer configurável
+
+**Endpoints API:**
+```
+GET    /wp-json/alvobot/v1/smart-links/settings
+POST   /wp-json/alvobot/v1/smart-links/settings
+POST   /wp-json/alvobot/v1/smart-links/generate
+POST   /wp-json/alvobot/v1/smart-links/bulk-generate
+GET    /wp-json/alvobot/v1/smart-links/posts
+GET    /wp-json/alvobot/v1/smart-links/post/{id}
+PUT    /wp-json/alvobot/v1/smart-links/post/{id}
+DELETE /wp-json/alvobot/v1/smart-links/post/{id}
+POST   /wp-json/alvobot/v1/smart-links/post/{id}/toggle
+GET    /wp-json/alvobot/v1/smart-links/search-posts
+GET    /wp-json/alvobot/v1/smart-links/stats
+```
+
+### 🎯 CTA Cards
+
+Crie cards de Call-to-Action personalizados para seus artigos.
+
+**Funcionalidades:**
+- ✅ 8 templates profissionais
+- ✅ Shortcode com personalização completa
+- ✅ Preview em tempo real (AJAX + estático)
+- ✅ Personalização de cores, fontes e imagens
+- ✅ Suporte multilíngue
+
+**Uso:**
+```php
+[cta_card template="vertical" title="Título" button="Saiba Mais" url="https://exemplo.com"]
+```
+
+### 📊 Quiz Builder
+
+Construa quizzes interativos para engajar seus visitantes.
+
+**Funcionalidades:**
+- ✅ Builder visual no admin
+- ✅ Múltiplos tipos de perguntas
+- ✅ Sistema de pontuação automático
+- ✅ Shortcode para embed em posts/páginas
+- ✅ Resultados customizáveis
+
+### 📄 Essential Pages
+
+Crie automaticamente as páginas essenciais para seu site.
+
+**Funcionalidades:**
+- ✅ Templates pré-definidos (Privacidade, Termos, Sobre, Contato)
+- ✅ Configuração automática no menu do rodapé
+- ✅ Configuração de páginas especiais do WordPress
+- ✅ Criação e exclusão individual
+
 ## 🔌 API
 
 ### Autenticação
@@ -269,6 +360,29 @@ GET  /wp-json/alvobot-pro/v1/admin/queue/status
 POST /wp-json/alvobot-pro/v1/admin/queue/add
 ```
 
+#### Smart Internal Links
+```bash
+# Obter configurações
+curl -X GET https://seusite.com/wp-json/alvobot/v1/smart-links/settings \
+  -H "Authorization: Basic BASE64_CREDENTIALS"
+
+# Gerar links para um post
+curl -X POST https://seusite.com/wp-json/alvobot/v1/smart-links/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic BASE64_CREDENTIALS" \
+  -d '{"post_id": 123}'
+
+# Gerar links em massa
+curl -X POST https://seusite.com/wp-json/alvobot/v1/smart-links/bulk-generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic BASE64_CREDENTIALS" \
+  -d '{"post_ids": [123, 456, 789]}'
+
+# Obter estatísticas
+curl -X GET https://seusite.com/wp-json/alvobot/v1/smart-links/stats \
+  -H "Authorization: Basic BASE64_CREDENTIALS"
+```
+
 ### Códigos de Resposta
 
 | Código | Significado |
@@ -322,6 +436,31 @@ add_filter('alvobot_author_box_html', function($html, $author_id) {
     // Seu código personalizado
     return $html;
 }, 10, 2);
+
+// Smart Internal Links - Customizar posições de inserção
+add_filter('alvobot_smart_links_insertion_positions', function($insertions, $total, $post_id, $blocks) {
+    return $insertions;
+}, 10, 4);
+
+// Smart Internal Links - Customizar HTML de bloco renderizado
+add_filter('alvobot_smart_links_render_block', function($html, $block, $post_id, $settings) {
+    return $html;
+}, 10, 4);
+
+// Smart Internal Links - Após links serem gerados
+add_action('alvobot_smart_links_generated', function($post_id, $meta) {
+    // Ação após geração de links
+}, 10, 2);
+
+// Smart Internal Links - Após links serem editados manualmente
+add_action('alvobot_smart_links_updated', function($post_id, $meta) {
+    // Ação após edição manual
+}, 10, 2);
+
+// Smart Internal Links - Customizar query de candidatos
+add_filter('alvobot_smart_links_candidate_args', function($args, $post_id, $limit) {
+    return $args;
+}, 10, 3);
 ```
 
 ## 🧪 Testes
@@ -331,10 +470,9 @@ O AlvoBot Pro inclui um sistema de testes automatizados completo e simples, gara
 ### ✅ **Sistema de Testes**
 
 ```bash
-✅ 58 testes executados
-✅ 456+ assertions validadas  
+✅ Testes automatizados com PHPUnit
+✅ 500+ assertions validadas
 ✅ 100% de sucesso
-✅ Tempo de execução < 0.02s
 ✅ Zero dependências complexas
 ```
 
@@ -344,6 +482,7 @@ O AlvoBot Pro inclui um sistema de testes automatizados completo e simples, gara
 - **Quiz Builder**: Estrutura, validação, shortcodes
 - **Logo Generator**: Requisições, cores, estilos
 - **Author Box**: Dados, configurações, HTML
+- **Smart Internal Links**: Meta validação, settings, estrutura, endpoints
 - **AJAX Handlers**: Segurança, nonces, sanitização
 - **OpenAI API**: Configuração, autenticação, respostas
 - **REST API**: Endpoints, rate limiting, validação
@@ -370,16 +509,17 @@ vendor/bin/phpunit tests/PluginBasicsTest.php
 
 ```
 tests/
-├── bootstrap.php              # Configuração simples
-├── PluginBasicsTest.php       # Testes básicos do plugin
-├── QuizBuilderTest.php        # Testes do Quiz Builder
-├── LogoGeneratorTest.php      # Testes do Logo Generator
-├── AuthorBoxTest.php          # Testes do Author Box
-├── AjaxHandlersTest.php       # Testes AJAX
-├── OpenAIApiTest.php          # Testes OpenAI API
-├── RestApiTest.php            # Testes REST API
-├── AlvoBotCloudApiTest.php    # Testes AlvoBot Cloud API
-└── ApiIntegrationTest.php     # Testes integração APIs
+├── bootstrap.php                  # Configuração simples
+├── PluginBasicsTest.php           # Testes básicos do plugin
+├── QuizBuilderTest.php            # Testes do Quiz Builder
+├── LogoGeneratorTest.php          # Testes do Logo Generator
+├── AuthorBoxTest.php              # Testes do Author Box
+├── SmartInternalLinksTest.php     # Testes do Smart Internal Links
+├── AjaxHandlersTest.php          # Testes AJAX
+├── OpenAIApiTest.php             # Testes OpenAI API
+├── RestApiTest.php               # Testes REST API
+├── AlvoBotCloudApiTest.php       # Testes AlvoBot Cloud API
+└── ApiIntegrationTest.php        # Testes integração APIs
 ```
 
 ### **Benefícios dos Testes**
@@ -410,15 +550,25 @@ tests/
 
 Veja o arquivo [CHANGELOG.md](CHANGELOG.md) para histórico completo de versões.
 
-### Versão Atual: 2.5.9
+### Versão Atual: 2.9.0
 
-**🐛 Correções:**
-- **Essential Pages**: Corrigido erro fatal ao criar páginas individuais
-- Adicionados métodos públicos `create_essential_page()` e `delete_essential_page()`
-- Implementado retorno booleano adequado para controle de fluxo
-- Adicionados logs de debug para rastreamento de criação/exclusão
-- Páginas criadas individualmente agora são adicionadas automaticamente ao menu do rodapé
-- Configuração automática de páginas especiais do WordPress (Privacy Policy, Terms)
+**✨ Novidades:**
+- **Smart Internal Links**: Módulo completo de links internos inteligentes com geração por IA
+  - Editor visual de links com busca de posts e autocomplete
+  - 10 endpoints REST API para integração completa
+  - Geração em massa com paginação
+  - Compatibilidade com page builders (Elementor, Divi, etc.)
+  - Personalização de cores e estilos dos botões
+  - Extensibilidade via hooks e filtros
+- **CTA Cards**: Preview AJAX em tempo real com fallback estático
+- **Testes**: Adicionados testes automatizados para Smart Internal Links
+
+**🔧 Melhorias:**
+- Singleton pattern refinado na classe principal
+- Design system auditado e padronizado (CSS variables)
+- Consolidação de dados compartilhados (countries-languages)
+- Melhoria na validação de meta data em todos os módulos
+- Hooks extensíveis em módulos existentes
 
 ## 🤝 Contribuição
 
@@ -447,7 +597,7 @@ Use nosso [sistema de issues](https://github.com/alvobot/alvobot-plugin-manager/
 **Template de Bug Report:**
 ```markdown
 **Descrição:** Breve descrição do bug
-**Versão:** 2.5.9
+**Versão:** 2.9.0
 **WordPress:** 6.x
 **PHP:** 8.x
 **Passos para reproduzir:**
