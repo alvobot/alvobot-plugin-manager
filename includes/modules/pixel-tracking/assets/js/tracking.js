@@ -96,7 +96,11 @@
 			var ids = pixel_ids_str.split( ',' ).map(
 				function (s) {
 					return s.trim(); }
-			).filter( Boolean );
+			).filter( Boolean ).filter(
+				function (id, index, arr) {
+					return arr.indexOf( id ) === index;
+				}
+			);
 			if ( ! ids.length) {
 				return;
 			}

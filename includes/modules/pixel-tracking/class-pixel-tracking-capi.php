@@ -66,8 +66,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 */
 	public function process_pending_events( $context = array() ) {
 		$dispatch_source = 'queue';
+		$target_event_post_id = 0;
 		if ( is_array( $context ) && ! empty( $context['source'] ) ) {
 			$dispatch_source = sanitize_key( (string) $context['source'] );
+		}
+		if ( is_array( $context ) && ! empty( $context['event_post_id'] ) ) {
+			$target_event_post_id = absint( $context['event_post_id'] );
 		}
 
 		$settings = $this->module->get_settings();
@@ -82,6 +86,18 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 		$min_age_seconds = 'queue' === $dispatch_source ? 300 : 0;
 		$events          = $this->module->cpt->get_pending_events( 250, $min_age_seconds );
+
+		// For real-time dispatch triggered by track_event, send only that event.
+		if ( 'track_event' === $dispatch_source && $target_event_post_id > 0 ) {
+			$target_event = get_post( $target_event_post_id );
+			if ( $target_event instanceof WP_Post
+				&& 'alvobot_pixel_event' === $target_event->post_type
+				&& 'pixel_pending' === $target_event->post_status ) {
+				$events = array( $target_event );
+			} else {
+				$events = array();
+			}
+		}
 
 		if ( empty( $events ) ) {
 			return array(
@@ -877,6 +893,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 	private function store_debug_payloads( $events, $payload_batch, $result, $pixel_id ) {
 		$response_payload = isset( $result['response_payload'] ) ? $result['response_payload'] : array();
 		$test_event_code = '';
+		$batch_size      = count( $payload_batch );
 		if ( isset( $result['request_payload']['test_event_code'] ) ) {
 			$test_event_code = sanitize_text_field( (string) $result['request_payload']['test_event_code'] );
 		}
@@ -886,10 +903,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 			// Build per-event request payload.
 			$per_event_request = array(
-				'pixel_id'  => $pixel_id,
-				'url'       => "https://graph.facebook.com/v24.0/{$pixel_id}/events",
-				'event'     => $event_payload,
-				'timestamp' => time(),
+				'pixel_id'    => $pixel_id,
+				'url'         => "https://graph.facebook.com/v24.0/{$pixel_id}/events",
+				'event'       => $event_payload,
+				'timestamp'   => time(),
+				'batch_size'  => $batch_size,
+				'batch_index' => $index + 1,
 			);
 			if ( '' !== $test_event_code ) {
 				$per_event_request['test_event_code'] = $test_event_code;
