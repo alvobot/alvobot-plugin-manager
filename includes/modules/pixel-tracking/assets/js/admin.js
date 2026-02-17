@@ -736,9 +736,12 @@
 		var perPage       = 25;
 		var totalEvents   = 0;
 		var currentOffset = 0;
+		var pixelLabelsById = getConfiguredPixelLabelMap();
+		var selectedEventIds = {};
 
 		loadEvents();
 		loadEventStats();
+		updateBulkActionsState();
 
 		// Filter button
 		$( '#events-filter-btn' ).on(
@@ -746,6 +749,7 @@
 			function () {
 				currentPage   = 1;
 				currentOffset = 0;
+				clearSelection();
 				loadEvents();
 			}
 		);
@@ -758,6 +762,7 @@
 				$( '#filter-event-name' ).val( '' );
 				currentPage   = 1;
 				currentOffset = 0;
+				clearSelection();
 				loadEvents();
 			}
 		);
@@ -786,9 +791,93 @@
 			}
 		);
 
-		function loadEvents() {
-			var $tbody = $( '#alvobot-events-tbody' );
-			$tbody.html( '<tr><td colspan="8" class="alvobot-events-loading"><span class="alvobot-skeleton" style="width:120px;"></span></td></tr>' );
+		$( '#events-select-all' ).on(
+			'change',
+			function () {
+				var checked = $( this ).is( ':checked' );
+				$( '.alvobot-events-row-check' ).each(
+					function () {
+						var eventId = String( $( this ).data( 'event-id' ) || '' );
+						$( this ).prop( 'checked', checked );
+						setSelected( eventId, checked );
+					}
+				);
+				updateBulkActionsState();
+			}
+		);
+
+		$( document )
+		.off( 'change.alvobotEventRowCheck', '.alvobot-events-row-check' )
+		.on(
+			'change.alvobotEventRowCheck',
+			'.alvobot-events-row-check',
+			function () {
+				var eventId = String( $( this ).data( 'event-id' ) || '' );
+				setSelected( eventId, $( this ).is( ':checked' ) );
+				updateBulkActionsState();
+			}
+		);
+
+		$( '#events-bulk-clear-btn' ).on(
+			'click',
+			function () {
+				clearSelection();
+				$( '.alvobot-events-row-check' ).prop( 'checked', false );
+				updateBulkActionsState();
+			}
+		);
+
+		$( '#events-bulk-apply-btn' ).on(
+			'click',
+			function () {
+				var action = String( $( '#events-bulk-action' ).val() || '' );
+				var eventIds = Object.keys( selectedEventIds );
+
+				if ( ! action || ! eventIds.length) {
+					return;
+				}
+
+				var confirmMessage =
+					action === 'delete'
+						? 'Excluir permanentemente ' + eventIds.length + ' evento(s) selecionado(s)?'
+						: 'Reenviar ' + eventIds.length + ' evento(s) selecionado(s) para a Meta?';
+				if ( ! confirm( confirmMessage )) {
+					return;
+				}
+
+				var $btn = $( this );
+				$btn.prop( 'disabled', true );
+
+				restPost(
+					'events/bulk',
+					{
+						action: action,
+						event_ids: eventIds,
+					},
+					function (result) {
+						$btn.prop( 'disabled', false );
+						clearSelection();
+						$( '#events-bulk-action' ).val( '' );
+						loadEvents();
+						loadEventStats();
+
+						var processed = result && typeof result.processed === 'number' ? result.processed : 0;
+						var failed    = result && typeof result.failed_count === 'number' ? result.failed_count : 0;
+						if (failed > 0) {
+							alert( 'Acao concluida com falhas. Processados: ' + processed + ' | Falhas: ' + failed );
+						}
+					},
+					function (error) {
+						$btn.prop( 'disabled', false );
+						alert( 'Erro na acao em massa: ' + error );
+					}
+				);
+			}
+		);
+
+			function loadEvents() {
+				var $tbody = $( '#alvobot-events-tbody' );
+				$tbody.html( '<tr><td colspan="9" class="alvobot-events-loading"><span class="alvobot-skeleton" style="width:120px;"></span></td></tr>' );
 
 			var params = 'limit=' + perPage + '&offset=' + currentOffset;
 			var status = $( '#filter-status' ).val();
@@ -800,44 +889,68 @@
 				params += '&event_name=' + encodeURIComponent( eventName );
 			}
 
-			restGet(
-				'events?' + params,
-				function (data, meta) {
-					totalEvents = meta ? meta.total : 0;
-					renderEventsTable( data );
-					updatePagination();
-				}
-			);
-		}
+				restGet(
+					'events?' + params,
+					function (data, meta) {
+						totalEvents = meta ? meta.total : 0;
+						renderEventsTable( data );
+						updatePagination();
+					},
+					function (error) {
+						totalEvents = 0;
+						$( '#alvobot-events-pagination' ).hide();
+						$tbody.html(
+							'<tr><td colspan="9" class="alvobot-empty-state"><p>' +
+							escHtml( error || 'Falha ao carregar eventos.' ) +
+							'</p><small>Atualize a pagina e tente novamente.</small></td></tr>'
+						);
+						updateBulkActionsState();
+					}
+				);
+			}
 
 		function loadEventStats() {
-			restGet(
-				'events/stats',
-				function (data) {
-					var pending = data.pixel_pending || 0;
-					var sent    = data.pixel_sent || 0;
+				restGet(
+					'events/stats',
+					function (data) {
+						var pending = data.pixel_pending || 0;
+						var sent    = data.pixel_sent || 0;
 					var error   = data.pixel_error || 0;
 					var total   = pending + sent + error;
 					$( '#events-stat-total' ).find( 'strong' ).text( formatNumber( total ) );
-					$( '#events-stat-pending' ).text( formatNumber( pending ) );
-					$( '#events-stat-sent' ).text( formatNumber( sent ) );
-					$( '#events-stat-error' ).text( formatNumber( error ) );
-				}
-			);
-		}
+						$( '#events-stat-pending' ).text( formatNumber( pending ) );
+						$( '#events-stat-sent' ).text( formatNumber( sent ) );
+						$( '#events-stat-error' ).text( formatNumber( error ) );
+					},
+					function () {
+						$( '#events-stat-total' ).find( 'strong' ).text( '-' );
+						$( '#events-stat-pending' ).text( '-' );
+						$( '#events-stat-sent' ).text( '-' );
+						$( '#events-stat-error' ).text( '-' );
+					}
+				);
+			}
 
 		function renderEventsTable(events) {
 			var $tbody = $( '#alvobot-events-tbody' );
 			$tbody.empty();
 
 			if ( ! events || ! events.length) {
-				$tbody.html( '<tr><td colspan="8" class="alvobot-empty-state"><p>Nenhum evento encontrado.</p></td></tr>' );
+				$tbody.html( '<tr><td colspan="9" class="alvobot-empty-state"><p>Nenhum evento encontrado.</p></td></tr>' );
+				updateBulkActionsState();
 				return;
 			}
 
 			for (var i = 0; i < events.length; i++) {
 				var e    = events[i];
 				var html = '<tr data-event-id="' + escAttr( e.event_id ) + '">';
+				var eventId = String( e.event_id || '' );
+				var isSelected = !! selectedEventIds[eventId];
+
+				// Selection checkbox
+				html += '<td class="alvobot-events-col-check">';
+				html += '<input type="checkbox" class="alvobot-events-row-check" data-event-id="' + escAttr( eventId ) + '"' + (isSelected ? ' checked' : '') + '>';
+				html += '</td>';
 
 				// Event name + ID
 				html += '<td>';
@@ -848,7 +961,7 @@
 				html += '</td>';
 
 				// Status badge
-				html += '<td>' + getStatusBadge( e.status, e.error, e.retry_count ) + '</td>';
+					html += '<td>' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</td>';
 
 				// Page URL + title
 				html += '<td>';
@@ -891,19 +1004,21 @@
 				html += '</div>';
 				html += '</td>';
 
-				// Pixels delivered
+				// Pixels
 				html += '<td>';
+				html += '<div class="alvobot-events-cell-pixels">';
 				if (e.pixel_ids) {
 					var pIds = e.pixel_ids.split( ',' );
 					for (var j = 0; j < pIds.length; j++) {
 						var pid = pIds[j].trim();
 						if (pid) {
-							html += '<code class="alvobot-events-pixel-tag">' + escHtml( pid.slice( -4 ) ) + '</code> ';
+							html += formatPixelTag( pid );
 						}
 					}
 				} else {
 					html += '<span class="alvobot-events-no-data">-</span>';
 				}
+				html += '</div>';
 				html += '</td>';
 
 				// Date
@@ -951,67 +1066,306 @@
 			if (window.lucide) {
 				window.lucide.createIcons();
 			}
+
+			updateBulkActionsState();
 		}
 
-		function getStatusBadge(status, error, retryCount) {
-			var map = {
-				pixel_pending: { cls: 'alvobot-badge-warning', label: 'Pendente' },
-				pixel_sent:    { cls: 'alvobot-badge-success', label: 'Enviado' },
-				pixel_error:   { cls: 'alvobot-badge-error', label: 'Erro' },
-			};
-			var info = map[status] || { cls: 'alvobot-badge-neutral', label: status };
-			var html = '<span class="alvobot-badge ' + info.cls + '">' + info.label + '</span>';
-			if (retryCount > 0 && status === 'pixel_pending') {
-				html += '<span class="alvobot-events-retry-tag">retry ' + retryCount + '/3</span>';
+			function getStatusBadge(status, error, retryCount, dispatchChannel) {
+				var map = {
+					pixel_pending: { cls: 'alvobot-badge-warning', label: 'Pendente' },
+					pixel_sent:    { cls: 'alvobot-badge-success', label: 'Enviado' },
+					pixel_error:   { cls: 'alvobot-badge-error', label: 'Erro' },
+				};
+				var info = map[status] || { cls: 'alvobot-badge-neutral', label: status };
+				var html = '<span class="alvobot-badge ' + info.cls + '">' + info.label + '</span>';
+				if (status === 'pixel_sent') {
+					if (dispatchChannel === 'realtime') {
+						html += '<span class="alvobot-events-dispatch-tag alvobot-events-dispatch-realtime">Tempo real</span>';
+					} else if (dispatchChannel === 'queue') {
+						html += '<span class="alvobot-events-dispatch-tag alvobot-events-dispatch-queue">Fila</span>';
+					}
+				}
+				if (retryCount > 0 && status === 'pixel_pending') {
+					html += '<span class="alvobot-events-retry-tag">retry ' + retryCount + '/3</span>';
+				}
+				if (error && status === 'pixel_error') {
+					html += '<span class="alvobot-events-error-hint" title="' + escAttr( error ) + '">!</span>';
+				}
+				return html;
 			}
-			if (error && status === 'pixel_error') {
-				html += '<span class="alvobot-events-error-hint" title="' + escAttr( error ) + '">!</span>';
+
+		function getConfiguredPixelLabelMap() {
+			var map = getLocalizedPixelLabelMap();
+			var raw = $( '#pixels_json' ).val();
+			if ( ! raw) {
+				return map;
 			}
-			return html;
+
+			try {
+				var pixels = JSON.parse( raw );
+				if ( ! Array.isArray( pixels )) {
+					return map;
+				}
+
+				for (var i = 0; i < pixels.length; i++) {
+					var pixel = pixels[i] || {};
+					var id    = String( pixel.pixel_id || '' ).trim();
+					var label = String( pixel.label || '' ).trim();
+					if (id) {
+						map[id] = label;
+					}
+				}
+			} catch (e) {
+				// Ignore malformed JSON and keep empty map.
+			}
+
+			return map;
 		}
 
-		function updatePagination() {
-			var maxPage = Math.ceil( totalEvents / perPage );
-			if (maxPage <= 1) {
-				$( '#alvobot-events-pagination' ).hide();
+		function getLocalizedPixelLabelMap() {
+			var map = {};
+			var source = extra && typeof extra.pixel_labels === 'object' ? extra.pixel_labels : {};
+			var keys = Object.keys( source );
+			for (var i = 0; i < keys.length; i++) {
+				var id = String( keys[i] || '' ).trim();
+				if ( ! id) {
+					continue;
+				}
+				map[id] = String( source[id] || '' ).trim();
+			}
+			return map;
+		}
+
+		function formatPixelTag(pixelId) {
+			var id    = String( pixelId || '' ).trim();
+			var label = id ? (pixelLabelsById[id] || '') : '';
+			var text  = label ? (label + ' (' + id + ')') : id;
+			return '<code class="alvobot-events-pixel-tag">' + escHtml( text ) + '</code> ';
+		}
+
+		function formatPixelList(pixelIds) {
+			if ( ! pixelIds) {
+				return '<span class="alvobot-events-missing">Nenhum</span>';
+			}
+
+			var list = String( pixelIds ).split( ',' );
+			var html = '';
+			for (var i = 0; i < list.length; i++) {
+				var id = String( list[i] || '' ).trim();
+				if (id) {
+					html += formatPixelTag( id );
+				}
+			}
+
+			return html || '<span class="alvobot-events-missing">Nenhum</span>';
+		}
+
+		function setSelected(eventId, selected) {
+			if ( ! eventId) {
 				return;
 			}
-			$( '#alvobot-events-pagination' ).show();
-			$( '#events-pagination-info' ).text( 'Pagina ' + currentPage + ' de ' + maxPage + ' (' + formatNumber( totalEvents ) + ' eventos)' );
-			$( '#events-prev-btn' ).prop( 'disabled', currentPage <= 1 );
-			$( '#events-next-btn' ).prop( 'disabled', currentPage >= maxPage );
+			if (selected) {
+				selectedEventIds[eventId] = true;
+			} else {
+				delete selectedEventIds[eventId];
+			}
 		}
 
-		// ---- 3-dot menu toggle ----
-		$( document ).on(
-			'click',
-			'.alvobot-events-actions-btn',
-			function (e) {
-				e.stopPropagation();
-				var $dropdown = $( this ).siblings( '.alvobot-events-dropdown' );
-				// Close all other dropdowns first.
-				$( '.alvobot-events-dropdown' ).not( $dropdown ).hide();
-				$dropdown.toggle();
+		function clearSelection() {
+			selectedEventIds = {};
+		}
+
+		function updateBulkActionsState() {
+			var selectedCount = Object.keys( selectedEventIds ).length;
+			var action        = String( $( '#events-bulk-action' ).val() || '' );
+			var canApply      = selectedCount > 0 && !! action;
+
+			$( '#events-selected-count' ).text( selectedCount );
+			$( '#events-bulk-clear-btn' ).prop( 'disabled', selectedCount === 0 );
+			$( '#events-bulk-apply-btn' ).prop( 'disabled', ! canApply );
+
+			var $visibleChecks = $( '.alvobot-events-row-check' );
+			if ( ! $visibleChecks.length) {
+				$( '#events-select-all' ).prop( 'checked', false );
+				return;
+			}
+
+			var checkedVisible = $visibleChecks.filter( ':checked' ).length;
+			$( '#events-select-all' ).prop( 'checked', checkedVisible > 0 && checkedVisible === $visibleChecks.length );
+		}
+
+		$( '#events-bulk-action' ).on(
+			'change',
+			function () {
+				updateBulkActionsState();
 			}
 		);
 
-		// Close dropdown on outside click.
-		$( document ).on(
-			'click',
-			function () {
-				$( '.alvobot-events-dropdown' ).hide();
+			function updatePagination() {
+				var maxPage = Math.ceil( totalEvents / perPage );
+				if (maxPage <= 1) {
+					$( '#alvobot-events-pagination' ).hide();
+					return;
+				}
+				$( '#alvobot-events-pagination' ).show();
+				$( '#events-pagination-info' ).text( 'Pagina ' + currentPage + ' de ' + maxPage + ' (' + formatNumber( totalEvents ) + ' eventos)' );
+				$( '#events-prev-btn' ).prop( 'disabled', currentPage <= 1 );
+				$( '#events-next-btn' ).prop( 'disabled', currentPage >= maxPage );
 			}
-		);
+
+			function closeEventDropdowns() {
+				$( '.alvobot-events-dropdown' )
+				.hide()
+				.removeClass( 'is-open' )
+				.css(
+					{
+						position: '',
+						left: '',
+						top: '',
+						right: '',
+						bottom: '',
+						transform: '',
+						visibility: '',
+						zIndex: '',
+					}
+				);
+			}
+
+			function openEventDropdown($btn, $dropdown) {
+				var gap   = 8;
+				var rect  = $btn[0].getBoundingClientRect();
+
+				closeEventDropdowns();
+
+				// Temporarily render invisibly to measure and then place in viewport.
+				$dropdown.css(
+					{
+						display: 'block',
+						visibility: 'hidden',
+						position: 'fixed',
+						right: 'auto',
+						bottom: 'auto',
+						transform: 'none',
+					}
+				);
+
+				var menuWidth  = $dropdown.outerWidth() || 160;
+				var menuHeight = $dropdown.outerHeight() || 140;
+				var left       = rect.right + gap;
+				var top        = rect.top;
+
+				// Prefer opening to the right of the actions column; fallback to left.
+				if (left + menuWidth > window.innerWidth - gap) {
+					left = rect.left - menuWidth - gap;
+				}
+				if (left < gap) {
+					left = gap;
+				}
+
+				// Keep menu fully visible vertically.
+				if (top + menuHeight > window.innerHeight - gap) {
+					top = window.innerHeight - menuHeight - gap;
+				}
+				if (top < gap) {
+					top = gap;
+				}
+
+				$dropdown
+				.css(
+					{
+						left: left + 'px',
+						top: top + 'px',
+						visibility: 'visible',
+						zIndex: 100050,
+					}
+				)
+				.addClass( 'is-open' );
+			}
+
+			// ---- 3-dot menu toggle ----
+			$( document )
+			.off( 'click.alvobotEventsActions', '.alvobot-events-actions-btn' )
+			.on(
+				'click.alvobotEventsActions',
+				'.alvobot-events-actions-btn',
+				function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+					var $btn      = $( this );
+					var $dropdown = $( this ).siblings( '.alvobot-events-dropdown' );
+					var isOpen    = $dropdown.is( ':visible' );
+					if (isOpen) {
+						closeEventDropdowns();
+						return;
+					}
+					openEventDropdown( $btn, $dropdown );
+				}
+			);
+
+			// Close dropdown on outside click.
+			$( document )
+			.off( 'click.alvobotEventsOutside' )
+			.on(
+				'click.alvobotEventsOutside',
+				function (e) {
+					// Keep dropdown open while interacting with the action button/menu.
+					if (
+						$( e.target ).closest( '.alvobot-events-actions-btn' ).length ||
+						$( e.target ).closest( '.alvobot-events-dropdown' ).length
+					) {
+						return;
+					}
+					closeEventDropdowns();
+				}
+			);
+
+			// Clicking the dropdown shell (not an item) should close it.
+			$( document )
+			.off( 'click.alvobotEventsDropdownShell', '.alvobot-events-dropdown' )
+			.on(
+				'click.alvobotEventsDropdownShell',
+				'.alvobot-events-dropdown',
+				function (e) {
+					if ( $( e.target ).closest( '.alvobot-events-dropdown-item' ).length ) {
+						return;
+					}
+					closeEventDropdowns();
+				}
+			);
+
+			// Close floating menus when viewport changes.
+			$( window )
+			.off( 'scroll.alvobotEventsPosition resize.alvobotEventsPosition' )
+			.on(
+				'scroll.alvobotEventsPosition resize.alvobotEventsPosition',
+				function () {
+					closeEventDropdowns();
+				}
+			);
+
+			$( document )
+			.off( 'keydown.alvobotEventsEsc' )
+			.on(
+				'keydown.alvobotEventsEsc',
+				function (e) {
+					if (e.key === 'Escape') {
+						closeEventDropdowns();
+					}
+				}
+			);
 
 		// ---- Dropdown action handlers ----
-		$( document ).on(
-			'click',
+		$( document )
+		.off( 'click.alvobotEventsItem', '.alvobot-events-dropdown-item' )
+		.on(
+			'click.alvobotEventsItem',
 			'.alvobot-events-dropdown-item',
-			function (e) {
-				e.stopPropagation();
-				var action  = $( this ).data( 'action' );
-				var eventId = $( this ).data( 'event-id' );
-				$( '.alvobot-events-dropdown' ).hide();
+				function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+					var action  = $( this ).data( 'action' );
+					var eventId = $( this ).data( 'event-id' );
+					closeEventDropdowns();
 
 				switch (action) {
 					case 'view':
@@ -1064,7 +1418,7 @@
 				[
 					['Evento', e.event_name],
 					['Event ID', '<code>' + escHtml( e.event_id ) + '</code>'],
-					['Status', getStatusBadge( e.status, e.error, e.retry_count )],
+						['Status', getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel )],
 					['Event Time', e.event_time ? formatTimestamp( parseInt( e.event_time, 10 ) ) : '-'],
 					['Criado em', e.created_at || '-'],
 					['Enviado em', e.sent_at ? formatTimestamp( parseInt( e.sent_at, 10 ) ) : '-'],
@@ -1087,6 +1441,7 @@
 				'Dados do Usuario (enviados a Meta)',
 				[
 					['IP', e.ip ? '<code>' + escHtml( e.ip ) + '</code>' : '-'],
+					['Browser IP', e.browser_ip ? '<code>' + escHtml( e.browser_ip ) + '</code>' : '-'],
 					['User Agent', e.user_agent ? '<span class="alvobot-events-ua">' + escHtml( e.user_agent ) + '</span>' : '-'],
 					['fbp', e.fbp ? '<code>' + escHtml( e.fbp ) + '</code>' : '<span class="alvobot-events-missing">Ausente</span>'],
 					['fbc', e.fbc ? '<code>' + escHtml( e.fbc ) + '</code>' : '<span class="alvobot-events-missing">Ausente</span>'],
@@ -1127,12 +1482,13 @@
 			sections.push( buildSection(
 				'Entrega CAPI',
 				[
-					['Pixels Alvo', e.pixel_ids || '-'],
-					['Pixels Entregues', e.fb_pixel_ids || '<span class="alvobot-events-missing">Nenhum</span>'],
-					['Tentativas', e.retry_count + '/3'],
-					['Erro', e.error ? '<span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span>' : '-'],
-				]
-			) );
+						['Pixels Alvo', formatPixelList( e.pixel_ids )],
+						['Pixels Entregues', formatPixelList( e.fb_pixel_ids )],
+						['Canal de Envio', (e.dispatch_channel === 'realtime' ? 'Tempo real' : (e.dispatch_channel === 'queue' ? 'Fila' : '-'))],
+						['Tentativas', e.retry_count + '/3'],
+						['Erro', e.error ? '<span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span>' : '-'],
+					]
+				) );
 
 			// Custom Data
 			if (e.custom_data && typeof e.custom_data === 'object' && Object.keys( e.custom_data ).length > 0) {
@@ -1154,8 +1510,9 @@
 			html += '<div class="alvobot-modal-section">';
 			html += '<h4>Status da Entrega</h4>';
 			html += '<div class="alvobot-events-detail-grid">';
-			html += '<div class="alvobot-events-detail-row"><span>Status</span><span>' + getStatusBadge( e.status, e.error, e.retry_count ) + '</span></div>';
-			html += '<div class="alvobot-events-detail-row"><span>Tentativas</span><span>' + e.retry_count + '/3</span></div>';
+				html += '<div class="alvobot-events-detail-row"><span>Status</span><span>' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</span></div>';
+				html += '<div class="alvobot-events-detail-row"><span>Canal de Envio</span><span>' + escHtml( e.dispatch_channel === 'realtime' ? 'Tempo real' : (e.dispatch_channel === 'queue' ? 'Fila' : '-' ) ) + '</span></div>';
+				html += '<div class="alvobot-events-detail-row"><span>Tentativas</span><span>' + e.retry_count + '/3</span></div>';
 			html += '<div class="alvobot-events-detail-row"><span>Pixels Entregues</span><span>' + escHtml( e.fb_pixel_ids || 'Nenhum' ) + '</span></div>';
 			if (e.error) {
 				html += '<div class="alvobot-events-detail-row"><span>Erro</span><span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span></div>';
@@ -1246,6 +1603,8 @@
 				'actions/resend-event/' + encodeURIComponent( eventId ),
 				{},
 				function () {
+					setSelected( String( eventId || '' ), false );
+					updateBulkActionsState();
 					loadEvents();
 					loadEventStats();
 				},
@@ -1264,9 +1623,11 @@
 			restDelete(
 				'events/' + encodeURIComponent( eventId ),
 				function () {
+					setSelected( String( eventId || '' ), false );
 					$( 'tr[data-event-id="' + eventId + '"]' ).fadeOut(
 						function () {
 							$( this ).remove();
+							updateBulkActionsState();
 						}
 					);
 					loadEventStats();
@@ -1355,8 +1716,10 @@
 		}
 
 		function initQuickActions() {
-			$( document ).on(
-				'click',
+			$( document )
+			.off( 'click.alvobotStatusAction', '.alvobot-action-btn' )
+			.on(
+				'click.alvobotStatusAction',
 				'.alvobot-action-btn',
 				function () {
 					var $btn   = $( this );
@@ -1364,8 +1727,6 @@
 					if ( ! action) {
 						return;
 					}
-
-					$btn.prop( 'disabled', true );
 
 					var actionMap = {
 						'send-pending': 'actions/send-pending',
@@ -1378,6 +1739,7 @@
 					if ( ! endpoint) {
 						return;
 					}
+					$btn.prop( 'disabled', true );
 
 					restPost(
 						endpoint,
@@ -1442,14 +1804,11 @@
 					}
 				},
 				error: function (xhr) {
+					var msg = getRestErrorMessage( xhr );
+					if (window.console && window.console.error) {
+						window.console.error( '[AlvoBot Pixel] REST GET error', endpoint, xhr.status, msg );
+					}
 					if (onError) {
-						var msg = 'Erro de conexao.';
-						try {
-								var body = JSON.parse( xhr.responseText );
-								msg      = body.message || msg;
-						} catch (e) {
-							// ignore
-						}
 						onError( msg );
 					}
 				},
@@ -1475,12 +1834,9 @@
 					}
 				},
 				error: function (xhr) {
-					var msg = 'Erro de conexao.';
-					try {
-						var body = JSON.parse( xhr.responseText );
-						msg      = body.message || msg;
-					} catch (e) {
-						// ignore
+					var msg = getRestErrorMessage( xhr );
+					if (window.console && window.console.error) {
+						window.console.error( '[AlvoBot Pixel] REST POST error', endpoint, xhr.status, msg );
 					}
 					if (onError) {
 						onError( msg );
@@ -1504,12 +1860,9 @@
 					}
 				},
 				error: function (xhr) {
-					var msg = 'Erro de conexao.';
-					try {
-						var body = JSON.parse( xhr.responseText );
-						msg      = body.message || msg;
-					} catch (e) {
-						// ignore
+					var msg = getRestErrorMessage( xhr );
+					if (window.console && window.console.error) {
+						window.console.error( '[AlvoBot Pixel] REST DELETE error', endpoint, xhr.status, msg );
 					}
 					if (onError) {
 						onError( msg );
@@ -1517,6 +1870,20 @@
 				},
 			}
 		);
+	}
+
+	function getRestErrorMessage(xhr) {
+		var msg = 'Erro de conexao.';
+		try {
+			var body = JSON.parse( xhr.responseText );
+			msg      = body.message || body.error || msg;
+			if (body.code === 'rest_cookie_invalid_nonce') {
+				msg = 'Sessao expirada (nonce invalido). Atualize a pagina do admin.';
+			}
+		} catch (e) {
+			// ignore
+		}
+		return msg;
 	}
 
 	// ================================================================

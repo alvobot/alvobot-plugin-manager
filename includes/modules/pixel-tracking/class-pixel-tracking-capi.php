@@ -22,7 +22,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 	public function __construct( $module ) {
 			$this->module = $module;
 			$this->schedule_recurring();
-			add_action( 'alvobot_pixel_send_events', array( $this, 'process_pending_events' ) );
+			add_action( 'alvobot_pixel_send_events', array( $this, 'process_pending_events' ), 10, 1 );
 	}
 
 		/**
@@ -64,7 +64,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 *
 		 * @return array Results summary.
 		 */
-	public function process_pending_events() {
+	public function process_pending_events( $context = array() ) {
+		$dispatch_source = 'queue';
+		if ( is_array( $context ) && ! empty( $context['source'] ) ) {
+			$dispatch_source = sanitize_key( (string) $context['source'] );
+		}
+
 		$settings = $this->module->get_settings();
 		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
 
@@ -84,7 +89,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 			);
 		}
 
-		AlvoBotPro::debug_log( 'pixel-tracking', 'Processing ' . count( $events ) . ' pending events' );
+		AlvoBotPro::debug_log( 'pixel-tracking', 'Processing ' . count( $events ) . " pending events ({$dispatch_source})" );
 
 		// Build two lists:
 		// - $all_capi_pixels: all pixels with a token (including expired) — used for delivery check
@@ -144,6 +149,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 				continue;
 			}
 
+			update_post_meta( $event_post_id, '_dispatch_channel', 'track_event' === $dispatch_source ? 'realtime' : 'queue' );
 			$this->module->cpt->mark_events_sent( array( $event_post_id ) );
 			++$sent;
 		}
@@ -215,7 +221,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 								$pixel_list[] = $pixel_id;
 							}
 							update_post_meta( $post_id, '_fb_pixel_ids', implode( ',', $pixel_list ) );
+							update_post_meta( $post_id, '_fb_sent_at', time() );
 						}
+						$this->store_debug_payloads( $events, $payload_batch, $retry_result, $pixel_id );
 						return array(
 							'sent_ids'   => $ids,
 							'failed_ids' => array(),
@@ -307,14 +315,17 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$event_name = get_post_meta( $post_id, '_event_name', true );
 			$event_id   = get_post_meta( $post_id, '_event_id', true );
 			$event_time = get_post_meta( $post_id, '_event_time', true );
+			$public_ip  = $this->resolve_public_ip_for_capi( $post_id );
 
 			// --- user_data: not-hashed fields ---
 			$user_data = array(
-				'client_ip_address' => get_post_meta( $post_id, '_ip', true ),
 				'client_user_agent' => get_post_meta( $post_id, '_user_agent', true ),
 				'fbp'               => get_post_meta( $post_id, '_fbp', true ),
 				'fbc'               => get_post_meta( $post_id, '_fbc', true ),
 			);
+			if ( '' !== $public_ip ) {
+				$user_data['client_ip_address'] = $public_ip;
+			}
 
 			// --- user_data: hashed geo fields (Meta requires normalization before SHA256) ---
 			$country_code = get_post_meta( $post_id, '_geo_country_code', true );
@@ -462,6 +473,105 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			return $payload;
+	}
+
+	/**
+	 * Resolve a public IP candidate for CAPI payloads.
+	 *
+	 * Never returns private/loopback/reserved addresses (e.g. ::1, 127.0.0.1).
+	 *
+	 * @param int $post_id Event post ID.
+	 * @return string
+	 */
+	private function resolve_public_ip_for_capi( $post_id ) {
+		$candidates = array(
+			(string) get_post_meta( $post_id, '_ip', true ),
+			(string) get_post_meta( $post_id, '_browser_ip', true ),
+		);
+
+		foreach ( $candidates as $candidate ) {
+			$ip = $this->first_valid_ip_from_list( $candidate, true );
+			if ( $ip && ! $this->is_private_or_loopback_ip( $ip ) ) {
+				return $ip;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extract first valid IP from a CSV/list header-like value.
+	 *
+	 * @param string $value Raw value.
+	 * @param bool   $prefer_public Prefer public IPs.
+	 * @return string
+	 */
+	private function first_valid_ip_from_list( $value, $prefer_public = false ) {
+		$value = sanitize_text_field( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		$parts = array_map( 'trim', explode( ',', $value ) );
+		$fallback_ip = '';
+		foreach ( $parts as $part ) {
+			$candidate = $this->normalize_ip_candidate( $part );
+			if ( false === filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+				continue;
+			}
+
+			if ( ! $prefer_public || ! $this->is_private_or_loopback_ip( $candidate ) ) {
+				return $candidate;
+			}
+
+			if ( '' === $fallback_ip ) {
+				$fallback_ip = $candidate;
+			}
+		}
+
+		return $fallback_ip;
+	}
+
+	/**
+	 * Normalize potentially formatted IP candidates.
+	 *
+	 * @param string $candidate Raw candidate.
+	 * @return string
+	 */
+	private function normalize_ip_candidate( $candidate ) {
+		$candidate = trim( (string) $candidate );
+		$candidate = trim( $candidate, "\"'" );
+
+		if ( 0 === stripos( $candidate, 'for=' ) ) {
+			$candidate = substr( $candidate, 4 );
+			$candidate = trim( $candidate, "\"'" );
+		}
+
+		// [IPv6]:port.
+		if ( preg_match( '/^\[([0-9a-fA-F:]+)\](?::\d+)?$/', $candidate, $matches ) ) {
+			return $matches[1];
+		}
+
+		// IPv4:port.
+		if ( preg_match( '/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $candidate, $matches ) ) {
+			return $matches[1];
+		}
+
+		return $candidate;
+	}
+
+	/**
+	 * Check whether an IP is private, loopback, or reserved.
+	 *
+	 * @param string $ip IP address.
+	 * @return bool
+	 */
+	private function is_private_or_loopback_ip( $ip ) {
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return true;
+		}
+
+		return false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 	}
 
 		/**
@@ -685,14 +795,39 @@ class AlvoBotPro_PixelTracking_CAPI {
 	/**
 	 * Schedule an immediate CAPI dispatch via Action Scheduler.
 	 *
-	 * Called after token refresh to process the pending event backlog ASAP
-	 * instead of waiting for the next 5-minute recurring cycle.
+	 * Called when we need near real-time processing instead of waiting
+	 * for the next recurring cycle.
 	 */
-	public function schedule_immediate_dispatch() {
-		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action( 'alvobot_pixel_send_events' );
-			AlvoBotPro::debug_log( 'pixel-tracking', 'Immediate dispatch scheduled after token refresh' );
+	public function schedule_immediate_dispatch( $reason = 'manual', $event_post_id = 0 ) {
+		$lock_key = 'alvobot_pixel_immediate_dispatch_lock';
+		if ( get_transient( $lock_key ) ) {
+			return;
 		}
+		// Coalesce bursts of events into a single immediate dispatch.
+		set_transient( $lock_key, 1, 10 );
+		$context = array(
+			'source' => sanitize_key( (string) $reason ),
+		);
+		$event_post_id = absint( $event_post_id );
+		if ( $event_post_id > 0 ) {
+			$context['event_post_id'] = $event_post_id;
+		}
+
+		if ( function_exists( 'as_enqueue_async_action' ) ) {
+			as_enqueue_async_action( 'alvobot_pixel_send_events', array( $context ) );
+			AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled ({$reason})" );
+			return;
+		}
+
+		// Fallback when Action Scheduler is unavailable.
+		$next = wp_next_scheduled( 'alvobot_pixel_send_events' );
+		if ( ! $next || $next > ( time() + 15 ) ) {
+			wp_schedule_single_event( time() + 1, 'alvobot_pixel_send_events', array( $context ) );
+		}
+		if ( function_exists( 'spawn_cron' ) ) {
+			spawn_cron( time() );
+		}
+		AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled via WP-Cron fallback ({$reason})" );
 	}
 
 		/**

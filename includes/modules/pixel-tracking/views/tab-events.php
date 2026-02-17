@@ -57,6 +57,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</button>
 			</div>
 		</div>
+		<div class="alvobot-events-bulk-bar" id="events-bulk-bar">
+			<div class="alvobot-events-bulk-summary">
+				<strong id="events-selected-count">0</strong> <?php esc_html_e( 'selecionados', 'alvobot-pro' ); ?>
+			</div>
+			<div class="alvobot-events-bulk-actions">
+				<select id="events-bulk-action" class="alvobot-select">
+					<option value=""><?php esc_html_e( 'Acoes em massa', 'alvobot-pro' ); ?></option>
+					<option value="resend"><?php esc_html_e( 'Reenviar selecionados', 'alvobot-pro' ); ?></option>
+					<option value="delete"><?php esc_html_e( 'Excluir selecionados', 'alvobot-pro' ); ?></option>
+				</select>
+				<button type="button" class="alvobot-btn alvobot-btn-outline alvobot-btn-sm" id="events-bulk-clear-btn" disabled>
+					<?php esc_html_e( 'Limpar selecao', 'alvobot-pro' ); ?>
+				</button>
+				<button type="button" class="alvobot-btn alvobot-btn-primary alvobot-btn-sm" id="events-bulk-apply-btn" disabled>
+					<?php esc_html_e( 'Aplicar', 'alvobot-pro' ); ?>
+				</button>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -83,9 +101,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="alvobot-card">
 	<div class="alvobot-card-content alvobot-card-content-table">
 		<div class="alvobot-events-table-wrap">
-			<table class="alvobot-events-table">
+			<table class="alvobot-table alvobot-events-table">
 				<thead>
 					<tr>
+						<th class="alvobot-events-col-check">
+							<input type="checkbox" id="events-select-all" aria-label="<?php esc_attr_e( 'Selecionar todos os eventos visiveis', 'alvobot-pro' ); ?>">
+						</th>
 						<th><?php esc_html_e( 'Evento', 'alvobot-pro' ); ?></th>
 						<th><?php esc_html_e( 'Status', 'alvobot-pro' ); ?></th>
 						<th><?php esc_html_e( 'Pagina', 'alvobot-pro' ); ?></th>
@@ -98,7 +119,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</thead>
 				<tbody id="alvobot-events-tbody">
 					<tr>
-						<td colspan="8" class="alvobot-events-loading">
+						<td colspan="9" class="alvobot-events-loading">
 							<span class="alvobot-skeleton" style="width: 120px;"></span>
 						</td>
 					</tr>

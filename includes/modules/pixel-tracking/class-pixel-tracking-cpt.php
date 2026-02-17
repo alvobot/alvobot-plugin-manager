@@ -109,8 +109,8 @@ class AlvoBotPro_PixelTracking_CPT {
 				)
 			);
 
-		if ( is_wp_error( $post_id ) ) {
-				return $post_id;
+		if ( is_wp_error( $post_id ) || ! $post_id ) {
+				return is_wp_error( $post_id ) ? $post_id : new WP_Error( 'insert_failed', 'wp_insert_post returned 0' );
 		}
 
 			$meta_fields = array(
@@ -125,6 +125,7 @@ class AlvoBotPro_PixelTracking_CPT {
 				'_fbp'            => isset( $data['fbp'] ) ? sanitize_text_field( $data['fbp'] ) : '',
 				'_fbc'            => isset( $data['fbc'] ) ? sanitize_text_field( $data['fbc'] ) : '',
 				'_ip'             => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : '',
+				'_browser_ip'     => isset( $data['browser_ip'] ) ? sanitize_text_field( $data['browser_ip'] ) : '',
 				'_user_agent'     => isset( $data['user_agent'] ) ? sanitize_text_field( $data['user_agent'] ) : '',
 				'_pixel_ids'      => isset( $data['pixel_ids'] ) ? sanitize_text_field( $data['pixel_ids'] ) : '',
 				'_custom_data'    => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? array_map( 'sanitize_text_field', $data['custom_data'] ) : array(),
@@ -197,8 +198,8 @@ class AlvoBotPro_PixelTracking_CPT {
 				)
 			);
 
-		if ( is_wp_error( $post_id ) ) {
-				return $post_id;
+		if ( is_wp_error( $post_id ) || ! $post_id ) {
+				return is_wp_error( $post_id ) ? $post_id : new WP_Error( 'insert_failed', 'wp_insert_post returned 0' );
 		}
 
 			update_post_meta( $post_id, '_lead_id', $lead_id );
@@ -301,6 +302,9 @@ class AlvoBotPro_PixelTracking_CPT {
 		if ( isset( $data['ip'] ) ) {
 				update_post_meta( $post_id, '_ip', sanitize_text_field( $data['ip'] ) );
 		}
+		if ( isset( $data['browser_ip'] ) ) {
+				update_post_meta( $post_id, '_browser_ip', sanitize_text_field( $data['browser_ip'] ) );
+		}
 		if ( isset( $data['user_agent'] ) ) {
 				update_post_meta( $post_id, '_user_agent', sanitize_text_field( $data['user_agent'] ) );
 		}
@@ -383,8 +387,8 @@ class AlvoBotPro_PixelTracking_CPT {
 					'post_status' => 'publish',
 				)
 			);
-		if ( is_wp_error( $post_id ) ) {
-				return $post_id;
+		if ( is_wp_error( $post_id ) || ! $post_id ) {
+				return is_wp_error( $post_id ) ? $post_id : new WP_Error( 'insert_failed', 'wp_insert_post returned 0' );
 		}
 			$this->save_conversion_meta( $post_id, $data );
 			return $post_id;
@@ -468,7 +472,7 @@ class AlvoBotPro_PixelTracking_CPT {
 						'post_status' => 'pixel_sent',
 					)
 				);
-				update_post_meta( $post_id, '_fb_sent_at', gmdate( 'c' ) );
+				update_post_meta( $post_id, '_fb_sent_at', time() );
 		}
 	}
 

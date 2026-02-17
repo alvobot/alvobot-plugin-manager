@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
 $alvobot_pt_test_code      = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
+$alvobot_pt_realtime_dispatch = isset( $settings['realtime_dispatch'] ) ? (bool) $settings['realtime_dispatch'] : true;
 $alvobot_pt_consent_check  = isset( $settings['consent_check'] ) ? $settings['consent_check'] : true;
 $alvobot_pt_consent_cookie = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 $alvobot_pt_excluded_roles = isset( $settings['excluded_roles'] ) ? $settings['excluded_roles'] : array();
@@ -47,13 +48,26 @@ $alvobot_pt_max_leads      = isset( $settings['max_leads'] ) ? $settings['max_le
 				<p class="alvobot-description"><?php esc_html_e( 'Eventos serao enviados com o test_event_code para o Facebook Events Manager.', 'alvobot-pro' ); ?></p>
 			</div>
 
-			<div class="alvobot-form-field" id="test-code-field" style="<?php echo ! $alvobot_pt_test_mode ? 'display:none' : ''; ?>">
-				<label for="test_event_code" class="alvobot-form-label"><?php esc_html_e( 'Test Event Code', 'alvobot-pro' ); ?></label>
-				<input type="text" id="test_event_code" name="test_event_code" class="alvobot-input" value="<?php echo esc_attr( $alvobot_pt_test_code ); ?>" placeholder="TEST12345">
-				<p class="alvobot-description"><?php esc_html_e( 'Encontre o codigo em Facebook Events Manager > Test Events.', 'alvobot-pro' ); ?></p>
+				<div class="alvobot-form-field" id="test-code-field" style="<?php echo ! $alvobot_pt_test_mode ? 'display:none' : ''; ?>">
+					<label for="test_event_code" class="alvobot-form-label"><?php esc_html_e( 'Test Event Code', 'alvobot-pro' ); ?></label>
+					<input type="text" id="test_event_code" name="test_event_code" class="alvobot-input" value="<?php echo esc_attr( $alvobot_pt_test_code ); ?>" placeholder="TEST12345">
+					<p class="alvobot-description"><?php esc_html_e( 'Encontre o codigo em Facebook Events Manager > Test Events.', 'alvobot-pro' ); ?></p>
+				</div>
+
+				<hr class="alvobot-divider">
+
+				<div class="alvobot-form-field">
+					<div class="alvobot-toggle-row">
+						<label class="alvobot-toggle">
+							<input type="checkbox" name="realtime_dispatch" value="1" <?php checked( $alvobot_pt_realtime_dispatch ); ?>>
+							<span class="alvobot-toggle-slider"></span>
+						</label>
+						<span class="alvobot-toggle-label"><?php esc_html_e( 'Enviar eventos ao servidor em tempo real', 'alvobot-pro' ); ?></span>
+					</div>
+					<p class="alvobot-description"><?php esc_html_e( 'Quando ativo, novos eventos disparam envio server-side imediatamente (mantendo fallback da fila).', 'alvobot-pro' ); ?></p>
+				</div>
 			</div>
 		</div>
-	</div>
 
 	<!-- Privacy & Consent -->
 	<div class="alvobot-card">

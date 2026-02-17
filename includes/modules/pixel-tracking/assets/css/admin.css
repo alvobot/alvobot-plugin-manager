@@ -657,6 +657,33 @@
 	padding-bottom: 1px;
 }
 
+.alvobot-events-bulk-bar {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--alvobot-gray-200);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.alvobot-events-bulk-summary {
+	font-size: 13px;
+	color: var(--alvobot-gray-700);
+}
+
+.alvobot-events-bulk-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.alvobot-events-bulk-actions .alvobot-select {
+	min-width: 210px;
+}
+
 /* Stats summary bar */
 .alvobot-events-stats-bar {
 	display: flex;
@@ -701,11 +728,17 @@
 }
 
 .alvobot-events-table-wrap {
+	display: block;
 	overflow-x: auto;
+	overflow-y: visible;
+	width: 100%;
+	max-width: 100%;
+	-webkit-overflow-scrolling: touch;
 }
 
 .alvobot-events-table {
 	width: 100%;
+	min-width: 1120px;
 	border-collapse: collapse;
 	font-size: 13px;
 }
@@ -721,6 +754,15 @@
 	border-bottom: 1px solid var(--alvobot-gray-300);
 	text-align: left;
 	white-space: nowrap;
+}
+
+.alvobot-events-col-check {
+	width: 34px;
+	text-align: center;
+}
+
+.alvobot-events-col-check input[type='checkbox'] {
+	margin: 0;
 }
 
 .alvobot-events-table tbody td {
@@ -832,6 +874,15 @@
 	border: 1px solid var(--alvobot-gray-300);
 	border-radius: 3px;
 	color: var(--alvobot-gray-700);
+	max-width: 260px;
+	white-space: normal;
+	word-break: break-word;
+}
+
+.alvobot-events-cell-pixels {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
 }
 
 /* Date cell */
@@ -855,6 +906,28 @@
 	font-size: 10px;
 	color: var(--alvobot-warning-dark, #856404);
 	font-weight: 500;
+}
+
+.alvobot-events-dispatch-tag {
+	display: inline-block;
+	margin-left: 4px;
+	padding: 1px 6px;
+	font-size: 10px;
+	font-weight: 600;
+	border-radius: 10px;
+	border: 1px solid transparent;
+}
+
+.alvobot-events-dispatch-realtime {
+	background: #e6ffed;
+	color: #166534;
+	border-color: #86efac;
+}
+
+.alvobot-events-dispatch-queue {
+	background: #f3f4f6;
+	color: #374151;
+	border-color: #d1d5db;
 }
 
 /* Error hint indicator */
@@ -1186,6 +1259,20 @@
 	.alvobot-events-filters {
 		flex-direction: column;
 		align-items: stretch;
+	}
+
+	.alvobot-events-bulk-bar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.alvobot-events-bulk-actions {
+		width: 100%;
+	}
+
+	.alvobot-events-bulk-actions .alvobot-select {
+		min-width: auto;
+		width: 100%;
 	}
 
 	.alvobot-filter-group .alvobot-select {

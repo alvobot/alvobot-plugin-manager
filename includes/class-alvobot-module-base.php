@@ -103,24 +103,34 @@ abstract class AlvoBotPro_Module_Base {
 		);
 
 		// CSS específico do módulo (se existir)
-		$module_css = $this->get_module_asset_path( 'css', 'admin.css' );
-		if ( $module_css ) {
+		$module_css_asset = $this->get_module_asset( 'css', 'admin.css' );
+		if ( $module_css_asset ) {
+			$module_css_version = (string) filemtime( $module_css_asset['path'] );
+			if ( empty( $module_css_version ) ) {
+				$module_css_version = $this->version;
+			}
+
 			wp_enqueue_style(
 				'alvobot-pro-' . $this->module_id,
-				$module_css,
+				$module_css_asset['url'],
 				array( 'alvobot-pro-styles' ),
-				$this->version
+				$module_css_version
 			);
 		}
 
 		// JavaScript específico do módulo (se existir)
-		$module_js = $this->get_module_asset_path( 'js', 'admin.js' );
-		if ( $module_js ) {
+		$module_js_asset = $this->get_module_asset( 'js', 'admin.js' );
+		if ( $module_js_asset ) {
+			$module_js_version = (string) filemtime( $module_js_asset['path'] );
+			if ( empty( $module_js_version ) ) {
+				$module_js_version = $this->version;
+			}
+
 			wp_enqueue_script(
 				'alvobot-pro-' . $this->module_id,
-				$module_js,
+				$module_js_asset['url'],
 				array( 'jquery' ),
-				$this->version,
+				$module_js_version,
 				true
 			);
 
@@ -142,6 +152,22 @@ abstract class AlvoBotPro_Module_Base {
 	 * Obtém o caminho do asset do módulo
 	 */
 	protected function get_module_asset_path( $type, $filename ) {
+		$asset = $this->get_module_asset( $type, $filename );
+		if ( $asset ) {
+			return $asset['url'];
+		}
+
+		return false;
+	}
+
+	/**
+	 * Obtém path+url do asset do módulo.
+	 *
+	 * @param string $type Asset type (css/js).
+	 * @param string $filename Asset filename.
+	 * @return array|false
+	 */
+	protected function get_module_asset( $type, $filename ) {
 		$possible_paths = array(
 			$this->plugin_dir . 'includes/modules/' . str_replace( '_', '-', $this->module_id ) . '/assets/' . $type . '/' . $filename,
 			$this->plugin_dir . 'includes/modules/' . str_replace( '_', '-', $this->module_id ) . '/' . $type . '/' . $filename,
@@ -149,7 +175,10 @@ abstract class AlvoBotPro_Module_Base {
 
 		foreach ( $possible_paths as $path ) {
 			if ( file_exists( $path ) ) {
-				return str_replace( $this->plugin_dir, $this->plugin_url, $path );
+				return array(
+					'path' => $path,
+					'url'  => str_replace( $this->plugin_dir, $this->plugin_url, $path ),
+				);
 			}
 		}
 
@@ -164,9 +193,12 @@ abstract class AlvoBotPro_Module_Base {
 			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'alvobot-pro' ) );
 		}
 
-		// Processa formulário se enviado
+		// Processa formulário em qualquer POST válido com nonce.
+		// Não dependa de $_POST['submit']: botões desabilitados via JS não são enviados pelo navegador.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by wp_verify_nonce in same condition.
-		if ( isset( $_POST['submit'], $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), $this->module_id . '_settings' ) ) {
+		if ( 'POST' === strtoupper( (string) filter_input( INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) ) &&
+			isset( $_POST['_wpnonce'] ) &&
+			wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), $this->module_id . '_settings' ) ) {
 			$this->process_settings_form();
 		}
 

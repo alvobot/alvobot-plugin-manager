@@ -22,7 +22,7 @@ class AlvoBotPro_PixelTracking_REST {
 	public function __construct( $module ) {
 		$this->module = $module;
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
-		add_filter( 'rest_authentication_errors', array( $this, 'bypass_cookie_nonce_error_for_public_tracking' ), 20 );
+		add_filter( 'rest_authentication_errors', array( $this, 'bypass_cookie_nonce_error_for_public_tracking' ), 999 );
 	}
 
 	public function register_routes() {
@@ -147,7 +147,27 @@ class AlvoBotPro_PixelTracking_REST {
 
 		register_rest_route(
 			$this->namespace,
-			'/events/(?P<event_id>[a-f0-9-]+)',
+			'/events/stats',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_event_stats' ),
+				'permission_callback' => array( $this, 'check_admin' ),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/events/bulk',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'bulk_events_action' ),
+				'permission_callback' => array( $this, 'check_admin' ),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/events/(?P<event_id>(?!(stats|bulk)$)[^/]+)',
 			array(
 				array(
 					'methods'             => 'GET',
@@ -159,16 +179,6 @@ class AlvoBotPro_PixelTracking_REST {
 					'callback'            => array( $this, 'delete_event' ),
 					'permission_callback' => array( $this, 'check_admin' ),
 				),
-			)
-		);
-
-		register_rest_route(
-			$this->namespace,
-			'/events/stats',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_event_stats' ),
-				'permission_callback' => array( $this, 'check_admin' ),
 			)
 		);
 
@@ -185,20 +195,20 @@ class AlvoBotPro_PixelTracking_REST {
 
 		register_rest_route(
 			$this->namespace,
-			'/leads/(?P<lead_id>[a-f0-9-]+)',
+			'/leads/stats',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_lead' ),
+				'callback'            => array( $this, 'get_lead_stats' ),
 				'permission_callback' => array( $this, 'check_admin' ),
 			)
 		);
 
 		register_rest_route(
 			$this->namespace,
-			'/leads/stats',
+			'/leads/(?P<lead_id>(?!stats$)[^/]+)',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_lead_stats' ),
+				'callback'            => array( $this, 'get_lead' ),
 				'permission_callback' => array( $this, 'check_admin' ),
 			)
 		);
@@ -257,7 +267,7 @@ class AlvoBotPro_PixelTracking_REST {
 
 		register_rest_route(
 			$this->namespace,
-			'/actions/resend-event/(?P<event_id>[a-f0-9-]+)',
+			'/actions/resend-event/(?P<event_id>[^/]+)',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'action_resend_event' ),
@@ -280,8 +290,15 @@ class AlvoBotPro_PixelTracking_REST {
 			return $validation;
 		}
 
+		$data = $request->get_json_params();
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
+
+		$browser_ip = $this->extract_browser_ip_from_payload( $data );
+		$ip         = $this->get_client_ip( $browser_ip );
+
 		// Rate limiting: max 100 events/min per IP
-		$ip         = $this->get_client_ip();
 		$rate_key   = 'alvobot_pt_rate_' . md5( $ip );
 		$rate_count = (int) get_transient( $rate_key );
 		if ( $rate_count >= 100 ) {
@@ -295,18 +312,14 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 		set_transient( $rate_key, $rate_count + 1, MINUTE_IN_SECONDS );
 
-		$data = $request->get_json_params();
-		if ( ! is_array( $data ) ) {
-			$data = array();
-		}
-
 		// Server-side IP/UA override (always more reliable than browser-reported).
 		$data['ip']         = $ip;
+		$data['browser_ip'] = $browser_ip;
 		$data['user_agent'] = (string) $request->get_header( 'User-Agent' );
 
 		// Server-side geo fallback when browser geo is missing or empty.
 		$has_browser_geo = ! empty( $data['geo'] ) && is_array( $data['geo'] ) && ! empty( $data['geo']['city'] );
-		if ( ! $has_browser_geo && $ip && '0.0.0.0' !== $ip ) {
+		if ( ! $has_browser_geo && $ip && '0.0.0.0' !== $ip && ! $this->is_private_or_loopback_ip( $ip ) ) {
 			$server_geo = $this->lookup_geo_by_ip( $ip );
 			if ( $server_geo ) {
 				$data['geo'] = $server_geo;
@@ -325,10 +338,18 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
+		$settings          = $this->module->get_settings();
+		$realtime_dispatch = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
+		if ( $realtime_dispatch && isset( $this->module->capi ) ) {
+			$this->module->capi->schedule_immediate_dispatch( 'track_event', (int) $post_id );
+		}
+
 		return new WP_REST_Response(
 			array(
-				'success'  => true,
-				'event_id' => isset( $data['event_id'] ) ? $data['event_id'] : '',
+				'success'      => true,
+				'event_id'     => isset( $data['event_id'] ) ? $data['event_id'] : '',
+				'resolved_ip'  => $ip,
+				'resolved_geo' => isset( $data['geo'] ) && is_array( $data['geo'] ) ? $data['geo'] : array(),
 			),
 			200
 		);
@@ -343,7 +364,13 @@ class AlvoBotPro_PixelTracking_REST {
 			return $validation;
 		}
 
-		$ip         = $this->get_client_ip();
+		$data = $request->get_json_params();
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
+
+		$browser_ip = $this->extract_browser_ip_from_payload( $data );
+		$ip         = $this->get_client_ip( $browser_ip );
 		$rate_key   = 'alvobot_pt_rate_' . md5( $ip );
 		$rate_count = (int) get_transient( $rate_key );
 		if ( $rate_count >= 100 ) {
@@ -357,18 +384,14 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 		set_transient( $rate_key, $rate_count + 1, MINUTE_IN_SECONDS );
 
-		$data = $request->get_json_params();
-		if ( ! is_array( $data ) ) {
-			$data = array();
-		}
-
 		// Server-side IP/UA override (always more reliable than browser-reported).
 		$data['ip']         = $ip;
+		$data['browser_ip'] = $browser_ip;
 		$data['user_agent'] = (string) $request->get_header( 'User-Agent' );
 
 		// Server-side geo fallback when browser geo is missing or empty.
 		$has_browser_geo = ! empty( $data['geo'] ) && is_array( $data['geo'] ) && ! empty( $data['geo']['city'] );
-		if ( ! $has_browser_geo && $ip && '0.0.0.0' !== $ip ) {
+		if ( ! $has_browser_geo && $ip && '0.0.0.0' !== $ip && ! $this->is_private_or_loopback_ip( $ip ) ) {
 			$server_geo = $this->lookup_geo_by_ip( $ip );
 			if ( $server_geo ) {
 				$data['geo'] = $server_geo;
@@ -390,11 +413,42 @@ class AlvoBotPro_PixelTracking_REST {
 		$lead_id = get_post_meta( $post_id, '_lead_id', true );
 		return new WP_REST_Response(
 			array(
-				'success' => true,
-				'lead_id' => $lead_id,
+				'success'      => true,
+				'lead_id'      => $lead_id,
+				'resolved_ip'  => $ip,
+				'resolved_geo' => isset( $data['geo'] ) && is_array( $data['geo'] ) ? $data['geo'] : array(),
 			),
 			200
 		);
+	}
+
+	/**
+	 * Extract browser-side IP candidate from payload.
+	 *
+	 * @param array $data Tracking payload.
+	 * @return string
+	 */
+	private function extract_browser_ip_from_payload( $data ) {
+		if ( ! is_array( $data ) ) {
+			return '';
+		}
+
+		$candidates = array();
+		if ( isset( $data['browser_ip'] ) ) {
+			$candidates[] = (string) $data['browser_ip'];
+		}
+		if ( isset( $data['ip'] ) ) {
+			$candidates[] = (string) $data['ip'];
+		}
+
+		foreach ( $candidates as $candidate ) {
+			$ip = $this->first_valid_ip_from_list( $this->sanitize_ip_value( $candidate ), true );
+			if ( $ip ) {
+				return $ip;
+			}
+		}
+
+		return '';
 	}
 
 	/**
@@ -743,6 +797,12 @@ class AlvoBotPro_PixelTracking_REST {
 		$query  = new WP_Query( $args );
 		$events = array();
 		foreach ( $query->posts as $post ) {
+			$server_ip          = get_post_meta( $post->ID, '_ip', true );
+			$browser_ip         = get_post_meta( $post->ID, '_browser_ip', true );
+			$display_ip         = $this->select_preferred_display_ip( $server_ip, $browser_ip );
+			$target_pixel_ids   = get_post_meta( $post->ID, '_pixel_ids', true );
+			$delivered_pixel_ids = get_post_meta( $post->ID, '_fb_pixel_ids', true );
+
 			$events[] = array(
 				'id'          => $post->ID,
 				'event_id'    => get_post_meta( $post->ID, '_event_id', true ),
@@ -750,16 +810,19 @@ class AlvoBotPro_PixelTracking_REST {
 				'status'      => $post->post_status,
 				'page_url'    => get_post_meta( $post->ID, '_page_url', true ),
 				'page_title'  => get_post_meta( $post->ID, '_page_title', true ),
-				'ip'          => get_post_meta( $post->ID, '_ip', true ),
+				'ip'          => $display_ip,
+				'browser_ip'  => $browser_ip,
 				'fbp'         => get_post_meta( $post->ID, '_fbp', true ),
 				'fbc'         => get_post_meta( $post->ID, '_fbc', true ),
-				'geo_city'    => get_post_meta( $post->ID, '_geo_city', true ),
-				'geo_country' => get_post_meta( $post->ID, '_geo_country_code', true ),
-				'pixel_ids'   => get_post_meta( $post->ID, '_fb_pixel_ids', true ),
-				'retry_count' => (int) get_post_meta( $post->ID, '_fb_retry_count', true ),
-				'created_at'  => $post->post_date,
-				'sent_at'     => get_post_meta( $post->ID, '_fb_sent_at', true ),
-				'error'       => get_post_meta( $post->ID, '_fb_error_message', true ),
+					'geo_city'    => get_post_meta( $post->ID, '_geo_city', true ),
+					'geo_country' => get_post_meta( $post->ID, '_geo_country_code', true ),
+					'pixel_ids'   => $target_pixel_ids ? $target_pixel_ids : $delivered_pixel_ids,
+					'fb_pixel_ids' => $delivered_pixel_ids,
+					'dispatch_channel' => get_post_meta( $post->ID, '_dispatch_channel', true ),
+					'retry_count' => (int) get_post_meta( $post->ID, '_fb_retry_count', true ),
+					'created_at'  => $post->post_date,
+					'sent_at'     => get_post_meta( $post->ID, '_fb_sent_at', true ),
+					'error'       => get_post_meta( $post->ID, '_fb_error_message', true ),
 			);
 		}
 
@@ -784,6 +847,11 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	public function get_event( $request ) {
 		$event_id = sanitize_text_field( (string) $request->get_param( 'event_id' ) );
+
+		// Guard: WordPress REST may match the dynamic route for /events/stats.
+		if ( 'stats' === $event_id ) {
+			return $this->get_event_stats();
+		}
 
 		if ( '' === $event_id ) {
 			return new WP_REST_Response(
@@ -821,6 +889,9 @@ class AlvoBotPro_PixelTracking_REST {
 
 		$post = $query->posts[0];
 		$pid  = $post->ID;
+		$server_ip  = get_post_meta( $pid, '_ip', true );
+		$browser_ip = get_post_meta( $pid, '_browser_ip', true );
+		$display_ip = $this->select_preferred_display_ip( $server_ip, $browser_ip );
 
 		return rest_ensure_response(
 			array(
@@ -835,7 +906,8 @@ class AlvoBotPro_PixelTracking_REST {
 					'page_title'       => get_post_meta( $pid, '_page_title', true ),
 					'page_id'          => get_post_meta( $pid, '_page_id', true ),
 					'referrer'         => get_post_meta( $pid, '_referrer', true ),
-					'ip'               => get_post_meta( $pid, '_ip', true ),
+					'ip'               => $display_ip,
+					'browser_ip'       => $browser_ip,
 					'user_agent'       => get_post_meta( $pid, '_user_agent', true ),
 					'fbp'              => get_post_meta( $pid, '_fbp', true ),
 					'fbc'              => get_post_meta( $pid, '_fbc', true ),
@@ -856,12 +928,13 @@ class AlvoBotPro_PixelTracking_REST {
 					'wp_em'            => get_post_meta( $pid, '_wp_em', true ) ? '(hashed)' : '',
 					'wp_fn'            => get_post_meta( $pid, '_wp_fn', true ) ? '(hashed)' : '',
 					'wp_ln'            => get_post_meta( $pid, '_wp_ln', true ) ? '(hashed)' : '',
-					'wp_external_id'   => get_post_meta( $pid, '_wp_external_id', true ) ? '(hashed)' : '',
-					'retry_count'      => (int) get_post_meta( $pid, '_fb_retry_count', true ),
-					'fb_pixel_ids'     => get_post_meta( $pid, '_fb_pixel_ids', true ),
-					'sent_at'          => get_post_meta( $pid, '_fb_sent_at', true ),
-					'error'            => get_post_meta( $pid, '_fb_error_message', true ),
-					'request_payload'  => get_post_meta( $pid, '_fb_request_payload', true ),
+						'wp_external_id'   => get_post_meta( $pid, '_wp_external_id', true ) ? '(hashed)' : '',
+						'retry_count'      => (int) get_post_meta( $pid, '_fb_retry_count', true ),
+						'fb_pixel_ids'     => get_post_meta( $pid, '_fb_pixel_ids', true ),
+						'dispatch_channel' => get_post_meta( $pid, '_dispatch_channel', true ),
+						'sent_at'          => get_post_meta( $pid, '_fb_sent_at', true ),
+						'error'            => get_post_meta( $pid, '_fb_error_message', true ),
+						'request_payload'  => get_post_meta( $pid, '_fb_request_payload', true ),
 					'response_payload' => get_post_meta( $pid, '_fb_response_payload', true ),
 					'created_at'       => $post->post_date,
 				),
@@ -947,6 +1020,11 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	public function get_lead( $request ) {
 		$lead_id = sanitize_text_field( (string) $request->get_param( 'lead_id' ) );
+
+		// Guard: WordPress REST may match the dynamic route for /leads/stats.
+		if ( 'stats' === $lead_id ) {
+			return $this->get_lead_stats();
+		}
 
 		if ( '' === $lead_id ) {
 			return new WP_REST_Response(
@@ -1053,6 +1131,7 @@ class AlvoBotPro_PixelTracking_REST {
 					'pixels_configured' => count( $pixels ),
 					'pending_events'    => $pending_count,
 					'test_mode'         => ! empty( $settings['test_mode'] ),
+					'realtime_dispatch' => ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] ),
 					'mode'              => isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot',
 				),
 			)
@@ -1118,6 +1197,98 @@ class AlvoBotPro_PixelTracking_REST {
 	}
 
 	/**
+	 * Authenticated: Bulk action for selected events.
+	 *
+	 * Supported actions:
+	 * - resend: reset selected events to pending and trigger immediate dispatch
+	 * - delete: delete selected events permanently
+	 */
+	public function bulk_events_action( $request ) {
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = array();
+		}
+
+		$action = isset( $params['action'] ) ? sanitize_key( (string) $params['action'] ) : '';
+		if ( ! in_array( $action, array( 'resend', 'delete' ), true ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Invalid bulk action',
+				),
+				400
+			);
+		}
+
+		$raw_event_ids = isset( $params['event_ids'] ) && is_array( $params['event_ids'] ) ? $params['event_ids'] : array();
+		$event_ids     = array();
+		foreach ( $raw_event_ids as $raw_event_id ) {
+			$event_id = sanitize_text_field( (string) $raw_event_id );
+			if ( '' !== $event_id ) {
+				$event_ids[ $event_id ] = true;
+			}
+		}
+		$event_ids = array_keys( $event_ids );
+
+		if ( empty( $event_ids ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'No event_ids provided',
+				),
+				400
+			);
+		}
+
+		$processed = 0;
+		$failed    = array();
+
+		foreach ( $event_ids as $event_id ) {
+			$post = $this->get_event_post_by_event_id( $event_id );
+			if ( ! $post ) {
+				$failed[] = array(
+					'event_id' => $event_id,
+					'error'    => 'Event not found',
+				);
+				continue;
+			}
+
+			if ( 'resend' === $action ) {
+				$this->reset_event_for_resend( $post->ID );
+				++$processed;
+				continue;
+			}
+
+			$deleted = wp_delete_post( $post->ID, true );
+			if ( $deleted ) {
+				++$processed;
+			} else {
+				$failed[] = array(
+					'event_id' => $event_id,
+					'error'    => 'Failed to delete event',
+				);
+			}
+		}
+
+		if ( 'resend' === $action && $processed > 0 ) {
+			$this->module->capi->schedule_immediate_dispatch();
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'action'      => $action,
+					'requested'   => count( $event_ids ),
+					'processed'   => $processed,
+					'failed'      => $failed,
+					'failed_count' => count( $failed ),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Authenticated: Resend a specific event to CAPI.
 	 *
 	 * Resets the event to pending status and clears delivery tracking,
@@ -1136,21 +1307,8 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
-		$query = new WP_Query(
-			array(
-				'post_type'      => 'alvobot_pixel_event',
-				'post_status'    => array( 'pixel_pending', 'pixel_sent', 'pixel_error' ),
-				'posts_per_page' => 1,
-				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'   => '_event_id',
-						'value' => $event_id,
-					),
-				),
-			)
-		);
-
-		if ( empty( $query->posts ) ) {
+		$post = $this->get_event_post_by_event_id( $event_id );
+		if ( ! $post ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -1160,19 +1318,7 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
-		$post = $query->posts[0];
-
-		// Reset to pending: clear delivery markers so CAPI resends to all pixels.
-		wp_update_post(
-			array(
-				'ID'          => $post->ID,
-				'post_status' => 'pixel_pending',
-			)
-		);
-		delete_post_meta( $post->ID, '_fb_pixel_ids' );
-		delete_post_meta( $post->ID, '_fb_sent_at' );
-		delete_post_meta( $post->ID, '_fb_error_message' );
-		update_post_meta( $post->ID, '_fb_retry_count', 0 );
+		$this->reset_event_for_resend( $post->ID );
 
 		// Trigger immediate dispatch.
 		$this->module->capi->schedule_immediate_dispatch();
@@ -1191,6 +1337,17 @@ class AlvoBotPro_PixelTracking_REST {
 	public function delete_event( $request ) {
 		$event_id = sanitize_text_field( (string) $request->get_param( 'event_id' ) );
 
+		// Guard: WordPress REST may match the dynamic route for /events/stats.
+		if ( 'stats' === $event_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Cannot delete stats endpoint',
+				),
+				400
+			);
+		}
+
 		if ( '' === $event_id ) {
 			return new WP_REST_Response(
 				array(
@@ -1201,6 +1358,29 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
+		$post = $this->get_event_post_by_event_id( $event_id );
+		if ( ! $post ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Event not found',
+				),
+				404
+			);
+		}
+
+		wp_delete_post( $post->ID, true );
+
+		return rest_ensure_response( array( 'success' => true ) );
+	}
+
+	/**
+	 * Find an event post by public event_id.
+	 *
+	 * @param string $event_id Event UUID.
+	 * @return WP_Post|null
+	 */
+	private function get_event_post_by_event_id( $event_id ) {
 		$query = new WP_Query(
 			array(
 				'post_type'      => 'alvobot_pixel_event',
@@ -1216,18 +1396,28 @@ class AlvoBotPro_PixelTracking_REST {
 		);
 
 		if ( empty( $query->posts ) ) {
-			return new WP_REST_Response(
-				array(
-					'success' => false,
-					'error'   => 'Event not found',
-				),
-				404
-			);
+			return null;
 		}
 
-		wp_delete_post( $query->posts[0]->ID, true );
+		return $query->posts[0];
+	}
 
-		return rest_ensure_response( array( 'success' => true ) );
+	/**
+	 * Reset an event to pending for CAPI resend.
+	 *
+	 * @param int $post_id Event post ID.
+	 */
+	private function reset_event_for_resend( $post_id ) {
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'pixel_pending',
+			)
+		);
+		delete_post_meta( $post_id, '_fb_pixel_ids' );
+		delete_post_meta( $post_id, '_fb_sent_at' );
+		delete_post_meta( $post_id, '_fb_error_message' );
+		update_post_meta( $post_id, '_fb_retry_count', 0 );
 	}
 
 	/**
@@ -1348,28 +1538,63 @@ class AlvoBotPro_PixelTracking_REST {
 	}
 
 	/**
+	 * Choose the most useful IP for admin display.
+	 *
+	 * Prioritizes public IPs and falls back to any available value only
+	 * when no public candidate exists.
+	 *
+	 * @param string $server_ip  IP resolved server-side.
+	 * @param string $browser_ip IP reported by browser capture.
+	 * @return string
+	 */
+	private function select_preferred_display_ip( $server_ip, $browser_ip ) {
+		$server_candidate  = $this->first_valid_ip_from_list( $this->sanitize_ip_value( (string) $server_ip ), true );
+		$browser_candidate = $this->first_valid_ip_from_list( $this->sanitize_ip_value( (string) $browser_ip ), true );
+
+		if ( $server_candidate && ! $this->is_private_or_loopback_ip( $server_candidate ) ) {
+			return $server_candidate;
+		}
+
+		if ( $browser_candidate && ! $this->is_private_or_loopback_ip( $browser_candidate ) ) {
+			return $browser_candidate;
+		}
+
+		return '';
+	}
+
+	/**
 	 * Get the client IP address with conservative proxy trust.
 	 */
-	private function get_client_ip() {
-		$remote_addr = (string) filter_input( INPUT_SERVER, 'REMOTE_ADDR', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+	private function get_client_ip( $browser_ip = '' ) {
+		// Use $_SERVER directly — filter_input(INPUT_SERVER, ...) is unreliable in PHP-FPM.
+		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		$remote_addr = $this->sanitize_ip_value( $remote_addr );
-		$remote_ip   = $this->first_valid_ip_from_list( $remote_addr );
+		$remote_ip   = $this->first_valid_ip_from_list( $remote_addr, true );
+
+		// Direct public client IP.
+		if ( $remote_ip && ! $this->is_private_or_loopback_ip( $remote_ip ) ) {
+			return $remote_ip;
+		}
 
 		// Only trust forwarded headers when request came from local/private proxy.
-		if ( $remote_ip && $this->is_private_or_loopback_ip( $remote_ip ) ) {
-			$proxy_headers = array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR' );
-			foreach ( $proxy_headers as $header ) {
-				$raw_header = filter_input( INPUT_SERVER, $header, FILTER_SANITIZE_FULL_SPECIAL_CHARS );
-				if ( empty( $raw_header ) ) {
-					continue;
-				}
-
-				$header_value = $this->sanitize_ip_value( (string) $raw_header );
-				$forwarded_ip = $this->first_valid_ip_from_list( $header_value );
-				if ( $forwarded_ip ) {
-					return $forwarded_ip;
-				}
+		$proxy_headers = array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR' );
+		foreach ( $proxy_headers as $header ) {
+			$raw_header = isset( $_SERVER[ $header ] ) ? sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) : '';
+			if ( empty( $raw_header ) ) {
+				continue;
 			}
+
+			$header_value = $this->sanitize_ip_value( (string) $raw_header );
+			$forwarded_ip = $this->first_valid_ip_from_list( $header_value, true );
+			if ( $forwarded_ip ) {
+				return $forwarded_ip;
+			}
+		}
+
+		// Browser-provided fallback is only used when server-side signals are private/loopback.
+		$browser_candidate = $this->first_valid_ip_from_list( $this->sanitize_ip_value( (string) $browser_ip ), true );
+		if ( $browser_candidate && ( ! $remote_ip || $this->is_private_or_loopback_ip( $remote_ip ) ) ) {
+			return $browser_candidate;
 		}
 
 		return $remote_ip ? $remote_ip : '0.0.0.0';
@@ -1378,22 +1603,61 @@ class AlvoBotPro_PixelTracking_REST {
 	/**
 	 * Extract first valid IP from a CSV list.
 	 *
-	 * @param string $value Raw header value.
+	 * @param string $value         Raw header value.
+	 * @param bool   $prefer_public Prefer public IPs when available.
 	 * @return string
 	 */
-	private function first_valid_ip_from_list( $value ) {
+	private function first_valid_ip_from_list( $value, $prefer_public = false ) {
 		if ( '' === $value ) {
 			return '';
 		}
 
 		$parts = array_map( 'trim', explode( ',', $value ) );
+		$fallback_ip = '';
 		foreach ( $parts as $part ) {
-			if ( false !== filter_var( $part, FILTER_VALIDATE_IP ) ) {
-				return $part;
+			$candidate = $this->normalize_ip_candidate( $part );
+			if ( false === filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+				continue;
+			}
+
+			if ( ! $prefer_public || ! $this->is_private_or_loopback_ip( $candidate ) ) {
+				return $candidate;
+			}
+
+			if ( '' === $fallback_ip ) {
+				$fallback_ip = $candidate;
 			}
 		}
 
-		return '';
+		return $fallback_ip;
+	}
+
+	/**
+	 * Normalize potentially formatted IP candidates.
+	 *
+	 * @param string $candidate Raw candidate string.
+	 * @return string
+	 */
+	private function normalize_ip_candidate( $candidate ) {
+		$candidate = trim( (string) $candidate );
+		$candidate = trim( $candidate, "\"'" );
+
+		if ( 0 === stripos( $candidate, 'for=' ) ) {
+			$candidate = substr( $candidate, 4 );
+			$candidate = trim( $candidate, "\"'" );
+		}
+
+		// [IPv6]:port.
+		if ( preg_match( '/^\[([0-9a-fA-F:]+)\](?::\d+)?$/', $candidate, $matches ) ) {
+			return $matches[1];
+		}
+
+		// IPv4:port.
+		if ( preg_match( '/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $candidate, $matches ) ) {
+			return $matches[1];
+		}
+
+		return $candidate;
 	}
 
 	/**
@@ -1403,8 +1667,11 @@ class AlvoBotPro_PixelTracking_REST {
 	 * @return bool
 	 */
 	private function is_private_or_loopback_ip( $ip ) {
-		$private = false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
-		return ! $private;
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return true;
+		}
+
+		return false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 	}
 
 	/**
@@ -1427,7 +1694,7 @@ class AlvoBotPro_PixelTracking_REST {
 	 * @return array|false Geo data array or false on failure.
 	 */
 	private function lookup_geo_by_ip( $ip ) {
-		if ( ! $ip || '0.0.0.0' === $ip ) {
+		if ( ! $ip || '0.0.0.0' === $ip || $this->is_private_or_loopback_ip( $ip ) ) {
 			return false;
 		}
 

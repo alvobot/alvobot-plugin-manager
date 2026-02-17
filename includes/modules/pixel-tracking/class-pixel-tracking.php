@@ -556,6 +556,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			// Settings tab fields — checkboxes absent = unchecked.
 			$merged['test_mode']       = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
 			$merged['test_event_code'] = isset( $posted['test_event_code'] ) ? $posted['test_event_code'] : '';
+			$merged['realtime_dispatch'] = isset( $posted['realtime_dispatch'] ) ? $posted['realtime_dispatch'] : '';
 			$merged['consent_check']   = isset( $posted['consent_check'] ) ? $posted['consent_check'] : '';
 			$merged['consent_cookie']  = isset( $posted['consent_cookie'] ) ? $posted['consent_cookie'] : '';
 			$merged['excluded_roles']  = isset( $posted['excluded_roles'] ) ? $posted['excluded_roles'] : array();
@@ -583,14 +584,25 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab display logic.
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'pixels';
+		$settings   = $this->get_settings();
+		$pixels     = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$pixel_labels = array();
+		foreach ( $pixels as $pixel ) {
+			$pixel_id = isset( $pixel['pixel_id'] ) ? sanitize_text_field( (string) $pixel['pixel_id'] ) : '';
+			if ( '' === $pixel_id ) {
+				continue;
+			}
+			$pixel_labels[ $pixel_id ] = isset( $pixel['label'] ) ? sanitize_text_field( (string) $pixel['label'] ) : '';
+		}
 
 		wp_localize_script(
 			'alvobot-pro-pixel-tracking',
 			'alvobot_pixel_tracking_extra',
 			array(
-				'rest_url'   => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
-				'rest_nonce' => wp_create_nonce( 'wp_rest' ),
-				'active_tab' => $active_tab,
+				'rest_url'      => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
+				'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
+				'active_tab'    => $active_tab,
+				'pixel_labels'  => $pixel_labels,
 			)
 		);
 	}
@@ -653,6 +665,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		$sanitized['test_mode']       = ! empty( $settings['test_mode'] );
 		$sanitized['test_event_code'] = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
+		$sanitized['realtime_dispatch'] = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
 
 		$sanitized['consent_check']  = ! isset( $settings['consent_check'] ) || ! empty( $settings['consent_check'] );
 		$sanitized['consent_cookie'] = isset( $settings['consent_cookie'] ) ? sanitize_text_field( $settings['consent_cookie'] ) : 'alvobot_tracking_consent';

@@ -11,6 +11,7 @@
 			this.data        = {};
 			this.config      = {};
 			this.initialized = false;
+			this.initial_pageview_sent = false;
 			this._readyPromise = null;
 			this._resolveReady = null;
 		}
@@ -62,7 +63,7 @@
 
 			// Async data capture
 			try {
-				this.data.ip = this.config.cf_trace_enabled ? await this.get_ip() : '';
+				this.data.ip = await this.get_ip();
 			} catch (e) {
 				this.data.ip = '';
 			}
@@ -76,6 +77,9 @@
 			// Start form monitoring for lead capture
 			this.monitor_forms();
 
+			// Always dispatch a default PageView through browser + server with shared event_id.
+			this.dispatch_initial_pageview();
+
 			this.initialized = true;
 			if (this._resolveReady) {
 				this._resolveReady();
@@ -83,7 +87,10 @@
 		}
 
 		/**
-		 * Initialize Facebook Pixel SDK and fire PageView.
+		 * Initialize Facebook Pixel SDK.
+		 *
+		 * PageView is dispatched by send_event() so browser and server share
+		 * the same event_id for deduplication.
 		 */
 		init_fb_sdk(pixel_ids_str) {
 			var ids = pixel_ids_str.split( ',' ).map(
@@ -121,24 +128,131 @@
 				window.fbq( 'init', ids[i] );
 			}
 
-			// Fire PageView
-			window.fbq( 'track', 'PageView' );
+		}
+
+		/**
+		 * Send the default PageView once per page load.
+		 */
+		dispatch_initial_pageview() {
+			if (this.initial_pageview_sent) {
+				return;
+			}
+
+			this.initial_pageview_sent = true;
+			this.send_event(
+				{
+					event_name: 'PageView',
+					event_custom: false,
+					content_name: this.config.page_title || document.title || '',
+					fb_pixels: this.config.pixel_ids || '',
+				}
+			);
 		}
 
 		/**
 		 * Get visitor IP via Cloudflare cdn-cgi/trace.
 		 */
 		async get_ip() {
+			var cachedIp = '';
 			try {
-				var resp  = await fetch( '/cdn-cgi/trace' );
-				if ( ! resp || ! resp.ok) {
-					return '';
-				}
-				var text  = await resp.text();
-				var match = text.match( /ip=([^\n]+)/ );
-				return match ? match[1] : '';
+				cachedIp = sessionStorage.getItem( 'alvobot_ip' ) || '';
 			} catch (e) {
-				return '';
+				cachedIp = '';
+			}
+
+			if (cachedIp) {
+				if ( ! this.is_private_ip( cachedIp )) {
+					return cachedIp;
+				}
+				try {
+					sessionStorage.removeItem( 'alvobot_ip' );
+				} catch (e) {
+					/* ignore */ }
+			}
+
+			if (this.config.cf_trace_enabled) {
+				try {
+					var cfResp  = await this.fetch_with_timeout( '/cdn-cgi/trace', {}, 2500 );
+					if (cfResp && cfResp.ok) {
+						var cfText  = await cfResp.text();
+						var cfMatch = cfText.match( /ip=([^\n]+)/ );
+						if (cfMatch && cfMatch[1] && ! this.is_private_ip( cfMatch[1] )) {
+							try {
+								sessionStorage.setItem( 'alvobot_ip', cfMatch[1] );
+							} catch (e) {
+								/* ignore */ }
+							return cfMatch[1];
+						}
+					}
+				} catch (e) {
+					/* continue fallback */ }
+			}
+
+			try {
+				var ipifyResp = await this.fetch_with_timeout( 'https://api64.ipify.org?format=json', {}, 2500 );
+				if (ipifyResp && ipifyResp.ok) {
+					var ipifyData = await ipifyResp.json();
+					if (ipifyData && ipifyData.ip && ! this.is_private_ip( ipifyData.ip )) {
+						try {
+							sessionStorage.setItem( 'alvobot_ip', ipifyData.ip );
+						} catch (e) {
+							/* ignore */ }
+						return ipifyData.ip;
+					}
+				}
+			} catch (e) {
+				/* continue fallback */ }
+
+			try {
+				var ipwhoResp = await this.fetch_with_timeout( 'https://ipwho.is/', {}, 3000 );
+				if (ipwhoResp && ipwhoResp.ok) {
+					var ipwhoData = await ipwhoResp.json();
+					if (ipwhoData && ipwhoData.ip && ! this.is_private_ip( ipwhoData.ip )) {
+						try {
+							sessionStorage.setItem( 'alvobot_ip', ipwhoData.ip );
+						} catch (e) {
+							/* ignore */ }
+						return ipwhoData.ip;
+					}
+				}
+			} catch (e) {
+				/* ignore */ }
+
+			return '';
+		}
+
+		/**
+		 * Fetch helper with timeout support.
+		 */
+		async fetch_with_timeout(url, options, timeoutMs) {
+			var opts = options || {};
+			var ms   = timeoutMs || 3000;
+
+			if (typeof AbortController === 'undefined') {
+				return fetch( url, opts );
+			}
+
+			var controller = new AbortController();
+			var timer      = setTimeout(
+				function () {
+					controller.abort();
+				},
+				ms
+			);
+
+			try {
+				return await fetch(
+					url,
+					Object.assign(
+						{},
+						opts,
+						{
+							signal: controller.signal,
+						}
+					)
+				);
+			} finally {
+				clearTimeout( timer );
 			}
 		}
 
@@ -331,6 +445,53 @@
 		}
 
 		/**
+		 * Returns true when the IP is private, loopback, or reserved.
+		 */
+		is_private_ip(ip) {
+			var value = (ip || '').trim().toLowerCase();
+			if ( ! value) {
+				return true;
+			}
+
+			if (value === '::1' || value === '::' || value === 'localhost') {
+				return true;
+			}
+
+			if (value.indexOf( '::ffff:' ) === 0) {
+				value = value.slice( 7 );
+			}
+
+			var isV4 = /^(\d{1,3})(\.\d{1,3}){3}$/.test( value );
+			if (isV4) {
+				var octets = value.split( '.' ).map( Number );
+				if (octets.some( function (n) { return n < 0 || n > 255; } )) {
+					return true;
+				}
+
+				if (octets[0] === 10 || octets[0] === 127 || octets[0] === 0) {
+					return true;
+				}
+				if (octets[0] === 192 && octets[1] === 168) {
+					return true;
+				}
+				if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) {
+					return true;
+				}
+				if (octets[0] === 169 && octets[1] === 254) {
+					return true;
+				}
+
+				return false;
+			}
+
+			if (value.indexOf( 'fe80:' ) === 0 || value.indexOf( 'fc' ) === 0 || value.indexOf( 'fd' ) === 0) {
+				return true;
+			}
+
+			return false;
+		}
+
+		/**
 		 * Generate a unique event ID.
 		 */
 		generate_event_id() {
@@ -376,6 +537,7 @@
 		async send_event(params) {
 			var event_id   = this.generate_event_id();
 			var event_name = params.event_name || 'PageView';
+			var self       = this;
 
 			// Build enriched custom_data
 			var custom_data = {
@@ -430,6 +592,7 @@
 								fbp: this.data.fbp,
 								fbc: this.data.fbc,
 								ip: this.data.ip,
+								browser_ip: this.data.ip,
 								user_agent: this.data.user_agent,
 								geo: this.data.geolocation,
 								utms: this.data.utms,
@@ -441,6 +604,42 @@
 						),
 					keepalive: true,
 					}
+				).then(
+					function (resp) {
+						if ( ! resp || ! resp.ok) {
+							return null;
+						}
+						return resp.json().catch(
+							function () {
+								return null;
+							}
+						);
+					}
+				).then(
+					function (result) {
+						if ( ! result) {
+							return;
+						}
+
+						if (result.resolved_ip) {
+							var currentIsPublic  = self.data.ip && ! self.is_private_ip( self.data.ip );
+							var resolvedIsPublic = ! self.is_private_ip( result.resolved_ip );
+							if (resolvedIsPublic && ! currentIsPublic) {
+								self.data.ip = result.resolved_ip;
+								try {
+									sessionStorage.setItem( 'alvobot_ip', result.resolved_ip );
+								} catch (e) {
+									/* ignore */ }
+							}
+						}
+
+						if (result.resolved_geo && result.resolved_geo.city && ( ! self.data.geolocation || ! self.data.geolocation.city )) {
+							self.data.geolocation = result.resolved_geo;
+						}
+					}
+				).catch(
+					function () {
+						/* ignore */ }
 				);
 			} catch (e) {
 				// Fire-and-forget
@@ -548,6 +747,7 @@
 				fbp: this.data.fbp,
 				fbc: this.data.fbc,
 				ip: this.data.ip,
+				browser_ip: this.data.ip,
 				user_agent: this.data.user_agent,
 				geo: this.data.geolocation,
 				utms: this.data.utms,
@@ -569,9 +769,23 @@
 				);
 
 				var result = await resp.json();
-				if (result.success && result.lead_id) {
+				if (result && result.success && result.lead_id) {
 						this.data.lead_id = result.lead_id;
 						this.set_cookie( 'alvobot_lead_id', result.lead_id );
+				}
+				if (result && result.resolved_ip) {
+					var currentIsPublic  = this.data.ip && ! this.is_private_ip( this.data.ip );
+					var resolvedIsPublic = ! this.is_private_ip( result.resolved_ip );
+					if (resolvedIsPublic && ! currentIsPublic) {
+						this.data.ip = result.resolved_ip;
+						try {
+							sessionStorage.setItem( 'alvobot_ip', result.resolved_ip );
+						} catch (e) {
+							/* ignore */ }
+					}
+				}
+				if (result && result.resolved_geo && result.resolved_geo.city && ( ! this.data.geolocation || ! this.data.geolocation.city )) {
+					this.data.geolocation = result.resolved_geo;
 				}
 			} catch (e) {
 				// Silent failure for lead capture

@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $alvobot_pt_pixels         = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
 $alvobot_pt_mode           = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
 $alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
+$alvobot_pt_realtime_dispatch = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
 $alvobot_pt_consent_check  = ! empty( $settings['consent_check'] );
 $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
 ?>
@@ -72,17 +73,25 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 						<?php echo 'alvobot' === $alvobot_pt_mode ? 'AlvoBot' : 'Manual'; ?>
 					</span>
 				</li>
-				<li>
-					<span class="alvobot-info-label"><?php esc_html_e( 'Modo Teste', 'alvobot-pro' ); ?></span>
-					<?php if ( $alvobot_pt_test_mode ) : ?>
-						<span class="alvobot-badge alvobot-badge-warning"><?php esc_html_e( 'Ativo', 'alvobot-pro' ); ?></span>
-					<?php else : ?>
-						<span class="alvobot-badge alvobot-badge-neutral"><?php esc_html_e( 'Inativo', 'alvobot-pro' ); ?></span>
-					<?php endif; ?>
-				</li>
-				<li>
-					<span class="alvobot-info-label"><?php esc_html_e( 'Consentimento', 'alvobot-pro' ); ?></span>
-					<?php if ( $alvobot_pt_consent_check ) : ?>
+					<li>
+						<span class="alvobot-info-label"><?php esc_html_e( 'Modo Teste', 'alvobot-pro' ); ?></span>
+						<?php if ( $alvobot_pt_test_mode ) : ?>
+							<span class="alvobot-badge alvobot-badge-warning"><?php esc_html_e( 'Ativo', 'alvobot-pro' ); ?></span>
+						<?php else : ?>
+							<span class="alvobot-badge alvobot-badge-neutral"><?php esc_html_e( 'Inativo', 'alvobot-pro' ); ?></span>
+						<?php endif; ?>
+					</li>
+					<li>
+						<span class="alvobot-info-label"><?php esc_html_e( 'Envio em Tempo Real', 'alvobot-pro' ); ?></span>
+						<?php if ( $alvobot_pt_realtime_dispatch ) : ?>
+							<span class="alvobot-badge alvobot-badge-success"><?php esc_html_e( 'Ativo', 'alvobot-pro' ); ?></span>
+						<?php else : ?>
+							<span class="alvobot-badge alvobot-badge-neutral"><?php esc_html_e( 'Inativo', 'alvobot-pro' ); ?></span>
+						<?php endif; ?>
+					</li>
+					<li>
+						<span class="alvobot-info-label"><?php esc_html_e( 'Consentimento', 'alvobot-pro' ); ?></span>
+						<?php if ( $alvobot_pt_consent_check ) : ?>
 						<span class="alvobot-badge alvobot-badge-success"><?php esc_html_e( 'Ativo', 'alvobot-pro' ); ?></span>
 					<?php else : ?>
 						<span class="alvobot-badge alvobot-badge-neutral"><?php esc_html_e( 'Desativado', 'alvobot-pro' ); ?></span>
