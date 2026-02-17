@@ -488,15 +488,19 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 	}
 
 	protected function sanitize_settings( $settings ) {
+		// Preserve existing values for keys absent from input (e.g. base class form POST with no fields).
+		$existing  = get_option( 'alvobot_pro_' . $this->module_id . '_settings', $this->get_default_options() );
 		$sanitized = array();
 
 		$sanitized['expiration_days'] = isset( $settings['expiration_days'] ) ?
-			max( 1, min( 30, absint( $settings['expiration_days'] ) ) ) : 15;
+			max( 1, min( 30, absint( $settings['expiration_days'] ) ) ) :
+			( isset( $existing['expiration_days'] ) ? absint( $existing['expiration_days'] ) : 15 );
 
 		$sanitized['auto_delete_expired'] = true; // Sempre ativo
 
 		$sanitized['temp_user_expiration'] = isset( $settings['temp_user_expiration'] ) ?
-			absint( $settings['temp_user_expiration'] ) : 0;
+			absint( $settings['temp_user_expiration'] ) :
+			( isset( $existing['temp_user_expiration'] ) ? absint( $existing['temp_user_expiration'] ) : 0 );
 
 		return $sanitized;
 	}

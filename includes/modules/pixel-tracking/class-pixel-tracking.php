@@ -601,23 +601,30 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 	protected function sanitize_settings( $settings ) {
 		$sanitized = array();
+		$old_settings = $this->get_settings();
+		$old_pixels   = isset( $old_settings['pixels'] ) && is_array( $old_settings['pixels'] ) ? $old_settings['pixels'] : array();
 
 		$sanitized['mode'] = isset( $settings['mode'] ) && in_array( $settings['mode'], array( 'alvobot', 'manual' ), true )
 			? $settings['mode'] : 'alvobot';
 
 		// Parse pixels: use pixels_json (from pixels tab POST) or fall back to existing pixels array.
 		if ( isset( $settings['pixels_json'] ) ) {
-			$pixels = json_decode( wp_unslash( $settings['pixels_json'] ), true );
-			if ( ! is_array( $pixels ) ) {
-				$pixels = array();
+			$decoded_pixels = null;
+			if ( is_string( $settings['pixels_json'] ) ) {
+				$decoded_pixels = json_decode( wp_unslash( $settings['pixels_json'] ), true );
+			}
+			if ( is_array( $decoded_pixels ) ) {
+				$pixels = $decoded_pixels;
+			} else {
+				// Preserve previously saved pixels when payload is malformed to prevent silent wipes.
+				$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : $old_pixels;
+				AlvoBotPro::debug_log( 'pixel-tracking', 'sanitize_settings: pixels_json inválido; mantendo pixels existentes para evitar perda de dados.' );
 			}
 		} else {
-			$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+			$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : $old_pixels;
 		}
 
 		// Detect removed pixels and handle pending events
-		$old_settings = $this->get_settings();
-		$old_pixels   = isset( $old_settings['pixels'] ) ? $old_settings['pixels'] : array();
 		$old_ids      = array_column( $old_pixels, 'pixel_id' );
 		$new_ids      = array_column( $pixels, 'pixel_id' );
 		$removed_ids  = array_diff( $old_ids, $new_ids );

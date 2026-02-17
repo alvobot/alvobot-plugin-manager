@@ -52,14 +52,8 @@ class AlvoBotPro_Ajax {
 			}
 		}
 
-		// Força a atualização da opção (terceiro parâmetro true força update mesmo se o valor for o mesmo)
-		delete_option( 'alvobot_pro_active_modules' );
-		$updated = add_option( 'alvobot_pro_active_modules', $active_modules );
-
-		// Se já existia, atualiza
-		if ( ! $updated ) {
-			$updated = update_option( 'alvobot_pro_active_modules', $active_modules );
-		}
+		// Persist safely in a single write operation to avoid losing state on partial failures.
+		update_option( 'alvobot_pro_active_modules', $active_modules );
 
 		// Limpa caches relevantes (object cache + cache estático da classe)
 		wp_cache_delete( 'alvobot_pro_active_modules', 'options' );
@@ -69,6 +63,14 @@ class AlvoBotPro_Ajax {
 		// Verifica o estado final
 		$final_state   = get_option( 'alvobot_pro_active_modules', array() );
 		$final_enabled = isset( $final_state[ $module ] ) ? filter_var( $final_state[ $module ], FILTER_VALIDATE_BOOLEAN ) : false;
+
+		if ( ! isset( $final_state[ $module ] ) || $final_enabled !== $active_modules[ $module ] ) {
+			wp_send_json_error(
+				array(
+					'message' => 'Falha ao persistir estado do módulo',
+				)
+			);
+		}
 
 		wp_send_json_success(
 			array(

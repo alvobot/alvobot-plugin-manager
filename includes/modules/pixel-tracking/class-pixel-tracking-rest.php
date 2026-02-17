@@ -22,6 +22,7 @@ class AlvoBotPro_PixelTracking_REST {
 	public function __construct( $module ) {
 		$this->module = $module;
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+		add_filter( 'rest_authentication_errors', array( $this, 'bypass_cookie_nonce_error_for_public_tracking' ), 20 );
 	}
 
 	public function register_routes() {
@@ -148,9 +149,16 @@ class AlvoBotPro_PixelTracking_REST {
 			$this->namespace,
 			'/events/(?P<event_id>[a-f0-9-]+)',
 			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_event' ),
-				'permission_callback' => array( $this, 'check_admin' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_event' ),
+					'permission_callback' => array( $this, 'check_admin' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => array( $this, 'delete_event' ),
+					'permission_callback' => array( $this, 'check_admin' ),
+				),
 			)
 		);
 
@@ -246,6 +254,17 @@ class AlvoBotPro_PixelTracking_REST {
 				'permission_callback' => array( $this, 'check_admin' ),
 			)
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/actions/resend-event/(?P<event_id>[a-f0-9-]+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'action_resend_event' ),
+				'permission_callback' => array( $this, 'check_admin' ),
+			)
+		);
+
 	}
 
 	public function check_admin() {
@@ -385,7 +404,19 @@ class AlvoBotPro_PixelTracking_REST {
 	 * @return true|WP_REST_Response True when valid, otherwise error response.
 	 */
 	private function validate_public_tracking_request( $request ) {
-		if ( ! $this->verify_same_origin( $request ) ) {
+		$same_origin = $this->verify_same_origin( $request );
+		$nonce_valid = $this->verify_tracking_nonce( $request );
+
+		// Fallback: when Origin/Referer headers are unavailable, a valid nonce is enough.
+		if ( ! $same_origin && $nonce_valid ) {
+			return true;
+		}
+
+		if ( ! $same_origin ) {
+			AlvoBotPro::debug_log(
+				'pixel-tracking',
+				'Public tracking blocked: forbidden origin. Origin=' . (string) $request->get_header( 'Origin' ) . ' Referer=' . (string) $request->get_header( 'Referer' ) . ' Sec-Fetch-Site=' . (string) $request->get_header( 'Sec-Fetch-Site' )
+			);
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -395,7 +426,8 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
-		if ( ! $this->verify_tracking_nonce( $request ) ) {
+		if ( ! $nonce_valid && is_user_logged_in() ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Public tracking blocked: invalid nonce for logged-in user.' );
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -415,7 +447,14 @@ class AlvoBotPro_PixelTracking_REST {
 	 * @return bool
 	 */
 	private function verify_tracking_nonce( $request ) {
-		$nonce = $request->get_header( 'X-WP-Nonce' );
+		$nonce = $request->get_header( 'X-Alvobot-Nonce' );
+		if ( empty( $nonce ) ) {
+			$nonce = $request->get_param( '_alvobot_nonce' );
+		}
+		// Backward compatibility with older frontend bundles.
+		if ( empty( $nonce ) ) {
+			$nonce = $request->get_header( 'X-WP-Nonce' );
+		}
 		if ( empty( $nonce ) ) {
 			$nonce = $request->get_param( '_wpnonce' );
 		}
@@ -425,6 +464,36 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		return (bool) wp_verify_nonce( $nonce, 'alvobot_pixel_tracking' );
+	}
+
+	/**
+	 * Ignore cookie-auth nonce errors for public tracking endpoints.
+	 *
+	 * WordPress core interprets X-WP-Nonce as wp_rest cookie nonce and can
+	 * reject requests before this controller runs. Our tracking endpoints are
+	 * intentionally public and perform their own validation.
+	 *
+	 * @param mixed $result Current authentication result.
+	 * @return mixed
+	 */
+	public function bypass_cookie_nonce_error_for_public_tracking( $result ) {
+		if ( ! is_wp_error( $result ) || 'rest_cookie_invalid_nonce' !== $result->get_error_code() ) {
+			return $result;
+		}
+
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$rest_route  = isset( $_GET['rest_route'] ) ? (string) sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ) : '';
+
+		$is_public_pixel_track = false !== strpos( $request_uri, '/wp-json/alvobot-pro/v1/pixel-tracking/events/track' ) ||
+			false !== strpos( $request_uri, '/wp-json/alvobot-pro/v1/pixel-tracking/leads/track' ) ||
+			false !== strpos( $rest_route, '/alvobot-pro/v1/pixel-tracking/events/track' ) ||
+			false !== strpos( $rest_route, '/alvobot-pro/v1/pixel-tracking/leads/track' );
+
+		if ( $is_public_pixel_track ) {
+			return true;
+		}
+
+		return $result;
 	}
 
 	/**
@@ -675,14 +744,22 @@ class AlvoBotPro_PixelTracking_REST {
 		$events = array();
 		foreach ( $query->posts as $post ) {
 			$events[] = array(
-				'id'         => $post->ID,
-				'event_id'   => get_post_meta( $post->ID, '_event_id', true ),
-				'event_name' => get_post_meta( $post->ID, '_event_name', true ),
-				'status'     => $post->post_status,
-				'page_url'   => get_post_meta( $post->ID, '_page_url', true ),
-				'created_at' => $post->post_date,
-				'sent_at'    => get_post_meta( $post->ID, '_fb_sent_at', true ),
-				'error'      => get_post_meta( $post->ID, '_fb_error_message', true ),
+				'id'          => $post->ID,
+				'event_id'    => get_post_meta( $post->ID, '_event_id', true ),
+				'event_name'  => get_post_meta( $post->ID, '_event_name', true ),
+				'status'      => $post->post_status,
+				'page_url'    => get_post_meta( $post->ID, '_page_url', true ),
+				'page_title'  => get_post_meta( $post->ID, '_page_title', true ),
+				'ip'          => get_post_meta( $post->ID, '_ip', true ),
+				'fbp'         => get_post_meta( $post->ID, '_fbp', true ),
+				'fbc'         => get_post_meta( $post->ID, '_fbc', true ),
+				'geo_city'    => get_post_meta( $post->ID, '_geo_city', true ),
+				'geo_country' => get_post_meta( $post->ID, '_geo_country_code', true ),
+				'pixel_ids'   => get_post_meta( $post->ID, '_fb_pixel_ids', true ),
+				'retry_count' => (int) get_post_meta( $post->ID, '_fb_retry_count', true ),
+				'created_at'  => $post->post_date,
+				'sent_at'     => get_post_meta( $post->ID, '_fb_sent_at', true ),
+				'error'       => get_post_meta( $post->ID, '_fb_error_message', true ),
 			);
 		}
 
@@ -701,6 +778,9 @@ class AlvoBotPro_PixelTracking_REST {
 
 	/**
 	 * Authenticated: Get event detail by event_id.
+	 *
+	 * Returns ALL stored metadata for deep debugging. This is the
+	 * endpoint used by the "View Details" modal in the Events tab.
 	 */
 	public function get_event( $request ) {
 		$event_id = sanitize_text_field( (string) $request->get_param( 'event_id' ) );
@@ -740,24 +820,50 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		$post = $query->posts[0];
+		$pid  = $post->ID;
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
 				'data'    => array(
-					'id'               => $post->ID,
-					'event_id'         => get_post_meta( $post->ID, '_event_id', true ),
-					'event_name'       => get_post_meta( $post->ID, '_event_name', true ),
+					'id'               => $pid,
+					'event_id'         => get_post_meta( $pid, '_event_id', true ),
+					'event_name'       => get_post_meta( $pid, '_event_name', true ),
+					'event_time'       => get_post_meta( $pid, '_event_time', true ),
 					'status'           => $post->post_status,
-					'page_url'         => get_post_meta( $post->ID, '_page_url', true ),
-					'page_title'       => get_post_meta( $post->ID, '_page_title', true ),
+					'page_url'         => get_post_meta( $pid, '_page_url', true ),
+					'page_title'       => get_post_meta( $pid, '_page_title', true ),
+					'page_id'          => get_post_meta( $pid, '_page_id', true ),
+					'referrer'         => get_post_meta( $pid, '_referrer', true ),
+					'ip'               => get_post_meta( $pid, '_ip', true ),
+					'user_agent'       => get_post_meta( $pid, '_user_agent', true ),
+					'fbp'              => get_post_meta( $pid, '_fbp', true ),
+					'fbc'              => get_post_meta( $pid, '_fbc', true ),
+					'lead_id'          => get_post_meta( $pid, '_lead_id', true ),
+					'pixel_ids'        => get_post_meta( $pid, '_pixel_ids', true ),
+					'geo_city'         => get_post_meta( $pid, '_geo_city', true ),
+					'geo_state'        => get_post_meta( $pid, '_geo_state', true ),
+					'geo_country'      => get_post_meta( $pid, '_geo_country', true ),
+					'geo_country_code' => get_post_meta( $pid, '_geo_country_code', true ),
+					'geo_zipcode'      => get_post_meta( $pid, '_geo_zipcode', true ),
+					'geo_timezone'     => get_post_meta( $pid, '_geo_timezone', true ),
+					'utm_source'       => get_post_meta( $pid, '_utm_source', true ),
+					'utm_medium'       => get_post_meta( $pid, '_utm_medium', true ),
+					'utm_campaign'     => get_post_meta( $pid, '_utm_campaign', true ),
+					'utm_content'      => get_post_meta( $pid, '_utm_content', true ),
+					'utm_term'         => get_post_meta( $pid, '_utm_term', true ),
+					'custom_data'      => get_post_meta( $pid, '_custom_data', true ),
+					'wp_em'            => get_post_meta( $pid, '_wp_em', true ) ? '(hashed)' : '',
+					'wp_fn'            => get_post_meta( $pid, '_wp_fn', true ) ? '(hashed)' : '',
+					'wp_ln'            => get_post_meta( $pid, '_wp_ln', true ) ? '(hashed)' : '',
+					'wp_external_id'   => get_post_meta( $pid, '_wp_external_id', true ) ? '(hashed)' : '',
+					'retry_count'      => (int) get_post_meta( $pid, '_fb_retry_count', true ),
+					'fb_pixel_ids'     => get_post_meta( $pid, '_fb_pixel_ids', true ),
+					'sent_at'          => get_post_meta( $pid, '_fb_sent_at', true ),
+					'error'            => get_post_meta( $pid, '_fb_error_message', true ),
+					'request_payload'  => get_post_meta( $pid, '_fb_request_payload', true ),
+					'response_payload' => get_post_meta( $pid, '_fb_response_payload', true ),
 					'created_at'       => $post->post_date,
-					'lead_id'          => get_post_meta( $post->ID, '_lead_id', true ),
-					'pixel_ids'        => get_post_meta( $post->ID, '_pixel_ids', true ),
-					'sent_at'          => get_post_meta( $post->ID, '_fb_sent_at', true ),
-					'error'            => get_post_meta( $post->ID, '_fb_error_message', true ),
-					'request_payload'  => get_post_meta( $post->ID, '_fb_request_payload', true ),
-					'response_payload' => get_post_meta( $post->ID, '_fb_response_payload', true ),
 				),
 			)
 		);
@@ -1012,6 +1118,119 @@ class AlvoBotPro_PixelTracking_REST {
 	}
 
 	/**
+	 * Authenticated: Resend a specific event to CAPI.
+	 *
+	 * Resets the event to pending status and clears delivery tracking,
+	 * then triggers an immediate CAPI dispatch.
+	 */
+	public function action_resend_event( $request ) {
+		$event_id = sanitize_text_field( (string) $request->get_param( 'event_id' ) );
+
+		if ( '' === $event_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Invalid event_id',
+				),
+				400
+			);
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'alvobot_pixel_event',
+				'post_status'    => array( 'pixel_pending', 'pixel_sent', 'pixel_error' ),
+				'posts_per_page' => 1,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_event_id',
+						'value' => $event_id,
+					),
+				),
+			)
+		);
+
+		if ( empty( $query->posts ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Event not found',
+				),
+				404
+			);
+		}
+
+		$post = $query->posts[0];
+
+		// Reset to pending: clear delivery markers so CAPI resends to all pixels.
+		wp_update_post(
+			array(
+				'ID'          => $post->ID,
+				'post_status' => 'pixel_pending',
+			)
+		);
+		delete_post_meta( $post->ID, '_fb_pixel_ids' );
+		delete_post_meta( $post->ID, '_fb_sent_at' );
+		delete_post_meta( $post->ID, '_fb_error_message' );
+		update_post_meta( $post->ID, '_fb_retry_count', 0 );
+
+		// Trigger immediate dispatch.
+		$this->module->capi->schedule_immediate_dispatch();
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Event queued for resend.',
+			)
+		);
+	}
+
+	/**
+	 * Authenticated: Delete a specific event.
+	 */
+	public function delete_event( $request ) {
+		$event_id = sanitize_text_field( (string) $request->get_param( 'event_id' ) );
+
+		if ( '' === $event_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Invalid event_id',
+				),
+				400
+			);
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'alvobot_pixel_event',
+				'post_status'    => array( 'pixel_pending', 'pixel_sent', 'pixel_error' ),
+				'posts_per_page' => 1,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_event_id',
+						'value' => $event_id,
+					),
+				),
+			)
+		);
+
+		if ( empty( $query->posts ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Event not found',
+				),
+				404
+			);
+		}
+
+		wp_delete_post( $query->posts[0]->ID, true );
+
+		return rest_ensure_response( array( 'success' => true ) );
+	}
+
+	/**
 	 * Format a conversion post for API response.
 	 */
 	private function format_conversion( $post ) {
@@ -1037,24 +1256,95 @@ class AlvoBotPro_PixelTracking_REST {
 	 * Checks Origin header first, then Referer as fallback.
 	 */
 	private function verify_same_origin( $request ) {
-		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
-		if ( ! $site_host ) {
+		$allowed_hosts = $this->get_allowed_hosts();
+		if ( empty( $allowed_hosts ) ) {
 			return false;
 		}
 
 		$origin = $request->get_header( 'Origin' );
 		if ( $origin ) {
 			$origin_host = wp_parse_url( $origin, PHP_URL_HOST );
-			return $origin_host === $site_host;
+			if ( $this->host_matches_allowed( $origin_host, $allowed_hosts ) ) {
+				return true;
+			}
 		}
 
 		$referer = $request->get_header( 'Referer' );
 		if ( $referer ) {
 			$referer_host = wp_parse_url( $referer, PHP_URL_HOST );
-			return $referer_host === $site_host;
+			if ( $this->host_matches_allowed( $referer_host, $allowed_hosts ) ) {
+				return true;
+			}
+		}
+
+		$sec_fetch_site = strtolower( (string) $request->get_header( 'Sec-Fetch-Site' ) );
+		if ( in_array( $sec_fetch_site, array( 'same-origin', 'same-site' ), true ) ) {
+			return true;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Build allowed host aliases for same-origin validation.
+	 *
+	 * @return string[]
+	 */
+	private function get_allowed_hosts() {
+		$candidates = array(
+			wp_parse_url( home_url(), PHP_URL_HOST ),
+			wp_parse_url( site_url(), PHP_URL_HOST ),
+			isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '',
+			isset( $_SERVER['SERVER_NAME'] ) ? sanitize_text_field( wp_unslash( $_SERVER['SERVER_NAME'] ) ) : '',
+		);
+
+		$hosts = array();
+		foreach ( $candidates as $candidate ) {
+			$normalized = $this->normalize_host( $candidate );
+			if ( $normalized ) {
+				$hosts[] = $normalized;
+			}
+		}
+
+		return array_values( array_unique( $hosts ) );
+	}
+
+	/**
+	 * Normalize host for safe comparison.
+	 *
+	 * @param string $host Raw host.
+	 * @return string
+	 */
+	private function normalize_host( $host ) {
+		if ( ! is_string( $host ) || '' === $host ) {
+			return '';
+		}
+
+		$host = strtolower( trim( $host ) );
+		$host = preg_replace( '/:\d+$/', '', $host );
+		$host = rtrim( $host, '.' );
+
+		if ( strpos( $host, 'www.' ) === 0 ) {
+			$host = substr( $host, 4 );
+		}
+
+		return $host;
+	}
+
+	/**
+	 * Check if host matches any allowed host alias.
+	 *
+	 * @param string   $host          Host to test.
+	 * @param string[] $allowed_hosts Normalized allowed hosts.
+	 * @return bool
+	 */
+	private function host_matches_allowed( $host, $allowed_hosts ) {
+		$normalized = $this->normalize_host( $host );
+		if ( '' === $normalized ) {
+			return false;
+		}
+
+		return in_array( $normalized, $allowed_hosts, true );
 	}
 
 	/**

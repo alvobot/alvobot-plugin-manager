@@ -108,11 +108,17 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$module_url = plugin_dir_url( __FILE__ );
 
 		if ( file_exists( $module_dir . 'assets/js/tracking.js' ) ) {
+			$script_path    = $module_dir . 'assets/js/tracking.js';
+			$asset_version  = (string) filemtime( $script_path );
+			if ( empty( $asset_version ) ) {
+				$asset_version = ALVOBOT_PRO_VERSION;
+			}
+
 			wp_enqueue_script(
 				'alvobot-pixel-tracking',
 				$module_url . 'assets/js/tracking.js',
 				array(),
-				ALVOBOT_PRO_VERSION,
+				$asset_version,
 				array(
 					'strategy'  => 'defer',
 					'in_footer' => true,
@@ -136,10 +142,11 @@ class AlvoBotPro_PixelTracking_Frontend {
 			return;
 		}
 
-		$pixel_ids      = implode( ',', array_column( $pixels, 'pixel_id' ) );
-		$consent_cookie = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
-		$consent_check  = ! empty( $settings['consent_check'] );
-		$tracking_nonce = wp_create_nonce( 'alvobot_pixel_tracking' );
+		$pixel_ids        = implode( ',', array_column( $pixels, 'pixel_id' ) );
+		$consent_cookie   = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
+		$consent_check    = ! empty( $settings['consent_check'] );
+		$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
+		$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
 
 		$page_id    = get_queried_object_id();
 		$page_title = wp_get_document_title();
@@ -186,6 +193,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 			content_category: <?php echo wp_json_encode( $content_category ); ?>,
 			consent_cookie: <?php echo wp_json_encode( $consent_cookie ); ?>,
 			consent_check: <?php echo $consent_check ? 'true' : 'false'; ?>,
+			cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
 			user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>
 		};
 		</script>

@@ -44,6 +44,13 @@
 	}
 
 	// ========================
+	// Events Tab
+	// ========================
+	if (activeTab === 'events') {
+		initEventsTab();
+	}
+
+	// ========================
 	// Status Tab
 	// ========================
 	if (activeTab === 'status') {
@@ -722,6 +729,605 @@
 	}
 
 	// ================================================================
+	// EVENTS TAB
+	// ================================================================
+	function initEventsTab() {
+		var currentPage   = 1;
+		var perPage       = 25;
+		var totalEvents   = 0;
+		var currentOffset = 0;
+
+		loadEvents();
+		loadEventStats();
+
+		// Filter button
+		$( '#events-filter-btn' ).on(
+			'click',
+			function () {
+				currentPage   = 1;
+				currentOffset = 0;
+				loadEvents();
+			}
+		);
+
+		// Clear filters
+		$( '#events-clear-filters-btn' ).on(
+			'click',
+			function () {
+				$( '#filter-status' ).val( '' );
+				$( '#filter-event-name' ).val( '' );
+				currentPage   = 1;
+				currentOffset = 0;
+				loadEvents();
+			}
+		);
+
+		// Pagination
+		$( '#events-prev-btn' ).on(
+			'click',
+			function () {
+				if (currentPage > 1) {
+					currentPage--;
+					currentOffset = (currentPage - 1) * perPage;
+					loadEvents();
+				}
+			}
+		);
+
+		$( '#events-next-btn' ).on(
+			'click',
+			function () {
+				var maxPage = Math.ceil( totalEvents / perPage );
+				if (currentPage < maxPage) {
+					currentPage++;
+					currentOffset = (currentPage - 1) * perPage;
+					loadEvents();
+				}
+			}
+		);
+
+		function loadEvents() {
+			var $tbody = $( '#alvobot-events-tbody' );
+			$tbody.html( '<tr><td colspan="8" class="alvobot-events-loading"><span class="alvobot-skeleton" style="width:120px;"></span></td></tr>' );
+
+			var params = 'limit=' + perPage + '&offset=' + currentOffset;
+			var status = $( '#filter-status' ).val();
+			if (status) {
+				params += '&status=' + encodeURIComponent( status );
+			}
+			var eventName = $( '#filter-event-name' ).val();
+			if (eventName) {
+				params += '&event_name=' + encodeURIComponent( eventName );
+			}
+
+			restGet(
+				'events?' + params,
+				function (data, meta) {
+					totalEvents = meta ? meta.total : 0;
+					renderEventsTable( data );
+					updatePagination();
+				}
+			);
+		}
+
+		function loadEventStats() {
+			restGet(
+				'events/stats',
+				function (data) {
+					var pending = data.pixel_pending || 0;
+					var sent    = data.pixel_sent || 0;
+					var error   = data.pixel_error || 0;
+					var total   = pending + sent + error;
+					$( '#events-stat-total' ).find( 'strong' ).text( formatNumber( total ) );
+					$( '#events-stat-pending' ).text( formatNumber( pending ) );
+					$( '#events-stat-sent' ).text( formatNumber( sent ) );
+					$( '#events-stat-error' ).text( formatNumber( error ) );
+				}
+			);
+		}
+
+		function renderEventsTable(events) {
+			var $tbody = $( '#alvobot-events-tbody' );
+			$tbody.empty();
+
+			if ( ! events || ! events.length) {
+				$tbody.html( '<tr><td colspan="8" class="alvobot-empty-state"><p>Nenhum evento encontrado.</p></td></tr>' );
+				return;
+			}
+
+			for (var i = 0; i < events.length; i++) {
+				var e    = events[i];
+				var html = '<tr data-event-id="' + escAttr( e.event_id ) + '">';
+
+				// Event name + ID
+				html += '<td>';
+				html += '<div class="alvobot-events-cell-event">';
+				html += '<strong>' + escHtml( e.event_name ) + '</strong>';
+				html += '<code class="alvobot-events-uuid">' + escHtml( (e.event_id || '').substring( 0, 8 ) ) + '...</code>';
+				html += '</div>';
+				html += '</td>';
+
+				// Status badge
+				html += '<td>' + getStatusBadge( e.status, e.error, e.retry_count ) + '</td>';
+
+				// Page URL + title
+				html += '<td>';
+				html += '<div class="alvobot-events-cell-page">';
+				if (e.page_title) {
+					html += '<span class="alvobot-events-page-title">' + escHtml( truncate( e.page_title, 30 ) ) + '</span>';
+				}
+				if (e.page_url) {
+					html += '<span class="alvobot-events-page-url">' + escHtml( truncateUrl( e.page_url, 35 ) ) + '</span>';
+				}
+				html += '</div>';
+				html += '</td>';
+
+				// IP / Location
+				html += '<td>';
+				html += '<div class="alvobot-events-cell-ip">';
+				if (e.ip) {
+					html += '<code>' + escHtml( e.ip ) + '</code>';
+				}
+				if (e.geo_city || e.geo_country) {
+					html += '<span class="alvobot-events-geo">';
+					html += escHtml( [e.geo_city, e.geo_country].filter( Boolean ).join( ', ' ) );
+					html += '</span>';
+				}
+				html += '</div>';
+				html += '</td>';
+
+				// Identifiers (fbp, fbc)
+				html += '<td>';
+				html += '<div class="alvobot-events-cell-ids">';
+				if (e.fbp) {
+					html += '<span class="alvobot-events-id-tag">fbp</span>';
+				}
+				if (e.fbc) {
+					html += '<span class="alvobot-events-id-tag alvobot-events-id-tag-fbc">fbc</span>';
+				}
+				if ( ! e.fbp && ! e.fbc) {
+					html += '<span class="alvobot-events-no-data">-</span>';
+				}
+				html += '</div>';
+				html += '</td>';
+
+				// Pixels delivered
+				html += '<td>';
+				if (e.pixel_ids) {
+					var pIds = e.pixel_ids.split( ',' );
+					for (var j = 0; j < pIds.length; j++) {
+						var pid = pIds[j].trim();
+						if (pid) {
+							html += '<code class="alvobot-events-pixel-tag">' + escHtml( pid.slice( -4 ) ) + '</code> ';
+						}
+					}
+				} else {
+					html += '<span class="alvobot-events-no-data">-</span>';
+				}
+				html += '</td>';
+
+				// Date
+				html += '<td>';
+				html += '<div class="alvobot-events-cell-date">';
+				html += '<span>' + escHtml( formatDate( e.created_at ) ) + '</span>';
+				if (e.sent_at) {
+					var sentTs = parseInt( e.sent_at, 10 );
+					if (sentTs > 0) {
+						html += '<span class="alvobot-events-sent-at">Enviado: ' + escHtml( formatTimestamp( sentTs ) ) + '</span>';
+					}
+				}
+				html += '</div>';
+				html += '</td>';
+
+				// Actions (3-dot menu)
+				html += '<td class="alvobot-events-col-actions">';
+				html += '<div class="alvobot-events-actions-wrap">';
+				html += '<button type="button" class="alvobot-events-actions-btn" data-event-id="' + escAttr( e.event_id ) + '">';
+				html += '<i data-lucide="more-vertical" class="alvobot-icon"></i>';
+				html += '</button>';
+				html += '<div class="alvobot-events-dropdown" style="display:none;">';
+				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="view" data-event-id="' + escAttr( e.event_id ) + '">';
+				html += '<i data-lucide="eye" class="alvobot-icon"></i> Detalhes';
+				html += '</button>';
+				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="logs" data-event-id="' + escAttr( e.event_id ) + '">';
+				html += '<i data-lucide="file-text" class="alvobot-icon"></i> Logs CAPI';
+				html += '</button>';
+				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="resend" data-event-id="' + escAttr( e.event_id ) + '">';
+				html += '<i data-lucide="refresh-cw" class="alvobot-icon"></i> Reenviar';
+				html += '</button>';
+				html += '<hr class="alvobot-events-dropdown-divider">';
+				html += '<button type="button" class="alvobot-events-dropdown-item alvobot-events-dropdown-danger" data-action="delete" data-event-id="' + escAttr( e.event_id ) + '">';
+				html += '<i data-lucide="trash-2" class="alvobot-icon"></i> Excluir';
+				html += '</button>';
+				html += '</div>';
+				html += '</div>';
+				html += '</td>';
+
+				html += '</tr>';
+				$tbody.append( html );
+			}
+
+			// Init Lucide icons
+			if (window.lucide) {
+				window.lucide.createIcons();
+			}
+		}
+
+		function getStatusBadge(status, error, retryCount) {
+			var map = {
+				pixel_pending: { cls: 'alvobot-badge-warning', label: 'Pendente' },
+				pixel_sent:    { cls: 'alvobot-badge-success', label: 'Enviado' },
+				pixel_error:   { cls: 'alvobot-badge-error', label: 'Erro' },
+			};
+			var info = map[status] || { cls: 'alvobot-badge-neutral', label: status };
+			var html = '<span class="alvobot-badge ' + info.cls + '">' + info.label + '</span>';
+			if (retryCount > 0 && status === 'pixel_pending') {
+				html += '<span class="alvobot-events-retry-tag">retry ' + retryCount + '/3</span>';
+			}
+			if (error && status === 'pixel_error') {
+				html += '<span class="alvobot-events-error-hint" title="' + escAttr( error ) + '">!</span>';
+			}
+			return html;
+		}
+
+		function updatePagination() {
+			var maxPage = Math.ceil( totalEvents / perPage );
+			if (maxPage <= 1) {
+				$( '#alvobot-events-pagination' ).hide();
+				return;
+			}
+			$( '#alvobot-events-pagination' ).show();
+			$( '#events-pagination-info' ).text( 'Pagina ' + currentPage + ' de ' + maxPage + ' (' + formatNumber( totalEvents ) + ' eventos)' );
+			$( '#events-prev-btn' ).prop( 'disabled', currentPage <= 1 );
+			$( '#events-next-btn' ).prop( 'disabled', currentPage >= maxPage );
+		}
+
+		// ---- 3-dot menu toggle ----
+		$( document ).on(
+			'click',
+			'.alvobot-events-actions-btn',
+			function (e) {
+				e.stopPropagation();
+				var $dropdown = $( this ).siblings( '.alvobot-events-dropdown' );
+				// Close all other dropdowns first.
+				$( '.alvobot-events-dropdown' ).not( $dropdown ).hide();
+				$dropdown.toggle();
+			}
+		);
+
+		// Close dropdown on outside click.
+		$( document ).on(
+			'click',
+			function () {
+				$( '.alvobot-events-dropdown' ).hide();
+			}
+		);
+
+		// ---- Dropdown action handlers ----
+		$( document ).on(
+			'click',
+			'.alvobot-events-dropdown-item',
+			function (e) {
+				e.stopPropagation();
+				var action  = $( this ).data( 'action' );
+				var eventId = $( this ).data( 'event-id' );
+				$( '.alvobot-events-dropdown' ).hide();
+
+				switch (action) {
+					case 'view':
+						openEventModal( eventId, 'details' );
+						break;
+					case 'logs':
+						openEventModal( eventId, 'logs' );
+						break;
+					case 'resend':
+						resendEvent( eventId );
+						break;
+					case 'delete':
+						deleteEvent( eventId );
+						break;
+				}
+			}
+		);
+
+		// ---- Modal ----
+		function openEventModal(eventId, view) {
+			var $modal = $( '#alvobot-event-modal' );
+			var $body  = $( '#alvobot-modal-body' );
+			var $title = $( '#alvobot-modal-title' );
+
+			$title.text( view === 'logs' ? 'Logs CAPI' : 'Detalhes do Evento' );
+			$body.html( '<div class="alvobot-events-loading"><span class="alvobot-skeleton" style="width:200px;"></span></div>' );
+			$modal.show();
+
+			restGet(
+				'events/' + encodeURIComponent( eventId ),
+				function (data) {
+					if (view === 'logs') {
+						renderLogsView( data, $body );
+					} else {
+						renderDetailsView( data, $body );
+					}
+					if (window.lucide) {
+						window.lucide.createIcons();
+					}
+				}
+			);
+		}
+
+		function renderDetailsView(e, $container) {
+			var sections = [];
+
+			// Event Info
+			sections.push( buildSection(
+				'Informacoes do Evento',
+				[
+					['Evento', e.event_name],
+					['Event ID', '<code>' + escHtml( e.event_id ) + '</code>'],
+					['Status', getStatusBadge( e.status, e.error, e.retry_count )],
+					['Event Time', e.event_time ? formatTimestamp( parseInt( e.event_time, 10 ) ) : '-'],
+					['Criado em', e.created_at || '-'],
+					['Enviado em', e.sent_at ? formatTimestamp( parseInt( e.sent_at, 10 ) ) : '-'],
+				]
+			) );
+
+			// Page Info
+			sections.push( buildSection(
+				'Pagina',
+				[
+					['Titulo', e.page_title || '-'],
+					['URL', e.page_url ? '<a href="' + escAttr( e.page_url ) + '" target="_blank">' + escHtml( e.page_url ) + '</a>' : '-'],
+					['Post ID', e.page_id || '-'],
+					['Referrer', e.referrer || '-'],
+				]
+			) );
+
+			// User Data
+			sections.push( buildSection(
+				'Dados do Usuario (enviados a Meta)',
+				[
+					['IP', e.ip ? '<code>' + escHtml( e.ip ) + '</code>' : '-'],
+					['User Agent', e.user_agent ? '<span class="alvobot-events-ua">' + escHtml( e.user_agent ) + '</span>' : '-'],
+					['fbp', e.fbp ? '<code>' + escHtml( e.fbp ) + '</code>' : '<span class="alvobot-events-missing">Ausente</span>'],
+					['fbc', e.fbc ? '<code>' + escHtml( e.fbc ) + '</code>' : '<span class="alvobot-events-missing">Ausente</span>'],
+					['Lead ID', e.lead_id || '-'],
+					['WP Email (hash)', e.wp_em || '-'],
+					['WP Nome (hash)', e.wp_fn || '-'],
+					['WP Sobrenome (hash)', e.wp_ln || '-'],
+					['WP External ID (hash)', e.wp_external_id || '-'],
+				]
+			) );
+
+			// Geo Data
+			sections.push( buildSection(
+				'Geolocalizacao',
+				[
+					['Cidade', e.geo_city || '<span class="alvobot-events-missing">Ausente</span>'],
+					['Estado', e.geo_state || '<span class="alvobot-events-missing">Ausente</span>'],
+					['Pais', e.geo_country || '-'],
+					['Codigo Pais', e.geo_country_code || '<span class="alvobot-events-missing">Ausente</span>'],
+					['CEP', e.geo_zipcode || '<span class="alvobot-events-missing">Ausente</span>'],
+					['Timezone', e.geo_timezone || '-'],
+				]
+			) );
+
+			// UTM Params
+			sections.push( buildSection(
+				'Parametros UTM',
+				[
+					['utm_source', e.utm_source || '-'],
+					['utm_medium', e.utm_medium || '-'],
+					['utm_campaign', e.utm_campaign || '-'],
+					['utm_content', e.utm_content || '-'],
+					['utm_term', e.utm_term || '-'],
+				]
+			) );
+
+			// Delivery Info
+			sections.push( buildSection(
+				'Entrega CAPI',
+				[
+					['Pixels Alvo', e.pixel_ids || '-'],
+					['Pixels Entregues', e.fb_pixel_ids || '<span class="alvobot-events-missing">Nenhum</span>'],
+					['Tentativas', e.retry_count + '/3'],
+					['Erro', e.error ? '<span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span>' : '-'],
+				]
+			) );
+
+			// Custom Data
+			if (e.custom_data && typeof e.custom_data === 'object' && Object.keys( e.custom_data ).length > 0) {
+				sections.push(
+					'<div class="alvobot-modal-section">' +
+					'<h4>Custom Data</h4>' +
+					'<pre class="alvobot-events-json">' + escHtml( JSON.stringify( e.custom_data, null, 2 ) ) + '</pre>' +
+					'</div>'
+				);
+			}
+
+			$container.html( sections.join( '' ) );
+		}
+
+		function renderLogsView(e, $container) {
+			var html = '';
+
+			// Status overview
+			html += '<div class="alvobot-modal-section">';
+			html += '<h4>Status da Entrega</h4>';
+			html += '<div class="alvobot-events-detail-grid">';
+			html += '<div class="alvobot-events-detail-row"><span>Status</span><span>' + getStatusBadge( e.status, e.error, e.retry_count ) + '</span></div>';
+			html += '<div class="alvobot-events-detail-row"><span>Tentativas</span><span>' + e.retry_count + '/3</span></div>';
+			html += '<div class="alvobot-events-detail-row"><span>Pixels Entregues</span><span>' + escHtml( e.fb_pixel_ids || 'Nenhum' ) + '</span></div>';
+			if (e.error) {
+				html += '<div class="alvobot-events-detail-row"><span>Erro</span><span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span></div>';
+			}
+			html += '</div>';
+			html += '</div>';
+
+			// Request/Response payload log
+			if (e.request_payload && Array.isArray( e.request_payload ) && e.request_payload.length > 0) {
+				for (var i = 0; i < e.request_payload.length; i++) {
+					var entry = e.request_payload[i];
+					html += '<div class="alvobot-modal-section">';
+					html += '<h4>Tentativa #' + (i + 1) + (entry.success ? ' <span class="alvobot-badge alvobot-badge-success">OK</span>' : ' <span class="alvobot-badge alvobot-badge-error">Falha</span>') + '</h4>';
+
+					// Request
+					html += '<div class="alvobot-events-log-block">';
+					html += '<div class="alvobot-events-log-label">Request (enviado a Meta)</div>';
+					html += '<pre class="alvobot-events-json">' + escHtml( JSON.stringify( entry.request, null, 2 ) ) + '</pre>';
+					html += '</div>';
+
+					// Response
+					html += '<div class="alvobot-events-log-block">';
+					html += '<div class="alvobot-events-log-label">Response (da Meta)</div>';
+					html += '<pre class="alvobot-events-json">' + escHtml( JSON.stringify( entry.response, null, 2 ) ) + '</pre>';
+					html += '</div>';
+
+					html += '</div>';
+				}
+			} else {
+				html += '<div class="alvobot-modal-section">';
+				html += '<div class="alvobot-empty-state alvobot-empty-state-compact">';
+				html += '<p>Nenhum log de envio disponivel.</p>';
+				html += '<small>Logs sao gerados quando o evento e processado pelo CAPI.</small>';
+				html += '</div>';
+				html += '</div>';
+			}
+
+			// Raw response_payload (last response)
+			if (e.response_payload && typeof e.response_payload === 'object' && Object.keys( e.response_payload ).length > 0) {
+				html += '<div class="alvobot-modal-section">';
+				html += '<h4>Ultima Resposta (raw)</h4>';
+				html += '<pre class="alvobot-events-json">' + escHtml( JSON.stringify( e.response_payload, null, 2 ) ) + '</pre>';
+				html += '</div>';
+			}
+
+			$container.html( html );
+		}
+
+		function buildSection(title, rows) {
+			var html = '<div class="alvobot-modal-section">';
+			html += '<h4>' + escHtml( title ) + '</h4>';
+			html += '<div class="alvobot-events-detail-grid">';
+			for (var i = 0; i < rows.length; i++) {
+				html += '<div class="alvobot-events-detail-row">';
+				html += '<span>' + escHtml( rows[i][0] ) + '</span>';
+				html += '<span>' + rows[i][1] + '</span>';
+				html += '</div>';
+			}
+			html += '</div>';
+			html += '</div>';
+			return html;
+		}
+
+		// Close modal
+		$( '#alvobot-modal-close, .alvobot-modal-backdrop' ).on(
+			'click',
+			function () {
+				$( '#alvobot-event-modal' ).hide();
+			}
+		);
+
+		$( document ).on(
+			'keydown',
+			function (e) {
+				if (e.key === 'Escape') {
+					$( '#alvobot-event-modal' ).hide();
+				}
+			}
+		);
+
+		// ---- Resend event ----
+		function resendEvent(eventId) {
+			if ( ! confirm( 'Reenviar este evento para a Meta? O status sera resetado para Pendente.' )) {
+				return;
+			}
+
+			restPost(
+				'actions/resend-event/' + encodeURIComponent( eventId ),
+				{},
+				function () {
+					loadEvents();
+					loadEventStats();
+				},
+				function (error) {
+					alert( 'Erro ao reenviar: ' + error );
+				}
+			);
+		}
+
+		// ---- Delete event ----
+		function deleteEvent(eventId) {
+			if ( ! confirm( 'Excluir este evento permanentemente?' )) {
+				return;
+			}
+
+			restDelete(
+				'events/' + encodeURIComponent( eventId ),
+				function () {
+					$( 'tr[data-event-id="' + eventId + '"]' ).fadeOut(
+						function () {
+							$( this ).remove();
+						}
+					);
+					loadEventStats();
+				},
+				function (error) {
+					alert( 'Erro ao excluir: ' + error );
+				}
+			);
+		}
+
+		// ---- Helpers ----
+		function truncate(str, max) {
+			if ( ! str) {
+				return '';
+			}
+			return str.length > max ? str.substring( 0, max ) + '...' : str;
+		}
+
+		function truncateUrl(url, max) {
+			if ( ! url) {
+				return '';
+			}
+			try {
+				var u = new URL( url );
+				var path = u.pathname + u.search;
+				return path.length > max ? path.substring( 0, max ) + '...' : path;
+			} catch (e) {
+				return truncate( url, max );
+			}
+		}
+
+		function formatDate(dateStr) {
+			if ( ! dateStr) {
+				return '-';
+			}
+			try {
+				var d = new Date( dateStr );
+				return d.toLocaleDateString( 'pt-BR' ) + ' ' + d.toLocaleTimeString( 'pt-BR', { hour: '2-digit', minute: '2-digit' } );
+			} catch (e) {
+				return dateStr;
+			}
+		}
+
+		function formatTimestamp(ts) {
+			if ( ! ts || ts <= 0) {
+				return '-';
+			}
+			try {
+				var d = new Date( ts * 1000 );
+				return d.toLocaleDateString( 'pt-BR' ) + ' ' + d.toLocaleTimeString( 'pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' } );
+			} catch (e) {
+				return String( ts );
+			}
+		}
+
+		function formatNumber(num) {
+			return Number( num ).toLocaleString( 'pt-BR' );
+		}
+	}
+
+	// ================================================================
 	// STATUS TAB
 	// ================================================================
 	function initStatusTab() {
@@ -816,7 +1422,7 @@
 	}
 
 	// ================================================================
-	// REST Helpers (for Status tab)
+	// REST Helpers
 	// ================================================================
 	function restGet(endpoint, onSuccess, onError) {
 		$.ajax(
@@ -828,11 +1434,11 @@
 				},
 				success: function (response) {
 					if (response.data) {
-						onSuccess( response.data );
+						onSuccess( response.data, response.meta || null );
 					} else if (response.success && response.data) {
-						onSuccess( response.data );
+						onSuccess( response.data, response.meta || null );
 					} else {
-						onSuccess( response );
+						onSuccess( response, null );
 					}
 				},
 				error: function (xhr) {
@@ -876,7 +1482,38 @@
 					} catch (e) {
 						// ignore
 					}
-					onError( msg );
+					if (onError) {
+						onError( msg );
+					}
+				},
+			}
+		);
+	}
+
+	function restDelete(endpoint, onSuccess, onError) {
+		$.ajax(
+			{
+				url: extra.rest_url + endpoint,
+				method: 'DELETE',
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader( 'X-WP-Nonce', extra.rest_nonce );
+				},
+				success: function (response) {
+					if (onSuccess) {
+						onSuccess( response.data || response );
+					}
+				},
+				error: function (xhr) {
+					var msg = 'Erro de conexao.';
+					try {
+						var body = JSON.parse( xhr.responseText );
+						msg      = body.message || msg;
+					} catch (e) {
+						// ignore
+					}
+					if (onError) {
+						onError( msg );
+					}
 				},
 			}
 		);

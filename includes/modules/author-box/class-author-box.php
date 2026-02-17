@@ -249,6 +249,7 @@ class AlvoBotPro_AuthorBox {
 
 	public function sanitize_options( $input ) {
 		$defaults  = $this->get_default_options();
+		$existing  = get_option( $this->option_name, $defaults );
 		$sanitized = array();
 
 		// Display on posts
@@ -266,9 +267,10 @@ class AlvoBotPro_AuthorBox {
 		// Title auto translation
 		$sanitized['title_use_auto_translation'] = isset( $input['title_use_auto_translation'] ) ? 1 : 0;
 
-		// Avatar size
+		// Avatar size — not rendered in the form, preserve existing value.
 		$sanitized['avatar_size'] = isset( $input['avatar_size'] ) ?
-			absint( $input['avatar_size'] ) : $defaults['avatar_size'];
+			absint( $input['avatar_size'] ) :
+			( isset( $existing['avatar_size'] ) ? absint( $existing['avatar_size'] ) : $defaults['avatar_size'] );
 
 		// Title text
 		$sanitized['title_text'] = isset( $input['title_text'] ) ?

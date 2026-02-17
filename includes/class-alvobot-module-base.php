@@ -174,7 +174,15 @@ abstract class AlvoBotPro_Module_Base {
 	}
 
 	/**
-	 * Processa o formulário de configurações
+	 * Processa o formulário de configurações.
+	 *
+	 * IMPORTANT: This passes raw POST data to save_settings(). Modules with
+	 * multi-tab forms or fields not present in every POST must either:
+	 * - Override this method to merge POST with existing settings, or
+	 * - Have their sanitize_settings() fall back to existing stored values
+	 *   for keys absent from the input array.
+	 * Failure to do so will cause missing POST keys to reset to defaults,
+	 * silently wiping data saved from other tabs or internal API calls.
 	 */
 	protected function process_settings_form() {
 		$settings = $_POST; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in render_settings_page before calling this method.

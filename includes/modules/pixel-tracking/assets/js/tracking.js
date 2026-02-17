@@ -62,7 +62,7 @@
 
 			// Async data capture
 			try {
-				this.data.ip = await this.get_ip();
+				this.data.ip = this.config.cf_trace_enabled ? await this.get_ip() : '';
 			} catch (e) {
 				this.data.ip = '';
 			}
@@ -131,6 +131,9 @@
 		async get_ip() {
 			try {
 				var resp  = await fetch( '/cdn-cgi/trace' );
+				if ( ! resp || ! resp.ok) {
+					return '';
+				}
 				var text  = await resp.text();
 				var match = text.match( /ip=([^\n]+)/ );
 				return match ? match[1] : '';
@@ -411,11 +414,11 @@
 				fetch(
 					this.config.api_event,
 					{
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'X-WP-Nonce': this.config.nonce || '',
-						},
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Alvobot-Nonce': this.config.nonce || '',
+							},
 						body: JSON.stringify(
 							{
 								event_id: event_id,
@@ -556,11 +559,11 @@
 				var resp = await fetch(
 					this.config.api_lead,
 					{
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'X-WP-Nonce': this.config.nonce || '',
-						},
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Alvobot-Nonce': this.config.nonce || '',
+							},
 						body: JSON.stringify( payload ),
 					}
 				);

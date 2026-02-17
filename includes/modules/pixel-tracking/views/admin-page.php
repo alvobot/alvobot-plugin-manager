@@ -41,6 +41,11 @@ $alvobot_pt_page_slug  = 'alvobot-pro-pixel-tracking';
 				<i data-lucide="target" class="alvobot-icon"></i>
 				<?php esc_html_e( 'Conversões', 'alvobot-pro' ); ?>
 			</a>
+			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=events"
+				class="nav-tab <?php echo 'events' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
+				<i data-lucide="list" class="alvobot-icon"></i>
+				<?php esc_html_e( 'Eventos', 'alvobot-pro' ); ?>
+			</a>
 			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=settings"
 				class="nav-tab <?php echo 'settings' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
 				<i data-lucide="settings" class="alvobot-icon"></i>
@@ -61,6 +66,9 @@ $alvobot_pt_page_slug  = 'alvobot-pro-pixel-tracking';
 					break;
 				case 'conversions':
 					include plugin_dir_path( __FILE__ ) . 'tab-conversions.php';
+					break;
+				case 'events':
+					include plugin_dir_path( __FILE__ ) . 'tab-events.php';
 					break;
 				case 'settings':
 					include plugin_dir_path( __FILE__ ) . 'tab-settings.php';

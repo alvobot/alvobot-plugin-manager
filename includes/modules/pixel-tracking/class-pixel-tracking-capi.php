@@ -183,6 +183,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 		$payload_batch = $this->build_batch( $events );
 		$result        = $this->send_batch( $pixel_id, $api_token, $payload_batch, $settings );
 
+		// Store request/response payloads on each event for debugging.
+		$this->store_debug_payloads( $events, $payload_batch, $result, $pixel_id );
+
 		if ( $result['success'] ) {
 			$ids = wp_list_pluck( $events, 'ID' );
 			foreach ( $ids as $post_id ) {
@@ -192,6 +195,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 						$pixel_list[] = $pixel_id;
 				}
 				update_post_meta( $post_id, '_fb_pixel_ids', implode( ',', $pixel_list ) );
+				update_post_meta( $post_id, '_fb_sent_at', time() );
 			}
 			$sent_ids = $ids;
 		} else {
@@ -476,6 +480,10 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 			$url = "https://graph.facebook.com/v24.0/{$pixel_id}/events";
 
+			// Store sanitized request (without access_token) for debugging.
+			$debug_request = $request_body;
+			$debug_request['access_token'] = '***REDACTED***';
+
 			$response = wp_remote_post(
 				$url,
 				array(
@@ -487,8 +495,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 		if ( is_wp_error( $response ) ) {
 				return array(
-					'success' => false,
-					'error'   => $response->get_error_message(),
+					'success'         => false,
+					'error'           => $response->get_error_message(),
+					'request_payload' => $debug_request,
 				);
 		}
 
@@ -496,34 +505,85 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$raw_body     = wp_remote_retrieve_body( $response );
 			$decoded_body = json_decode( $raw_body, true );
 
+			$response_payload = array(
+				'http_code' => $code,
+				'body'      => $decoded_body,
+			);
+
 		if ( 429 === $code ) {
 				return array(
-					'success' => false,
-					'error'   => 'rate_limited',
-					'code'    => 429,
+					'success'          => false,
+					'error'            => 'rate_limited',
+					'code'             => 429,
+					'request_payload'  => $debug_request,
+					'response_payload' => $response_payload,
 				);
 		}
 
 		if ( $code >= 400 ) {
 				$error = isset( $decoded_body['error']['message'] ) ? $decoded_body['error']['message'] : "HTTP {$code}";
 				return array(
-					'success' => false,
-					'error'   => $error,
-					'code'    => $code,
+					'success'          => false,
+					'error'            => $error,
+					'code'             => $code,
+					'request_payload'  => $debug_request,
+					'response_payload' => $response_payload,
 				);
 		}
 
 		if ( ! isset( $decoded_body['events_received'] ) ) {
 				return array(
-					'success' => false,
-					'error'   => 'No events_received in response',
+					'success'          => false,
+					'error'            => 'No events_received in response',
+					'request_payload'  => $debug_request,
+					'response_payload' => $response_payload,
 				);
 		}
 
 			return array(
-				'success'  => true,
-				'response' => $decoded_body,
+				'success'          => true,
+				'response'         => $decoded_body,
+				'request_payload'  => $debug_request,
+				'response_payload' => $response_payload,
 			);
+	}
+
+	/**
+	 * Store request/response payloads on event posts for debugging.
+	 *
+	 * Each event gets its own payload slice from the batch so admins can
+	 * inspect exactly what was sent to Meta for that specific event.
+	 *
+	 * @param array  $events        Event post objects.
+	 * @param array  $payload_batch Built CAPI payloads (same order as $events).
+	 * @param array  $result        send_batch() result.
+	 * @param string $pixel_id      Target pixel ID.
+	 */
+	private function store_debug_payloads( $events, $payload_batch, $result, $pixel_id ) {
+		$response_payload = isset( $result['response_payload'] ) ? $result['response_payload'] : array();
+
+		foreach ( $events as $index => $event ) {
+			$event_payload = isset( $payload_batch[ $index ] ) ? $payload_batch[ $index ] : array();
+
+			// Build per-event request payload.
+			$per_event_request = array(
+				'pixel_id'  => $pixel_id,
+				'url'       => "https://graph.facebook.com/v24.0/{$pixel_id}/events",
+				'event'     => $event_payload,
+				'timestamp' => time(),
+			);
+
+			// Append to existing log (multiple pixels may write to same event).
+			$existing_log = get_post_meta( $event->ID, '_fb_request_payload', true );
+			$log_entries  = is_array( $existing_log ) ? $existing_log : array();
+			$log_entries[] = array(
+				'request'  => $per_event_request,
+				'response' => $response_payload,
+				'success'  => ! empty( $result['success'] ),
+			);
+			update_post_meta( $event->ID, '_fb_request_payload', $log_entries );
+			update_post_meta( $event->ID, '_fb_response_payload', $response_payload );
+		}
 	}
 
 		/**
