@@ -24,7 +24,7 @@ $alvobot_pt_max_leads      = isset( $settings['max_leads'] ) ? $settings['max_le
 
 <form method="post" action="" class="alvobot-module-form">
 	<?php wp_nonce_field( $this->module_id . '_settings' ); ?>
-	<input type="hidden" name="active_tab" value="configuracoes">
+	<input type="hidden" name="active_tab" value="settings">
 
 	<!-- Test Mode -->
 	<div class="alvobot-card">

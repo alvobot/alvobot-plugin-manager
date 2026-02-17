@@ -150,6 +150,11 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 			$target_langs = $data['target_langs'];
 			$options      = $data['options'];
 
+			// Validação por recurso: o usuário precisa poder editar o post alvo.
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				wp_send_json_error( array( 'message' => 'Você não tem permissão para editar este post.' ), 403 );
+			}
+
 			AlvoBotPro::debug_log( 'multi-languages', "AJAX: Adicionando post {$post_id} à fila" );
 
 			// Adiciona à fila em vez de processar diretamente
@@ -220,6 +225,11 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 			$target_langs = $data['target_langs'];
 			$options      = $data['options'];
 
+			// Validação por recurso: o usuário precisa poder editar o post alvo.
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				wp_send_json_error( array( 'message' => 'Você não tem permissão para editar este post.' ), 403 );
+			}
+
 			AlvoBotPro::debug_log( 'multi-languages', "AJAX: Adicionando post {$post_id} à fila com idiomas: " . implode( ', ', $target_langs ) );
 
 			$queue_id = $this->translation_queue->add_to_queue( $post_id, $target_langs, $options );
@@ -253,28 +263,6 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 
 		} catch ( Exception $e ) {
 			AlvoBotPro::debug_log( 'multi-languages', 'AJAX Error: ' . $e->getMessage() );
-			wp_send_json_error( array( 'message' => $e->getMessage() ) );
-		}
-	}
-
-	/**
-	 * Processa a fila de tradução
-	 */
-	public function process_queue() {
-		AlvoBotPro::debug_log( 'multi-languages', 'AJAX: Processando fila de tradução' );
-
-		try {
-			// Validação centralizada (sem parâmetros obrigatórios, apenas permissão)
-			$this->validate_ajax_request( 'manage_options', [] );
-
-			$processed = $this->translation_queue->process_next_item();
-
-			if ( $processed ) {
-				wp_send_json_success( array( 'message' => 'Item processado com sucesso' ) );
-			} else {
-				wp_send_json_success( array( 'message' => 'Nenhum item pendente para processar' ) );
-			}
-		} catch ( Exception $e ) {
 			wp_send_json_error( array( 'message' => $e->getMessage() ) );
 		}
 	}
@@ -347,15 +335,6 @@ class AlvoBotPro_MultiLanguages_Ajax_Controller {
 			$this->translation_queue->ajax_reset_orphaned_items();
 		} else {
 			wp_send_json_error( array( 'message' => 'Sistema de fila não disponível' ) );
-		}
-	}
-
-	/**
-	 * Valida nonce para AJAX
-	 */
-	private function validate_nonce( $action = 'alvobot_nonce' ) {
-		if ( ! wp_verify_nonce( isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '', $action ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This IS the nonce verification.
-			wp_send_json_error( array( 'message' => 'Nonce inválido' ) );
 		}
 	}
 

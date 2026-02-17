@@ -20,8 +20,10 @@ class AlvoBotPro_PluginManager {
 	public function __construct() {
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 		add_action( 'admin_notices', array( $this, 'show_connection_warnings' ) );
+		add_action( 'admin_notices', array( $this, 'show_blocked_plugins_notice' ) );
 		add_action( 'admin_init', array( $this, 'handle_retry_connection' ) );
 		add_action( 'admin_init', array( $this, 'auto_deactivate_blocked_plugins' ), 1 );
+		add_action( 'wp_ajax_alvobot_fix_htaccess_auth', array( $this, 'ajax_fix_htaccess_auth' ) );
 		// Defer init to plugins_loaded so wp_generate_password() is available
 		add_action( 'plugins_loaded', array( $this, 'init' ) );
 	}
@@ -31,10 +33,9 @@ class AlvoBotPro_PluginManager {
 		if ( ! get_option( 'alvobot_site_token' ) ) {
 			$token = wp_generate_password( 32, false );
 			update_option( 'alvobot_site_token', $token );
-			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site gerado: ' . substr( $token, 0, 8 ) . '...' );
+			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site gerado com sucesso.' );
 		} else {
-			$existing_token = get_option( 'alvobot_site_token' );
-			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site já existe: ' . substr( $existing_token, 0, 8 ) . '...' );
+			AlvoBotPro::debug_log( 'plugin-manager', 'Token de site já existe.' );
 		}
 
 		// Register REST API endpoints
@@ -109,6 +110,9 @@ class AlvoBotPro_PluginManager {
 			$retry_button = '<p><a href="' . wp_nonce_url( admin_url( 'admin.php?page=alvobot-pro&retry_connection=1' ), 'alvobot_retry_connection' ) . '" class="button button-primary">Tentar Novamente</a></p>';
 		}
 
+		// Add diagnostic link to all error types
+		$diagnostic_link = '<p style="margin-top: 8px;"><a href="' . esc_url( admin_url( 'admin.php?page=alvobot-pro' ) ) . '">Abrir Diagnóstico do Sistema</a> para uma verificação completa de todos os pré-requisitos.</p>';
+
 		// Exibe o aviso com estilo de erro
 		?>
 		<div class="notice notice-error is-dismissible" style="border-left-color: #dc3232;">
@@ -116,7 +120,8 @@ class AlvoBotPro_PluginManager {
 			<p><strong><?php echo esc_html( $message ); ?></strong></p>
 			<?php echo wp_kses_post( $extra_info ); ?>
 			<?php echo wp_kses_post( $retry_button ); ?>
-			<p style="margin-bottom: 10px;"><small>Erro detectado em: <?php echo esc_html( date( 'd/m/Y H:i:s', $status['timestamp'] ) ); ?></small></p>
+			<?php echo wp_kses_post( $diagnostic_link ); ?>
+			<p style="margin-bottom: 10px;"><small>Erro detectado em: <?php echo esc_html( gmdate( 'd/m/Y H:i:s', $status['timestamp'] ) ); ?></small></p>
 		</div>
 		<?php
 	}
@@ -155,6 +160,10 @@ class AlvoBotPro_PluginManager {
 
 		$plugins_to_deactivate = array();
 
+		if ( ! function_exists( 'get_plugin_data' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		foreach ( $active_plugins as $plugin ) {
 			if ( stripos( $plugin, 'alvobot' ) !== false ) {
 				continue;
@@ -163,7 +172,7 @@ class AlvoBotPro_PluginManager {
 			foreach ( $this->blocked_plugin_patterns as $pattern ) {
 				if ( stripos( $plugin, $pattern ) !== false ) {
 					$plugins_to_deactivate[] = $plugin;
-					AlvoBotPro::debug_log( 'plugin-manager', sprintf( 'Plugin bloqueado detectado: %s (padrão: %s)', $plugin, $pattern ) );
+					AlvoBotPro::debug_log( 'plugin-manager', sprintf( 'Plugin incompatível detectado: %s (padrão: %s)', $plugin, $pattern ) );
 					break;
 				}
 			}
@@ -174,11 +183,64 @@ class AlvoBotPro_PluginManager {
 				require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
 
+			$deactivated_names = array();
 			foreach ( $plugins_to_deactivate as $plugin ) {
+				$plugin_file = WP_PLUGIN_DIR . '/' . $plugin;
+				$name        = $plugin;
+				if ( file_exists( $plugin_file ) ) {
+					$data = get_plugin_data( $plugin_file, false, false );
+					if ( ! empty( $data['Name'] ) ) {
+						$name = $data['Name'];
+					}
+				}
 				deactivate_plugins( $plugin, true );
+				$deactivated_names[] = $name;
 				AlvoBotPro::debug_log( 'plugin-manager', sprintf( 'Plugin desativado automaticamente: %s', $plugin ) );
 			}
+
+			// Store which plugins were deactivated so we can show a notice
+			update_option( 'alvobot_blocked_plugins_notice', $deactivated_names );
 		}
+	}
+
+	/**
+	 * Shows admin notice when blocked plugins have been deactivated.
+	 * Notice is dismissible and only shows once after deactivation.
+	 */
+	public function show_blocked_plugins_notice() {
+		$deactivated = get_option( 'alvobot_blocked_plugins_notice' );
+		if ( empty( $deactivated ) || ! is_array( $deactivated ) ) {
+			return;
+		}
+
+		// Only show to admins
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$plugin_list = implode( ', ', array_map( 'esc_html', $deactivated ) );
+		?>
+		<div class="notice notice-warning is-dismissible" data-alvobot-dismiss="blocked-plugins">
+			<h3 style="margin-top: 10px;">
+				<i data-lucide="shield-alert" class="alvobot-icon" style="width:18px;height:18px;vertical-align:middle;margin-right:4px;color:#dba617;"></i>
+				AlvoBot Pro - Plugins Incompatíveis Desativados
+			</h3>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: comma-separated list of plugin names */
+					esc_html__( 'Os seguintes plugins foram desativados automaticamente por serem incompatíveis com o AlvoBot Pro: %s', 'alvobot-pro' ),
+					'<strong>' . wp_kses_post( $plugin_list ) . '</strong>'
+				);
+				?>
+			</p>
+			<p style="color: #666; font-size: 12px;">
+				<?php esc_html_e( 'Esses plugins interferem no gerenciamento remoto e no registro do site. Se precisar reativá-los, desative o AlvoBot Pro primeiro.', 'alvobot-pro' ); ?>
+			</p>
+		</div>
+		<?php
+		// Clear the notice after showing it once
+		delete_option( 'alvobot_blocked_plugins_notice' );
 	}
 
 	public function activate() {
@@ -230,7 +292,7 @@ class AlvoBotPro_PluginManager {
 						'status'     => 'error',
 						'error_type' => 'app_password_failed',
 						'timestamp'  => time(),
-						'message'    => 'Falha ao gerar Application Password. Provavelmente algum plugin de segurança está bloqueando esta funcionalidade.',
+						'message'    => 'Falha ao gerar Application Password. Verifique o Diagnóstico do Sistema para mais detalhes.',
 					)
 				);
 			}
@@ -373,6 +435,13 @@ class AlvoBotPro_PluginManager {
 			return $existing_user;
 		}
 
+		// Check if email is already in use by another user
+		$email_user = get_user_by( 'email', $email );
+		if ( $email_user ) {
+			AlvoBotPro::debug_log( 'plugin-manager', sprintf( 'Email %s já em uso pelo usuário %s (ID: %d). Usando email alternativo.', $email, $email_user->user_login, $email_user->ID ) );
+			$email = 'alvobot-' . wp_generate_password( 6, false, false ) . '@alvobot.com.br';
+		}
+
 		// Create new user
 		$userdata = array(
 			'user_login' => $username,
@@ -382,7 +451,18 @@ class AlvoBotPro_PluginManager {
 		);
 
 		$user_id = wp_insert_user( $userdata );
-		return $user_id ? get_user_by( 'id', $user_id ) : false;
+
+		if ( is_wp_error( $user_id ) ) {
+			AlvoBotPro::debug_log( 'plugin-manager', 'Erro ao criar usuário: ' . $user_id->get_error_message() );
+			return $user_id;
+		}
+
+		$user = get_user_by( 'id', $user_id );
+		if ( ! $user ) {
+			return new WP_Error( 'user_lookup_failed', 'Usuário criado mas não encontrado no banco de dados.' );
+		}
+
+		return $user;
 	}
 
 	public function generate_alvobot_app_password( $user ) {
@@ -391,8 +471,47 @@ class AlvoBotPro_PluginManager {
 			return false;
 		}
 
+		// Check WordPress version supports Application Passwords (5.6+)
+		global $wp_version;
+		if ( version_compare( $wp_version, '5.6', '<' ) ) {
+			AlvoBotPro::debug_log( 'plugin-manager', 'Plugin Manager: WordPress ' . $wp_version . ' não suporta Application Passwords (requer 5.6+).' );
+			update_option(
+				'alvobot_connection_status',
+				array(
+					'status'     => 'error',
+					'error_type' => 'app_password_failed',
+					'timestamp'  => time(),
+					'message'    => 'WordPress ' . $wp_version . ' não suporta Application Passwords. Atualize para a versão 5.6 ou superior.',
+				)
+			);
+			return false;
+		}
+
 		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
 			require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+		}
+
+		// Check if Application Passwords are available (can be disabled by plugins or non-HTTPS)
+		if ( ! wp_is_application_passwords_available() ) {
+			$reason = 'Motivo desconhecido.';
+			if ( ! is_ssl() && ! wp_is_application_passwords_available_for_user( $user ) ) {
+				$reason = 'O site não usa HTTPS. Application Passwords requerem SSL.';
+			} elseif ( ! wp_is_application_passwords_available_for_user( $user ) ) {
+				$reason = 'Application Passwords estão desabilitados para este usuário (possivelmente por um plugin de segurança).';
+			} else {
+				$reason = 'Application Passwords estão desabilitados (possivelmente por um plugin de segurança ou configuração do servidor).';
+			}
+			AlvoBotPro::debug_log( 'plugin-manager', 'Plugin Manager: Application Passwords não disponíveis. ' . $reason );
+			update_option(
+				'alvobot_connection_status',
+				array(
+					'status'     => 'error',
+					'error_type' => 'app_password_failed',
+					'timestamp'  => time(),
+					'message'    => 'Application Passwords não disponíveis. ' . $reason,
+				)
+			);
+			return false;
 		}
 
 		// Remove existing passwords
@@ -418,7 +537,7 @@ class AlvoBotPro_PluginManager {
 		}
 
 		AlvoBotPro::debug_log( 'plugin-manager', 'Plugin Manager: Senha de aplicativo gerada com sucesso' );
-		return $app_pass; // Return the plain text password
+		return $app_pass;
 	}
 
 	public function register_site( $app_password = null ) {
@@ -448,7 +567,7 @@ class AlvoBotPro_PluginManager {
 			'plugins'    => array_keys( $plugins ),
 		);
 
-		AlvoBotPro::debug_log( 'plugin-manager', ' Token do site: ' . ( $site_token ? substr( $site_token, 0, 8 ) . '...' : 'VAZIO' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', ' Token do site: ' . ( $site_token ? 'PRESENTE' : 'VAZIO' ) );
 
 		if ( $app_password ) {
 			// Pegar apenas a string da senha (primeiro elemento do array)
@@ -583,6 +702,387 @@ class AlvoBotPro_PluginManager {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_command' ),
 				'permission_callback' => array( $this, 'verify_token' ),
+			)
+		);
+
+		// Endpoint para health check diagnóstico
+		register_rest_route(
+			$this->namespace,
+			'/health-check',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'rest_health_check' ),
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				},
+			)
+		);
+
+		// Endpoint para testar se o Authorization header chega ao PHP
+		register_rest_route(
+			$this->namespace,
+			'/auth-header-test',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'rest_auth_header_test' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+
+	/**
+	 * REST endpoint that echoes whether the Authorization header was received.
+	 * Used by the health check to verify header passthrough.
+	 */
+	public function rest_auth_header_test( $request ) {
+		$auth_header = $request->get_header( 'authorization' );
+
+		return new WP_REST_Response(
+			array(
+				'received'              => ! empty( $auth_header ),
+				'header_value'          => $auth_header ? substr( $auth_header, 0, 20 ) . '...' : null,
+				'http_authorization'    => isset( $_SERVER['HTTP_AUTHORIZATION'] ),
+				'redirect_authorization' => isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * REST endpoint for health check (admin-only).
+	 */
+	public function rest_health_check() {
+		return new WP_REST_Response( $this->run_health_check(), 200 );
+	}
+
+	/**
+	 * Runs a comprehensive health check of all prerequisites for the AlvoBot connection.
+	 *
+	 * @return array Associative array of check results.
+	 */
+	public function run_health_check() {
+		$checks = array();
+
+		// 1. WordPress version
+		global $wp_version;
+		$checks['wp_version'] = array(
+			'label'  => 'WordPress 5.6+',
+			'status' => version_compare( $wp_version, '5.6', '>=' ) ? 'ok' : 'error',
+			'value'  => $wp_version,
+			'help'   => version_compare( $wp_version, '5.6', '<' ) ? 'Atualize o WordPress para 5.6+ para suportar Application Passwords.' : '',
+		);
+
+		// 2. HTTPS
+		$is_ssl = is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) === 'https' );
+		$checks['https'] = array(
+			'label'  => 'HTTPS Ativo',
+			'status' => $is_ssl ? 'ok' : 'warning',
+			'value'  => $is_ssl ? 'Sim' : 'Não',
+			'help'   => ! $is_ssl ? 'Application Passwords requerem HTTPS. Ative SSL no seu hosting.' : '',
+		);
+
+		// 3. Application Passwords available
+		$app_pass_available = function_exists( 'wp_is_application_passwords_available' ) && wp_is_application_passwords_available();
+		$checks['app_passwords'] = array(
+			'label'  => 'Application Passwords Disponíveis',
+			'status' => $app_pass_available ? 'ok' : 'error',
+			'value'  => $app_pass_available ? 'Sim' : 'Não',
+			'help'   => ! $app_pass_available ? 'Verifique se plugins de segurança não estão desabilitando Application Passwords.' : '',
+		);
+
+		// 4. Alvobot user exists
+		$alvobot_user = get_user_by( 'login', 'alvobot' );
+		$checks['user'] = array(
+			'label'  => 'Usuário AlvoBot',
+			'status' => $alvobot_user ? 'ok' : 'error',
+			'value'  => $alvobot_user ? 'ID: ' . $alvobot_user->ID : 'Não existe',
+			'help'   => ! $alvobot_user ? 'Clique em "Inicializar Sistema" ou "Refazer Registro" para criar.' : '',
+		);
+
+		// 5. App Password exists for user
+		$has_app_pass = false;
+		if ( $alvobot_user ) {
+			if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+				require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+			}
+			$passwords    = WP_Application_Passwords::get_user_application_passwords( $alvobot_user->ID );
+			$has_app_pass = count( $passwords ) > 0;
+		}
+		$checks['app_password_exists'] = array(
+			'label'  => 'Application Password Gerada',
+			'status' => $has_app_pass ? 'ok' : 'error',
+			'value'  => $has_app_pass ? 'Sim' : 'Não',
+			'help'   => ! $has_app_pass ? 'Clique em "Refazer Registro" para gerar uma nova.' : '',
+		);
+
+		// 6. Site token exists
+		$site_token = get_option( 'alvobot_site_token' );
+		$checks['token'] = array(
+			'label'  => 'Token do Site',
+			'status' => ! empty( $site_token ) ? 'ok' : 'error',
+			'value'  => ! empty( $site_token ) ? 'Configurado' : 'Ausente',
+			'help'   => empty( $site_token ) ? 'O token será gerado automaticamente na próxima inicialização.' : '',
+		);
+
+		// 7. REST API accessible
+		$rest_url    = get_rest_url( null, 'wp/v2/' );
+		$rest_check  = wp_remote_get(
+			$rest_url,
+			array(
+				'timeout'   => 10,
+				'sslverify' => false,
+			)
+		);
+		$rest_status = 'ok';
+		$rest_value  = 'Acessível';
+		$rest_help   = '';
+		if ( is_wp_error( $rest_check ) ) {
+			$rest_status = 'error';
+			$rest_value  = 'Erro: ' . $rest_check->get_error_message();
+			$rest_help   = 'A REST API não está acessível. Verifique se não há plugins bloqueando ou permalinks desabilitados.';
+		} elseif ( wp_remote_retrieve_response_code( $rest_check ) >= 400 ) {
+			$rest_status = 'warning';
+			$rest_value  = 'HTTP ' . wp_remote_retrieve_response_code( $rest_check );
+			$rest_help   = 'A REST API retornou erro. Verifique plugins de segurança ou configurações do servidor.';
+		}
+		$checks['rest_api'] = array(
+			'label'  => 'REST API Acessível',
+			'status' => $rest_status,
+			'value'  => $rest_value,
+			'help'   => $rest_help,
+		);
+
+		// 8. Outgoing HTTP connections (can reach Supabase)
+		$outgoing_check = wp_remote_get(
+			'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/',
+			array(
+				'timeout'   => 15,
+				'sslverify' => true,
+			)
+		);
+		$outgoing_ok = ! is_wp_error( $outgoing_check );
+		$checks['outgoing_http'] = array(
+			'label'  => 'Conexão com Servidor AlvoBot',
+			'status' => $outgoing_ok ? 'ok' : 'error',
+			'value'  => $outgoing_ok ? 'Conectado' : 'Falha',
+			'help'   => ! $outgoing_ok ? 'O servidor não consegue conectar ao AlvoBot. Verifique firewall, proxy ou restrições do hosting. Erro: ' . ( is_wp_error( $outgoing_check ) ? $outgoing_check->get_error_message() : '' ) : '',
+		);
+
+		// 9. Authorization header passthrough (real self-test)
+		$auth_test_result = $this->test_auth_header_passthrough();
+		$checks['auth_header'] = $auth_test_result;
+
+		// 10. Check for known conflicting plugins
+		$conflicting_plugins = $this->detect_conflicting_plugins();
+		$has_conflicts       = ! empty( $conflicting_plugins );
+		$checks['conflicting_plugins'] = array(
+			'label'  => 'Plugins de Segurança',
+			'status' => $has_conflicts ? 'warning' : 'ok',
+			'value'  => $has_conflicts ? implode( ', ', $conflicting_plugins ) : 'Nenhum detectado',
+			'help'   => $has_conflicts ? 'Esses plugins podem interferir com Application Passwords e REST API. Se houver problemas de conexão, tente desativá-los temporariamente.' : '',
+		);
+
+		// 11. Connection status
+		$conn_status = get_option( 'alvobot_connection_status' );
+		$conn_ok     = is_array( $conn_status ) && isset( $conn_status['status'] ) && $conn_status['status'] === 'connected';
+		$checks['connection'] = array(
+			'label'  => 'Status da Conexão',
+			'status' => $conn_ok ? 'ok' : ( $conn_status ? 'error' : 'warning' ),
+			'value'  => $conn_ok ? 'Conectado' : ( $conn_status && is_array( $conn_status ) ? ( $conn_status['message'] ?? 'Erro' ) : 'Não inicializado' ),
+			'help'   => '',
+		);
+
+		// 12. Site URL consistency check
+		$site_url = get_site_url();
+		$home_url = get_home_url();
+		$urls_match = untrailingslashit( $site_url ) === untrailingslashit( $home_url );
+		$checks['url_consistency'] = array(
+			'label'  => 'Consistência de URL',
+			'status' => $urls_match ? 'ok' : 'warning',
+			'value'  => $urls_match ? $site_url : "site_url: {$site_url} | home_url: {$home_url}",
+			'help'   => ! $urls_match ? 'site_url e home_url são diferentes. Isso pode causar problemas na validação do domínio.' : '',
+		);
+
+		return $checks;
+	}
+
+	/**
+	 * Detects known security plugins that may interfere with Application Passwords or REST API.
+	 *
+	 * @return array List of conflicting plugin names.
+	 */
+	private function detect_conflicting_plugins() {
+		$active_plugins = get_option( 'active_plugins', array() );
+		$known_conflicts = array(
+			'wordfence'          => 'Wordfence Security',
+			'better-wp-security' => 'iThemes Security',
+			'ithemes-security'   => 'iThemes Security',
+			'all-in-one-wp-security' => 'All In One WP Security',
+			'sucuri-scanner'     => 'Sucuri Security',
+			'disable-json-api'   => 'Disable REST API',
+			'disable-wp-rest-api' => 'Disable WP REST API',
+			'really-simple-ssl'  => 'Really Simple SSL',
+			'shield-security'    => 'Shield Security',
+			'cerber'             => 'WP Cerber Security',
+		);
+
+		$found = array();
+		foreach ( $active_plugins as $plugin ) {
+			$plugin_lower = strtolower( $plugin );
+			foreach ( $known_conflicts as $pattern => $name ) {
+				if ( strpos( $plugin_lower, $pattern ) !== false ) {
+					$found[] = $name;
+					break;
+				}
+			}
+		}
+
+		return array_unique( $found );
+	}
+
+	/**
+	 * Tests whether the Authorization header actually reaches PHP by making a self-request
+	 * to the auth-header-test endpoint with a dummy Authorization header.
+	 *
+	 * @return array Health check result array.
+	 */
+	private function test_auth_header_passthrough() {
+		$test_url = get_rest_url( null, $this->namespace . '/auth-header-test' );
+		$response = wp_remote_get(
+			$test_url,
+			array(
+				'timeout'   => 10,
+				'sslverify' => false,
+				'headers'   => array(
+					'Authorization' => 'Basic ' . base64_encode( 'alvobot-test:health-check-probe' ),
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'label'  => 'Authorization Header',
+				'status' => 'warning',
+				'value'  => 'Não foi possível testar',
+				'help'   => 'Erro ao testar: ' . $response->get_error_message(),
+				'fixable' => false,
+			);
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		if ( $status_code !== 200 ) {
+			return array(
+				'label'  => 'Authorization Header',
+				'status' => 'warning',
+				'value'  => 'Teste inconclusivo (HTTP ' . $status_code . ')',
+				'help'   => 'O endpoint de teste retornou status ' . $status_code . '. Verifique se a REST API está acessível.',
+				'fixable' => false,
+			);
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ! empty( $body['received'] ) ) {
+			return array(
+				'label'  => 'Authorization Header',
+				'status' => 'ok',
+				'value'  => 'Funcionando',
+				'help'   => '',
+				'fixable' => false,
+			);
+		}
+
+		// Header NOT received — check if we can fix it
+		$htaccess_path = $this->get_htaccess_path();
+		$can_fix       = $htaccess_path && is_writable( $htaccess_path );
+
+		return array(
+			'label'  => 'Authorization Header',
+			'status' => 'error',
+			'value'  => 'Bloqueado pelo servidor',
+			'help'   => $can_fix
+				? 'O servidor está removendo o header Authorization. Clique em "Corrigir" para adicionar a regra necessária ao .htaccess automaticamente.'
+				: 'O servidor está removendo o header Authorization. Adicione manualmente ao .htaccess: RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]',
+			'fixable' => $can_fix,
+		);
+	}
+
+	/**
+	 * Returns the path to the .htaccess file if available.
+	 *
+	 * @return string|false Path to .htaccess or false.
+	 */
+	private function get_htaccess_path() {
+		$htaccess = ABSPATH . '.htaccess';
+		return file_exists( $htaccess ) ? $htaccess : false;
+	}
+
+	/**
+	 * Fixes the .htaccess to pass Authorization headers to PHP.
+	 * Uses WordPress's insert_with_markers() for safe, idempotent insertion.
+	 *
+	 * @return true|WP_Error
+	 */
+	public function fix_htaccess_auth() {
+		$htaccess_path = $this->get_htaccess_path();
+
+		if ( ! $htaccess_path ) {
+			// .htaccess doesn't exist yet — try to create it
+			$htaccess_path = ABSPATH . '.htaccess';
+		}
+
+		if ( file_exists( $htaccess_path ) && ! is_writable( $htaccess_path ) ) {
+			return new WP_Error(
+				'htaccess_not_writable',
+				'O arquivo .htaccess não tem permissão de escrita. Altere as permissões ou adicione a regra manualmente.'
+			);
+		}
+
+		$rules = array(
+			'RewriteEngine On',
+			'RewriteCond %{HTTP:Authorization} ^(.*)',
+			'RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]',
+		);
+
+		$result = insert_with_markers( $htaccess_path, 'AlvoBot Authorization Fix', $rules );
+
+		if ( ! $result ) {
+			return new WP_Error(
+				'htaccess_write_failed',
+				'Falha ao escrever no .htaccess. Verifique as permissões do arquivo.'
+			);
+		}
+
+		AlvoBotPro::debug_log( 'plugin-manager', 'Authorization header fix applied to .htaccess successfully.' );
+
+		return true;
+	}
+
+	/**
+	 * AJAX handler for fixing .htaccess Authorization header passthrough.
+	 */
+	public function ajax_fix_htaccess_auth() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Permissão negada.' ) );
+		}
+
+		if ( ! check_ajax_referer( 'alvobot_fix_htaccess', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => 'Nonce inválido.' ) );
+		}
+
+		$result = $this->fix_htaccess_auth();
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		// Re-test to confirm the fix worked
+		$retest = $this->test_auth_header_passthrough();
+
+		wp_send_json_success(
+			array(
+				'message'    => 'Regra adicionada ao .htaccess com sucesso!',
+				'new_status' => $retest['status'],
 			)
 		);
 	}
@@ -987,9 +1487,6 @@ class AlvoBotPro_PluginManager {
 	 */
 	private function handle_reset( $request ) {
 		try {
-			// Guarda o token atual antes de deletar
-			$current_token = get_option( 'alvobot_site_token' );
-
 			// Remove todas as opções do plugin
 			delete_option( 'alvobot_site_token' );
 			delete_option( 'alvobot_connection_status' );
@@ -1008,6 +1505,9 @@ class AlvoBotPro_PluginManager {
 
 			// Cria um novo usuário alvobot
 			$new_user = $this->create_alvobot_user();
+			if ( is_wp_error( $new_user ) ) {
+				throw new Exception( 'Falha ao criar usuário alvobot: ' . $new_user->get_error_message() );
+			}
 			if ( ! $new_user ) {
 				throw new Exception( 'Falha ao criar usuário alvobot' );
 			}
@@ -1022,19 +1522,18 @@ class AlvoBotPro_PluginManager {
 			$new_token = wp_generate_password( 32, false );
 			update_option( 'alvobot_site_token', $new_token );
 
-			// Registra o site com a nova senha de app
-			$this->register_site( $app_password_data[0] );
+			// Registra o site com a nova senha de app (envia credenciais ao Supabase internamente)
+			$register_result = $this->register_site( $app_password_data );
 
 			return new WP_REST_Response(
 				array(
-					'success'      => true,
-					'message'      => 'Plugin resetado com sucesso',
-					'new_token'    => $new_token,
-					'app_password' => $app_password_data[0],
-					'user'         => array(
+					'success'            => true,
+					'message'            => 'Plugin resetado com sucesso',
+					'new_token'          => $new_token,
+					'registration_ok'    => (bool) $register_result,
+					'user'               => array(
 						'id'    => $new_user->ID,
 						'login' => $new_user->user_login,
-						'email' => $new_user->user_email,
 					),
 				)
 			);

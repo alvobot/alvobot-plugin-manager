@@ -76,24 +76,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Token do Site', 'alvobot-pro' ); ?></th>
 					<td>
-						<?php if ( $site_token ) : ?>
-							<span class="alvobot-badge alvobot-badge-success">
-								<span class="alvobot-status-indicator success"></span>
-								<?php esc_html_e( 'Gerado', 'alvobot-pro' ); ?>
-							</span>
-							<div class="alvobot-token-field alvobot-mt-sm">
-								<code class="alvobot-token-value" data-token="<?php echo esc_attr( $site_token ); ?>">••••••••••••••••••••••••••••••••</code>
-								<button type="button" class="alvobot-token-toggle" title="<?php esc_attr_e( 'Mostrar/Ocultar Token', 'alvobot-pro' ); ?>">
-									<svg class="eye-show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-									</svg>
-									<svg class="eye-hide" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-									</svg>
-								</button>
-							</div>
-						<?php else : ?>
+							<?php if ( $site_token ) : ?>
+								<span class="alvobot-badge alvobot-badge-success">
+									<span class="alvobot-status-indicator success"></span>
+									<?php esc_html_e( 'Gerado', 'alvobot-pro' ); ?>
+								</span>
+								<div class="alvobot-token-field alvobot-mt-sm">
+									<?php
+									$site_token_str  = (string) $site_token;
+									$token_length    = strlen( $site_token_str );
+									$masked_site_token = $token_length <= 4
+										? str_repeat( '•', $token_length )
+										: str_repeat( '•', $token_length - 4 ) . substr( $site_token_str, -4 );
+									?>
+									<code class="alvobot-token-value"><?php echo esc_html( $masked_site_token ); ?></code>
+								</div>
+							<?php else : ?>
 							<span class="alvobot-badge alvobot-badge-error">
 								<span class="alvobot-status-indicator error"></span>
 								<?php esc_html_e( 'Não Gerado', 'alvobot-pro' ); ?>

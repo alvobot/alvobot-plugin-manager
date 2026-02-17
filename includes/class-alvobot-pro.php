@@ -168,12 +168,73 @@ class AlvoBotPro {
 		$this->init_modules();
 	}
 
+	/**
+	 * Normaliza o estado ativo dos módulos.
+	 *
+	 * @param mixed $saved_modules Valor cru da option alvobot_pro_active_modules.
+	 * @return array<string, bool>
+	 */
+	private function resolve_active_modules_map( $saved_modules ) {
+		$default_modules = self::get_default_modules();
+		$active_modules  = is_array( $saved_modules ) ? wp_parse_args( $saved_modules, $default_modules ) : $default_modules;
+
+		// Garante que módulos force_active estejam sempre ativos.
+		foreach ( self::$module_registry as $id => $meta ) {
+			if ( ! empty( $meta['force_active'] ) ) {
+				$active_modules[ $id ] = true;
+			}
+		}
+
+		// Normaliza para booleano por módulo registrado.
+		foreach ( self::$module_registry as $id => $meta ) {
+			$active_modules[ $id ] = $this->module_flag_to_bool( isset( $active_modules[ $id ] ) ? $active_modules[ $id ] : false );
+		}
+
+		return $active_modules;
+	}
+
+	/**
+	 * Converte flags de módulo para booleano, suportando formatos legados.
+	 *
+	 * @param mixed $value Valor salvo na option.
+	 * @return bool
+	 */
+	private function module_flag_to_bool( $value ) {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return (bool) $value;
+		}
+
+		if ( is_string( $value ) ) {
+			$normalized = strtolower( trim( $value ) );
+			if ( in_array( $normalized, array( '1', 'true', 'yes', 'on' ), true ) ) {
+				return true;
+			}
+			if ( in_array( $normalized, array( '0', 'false', 'no', 'off', '' ), true ) ) {
+				return false;
+			}
+		}
+
+		return ! empty( $value );
+	}
+
 	private function load_dependencies() {
 		// Carrega a classe base dos módulos
 		require_once ALVOBOT_PRO_PLUGIN_DIR . 'includes/class-alvobot-module-base.php';
 
-		// Carrega os módulos a partir do registry centralizado
+		// Carrega apenas módulos ativos (e force_active).
+		$saved_modules  = get_option( 'alvobot_pro_active_modules' );
+		$active_modules = $this->resolve_active_modules_map( $saved_modules );
+
+		// Carrega os módulos ativos a partir do registry centralizado.
 		foreach ( self::$module_registry as $module_id => $meta ) {
+			if ( empty( $active_modules[ $module_id ] ) ) {
+				continue;
+			}
+
 			$file = ALVOBOT_PRO_PLUGIN_DIR . $meta['file'];
 			if ( file_exists( $file ) ) {
 				require_once $file;
@@ -212,19 +273,13 @@ class AlvoBotPro {
 
 		// Se não existir no banco, cria com os valores padrão
 		if ( false === $saved_modules ) {
-			update_option( 'alvobot_pro_active_modules', $default_modules );
-			self::$active_modules_cache = $default_modules;
-			$this->active_modules       = $default_modules;
+			$this->active_modules       = $this->resolve_active_modules_map( $default_modules );
+			update_option( 'alvobot_pro_active_modules', $this->active_modules );
+			self::$active_modules_cache = $this->active_modules;
 			self::debug_log( 'plugin-manager', 'Criando módulos padrão' );
 		} else {
-			// Mescla os módulos salvos com os padrões para garantir que todos os módulos existam
-			$this->active_modules = wp_parse_args( $saved_modules, $default_modules );
-			// Garante que módulos force_active estejam sempre ativos
-			foreach ( self::$module_registry as $id => $meta ) {
-				if ( ! empty( $meta['force_active'] ) ) {
-					$this->active_modules[ $id ] = true;
-				}
-			}
+			// Mescla os módulos salvos com os padrões e normaliza flags.
+			$this->active_modules = $this->resolve_active_modules_map( $saved_modules );
 			// Atualiza a opção no banco de dados
 			update_option( 'alvobot_pro_active_modules', $this->active_modules );
 			self::$active_modules_cache = $this->active_modules;
@@ -235,23 +290,24 @@ class AlvoBotPro {
 		foreach ( self::$module_registry as $module_id => $meta ) {
 			$class_name = $meta['class'];
 			self::debug_log( 'plugin-manager', "Verificando módulo {$module_id} ({$class_name})" );
-			if (
-				isset( $this->active_modules[ $module_id ] ) &&
-				$this->active_modules[ $module_id ] &&
-				class_exists( $class_name )
-			) {
-				self::debug_log( 'plugin-manager', "Instanciando módulo {$module_id}" );
-				// Singletons expõem get_instance(); classes normais são instanciadas diretamente
-				if ( method_exists( $class_name, 'get_instance' ) ) {
-					$this->modules[ $module_id ] = $class_name::get_instance();
-				} else {
-					$this->modules[ $module_id ] = new $class_name();
-				}
-			} else {
+
+			$is_module_active = isset( $this->active_modules[ $module_id ] ) && $this->active_modules[ $module_id ];
+			if ( ! $is_module_active ) {
 				self::debug_log( 'plugin-manager', "Módulo {$module_id} não ativo ou classe não existe" );
-				if ( ! class_exists( $class_name ) ) {
-					self::debug_log( 'plugin-manager', "Classe {$class_name} não existe" );
-				}
+				continue;
+			}
+
+			if ( ! class_exists( $class_name ) ) {
+				self::debug_log( 'plugin-manager', "Classe {$class_name} não existe" );
+				continue;
+			}
+
+			self::debug_log( 'plugin-manager', "Instanciando módulo {$module_id}" );
+			// Singletons expõem get_instance(); classes normais são instanciadas diretamente
+			if ( method_exists( $class_name, 'get_instance' ) ) {
+				$this->modules[ $module_id ] = $class_name::get_instance();
+			} else {
+				$this->modules[ $module_id ] = new $class_name();
 			}
 		}
 	}
@@ -456,7 +512,7 @@ class AlvoBotPro {
 	 * Usa o MESMO token que já existe no sistema
 	 */
 	public static function authenticate_with_token( $username, $token ) {
-		self::debug_log( 'auth', sprintf( 'Tentando autenticar com token: %s...', substr( $token, 0, 10 ) ) );
+		self::debug_log( 'auth', sprintf( 'Tentando autenticar com token recebido (comprimento: %d)', strlen( (string) $token ) ) );
 
 		// Obtém o token do site (o mesmo usado para comunicação com GRP)
 		$site_token = get_option( 'alvobot_site_token' );
@@ -466,17 +522,13 @@ class AlvoBotPro {
 			return new WP_Error( 'no_site_token', __( 'Token do site não configurado.', 'alvobot-pro' ) );
 		}
 
-		self::debug_log( 'auth', sprintf( 'Token do site: %s...', substr( $site_token, 0, 10 ) ) );
+		self::debug_log( 'auth', sprintf( 'Token do site configurado (comprimento: %d)', strlen( (string) $site_token ) ) );
 
 		// Verifica se o token fornecido corresponde ao token do site
 		if ( $token !== $site_token ) {
 			self::debug_log(
 				'auth',
-				sprintf(
-					'✗ Token inválido. Fornecido: %s... / Esperado: %s...',
-					substr( $token, 0, 10 ),
-					substr( $site_token, 0, 10 )
-				)
+				'✗ Token inválido para a requisição.'
 			);
 			return new WP_Error( 'invalid_token', __( 'Token inválido.', 'alvobot-pro' ) );
 		}
@@ -679,14 +731,6 @@ class AlvoBotPro {
 					}
 				})();
 			'
-			);
-
-			wp_enqueue_script(
-				'alvobot-pro-token-visibility',
-				ALVOBOT_PRO_PLUGIN_URL . 'assets/js/token-visibility.js',
-				array( 'jquery' ),
-				$this->version,
-				true
 			);
 
 			wp_enqueue_script(

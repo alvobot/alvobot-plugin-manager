@@ -121,7 +121,7 @@ class AlvoBotPro_Translation_Queue {
 		}
 
 		$source_lang  = function_exists( 'pll_get_post_language' ) ? ( pll_get_post_language( $post_id ) ?: pll_default_language() ) : 'pt';
-		$target_langs = array_filter( $target_langs, fn( $lang ) => $lang !== $source_lang );
+		$target_langs = $this->sanitize_target_languages( $target_langs, $source_lang );
 
 		if ( empty( $target_langs ) ) {
 			AlvoBotPro::debug_log( 'multi-languages', "Nenhum idioma de destino válido para post {$post_id}. Idioma atual: {$source_lang}" );
@@ -163,6 +163,69 @@ class AlvoBotPro_Translation_Queue {
 			]
 		);
 		return $wpdb->insert_id;
+	}
+
+	/**
+	 * Normaliza e valida idiomas de destino antes de inserir na fila.
+	 *
+	 * @param mixed  $target_langs Idiomas recebidos.
+	 * @param string $source_lang  Idioma de origem para evitar duplicidade.
+	 * @return array<int, string>
+	 */
+	private function sanitize_target_languages( $target_langs, $source_lang = '' ) {
+		if ( ! is_array( $target_langs ) ) {
+			return array();
+		}
+
+		$normalized = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						function ( $lang ) {
+							$lang = sanitize_text_field( (string) $lang );
+							return strtolower( trim( $lang ) );
+						},
+						$target_langs
+					)
+				)
+			)
+		);
+
+		if ( function_exists( 'PLL' ) && PLL()->model ) {
+			$available_languages = PLL()->model->get_languages_list();
+			$allowed_slugs       = array_map(
+				function ( $language ) {
+					return isset( $language->slug ) ? sanitize_text_field( strtolower( (string) $language->slug ) ) : '';
+				},
+				$available_languages
+			);
+			$allowed_slugs       = array_values( array_filter( array_unique( $allowed_slugs ) ) );
+
+			if ( ! empty( $allowed_slugs ) ) {
+				$normalized = array_values(
+					array_filter(
+						$normalized,
+						function ( $lang ) use ( $allowed_slugs ) {
+							return in_array( $lang, $allowed_slugs, true );
+						}
+					)
+				);
+			}
+		}
+
+		if ( ! empty( $source_lang ) ) {
+			$source_lang = sanitize_text_field( strtolower( (string) $source_lang ) );
+			$normalized  = array_values(
+				array_filter(
+					$normalized,
+					function ( $lang ) use ( $source_lang ) {
+						return $lang !== $source_lang;
+					}
+				)
+			);
+		}
+
+		return $normalized;
 	}
 
 	/**

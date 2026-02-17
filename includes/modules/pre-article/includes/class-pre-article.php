@@ -1050,18 +1050,16 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 											</h3>
 										</div>
 										<div class="alvobot-card-content">
-											<div class="alvobot-grid alvobot-grid-2">
-												<div class="alvobot-form-field">
-													<label for="button_text_<?php echo intval( $i ); ?>" class="alvobot-form-label"><?php esc_html_e( 'Texto do Botão:', 'alvobot-pro' ); ?></label>
-													<div class="alvobot-form-control">
-														<input type="text" id="button_text_<?php echo intval( $i ); ?>" name="alvobot_pre_artigo_options[button_text_<?php echo intval( $i ); ?>]" value="<?php echo esc_attr( $button_text ); ?>" class="alvobot-input" placeholder="<?php esc_attr_e( 'Digite o texto do botão...', 'alvobot-pro' ); ?>" />
-													</div>
+											<div class="alvobot-form-field">
+												<label for="button_text_<?php echo intval( $i ); ?>" class="alvobot-form-label"><?php esc_html_e( 'Texto do Botão:', 'alvobot-pro' ); ?></label>
+												<div class="alvobot-form-control">
+													<input type="text" id="button_text_<?php echo intval( $i ); ?>" name="alvobot_pre_artigo_options[button_text_<?php echo intval( $i ); ?>]" value="<?php echo esc_attr( $button_text ); ?>" class="alvobot-input" placeholder="<?php esc_attr_e( 'Digite o texto do botão...', 'alvobot-pro' ); ?>" />
 												</div>
-												<div class="alvobot-form-field">
-													<label for="button_color_<?php echo intval( $i ); ?>" class="alvobot-form-label"><?php esc_html_e( 'Cor do Botão:', 'alvobot-pro' ); ?></label>
-													<div class="alvobot-form-control">
-														<input type="text" id="button_color_<?php echo intval( $i ); ?>" name="alvobot_pre_artigo_options[button_color_<?php echo intval( $i ); ?>]" value="<?php echo esc_attr( $button_color ); ?>" class="wp-color-picker-field alvobot-input" data-default-color="#1E73BE" />
-													</div>
+											</div>
+											<div class="alvobot-form-field alvobot-mt-lg">
+												<label for="button_color_<?php echo intval( $i ); ?>" class="alvobot-form-label"><?php esc_html_e( 'Cor do Botão:', 'alvobot-pro' ); ?></label>
+												<div class="alvobot-form-control">
+													<input type="text" id="button_color_<?php echo intval( $i ); ?>" name="alvobot_pre_artigo_options[button_color_<?php echo intval( $i ); ?>]" value="<?php echo esc_attr( $button_color ); ?>" class="wp-color-picker-field alvobot-input" data-default-color="#1E73BE" />
 												</div>
 											</div>
 										</div>

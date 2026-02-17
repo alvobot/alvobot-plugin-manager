@@ -150,18 +150,16 @@ jQuery(document).ready(function ($) {
                             </h3>
                         </div>
                         <div class="alvobot-card-content">
-                            <div class="alvobot-grid alvobot-grid-2">
-                                <div class="alvobot-form-field">
-                                    <label for="button_text_${i}" class="alvobot-form-label">Texto do Botão:</label>
-                                    <div class="alvobot-form-control">
-                                        <input type="text" id="button_text_${i}" name="alvobot_pre_artigo_options[button_text_${i}]" value="" class="alvobot-input" placeholder="Digite o texto do botão...">
-                                    </div>
+                            <div class="alvobot-form-field">
+                                <label for="button_text_${i}" class="alvobot-form-label">Texto do Botão:</label>
+                                <div class="alvobot-form-control">
+                                    <input type="text" id="button_text_${i}" name="alvobot_pre_artigo_options[button_text_${i}]" value="" class="alvobot-input" placeholder="Digite o texto do botão...">
                                 </div>
-                                <div class="alvobot-form-field">
-                                    <label for="button_color_${i}" class="alvobot-form-label">Cor do Botão:</label>
-                                    <div class="alvobot-form-control">
-                                        <input type="text" class="wp-color-picker-field alvobot-input" id="button_color_${i}" name="alvobot_pre_artigo_options[button_color_${i}]" value="${novaCor}" data-default-color="#1E73BE">
-                                    </div>
+                            </div>
+                            <div class="alvobot-form-field alvobot-mt-lg">
+                                <label for="button_color_${i}" class="alvobot-form-label">Cor do Botão:</label>
+                                <div class="alvobot-form-control">
+                                    <input type="text" class="wp-color-picker-field alvobot-input" id="button_color_${i}" name="alvobot_pre_artigo_options[button_color_${i}]" value="${novaCor}" data-default-color="#1E73BE">
                                 </div>
                             </div>
                         </div>

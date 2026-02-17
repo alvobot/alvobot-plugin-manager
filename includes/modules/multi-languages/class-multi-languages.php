@@ -246,34 +246,35 @@ class AlvoBotPro_MultiLanguages {
 	 * Enfileira scripts e estilos do admin
 	 */
 	public function enqueue_admin_assets( $hook ) {
-		// Páginas onde o módulo deve estar ativo
+		// Páginas de edição de conteúdo que usam o modal de tradução
 		$allowed_hooks  = array( 'edit.php', 'post.php', 'post-new.php' );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
 		$is_module_page = ( isset( $_GET['page'] ) && $_GET['page'] === 'alvobot-pro-multi-languages' );
+		$is_editor_page = in_array( $hook, $allowed_hooks, true );
 
-		if ( ! in_array( $hook, $allowed_hooks ) && ! $is_module_page ) {
+		if ( ! $is_editor_page && ! $is_module_page ) {
 			return;
 		}
 
-		// CSS
-		wp_enqueue_style(
-			'alvobot-translation-modal',
-			plugin_dir_url( __FILE__ ) . 'assets/css/translation-modal.css',
-			array(),
-			'1.0.1'
-		);
+		if ( $is_editor_page ) {
+			// CSS/JS do modal de tradução para listas/edição de conteúdo.
+			wp_enqueue_style(
+				'alvobot-translation-modal',
+				plugin_dir_url( __FILE__ ) . 'assets/css/translation-modal.css',
+				array(),
+				'1.0.1'
+			);
 
-		// JavaScript principal
-		wp_enqueue_script(
-			'alvobot-translation-interface',
-			plugin_dir_url( __FILE__ ) . 'assets/js/translation-interface.js',
-			array( 'jquery', 'wp-util' ),
-			'2.0.0',
-			true
-		);
+			wp_enqueue_script(
+				'alvobot-translation-interface',
+				plugin_dir_url( __FILE__ ) . 'assets/js/translation-interface.js',
+				array( 'jquery', 'wp-util' ),
+				'2.0.0',
+				true
+			);
 
-		// Dados para JavaScript
-		$this->localize_script_data();
+			$this->localize_script_data();
+		}
 
 		// Delega para o Admin Controller para páginas específicas do módulo
 		if ( $is_module_page && $this->admin_controller && method_exists( $this->admin_controller, 'enqueue_admin_assets' ) ) {
@@ -333,6 +334,13 @@ class AlvoBotPro_MultiLanguages {
 			$schedules['every_minute'] = array(
 				'interval' => 60,
 				'display'  => __( 'A cada minuto', 'alvobot-pro' ),
+			);
+		}
+
+		if ( ! isset( $schedules['every_five_minutes'] ) ) {
+			$schedules['every_five_minutes'] = array(
+				'interval' => 300,
+				'display'  => __( 'A cada 5 minutos', 'alvobot-pro' ),
 			);
 		}
 

@@ -270,15 +270,27 @@
 			const sourceContent = await fetchPostContent(fromPostId);
 
 			if (!sourceContent.success) {
-				throw new Error(sourceContent.error || 'Erro ao buscar conteúdo');
+				throw new Error(
+					sourceContent.error ||
+						(sourceContent.data && sourceContent.data.message) ||
+						'Erro ao buscar conteúdo',
+				);
 			}
 
 			// Inicia tradução
 			updateProgress(30, 'Conectando com OpenAI...');
-			const translationResult = await translatePostContent(fromPostId, targetLang, options);
+			const translationRawResult = await translatePostContent(fromPostId, targetLang, options);
+			const translationResult =
+				translationRawResult && translationRawResult.data && typeof translationRawResult.data === 'object'
+					? { ...translationRawResult, ...translationRawResult.data }
+					: translationRawResult;
 
 			if (!translationResult.success) {
-				throw new Error(translationResult.error || 'Erro na tradução');
+				throw new Error(
+					translationResult.error ||
+						(translationResult.data && translationResult.data.message) ||
+						'Erro na tradução',
+				);
 			}
 
 			// Aplica tradução ao editor atual

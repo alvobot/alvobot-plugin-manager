@@ -354,7 +354,12 @@ curl -X PUT https://seusite.com/wp-json/alvobot-pro/v1/authors/username \
 # Endpoint principal de tradução (autenticado)
 POST /wp-json/alvobot-pro/v1/translate
 
-# Endpoints administrativos (internos)
+# Endpoints canônicos de fila
+GET  /wp-json/alvobot-pro/v1/queue/status
+POST /wp-json/alvobot-pro/v1/queue/add
+
+# Endpoints administrativos legados (compatibilidade)
+# Observação: retornam headers X-AlvoBot-Deprecated / X-AlvoBot-Replacement / X-AlvoBot-Sunset
 POST /wp-json/alvobot-pro/v1/admin/translate
 GET  /wp-json/alvobot-pro/v1/admin/queue/status
 POST /wp-json/alvobot-pro/v1/admin/queue/add

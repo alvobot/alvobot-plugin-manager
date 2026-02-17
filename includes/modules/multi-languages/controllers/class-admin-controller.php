@@ -32,9 +32,6 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	 * Registra hooks administrativos
 	 */
 	private function register_admin_hooks() {
-		// Assets administrativos
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
-
 		// Desabilitado - botão "Traduzir" já é adicionado pela classe principal
 		// add_filter('post_row_actions', array($this, 'add_translate_row_action'), 10, 2);
 		// add_filter('page_row_actions', array($this, 'add_translate_row_action'), 10, 2);
@@ -44,13 +41,9 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 
 		// REST API
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-		add_action( 'rest_api_init', array( $this, 'register_post_translations_field' ) );
 
 		// Logs de sistema
 		add_action( 'alvobot_multi_languages_log', array( $this, 'handle_log_entry' ) );
-
-		// Agendamentos de cron personalizados
-		add_filter( 'cron_schedules', array( $this, 'add_cron_schedules' ) );
 
 		AlvoBotPro::debug_log( 'multi-languages', 'Admin Controller: Hooks registrados' );
 	}
@@ -213,6 +206,33 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'rest_add_to_queue' ),
 				'permission_callback' => $admin_permission_callback,
+				'args'                => array(
+					'post_id'             => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+					),
+					'target_lang'         => array(
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'target_langs'        => array(
+						'required' => false,
+					),
+					'options'             => array(
+						'required' => false,
+					),
+					'priority'            => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'process_immediately' => array(
+						'required' => false,
+					),
+				),
 			)
 		);
 	}
@@ -225,64 +245,36 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 	}
 
 	/**
-	 * Adiciona campo de traduções aos posts via REST API
-	 */
-	public function register_post_translations_field() {
-		$post_types = array( 'post', 'page' );
-
-		foreach ( $post_types as $post_type ) {
-			register_rest_field(
-				$post_type,
-				'pll_post_translations',
-				array(
-					'get_callback' => array( $this, 'get_post_translations_for_rest' ),
-					'schema'       => array(
-						'description' => __( 'Traduções do post via Polylang', 'alvobot-pro' ),
-						'type'        => 'object',
-					),
-				)
-			);
-		}
-	}
-
-	/**
-	 * Callback para obter traduções via REST
-	 */
-	public function get_post_translations_for_rest( $post ) {
-		if ( function_exists( 'pll_get_post_translations' ) ) {
-			return pll_get_post_translations( $post['id'] );
-		}
-		return array();
-	}
-
-	/**
 	 * Handler REST para traduzir conteúdo
 	 */
-	public function rest_translate_content( $request ) {
-		$text        = $request->get_param( 'text' );
-		$source_lang = $request->get_param( 'source_lang' );
-		$target_lang = $request->get_param( 'target_lang' );
-
-		// Implementar tradução via REST API
-		return new WP_REST_Response(
+	public function rest_translate_content( $_request ) {
+		// Mantido por compatibilidade: endpoint legado sem implementação efetiva.
+		$response = new WP_REST_Response(
 			array(
-				'success' => false,
-				'message' => 'REST API translation not yet implemented',
+				'success'      => false,
+				'deprecated'   => true,
+				'message'      => 'Endpoint administrativo legado. Use /translate para criação/atualização de traduções.',
+				'replacement'  => '/wp-json/alvobot-pro/v1/translate',
+				'sunset_date'  => '2026-12-31',
+				'deprecated_in' => '2026-02-17',
 			),
 			501
 		);
+
+		return $this->add_deprecation_headers( $response, '/wp-json/alvobot-pro/v1/translate' );
 	}
 
 	/**
 	 * Handler REST para status da fila
 	 */
-	public function rest_get_queue_status( $request ) {
+	public function rest_get_queue_status( $_request ) {
 		if ( ! $this->translation_queue ) {
 			return new WP_Error( 'no_queue', 'Sistema de fila não disponível', array( 'status' => 500 ) );
 		}
 
 		$status = $this->translation_queue->get_queue_status();
-		return new WP_REST_Response( $status, 200 );
+		$response = new WP_REST_Response( $status, 200 );
+		return $this->add_deprecation_headers( $response, '/wp-json/alvobot-pro/v1/queue/status' );
 	}
 
 	/**
@@ -293,13 +285,183 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 			return new WP_Error( 'no_queue', 'Sistema de fila não disponível', array( 'status' => 500 ) );
 		}
 
-		// Implementar adição à fila via REST API
-		return new WP_REST_Response(
+		$post_id = (int) $request->get_param( 'post_id' );
+		if ( $post_id <= 0 ) {
+			return new WP_Error( 'invalid_post_id', 'post_id inválido.', array( 'status' => 400 ) );
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return new WP_Error( 'post_not_found', 'Post não encontrado.', array( 'status' => 404 ) );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error( 'forbidden_post', 'Você não tem permissão para editar este post.', array( 'status' => 403 ) );
+		}
+
+		$target_langs = $this->parse_target_languages_from_request( $request );
+		if ( is_wp_error( $target_langs ) ) {
+			return $target_langs;
+		}
+		$source_lang = function_exists( 'pll_get_post_language' ) ? pll_get_post_language( $post_id, 'slug' ) : '';
+		if ( ! empty( $source_lang ) ) {
+			$source_lang  = sanitize_text_field( strtolower( (string) $source_lang ) );
+			$target_langs = array_values(
+				array_filter(
+					$target_langs,
+					function ( $lang ) use ( $source_lang ) {
+						return $lang !== $source_lang;
+					}
+				)
+			);
+		}
+		if ( empty( $target_langs ) ) {
+			return new WP_Error( 'invalid_target_langs', 'Nenhum idioma de destino válido após filtrar o idioma de origem.', array( 'status' => 400 ) );
+		}
+
+		$options = $this->parse_options_from_request( $request );
+
+		$priority = $request->get_param( 'priority' );
+		$priority = is_numeric( $priority ) ? (int) $priority : 10;
+
+		$queue_id = $this->translation_queue->add_to_queue( $post_id, $target_langs, $options, $priority );
+		if ( ! $queue_id ) {
+			return new WP_Error( 'queue_add_failed', 'Falha ao adicionar item na fila.', array( 'status' => 500 ) );
+		}
+
+		$process_immediately_param = $request->get_param( 'process_immediately' );
+		$process_immediately_opt   = isset( $options['process_immediately'] ) ? $options['process_immediately'] : false;
+		$process_immediately       = filter_var( $process_immediately_param, FILTER_VALIDATE_BOOLEAN ) || filter_var( $process_immediately_opt, FILTER_VALIDATE_BOOLEAN );
+
+		$processed = false;
+		if ( $process_immediately && method_exists( $this->translation_queue, 'process_specific_item' ) ) {
+			$processed = (bool) $this->translation_queue->process_specific_item( $queue_id );
+		}
+
+		$response = new WP_REST_Response(
 			array(
-				'success' => false,
-				'message' => 'REST API queue add not yet implemented',
+				'success'      => true,
+				'deprecated'   => true,
+				'queue_id'     => $queue_id,
+				'processed'    => $processed,
+				'message'      => $processed ? 'Item adicionado e processado.' : 'Item adicionado à fila.',
+				'replacement'  => '/wp-json/alvobot-pro/v1/queue/add',
+				'sunset_date'  => '2026-12-31',
+				'deprecated_in' => '2026-02-17',
 			),
-			501
+			200
+		);
+
+		return $this->add_deprecation_headers( $response, '/wp-json/alvobot-pro/v1/queue/add' );
+	}
+
+	/**
+	 * Adiciona headers de depreciação para endpoints administrativos legados.
+	 */
+	private function add_deprecation_headers( $response, $replacement ) {
+		$response = rest_ensure_response( $response );
+
+		if ( $response instanceof WP_REST_Response ) {
+			$response->header( 'X-AlvoBot-Deprecated', 'true' );
+			$response->header( 'X-AlvoBot-Replacement', (string) $replacement );
+			$response->header( 'X-AlvoBot-Sunset', '2026-12-31' );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Extrai e valida idiomas alvo da requisição de fila.
+	 *
+	 * @return array|WP_Error
+	 */
+	private function parse_target_languages_from_request( $request ) {
+		$target_langs = $request->get_param( 'target_langs' );
+		if ( is_string( $target_langs ) ) {
+			$decoded = json_decode( $target_langs, true );
+			if ( is_array( $decoded ) ) {
+				$target_langs = $decoded;
+			} else {
+				$target_langs = array_map( 'trim', explode( ',', $target_langs ) );
+			}
+		}
+
+		if ( ! is_array( $target_langs ) ) {
+			$target_langs = array();
+		}
+
+		$single_target_lang = sanitize_text_field( (string) $request->get_param( 'target_lang' ) );
+		if ( ! empty( $single_target_lang ) ) {
+			$target_langs[] = $single_target_lang;
+		}
+
+		$target_langs = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						function ( $lang ) {
+							$lang = sanitize_text_field( (string) $lang );
+							return strtolower( trim( $lang ) );
+						},
+						$target_langs
+					)
+				)
+			)
+		);
+
+		if ( empty( $target_langs ) ) {
+			return new WP_Error( 'invalid_target_langs', 'Informe target_lang ou target_langs.', array( 'status' => 400 ) );
+		}
+
+		$available_slugs = $this->get_available_language_slugs();
+		if ( ! empty( $available_slugs ) ) {
+			$invalid_langs = array_values( array_diff( $target_langs, $available_slugs ) );
+			if ( ! empty( $invalid_langs ) ) {
+				return new WP_Error(
+					'invalid_target_langs',
+					sprintf( 'Idiomas inválidos: %s', implode( ', ', $invalid_langs ) ),
+					array( 'status' => 400 )
+				);
+			}
+		}
+
+		return $target_langs;
+	}
+
+	/**
+	 * Extrai opções da requisição de fila.
+	 */
+	private function parse_options_from_request( $request ) {
+		$options = $request->get_param( 'options' );
+		if ( is_string( $options ) ) {
+			$decoded_options = json_decode( $options, true );
+			if ( is_array( $decoded_options ) ) {
+				$options = $decoded_options;
+			}
+		}
+		return is_array( $options ) ? $options : array();
+	}
+
+	/**
+	 * Retorna slugs de idiomas válidos configurados no Polylang.
+	 *
+	 * @return array<int, string>
+	 */
+	private function get_available_language_slugs() {
+		if ( ! function_exists( 'PLL' ) || ! PLL()->model ) {
+			return array();
+		}
+
+		$languages = PLL()->model->get_languages_list();
+		return array_values(
+			array_filter(
+				array_map(
+					function ( $language ) {
+						return isset( $language->slug ) ? sanitize_text_field( strtolower( (string) $language->slug ) ) : '';
+					},
+					$languages
+				)
+			)
 		);
 	}
 
@@ -344,23 +506,6 @@ class AlvoBotPro_MultiLanguages_Admin_Controller {
 		}
 
 		set_transient( 'alvobot_multi_languages_logs', $logs, DAY_IN_SECONDS );
-	}
-
-	/**
-	 * Adiciona agendamentos de cron personalizados
-	 */
-	public function add_cron_schedules( $schedules ) {
-		$schedules['every_minute'] = array(
-			'interval' => 60,
-			'display'  => __( 'A cada minuto', 'alvobot-pro' ),
-		);
-
-		$schedules['every_five_minutes'] = array(
-			'interval' => 300,
-			'display'  => __( 'A cada 5 minutos', 'alvobot-pro' ),
-		);
-
-		return $schedules;
 	}
 
 	/**

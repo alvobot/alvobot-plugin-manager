@@ -552,7 +552,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			if ( isset( $posted['pixels_json'] ) ) {
 				$merged['pixels_json'] = $posted['pixels_json'];
 			}
-		} elseif ( 'configuracoes' === $active_tab ) {
+		} elseif ( 'settings' === $active_tab ) {
 			// Settings tab fields — checkboxes absent = unchecked.
 			$merged['test_mode']       = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
 			$merged['test_event_code'] = isset( $posted['test_event_code'] ) ? $posted['test_event_code'] : '';

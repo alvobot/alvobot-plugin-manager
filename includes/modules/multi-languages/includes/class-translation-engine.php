@@ -40,9 +40,9 @@ class AlvoBotPro_Translation_Engine {
 		$this->load_cache();
 
 		add_action( 'wp_ajax_alvobot_translate_content', array( $this, 'ajax_translate_content' ) );
+		add_action( 'wp_ajax_alvobot_translate_post_content', array( $this, 'ajax_translate_post_content' ) );
+		add_action( 'wp_ajax_alvobot_fetch_post_content', array( $this, 'ajax_fetch_post_content' ) );
 		add_action( 'wp_ajax_alvobot_get_translation_status', array( $this, 'ajax_get_translation_status' ) );
-		add_action( 'wp_ajax_alvobot_save_translation', array( $this, 'ajax_save_translation' ) );
-		add_action( 'wp_ajax_alvobot_batch_translate', array( $this, 'ajax_batch_translate' ) );
 	}
 
 	/**
@@ -1216,25 +1216,176 @@ class AlvoBotPro_Translation_Engine {
 	/**
 	 * Handlers AJAX
 	 */
-	public function ajax_translate_content() {
-		// SEGURANÇA: Verificar nonce padronizado e permissões
-		if ( ! check_ajax_referer( 'alvobot_multi_languages_nonce', 'nonce', false ) ) {
-			wp_send_json_error( [ 'message' => 'Nonce inválido' ] );
+	private function verify_compatible_ajax_nonce() {
+		$is_valid = check_ajax_referer( 'alvobot_nonce', 'nonce', false ) || check_ajax_referer( 'alvobot_multi_languages_nonce', 'nonce', false );
+
+		if ( ! $is_valid ) {
+			wp_send_json_error( array( 'message' => 'Nonce inválido' ), 403 );
+		}
+	}
+
+	/**
+	 * Valida permissões do usuário para editar um post específico.
+	 */
+	private function validate_post_edit_permission( $post_id ) {
+		if ( $post_id <= 0 ) {
+			wp_send_json_error( array( 'message' => 'Post ID inválido' ), 400 );
 		}
 
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			wp_send_json_error( array( 'message' => 'Post não encontrado' ), 404 );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => 'Você não tem permissão para editar este post.' ), 403 );
+		}
+
+		return $post;
+	}
+
+	/**
+	 * Sanitiza opções AJAX de forma recursiva.
+	 */
+	private function sanitize_ajax_options( $options ) {
+		if ( ! is_array( $options ) ) {
+			return array();
+		}
+
+		$sanitized = array();
+		foreach ( $options as $key => $value ) {
+			$sanitized_key = is_string( $key ) ? sanitize_key( $key ) : $key;
+
+			if ( is_array( $value ) ) {
+				$sanitized[ $sanitized_key ] = $this->sanitize_ajax_options( $value );
+				continue;
+			}
+
+			if ( is_bool( $value ) || is_numeric( $value ) ) {
+				$sanitized[ $sanitized_key ] = $value;
+				continue;
+			}
+
+			$sanitized[ $sanitized_key ] = sanitize_text_field( (string) $value );
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Retorna conteúdo básico do post para fluxo de tradução em editor.
+	 */
+	public function ajax_fetch_post_content() {
+		$this->verify_compatible_ajax_nonce();
+
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( [ 'message' => 'Permissões insuficientes' ] );
+			wp_send_json_error( array( 'message' => 'Permissões insuficientes' ), 403 );
+		}
+
+		$post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$post    = $this->validate_post_edit_permission( $post_id );
+
+		wp_send_json_success(
+			array(
+				'post_id'       => $post->ID,
+				'post_title'    => $post->post_title,
+				'post_excerpt'  => $post->post_excerpt,
+				'post_content'  => $post->post_content,
+				'source_lang'   => $this->detect_post_language( $post->ID ),
+				'modified_gmt'  => $post->post_modified_gmt,
+				'post_status'   => $post->post_status,
+				'post_type'     => $post->post_type,
+			)
+		);
+	}
+
+	/**
+	 * Endpoint AJAX legado para tradução direta no editor.
+	 */
+	public function ajax_translate_post_content() {
+		$this->verify_compatible_ajax_nonce();
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Permissões insuficientes' ), 403 );
+		}
+
+		$post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$this->validate_post_edit_permission( $post_id );
+
+		$target_lang = isset( $_POST['target_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['target_lang'] ) ) : '';
+		$target_lang = strtolower( trim( $target_lang ) );
+		if ( empty( $target_lang ) ) {
+			wp_send_json_error( array( 'message' => 'Idioma de destino é obrigatório' ), 400 );
+		}
+
+		$options = isset( $_POST['options'] ) ? wp_unslash( $_POST['options'] ) : array();
+		$options = $this->sanitize_ajax_options( $options );
+
+		$result = $this->translate_post_content( $post_id, $target_lang, $options );
+		if ( empty( $result['success'] ) ) {
+			$error = isset( $result['error'] ) ? (string) $result['error'] : 'Erro ao traduzir conteúdo';
+			wp_send_json_error( array( 'message' => $error ), 500 );
+		}
+
+		$translated_content = isset( $result['translated_content'] ) ? $result['translated_content'] : ( $result['post_content'] ?? '' );
+		$translated_title   = isset( $result['translated_title'] ) ? $result['translated_title'] : ( $result['post_title'] ?? '' );
+		$translated_excerpt = isset( $result['translated_excerpt'] ) ? $result['translated_excerpt'] : ( $result['post_excerpt'] ?? '' );
+
+		wp_send_json_success(
+			array(
+				'translated_content' => $translated_content,
+				'translated_title'   => $translated_title,
+				'translated_excerpt' => $translated_excerpt,
+				'source_language'    => $result['source_language'] ?? null,
+				'target_language'    => $result['target_language'] ?? $target_lang,
+				'translation_method' => $result['translation_method'] ?? 'direct',
+			)
+		);
+	}
+
+	/**
+	 * Handler para tradução via fila (compatibilidade).
+	 */
+	public function ajax_translate_content() {
+		$this->verify_compatible_ajax_nonce();
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Permissões insuficientes' ), 403 );
 		}
 
 		// SEGURANÇA: Validar e sanitizar inputs
 		$post_id      = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$this->validate_post_edit_permission( $post_id );
+
 		$target_langs = isset( $_POST['target_langs'] ) && is_array( $_POST['target_langs'] )
 			? array_map( 'sanitize_text_field', wp_unslash( $_POST['target_langs'] ) )
 			: array();
-		$options      = isset( $_POST['options'] ) && is_array( $_POST['options'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['options'] ) ) : array();
+
+		if ( empty( $target_langs ) && isset( $_POST['target_lang'] ) ) {
+			$single_target = sanitize_text_field( wp_unslash( $_POST['target_lang'] ) );
+			if ( ! empty( $single_target ) ) {
+				$target_langs[] = $single_target;
+			}
+		}
+
+		$target_langs = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						function ( $lang ) {
+							return strtolower( trim( (string) $lang ) );
+						},
+						$target_langs
+					)
+				)
+			)
+		);
+
+		$options = isset( $_POST['options'] ) ? wp_unslash( $_POST['options'] ) : array();
+		$options = $this->sanitize_ajax_options( $options );
 
 		if ( ! $post_id || empty( $target_langs ) ) {
-			wp_send_json_error( [ 'message' => 'Post ID e idiomas de destino são obrigatórios' ] );
+			wp_send_json_error( array( 'message' => 'Post ID e idiomas de destino são obrigatórios' ), 400 );
 		}
 
 		// UNIFICAÇÃO: Usar sempre a fila para garantir validação e consistência
@@ -1249,43 +1400,44 @@ class AlvoBotPro_Translation_Engine {
 			$queue_id = $translation_queue->add_to_queue( $post_id, $target_langs, $options, 20 );
 
 			if ( ! $queue_id ) {
-				wp_send_json_error( [ 'message' => 'Falha ao adicionar à fila de tradução' ] );
+				wp_send_json_error( array( 'message' => 'Falha ao adicionar à fila de tradução' ), 500 );
 			}
 
 			// Processa imediatamente
-			$processed = $translation_queue->process_next_item();
+			if ( method_exists( $translation_queue, 'process_specific_item' ) ) {
+				$processed = $translation_queue->process_specific_item( $queue_id );
+			} else {
+				$processed = $translation_queue->process_next_item();
+			}
 
 			if ( $processed ) {
 				wp_send_json_success(
-					[
+					array(
 						'message'   => 'Tradução processada com sucesso via fila',
 						'queue_id'  => $queue_id,
 						'processed' => true,
-					]
+					)
 				);
 			} else {
 				wp_send_json_success(
-					[
+					array(
 						'message'   => 'Tradução adicionada à fila para processamento',
 						'queue_id'  => $queue_id,
 						'processed' => false,
-					]
+					)
 				);
 			}
 		} catch ( Exception $e ) {
 			AlvoBotPro::debug_log( 'multi-languages', 'Erro no AJAX unificado: ' . $e->getMessage() );
-			wp_send_json_error( [ 'message' => 'Erro interno: ' . $e->getMessage() ] );
+			wp_send_json_error( array( 'message' => 'Erro interno: ' . $e->getMessage() ), 500 );
 		}
 	}
 
 	public function ajax_get_translation_status() {
-		// SEGURANÇA: Verificar nonce padronizado e permissões
-		if ( ! check_ajax_referer( 'alvobot_multi_languages_nonce', 'nonce', false ) ) {
-			wp_send_json_error( [ 'message' => 'Nonce inválido' ] );
-		}
+		$this->verify_compatible_ajax_nonce();
 
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( [ 'message' => 'Permissões insuficientes' ] );
+			wp_send_json_error( array( 'message' => 'Permissões insuficientes' ), 403 );
 		}
 
 		$provider_status = array();

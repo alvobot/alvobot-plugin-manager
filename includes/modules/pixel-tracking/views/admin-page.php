@@ -36,15 +36,15 @@ $alvobot_pt_page_slug  = 'alvobot-pro-pixel-tracking';
 				<i data-lucide="radio" class="alvobot-icon"></i>
 				<?php esc_html_e( 'Pixels', 'alvobot-pro' ); ?>
 			</a>
-			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=conversoes"
-				class="nav-tab <?php echo 'conversoes' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
+			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=conversions"
+				class="nav-tab <?php echo 'conversions' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
 				<i data-lucide="target" class="alvobot-icon"></i>
-				<?php esc_html_e( 'Conversoes', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Conversões', 'alvobot-pro' ); ?>
 			</a>
-			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=configuracoes"
-				class="nav-tab <?php echo 'configuracoes' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
+			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=settings"
+				class="nav-tab <?php echo 'settings' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
 				<i data-lucide="settings" class="alvobot-icon"></i>
-				<?php esc_html_e( 'Configuracoes', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Configurações', 'alvobot-pro' ); ?>
 			</a>
 			<a href="?page=<?php echo esc_attr( $alvobot_pt_page_slug ); ?>&tab=status"
 				class="nav-tab <?php echo 'status' === $alvobot_pt_active_tab ? 'nav-tab-active' : ''; ?>">
@@ -59,11 +59,11 @@ $alvobot_pt_page_slug  = 'alvobot-pro-pixel-tracking';
 				case 'pixels':
 					include plugin_dir_path( __FILE__ ) . 'tab-pixels.php';
 					break;
-				case 'conversoes':
-					include plugin_dir_path( __FILE__ ) . 'tab-conversoes.php';
+				case 'conversions':
+					include plugin_dir_path( __FILE__ ) . 'tab-conversions.php';
 					break;
-				case 'configuracoes':
-					include plugin_dir_path( __FILE__ ) . 'tab-configuracoes.php';
+				case 'settings':
+					include plugin_dir_path( __FILE__ ) . 'tab-settings.php';
 					break;
 				case 'status':
 					include plugin_dir_path( __FILE__ ) . 'tab-status.php';

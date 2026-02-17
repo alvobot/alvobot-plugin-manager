@@ -32,14 +32,14 @@
 	// ========================
 	// Conversions Tab
 	// ========================
-	if (activeTab === 'conversoes') {
+	if (activeTab === 'conversions') {
 		initConversionsTab();
 	}
 
 	// ========================
 	// Configuracoes Tab
 	// ========================
-	if (activeTab === 'configuracoes') {
+	if (activeTab === 'settings') {
 		initConfiguracoesTab();
 	}
 

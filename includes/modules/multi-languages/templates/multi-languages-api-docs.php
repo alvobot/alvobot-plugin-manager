@@ -6,15 +6,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<h2><?php echo esc_html__( 'Documentação da API Multi Languages', 'alvobot-pro' ); ?></h2>
 	
-	<div class="notice notice-info">
-		<p>
-			<?php echo esc_html__( 'Esta página contém a documentação completa da API REST do módulo Multi Languages.', 'alvobot-pro' ); ?>
-			<?php echo esc_html__( 'Todos os endpoints estão disponíveis no namespace', 'alvobot-pro' ); ?> <code>/wp-json/alvobot-pro/v1/</code>.
-		</p>
-		<p>
-			<?php echo esc_html__( 'Todos os endpoints exigem autenticação e permissões de edição (edit_posts) via sessão WordPress ou Basic Auth válido.', 'alvobot-pro' ); ?>
-		</p>
-	</div>
+		<div class="notice notice-info">
+			<p>
+				<?php echo esc_html__( 'Esta página contém a documentação completa da API REST do módulo Multi Languages.', 'alvobot-pro' ); ?>
+				<?php echo esc_html__( 'Todos os endpoints estão disponíveis no namespace', 'alvobot-pro' ); ?> <code>/wp-json/alvobot-pro/v1/</code>.
+			</p>
+			<p>
+				<?php echo esc_html__( 'Todos os endpoints exigem autenticação e permissões de edição (edit_posts) via sessão WordPress ou Basic Auth válido.', 'alvobot-pro' ); ?>
+			</p>
+			<p>
+				<?php echo esc_html__( 'Os endpoints com prefixo /admin/ são legados e retornam cabeçalhos de depreciação. Prefira os endpoints principais ou AJAX administrativo.', 'alvobot-pro' ); ?>
+			</p>
+		</div>
 	
 	<div class="card">
 		<h2><?php echo esc_html__( 'Endpoints Disponíveis', 'alvobot-pro' ); ?></h2>
@@ -30,22 +33,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</thead>
 				<tbody>
 					<!-- Endpoints Administrativos -->
+						<tr>
+							<td><code>/admin/translate</code></td>
+							<td><code>POST</code></td>
+							<td><?php echo esc_html__( '[LEGADO] Endpoint administrativo sem implementação completa. Use /translate. Sunset: 2026-12-31.', 'alvobot-pro' ); ?></td>
+							<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>/admin/queue/status</code></td>
+							<td><code>GET</code></td>
+							<td><?php echo esc_html__( '[LEGADO] Status da fila (compatibilidade). Prefira /queue/status.', 'alvobot-pro' ); ?></td>
+							<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>/admin/queue/add</code></td>
+							<td><code>POST</code></td>
+							<td><?php echo esc_html__( '[LEGADO] Adiciona item na fila (compatibilidade). Prefira /queue/add.', 'alvobot-pro' ); ?></td>
+							<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
+						</tr>
+
 					<tr>
-						<td><code>/admin/translate</code></td>
-						<td><code>POST</code></td>
-						<td><?php echo esc_html__( 'Endpoint administrativo para tradução de conteúdo no painel.', 'alvobot-pro' ); ?></td>
-						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
-					</tr>
-					<tr>
-						<td><code>/admin/queue/status</code></td>
+						<td><code>/queue/status</code></td>
 						<td><code>GET</code></td>
-						<td><?php echo esc_html__( 'Retorna status da fila de tradução para uso administrativo.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Endpoint canônico para consultar status da fila de tradução.', 'alvobot-pro' ); ?></td>
 						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
 					</tr>
 					<tr>
-						<td><code>/admin/queue/add</code></td>
+						<td><code>/queue/add</code></td>
 						<td><code>POST</code></td>
-						<td><?php echo esc_html__( 'Adiciona item na fila de tradução via endpoint administrativo.', 'alvobot-pro' ); ?></td>
+						<td><?php echo esc_html__( 'Endpoint canônico para adicionar itens à fila de tradução.', 'alvobot-pro' ); ?></td>
 						<td><?php echo esc_html__( 'Editor (autenticado)', 'alvobot-pro' ); ?></td>
 					</tr>
 
