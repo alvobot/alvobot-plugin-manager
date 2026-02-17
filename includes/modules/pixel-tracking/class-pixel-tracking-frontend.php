@@ -137,6 +137,9 @@ class AlvoBotPro_PixelTracking_Frontend {
 
 		$settings = $this->module->get_settings();
 		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$debug_enabled = class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' )
+			? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' )
+			: false;
 
 		if ( empty( $pixels ) ) {
 			return;
@@ -182,8 +185,8 @@ class AlvoBotPro_PixelTracking_Frontend {
 		// Generate config object
 		?>
 		<script>
-		var alvobot_pixel_config = {
-			pixel_ids: <?php echo wp_json_encode( $pixel_ids ); ?>,
+			var alvobot_pixel_config = {
+				pixel_ids: <?php echo wp_json_encode( $pixel_ids ); ?>,
 			api_event: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/events/track' ) ) ); ?>,
 			api_lead: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/leads/track' ) ) ); ?>,
 			nonce: <?php echo wp_json_encode( $tracking_nonce ); ?>,
@@ -191,11 +194,12 @@ class AlvoBotPro_PixelTracking_Frontend {
 			page_title: <?php echo wp_json_encode( $page_title ); ?>,
 			content_type: <?php echo wp_json_encode( $content_type ); ?>,
 			content_category: <?php echo wp_json_encode( $content_category ); ?>,
-			consent_cookie: <?php echo wp_json_encode( $consent_cookie ); ?>,
-			consent_check: <?php echo $consent_check ? 'true' : 'false'; ?>,
-			cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
-			user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>
-		};
+				consent_cookie: <?php echo wp_json_encode( $consent_cookie ); ?>,
+				consent_check: <?php echo $consent_check ? 'true' : 'false'; ?>,
+				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
+				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
+				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>
+			};
 		</script>
 		<?php
 

@@ -9,6 +9,98 @@
 	var config    = window.alvobot_pixel_tracking || {};
 	var extra     = window.alvobot_pixel_tracking_extra || {};
 	var activeTab = extra.active_tab || 'pixels';
+	var debugEnabled = !! (extra.debug_enabled || config.debug_enabled);
+	var debugPrefix  = '[AlvoBot Pixel][ADMIN]';
+
+	function cloneForDebug(value) {
+		try {
+			return JSON.parse( JSON.stringify( value ) );
+		} catch (e) {
+			return value;
+		}
+	}
+
+	function debugLog(message, payload) {
+		if ( ! debugEnabled || ! window.console || ! window.console.log) {
+			return;
+		}
+		if (typeof payload === 'undefined') {
+			window.console.log( debugPrefix + ' ' + message );
+			return;
+		}
+		window.console.log( debugPrefix + ' ' + message, cloneForDebug( payload ) );
+	}
+
+	function debugWarn(message, payload) {
+		if ( ! debugEnabled || ! window.console || ! window.console.warn) {
+			return;
+		}
+		if (typeof payload === 'undefined') {
+			window.console.warn( debugPrefix + ' ' + message );
+			return;
+		}
+		window.console.warn( debugPrefix + ' ' + message, cloneForDebug( payload ) );
+	}
+
+	function debugError(message, payload) {
+		if ( ! debugEnabled || ! window.console || ! window.console.error) {
+			return;
+		}
+		if (typeof payload === 'undefined') {
+			window.console.error( debugPrefix + ' ' + message );
+			return;
+		}
+		window.console.error( debugPrefix + ' ' + message, cloneForDebug( payload ) );
+	}
+
+	debugLog(
+		'admin bootstrap',
+		{
+			active_tab: activeTab,
+			config: config,
+			extra: extra,
+		}
+	);
+
+	// Logs all AJAX traffic on this module page when debug is enabled.
+	if (debugEnabled) {
+		$( document ).on(
+			'ajaxSend.alvobotPixelDebug',
+			function (_event, _xhr, settings) {
+				var url = settings && settings.url ? String( settings.url ) : '';
+				if (url.indexOf( 'admin-ajax.php' ) === -1 && url.indexOf( '/pixel-tracking/' ) === -1) {
+					return;
+				}
+				debugLog(
+					'ajaxSend',
+					{
+						url: url,
+						method: settings.type || settings.method || 'GET',
+						data: settings.data || null,
+					}
+				);
+			}
+		);
+
+		$( document ).on(
+			'ajaxComplete.alvobotPixelDebug',
+			function (_event, xhr, settings) {
+				var url = settings && settings.url ? String( settings.url ) : '';
+				if (url.indexOf( 'admin-ajax.php' ) === -1 && url.indexOf( '/pixel-tracking/' ) === -1) {
+					return;
+				}
+				debugLog(
+					'ajaxComplete',
+					{
+						url: url,
+						method: settings.type || settings.method || 'GET',
+						status: xhr && typeof xhr.status !== 'undefined' ? xhr.status : null,
+						response: xhr && typeof xhr.responseText === 'string' ? xhr.responseText.substring( 0, 3000 ) : null,
+					}
+				);
+			}
+		);
+	}
 
 	// Prevent double-submit on all module forms (race condition guard).
 	$( '.alvobot-module-form' ).on(
@@ -26,6 +118,7 @@
 	// Pixels Tab
 	// ========================
 	if (activeTab === 'pixels') {
+		debugLog( 'init tab: pixels' );
 		initPixelsTab();
 	}
 
@@ -33,6 +126,7 @@
 	// Conversions Tab
 	// ========================
 	if (activeTab === 'conversions') {
+		debugLog( 'init tab: conversions' );
 		initConversionsTab();
 	}
 
@@ -40,6 +134,7 @@
 	// Configuracoes Tab
 	// ========================
 	if (activeTab === 'settings') {
+		debugLog( 'init tab: settings' );
 		initConfiguracoesTab();
 	}
 
@@ -47,6 +142,7 @@
 	// Events Tab
 	// ========================
 	if (activeTab === 'events') {
+		debugLog( 'init tab: events' );
 		initEventsTab();
 	}
 
@@ -54,6 +150,7 @@
 	// Status Tab
 	// ========================
 	if (activeTab === 'status') {
+		debugLog( 'init tab: status' );
 		initStatusTab();
 	}
 
@@ -66,16 +163,19 @@
 		// Parse initial pixels from hidden field
 		try {
 			pixelsData = JSON.parse( $( '#pixels_json' ).val() || '[]' );
+			debugLog( 'pixels tab: parsed pixels_json', { count: pixelsData.length, pixels: pixelsData } );
 		} catch (e) {
 			pixelsData = [];
+			debugError( 'pixels tab: failed to parse pixels_json', e && e.message ? e.message : e );
 		}
 
 		// Mode toggle: show/hide AlvoBot vs Manual sections
 		$( 'input[name="mode"]' ).on(
 			'change',
-			function () {
-				var mode = $( this ).val();
-				$( '.alvobot-pixel-mode-section' ).hide();
+				function () {
+					var mode = $( this ).val();
+					debugLog( 'pixels tab: mode changed', { mode: mode } );
+					$( '.alvobot-pixel-mode-section' ).hide();
 				$( '#alvobot-pixel-mode-' + mode ).show();
 			}
 		);
@@ -102,8 +202,9 @@
 							action: 'alvobot_pixel_tracking_fetch_pixels',
 							nonce: config.nonce,
 						},
-						success: function (response) {
-							$loading.hide();
+							success: function (response) {
+								debugLog( 'pixels tab: fetch pixels response', response );
+								$loading.hide();
 							$btn.prop( 'disabled', false );
 
 							if (response.success && response.data.pixels) {
@@ -113,8 +214,9 @@
 								$error.text( response.data || 'Erro ao buscar pixels.' ).show();
 							}
 						},
-						error: function () {
-							$loading.hide();
+							error: function () {
+								debugError( 'pixels tab: fetch pixels ajax error' );
+								$loading.hide();
 							$btn.prop( 'disabled', false );
 							$error.text( 'Erro de conexao. Tente novamente.' ).show();
 						},
@@ -124,8 +226,9 @@
 		);
 
 		// Render AlvoBot pixel list with select/update buttons
-		function renderAlvobotPixelList(pixels) {
-			var $list = $( '#alvobot-pixel-list' );
+			function renderAlvobotPixelList(pixels) {
+				debugLog( 'pixels tab: render AlvoBot list', { count: pixels ? pixels.length : 0, pixels: pixels } );
+				var $list = $( '#alvobot-pixel-list' );
 			$list.empty();
 
 			if ( ! pixels.length) {
@@ -187,8 +290,9 @@
 		$( document ).on(
 			'click',
 			'.alvobot-update-alvobot-pixel',
-			function () {
-				var pixel = JSON.parse( $( this ).attr( 'data-pixel' ) );
+				function () {
+					var pixel = JSON.parse( $( this ).attr( 'data-pixel' ) );
+					debugLog( 'pixels tab: update token clicked', pixel );
 				for (var i = 0; i < pixelsData.length; i++) {
 					if (pixelsData[i].pixel_id === pixel.pixel_id) {
 						pixelsData[i].api_token      = pixel.access_token || '';
@@ -209,8 +313,9 @@
 		$( document ).on(
 			'click',
 			'.alvobot-select-alvobot-pixel',
-			function () {
-				var pixel = JSON.parse( $( this ).attr( 'data-pixel' ) );
+				function () {
+					var pixel = JSON.parse( $( this ).attr( 'data-pixel' ) );
+					debugLog( 'pixels tab: select pixel clicked', pixel );
 				pixelsData.push(
 					{
 						pixel_id: pixel.pixel_id,
@@ -230,10 +335,18 @@
 		// Manual Mode: Add pixel button
 		$( '#alvobot-add-manual-pixel-btn' ).on(
 			'click',
-			function () {
-				var pixelId  = $( '#manual_pixel_id' ).val().trim();
-				var apiToken = $( '#manual_api_token' ).val().trim();
-				var label    = $( '#manual_pixel_label' ).val().trim();
+				function () {
+					var pixelId  = $( '#manual_pixel_id' ).val().trim();
+					var apiToken = $( '#manual_api_token' ).val().trim();
+					var label    = $( '#manual_pixel_label' ).val().trim();
+					debugLog(
+						'pixels tab: add manual pixel clicked',
+						{
+							pixel_id: pixelId,
+							has_api_token: !! apiToken,
+							label: label,
+						}
+					);
 
 				if ( ! /^\d{15,16}$/.test( pixelId )) {
 					alert( 'Pixel ID deve conter 15-16 digitos numericos.' );
@@ -715,10 +828,12 @@
 	// CONFIGURACOES TAB
 	// ================================================================
 	function initConfiguracoesTab() {
+		debugLog( 'settings tab: init' );
 		// Test mode: show/hide test event code field
 		$( 'input[name="test_mode"]' ).on(
 			'change',
 			function () {
+				debugLog( 'settings tab: test_mode changed', { enabled: $( this ).is( ':checked' ) } );
 				if ($( this ).is( ':checked' )) {
 					$( '#test-code-field' ).show();
 				} else {
@@ -732,6 +847,7 @@
 	// EVENTS TAB
 	// ================================================================
 	function initEventsTab() {
+		debugLog( 'events tab: init' );
 		var currentPage   = 1;
 		var perPage       = 25;
 		var totalEvents   = 0;
@@ -742,11 +858,19 @@
 		loadEvents();
 		loadEventStats();
 		updateBulkActionsState();
+		debugLog( 'events tab: initial load triggered' );
 
 		// Filter button
 		$( '#events-filter-btn' ).on(
 			'click',
 			function () {
+				debugLog(
+					'events tab: filter apply clicked',
+					{
+						status: $( '#filter-status' ).val(),
+						event_name: $( '#filter-event-name' ).val(),
+					}
+				);
 				currentPage   = 1;
 				currentOffset = 0;
 				clearSelection();
@@ -758,6 +882,7 @@
 		$( '#events-clear-filters-btn' ).on(
 			'click',
 			function () {
+				debugLog( 'events tab: clear filters clicked' );
 				$( '#filter-status' ).val( '' );
 				$( '#filter-event-name' ).val( '' );
 				currentPage   = 1;
@@ -795,6 +920,7 @@
 			'change',
 			function () {
 				var checked = $( this ).is( ':checked' );
+				debugLog( 'events tab: select-all changed', { checked: checked } );
 				$( '.alvobot-events-row-check' ).each(
 					function () {
 						var eventId = String( $( this ).data( 'event-id' ) || '' );
@@ -811,16 +937,18 @@
 		.on(
 			'change.alvobotEventRowCheck',
 			'.alvobot-events-row-check',
-			function () {
-				var eventId = String( $( this ).data( 'event-id' ) || '' );
-				setSelected( eventId, $( this ).is( ':checked' ) );
-				updateBulkActionsState();
-			}
-		);
+				function () {
+					var eventId = String( $( this ).data( 'event-id' ) || '' );
+					setSelected( eventId, $( this ).is( ':checked' ) );
+					debugLog( 'events tab: row selection changed', { event_id: eventId, checked: $( this ).is( ':checked' ) } );
+					updateBulkActionsState();
+				}
+			);
 
 		$( '#events-bulk-clear-btn' ).on(
 			'click',
 			function () {
+				debugLog( 'events tab: bulk clear clicked' );
 				clearSelection();
 				$( '.alvobot-events-row-check' ).prop( 'checked', false );
 				updateBulkActionsState();
@@ -832,6 +960,7 @@
 			function () {
 				var action = String( $( '#events-bulk-action' ).val() || '' );
 				var eventIds = Object.keys( selectedEventIds );
+				debugLog( 'events tab: bulk apply clicked', { action: action, event_ids: eventIds } );
 
 				if ( ! action || ! eventIds.length) {
 					return;
@@ -854,8 +983,9 @@
 						action: action,
 						event_ids: eventIds,
 					},
-					function (result) {
-						$btn.prop( 'disabled', false );
+						function (result) {
+							debugLog( 'events tab: bulk apply success', result );
+							$btn.prop( 'disabled', false );
 						clearSelection();
 						$( '#events-bulk-action' ).val( '' );
 						loadEvents();
@@ -888,15 +1018,18 @@
 			if (eventName) {
 				params += '&event_name=' + encodeURIComponent( eventName );
 			}
+			debugLog( 'events tab: loadEvents request', { params: params, page: currentPage, offset: currentOffset } );
 
 				restGet(
 					'events?' + params,
 					function (data, meta) {
+						debugLog( 'events tab: loadEvents success', { events_count: data ? data.length : 0, meta: meta } );
 						totalEvents = meta ? meta.total : 0;
 						renderEventsTable( data );
 						updatePagination();
 					},
 					function (error) {
+						debugError( 'events tab: loadEvents error', error );
 						totalEvents = 0;
 						$( '#alvobot-events-pagination' ).hide();
 						$tbody.html(
@@ -910,9 +1043,11 @@
 			}
 
 		function loadEventStats() {
+				debugLog( 'events tab: loadEventStats request' );
 				restGet(
 					'events/stats',
 					function (data) {
+						debugLog( 'events tab: loadEventStats success', data );
 						var pending = data.pixel_pending || 0;
 						var sent    = data.pixel_sent || 0;
 					var error   = data.pixel_error || 0;
@@ -923,6 +1058,7 @@
 						$( '#events-stat-error' ).text( formatNumber( error ) );
 					},
 					function () {
+						debugError( 'events tab: loadEventStats error' );
 						$( '#events-stat-total' ).find( 'strong' ).text( '-' );
 						$( '#events-stat-pending' ).text( '-' );
 						$( '#events-stat-sent' ).text( '-' );
@@ -932,6 +1068,7 @@
 			}
 
 		function renderEventsTable(events) {
+			debugLog( 'events tab: renderEventsTable', { count: events ? events.length : 0 } );
 			var $tbody = $( '#alvobot-events-tbody' );
 			$tbody.empty();
 
@@ -1291,61 +1428,87 @@
 				.addClass( 'is-open' );
 			}
 
-			// ---- 3-dot menu + item actions (single handler to avoid click race) ----
+			// ---- 3-dot menu + item actions (deterministic handlers) ----
 			$( document )
-			.off( 'click.alvobotEventsMenu' )
+			.off( 'click.alvobotEventsActionBtn', '.alvobot-events-actions-btn' )
 			.on(
-				'click.alvobotEventsMenu',
+				'click.alvobotEventsActionBtn',
+				'.alvobot-events-actions-btn',
+				function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+
+					var $btn      = $( this );
+					var $dropdown = $btn.siblings( '.alvobot-events-dropdown' );
+					var eventId   = String( $btn.data( 'event-id' ) || '' );
+					var isOpen    = $dropdown.hasClass( 'is-open' ) && $dropdown.is( ':visible' );
+
+					debugLog( 'events tab: action button clicked', { event_id: eventId, was_open: isOpen } );
+
+					if (isOpen) {
+						closeEventDropdowns();
+						debugLog( 'events tab: action menu closed', { event_id: eventId } );
+						return;
+					}
+
+					openEventDropdown( $btn, $dropdown );
+					debugLog( 'events tab: action menu opened', { event_id: eventId } );
+				}
+			);
+
+			$( document )
+			.off( 'click.alvobotEventsActionItem', '.alvobot-events-dropdown-item' )
+			.on(
+				'click.alvobotEventsActionItem',
+				'.alvobot-events-dropdown-item',
+				function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+
+					var $item   = $( this );
+					var action  = $item.data( 'action' );
+					var eventId = $item.data( 'event-id' );
+					debugLog( 'events tab: dropdown action clicked', { action: action, event_id: eventId } );
+					closeEventDropdowns();
+
+					switch (action) {
+						case 'view':
+							openEventModal( eventId, 'details' );
+							break;
+						case 'logs':
+							openEventModal( eventId, 'logs' );
+							break;
+						case 'resend':
+							resendEvent( eventId );
+							break;
+						case 'delete':
+							deleteEvent( eventId );
+							break;
+					}
+				}
+			);
+
+			// Keep dropdown open when clicking inside its container.
+			$( document )
+			.off( 'click.alvobotEventsDropdownShell', '.alvobot-events-dropdown' )
+			.on(
+				'click.alvobotEventsDropdownShell',
+				'.alvobot-events-dropdown',
+				function (e) {
+					e.stopPropagation();
+				}
+			);
+
+			// Click outside closes all menus.
+			$( document )
+			.off( 'click.alvobotEventsOutside' )
+			.on(
+				'click.alvobotEventsOutside',
 				function (e) {
 					var $target = $( e.target );
-					var $item   = $target.closest( '.alvobot-events-dropdown-item' );
-					if ( $item.length ) {
-						e.preventDefault();
-						e.stopImmediatePropagation();
-
-						var action  = $item.data( 'action' );
-						var eventId = $item.data( 'event-id' );
-						closeEventDropdowns();
-
-						switch (action) {
-							case 'view':
-								openEventModal( eventId, 'details' );
-								break;
-							case 'logs':
-								openEventModal( eventId, 'logs' );
-								break;
-							case 'resend':
-								resendEvent( eventId );
-								break;
-							case 'delete':
-								deleteEvent( eventId );
-								break;
-						}
+					if ( $target.closest( '.alvobot-events-actions-wrap' ).length || $target.closest( '.alvobot-events-dropdown' ).length ) {
 						return;
 					}
-
-					var $btn = $target.closest( '.alvobot-events-actions-btn' );
-					if ( $btn.length ) {
-						e.preventDefault();
-						e.stopImmediatePropagation();
-
-						var $dropdown = $btn.siblings( '.alvobot-events-dropdown' );
-						if ( $dropdown.is( ':visible' ) ) {
-							closeEventDropdowns();
-							return;
-						}
-
-						openEventDropdown( $btn, $dropdown );
-						return;
-					}
-
-					// Clicked inside dropdown shell (outside items).
-					if ( $target.closest( '.alvobot-events-dropdown' ).length ) {
-						closeEventDropdowns();
-						return;
-					}
-
-					// Outside click.
 					closeEventDropdowns();
 				}
 			);
@@ -1372,8 +1535,9 @@
 			);
 
 		// ---- Modal ----
-		function openEventModal(eventId, view) {
-			var $modal = $( '#alvobot-event-modal' );
+			function openEventModal(eventId, view) {
+				debugLog( 'events tab: openEventModal', { event_id: eventId, view: view } );
+				var $modal = $( '#alvobot-event-modal' );
 			var $body  = $( '#alvobot-modal-body' );
 			var $title = $( '#alvobot-modal-title' );
 
@@ -1382,9 +1546,10 @@
 			$modal.show();
 
 			restGet(
-				'events/' + encodeURIComponent( eventId ),
-				function (data) {
-					if (view === 'logs') {
+					'events/' + encodeURIComponent( eventId ),
+					function (data) {
+						debugLog( 'events tab: openEventModal data loaded', { event_id: eventId, view: view, data: data } );
+						if (view === 'logs') {
 						renderLogsView( data, $body );
 					} else {
 						renderDetailsView( data, $body );
@@ -1581,36 +1746,43 @@
 		);
 
 		// ---- Resend event ----
-		function resendEvent(eventId) {
-			if ( ! confirm( 'Reenviar este evento para a Meta? O status sera resetado para Pendente.' )) {
-				return;
-			}
+			function resendEvent(eventId) {
+				debugLog( 'events tab: resend requested', { event_id: eventId } );
+				if ( ! confirm( 'Reenviar este evento para a Meta? O status sera resetado para Pendente.' )) {
+					debugWarn( 'events tab: resend canceled by user', { event_id: eventId } );
+					return;
+				}
 
 			restPost(
 				'actions/resend-event/' + encodeURIComponent( eventId ),
 				{},
-				function () {
-					setSelected( String( eventId || '' ), false );
+					function () {
+						debugLog( 'events tab: resend success', { event_id: eventId } );
+						setSelected( String( eventId || '' ), false );
 					updateBulkActionsState();
 					loadEvents();
 					loadEventStats();
 				},
-				function (error) {
-					alert( 'Erro ao reenviar: ' + error );
+					function (error) {
+						debugError( 'events tab: resend failed', { event_id: eventId, error: error } );
+						alert( 'Erro ao reenviar: ' + error );
 				}
 			);
 		}
 
 		// ---- Delete event ----
-		function deleteEvent(eventId) {
-			if ( ! confirm( 'Excluir este evento permanentemente?' )) {
-				return;
-			}
+			function deleteEvent(eventId) {
+				debugLog( 'events tab: delete requested', { event_id: eventId } );
+				if ( ! confirm( 'Excluir este evento permanentemente?' )) {
+					debugWarn( 'events tab: delete canceled by user', { event_id: eventId } );
+					return;
+				}
 
 			restDelete(
 				'events/' + encodeURIComponent( eventId ),
-				function () {
-					setSelected( String( eventId || '' ), false );
+					function () {
+						debugLog( 'events tab: delete success', { event_id: eventId } );
+						setSelected( String( eventId || '' ), false );
 					$( 'tr[data-event-id="' + eventId + '"]' ).fadeOut(
 						function () {
 							$( this ).remove();
@@ -1619,8 +1791,9 @@
 					);
 					loadEventStats();
 				},
-				function (error) {
-					alert( 'Erro ao excluir: ' + error );
+					function (error) {
+						debugError( 'events tab: delete failed', { event_id: eventId, error: error } );
+						alert( 'Erro ao excluir: ' + error );
 				}
 			);
 		}
@@ -1679,14 +1852,17 @@
 	// STATUS TAB
 	// ================================================================
 	function initStatusTab() {
+		debugLog( 'status tab: init' );
 		loadStatusData();
 		initQuickActions();
 
 		function loadStatusData() {
+			debugLog( 'status tab: loadStatusData request' );
 			// Fetch event stats
 			restGet(
 				'events/stats',
 				function (data) {
+					debugLog( 'status tab: events/stats success', data );
 					$( '#stat-pending' ).text( formatNumber( data.pixel_pending || 0 ) );
 					$( '#stat-sent' ).text( formatNumber( data.pixel_sent || 0 ) );
 					$( '#stat-error' ).text( formatNumber( data.pixel_error || 0 ) );
@@ -1697,6 +1873,7 @@
 			restGet(
 				'leads/stats',
 				function (data) {
+					debugLog( 'status tab: leads/stats success', data );
 					$( '#stat-leads' ).text( formatNumber( data.total || 0 ) );
 				}
 			);
@@ -1711,6 +1888,7 @@
 				function () {
 					var $btn   = $( this );
 					var action = $btn.data( 'action' );
+					debugLog( 'status tab: quick action clicked', { action: action } );
 					if ( ! action) {
 						return;
 					}
@@ -1724,6 +1902,7 @@
 
 					var endpoint = actionMap[action];
 					if ( ! endpoint) {
+						debugWarn( 'status tab: unknown quick action', { action: action } );
 						return;
 					}
 					$btn.prop( 'disabled', true );
@@ -1732,12 +1911,14 @@
 						endpoint,
 						{},
 						function (data) {
+							debugLog( 'status tab: quick action success', { action: action, endpoint: endpoint, data: data } );
 							$btn.prop( 'disabled', false );
 							showActionFeedback( data.message || 'Acao executada com sucesso.', 'success' );
 							// Refresh stats after action
 							loadStatusData();
 						},
 						function (error) {
+							debugError( 'status tab: quick action error', { action: action, endpoint: endpoint, error: error } );
 							$btn.prop( 'disabled', false );
 							showActionFeedback(
 								error || 'Erro ao executar acao.',
@@ -1774,6 +1955,7 @@
 	// REST Helpers
 	// ================================================================
 	function restGet(endpoint, onSuccess, onError) {
+		debugLog( 'restGet request', { endpoint: endpoint } );
 		$.ajax(
 			{
 				url: extra.rest_url + endpoint,
@@ -1782,6 +1964,7 @@
 					xhr.setRequestHeader( 'X-WP-Nonce', extra.rest_nonce );
 				},
 				success: function (response) {
+					debugLog( 'restGet success', { endpoint: endpoint, response: response } );
 					if (response.data) {
 						onSuccess( response.data, response.meta || null );
 					} else if (response.success && response.data) {
@@ -1792,9 +1975,15 @@
 				},
 				error: function (xhr) {
 					var msg = getRestErrorMessage( xhr );
-					if (window.console && window.console.error) {
-						window.console.error( '[AlvoBot Pixel] REST GET error', endpoint, xhr.status, msg );
-					}
+					debugError(
+						'restGet error',
+						{
+							endpoint: endpoint,
+							status: xhr && typeof xhr.status !== 'undefined' ? xhr.status : null,
+							message: msg,
+							response: xhr && typeof xhr.responseText === 'string' ? xhr.responseText.substring( 0, 3000 ) : null,
+						}
+					);
 					if (onError) {
 						onError( msg );
 					}
@@ -1804,6 +1993,7 @@
 	}
 
 	function restPost(endpoint, data, onSuccess, onError) {
+		debugLog( 'restPost request', { endpoint: endpoint, payload: data } );
 		$.ajax(
 			{
 				url: extra.rest_url + endpoint,
@@ -1814,6 +2004,7 @@
 					xhr.setRequestHeader( 'X-WP-Nonce', extra.rest_nonce );
 				},
 				success: function (response) {
+					debugLog( 'restPost success', { endpoint: endpoint, response: response } );
 					if (response.data) {
 						onSuccess( response.data );
 					} else {
@@ -1822,9 +2013,15 @@
 				},
 				error: function (xhr) {
 					var msg = getRestErrorMessage( xhr );
-					if (window.console && window.console.error) {
-						window.console.error( '[AlvoBot Pixel] REST POST error', endpoint, xhr.status, msg );
-					}
+					debugError(
+						'restPost error',
+						{
+							endpoint: endpoint,
+							status: xhr && typeof xhr.status !== 'undefined' ? xhr.status : null,
+							message: msg,
+							response: xhr && typeof xhr.responseText === 'string' ? xhr.responseText.substring( 0, 3000 ) : null,
+						}
+					);
 					if (onError) {
 						onError( msg );
 					}
@@ -1834,6 +2031,7 @@
 	}
 
 	function restDelete(endpoint, onSuccess, onError) {
+		debugLog( 'restDelete request', { endpoint: endpoint } );
 		$.ajax(
 			{
 				url: extra.rest_url + endpoint,
@@ -1842,15 +2040,22 @@
 					xhr.setRequestHeader( 'X-WP-Nonce', extra.rest_nonce );
 				},
 				success: function (response) {
+					debugLog( 'restDelete success', { endpoint: endpoint, response: response } );
 					if (onSuccess) {
 						onSuccess( response.data || response );
 					}
 				},
 				error: function (xhr) {
 					var msg = getRestErrorMessage( xhr );
-					if (window.console && window.console.error) {
-						window.console.error( '[AlvoBot Pixel] REST DELETE error', endpoint, xhr.status, msg );
-					}
+					debugError(
+						'restDelete error',
+						{
+							endpoint: endpoint,
+							status: xhr && typeof xhr.status !== 'undefined' ? xhr.status : null,
+							message: msg,
+							response: xhr && typeof xhr.responseText === 'string' ? xhr.responseText.substring( 0, 3000 ) : null,
+						}
+					);
 					if (onError) {
 						onError( msg );
 					}
@@ -1867,8 +2072,15 @@
 			if (body.code === 'rest_cookie_invalid_nonce') {
 				msg = 'Sessao expirada (nonce invalido). Atualize a pagina do admin.';
 			}
+			debugWarn( 'getRestErrorMessage(): parsed body', body );
 		} catch (e) {
-			// ignore
+			debugWarn(
+				'getRestErrorMessage(): failed to parse response body',
+				{
+					error: e && e.message ? e.message : e,
+					response: xhr && typeof xhr.responseText === 'string' ? xhr.responseText.substring( 0, 1500 ) : null,
+				}
+			);
 		}
 		return msg;
 	}

@@ -595,17 +595,18 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$pixel_labels[ $pixel_id ] = isset( $pixel['label'] ) ? sanitize_text_field( (string) $pixel['label'] ) : '';
 		}
 
-		wp_localize_script(
-			'alvobot-pro-pixel-tracking',
-			'alvobot_pixel_tracking_extra',
-			array(
-				'rest_url'      => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
-				'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
-				'active_tab'    => $active_tab,
-				'pixel_labels'  => $pixel_labels,
-			)
-		);
-	}
+			wp_localize_script(
+				'alvobot-pro-pixel-tracking',
+				'alvobot_pixel_tracking_extra',
+				array(
+					'rest_url'      => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
+					'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
+					'active_tab'    => $active_tab,
+					'pixel_labels'  => $pixel_labels,
+					'debug_enabled' => class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' ) ? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' ) : false,
+				)
+			);
+		}
 
 	protected function render_settings_sections( $settings ) {
 		// Kept for backward compatibility — content now rendered via tab view files.

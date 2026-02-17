@@ -6,85 +6,160 @@
 (function () {
 	'use strict';
 
-	class AlvoBotPixelTracking {
-		constructor() {
-			this.data        = {};
-			this.config      = {};
-			this.initialized = false;
-			this.initial_pageview_sent = false;
-			this._readyPromise = null;
-			this._resolveReady = null;
-		}
+		class AlvoBotPixelTracking {
+			constructor() {
+				this.data        = {};
+				this.config      = {};
+				this.initialized = false;
+				this.initial_pageview_sent = false;
+				this._readyPromise = null;
+				this._resolveReady = null;
+				this.debug_enabled = false;
+				this.debug_prefix  = '[AlvoBot Pixel][FRONT]';
+			}
 
 		/**
 		 * Returns a promise that resolves when the tracker has finished initializing.
 		 */
-		ready() {
-			if (this.initialized) {
-				return Promise.resolve();
+			ready() {
+				if (this.initialized) {
+					this.log_debug( 'ready(): already initialized' );
+					return Promise.resolve();
+				}
+				if ( ! this._readyPromise) {
+					var self = this;
+					this._readyPromise = new Promise( function (resolve) {
+						self._resolveReady = resolve;
+					});
+					this.log_debug( 'ready(): promise created' );
+				}
+				return this._readyPromise;
 			}
-			if ( ! this._readyPromise) {
-				var self = this;
-				this._readyPromise = new Promise( function (resolve) {
-					self._resolveReady = resolve;
-				});
+
+			clone_for_debug(value) {
+				try {
+					return JSON.parse( JSON.stringify( value ) );
+				} catch (e) {
+					return value;
+				}
 			}
-			return this._readyPromise;
-		}
+
+			log_debug(message, payload) {
+				if ( ! this.debug_enabled || ! window.console || ! window.console.log) {
+					return;
+				}
+				if (typeof payload === 'undefined') {
+					window.console.log( this.debug_prefix + ' ' + message );
+					return;
+				}
+				window.console.log( this.debug_prefix + ' ' + message, this.clone_for_debug( payload ) );
+			}
+
+			log_warn(message, payload) {
+				if ( ! this.debug_enabled || ! window.console || ! window.console.warn) {
+					return;
+				}
+				if (typeof payload === 'undefined') {
+					window.console.warn( this.debug_prefix + ' ' + message );
+					return;
+				}
+				window.console.warn( this.debug_prefix + ' ' + message, this.clone_for_debug( payload ) );
+			}
+
+			log_error(message, payload) {
+				if ( ! this.debug_enabled || ! window.console || ! window.console.error) {
+					return;
+				}
+				if (typeof payload === 'undefined') {
+					window.console.error( this.debug_prefix + ' ' + message );
+					return;
+				}
+				window.console.error( this.debug_prefix + ' ' + message, this.clone_for_debug( payload ) );
+			}
 
 		/**
 		 * Initialize tracking with config from PHP inline script.
 		 */
-		async start(config) {
-			this.config = config || window.alvobot_pixel_config || {};
+			async start(config) {
+				this.config = config || window.alvobot_pixel_config || {};
+				this.debug_enabled = !! this.config.debug_enabled;
+				this.log_debug(
+					'start() called',
+					{
+						href: window.location.href,
+						page_title: document.title,
+						config: this.config,
+					}
+				);
 
-			if ( ! this.config.pixel_ids) {
-				return;
-			}
+				if ( ! this.config.pixel_ids) {
+					this.log_warn( 'start aborted: no pixel_ids configured' );
+					return;
+				}
 
-			// Check consent if required
-			if (this.config.consent_check && ! this.check_consent()) {
-				return;
-			}
+				// Check consent if required
+				if (this.config.consent_check && ! this.check_consent()) {
+					this.log_warn(
+						'start aborted: consent not granted',
+						{
+							consent_cookie: this.config.consent_cookie,
+						}
+					);
+					return;
+				}
 
-			// Check if bot
-			if (this.is_bot()) {
-				return;
-			}
+				// Check if bot
+				if (this.is_bot()) {
+					this.log_warn( 'start aborted: bot detected', { user_agent: navigator.userAgent } );
+					return;
+				}
 
-			// Initialize Facebook Pixel SDK
-			this.init_fb_sdk( this.config.pixel_ids );
+				// Initialize Facebook Pixel SDK
+				this.init_fb_sdk( this.config.pixel_ids );
 
 			// Capture visitor data
 			this.data.fbp        = this.get_fbp();
 			this.data.fbc        = this.get_fbc();
 			this.data.utms       = this.get_utms();
-			this.data.user_agent = navigator.userAgent;
+				this.data.user_agent = navigator.userAgent;
+				this.log_debug(
+					'visitor base data captured',
+					{
+						fbp: this.data.fbp,
+						fbc: this.data.fbc,
+						utms: this.data.utms,
+						user_agent: this.data.user_agent,
+					}
+				);
 
-			// Async data capture
-			try {
-				this.data.ip = await this.get_ip();
-			} catch (e) {
-				this.data.ip = '';
+				// Async data capture
+				try {
+					this.data.ip = await this.get_ip();
+				} catch (e) {
+					this.data.ip = '';
+					this.log_error( 'get_ip() threw', e && e.message ? e.message : e );
+				}
+
+				try {
+					this.data.geolocation = await this.get_geolocation();
+				} catch (e) {
+					this.data.geolocation = {};
+					this.log_error( 'get_geolocation() threw', e && e.message ? e.message : e );
+				}
+				this.log_debug( 'async capture complete', { ip: this.data.ip, geolocation: this.data.geolocation } );
+
+				// Start form monitoring for lead capture
+				this.monitor_forms();
+
+				// Always dispatch a default PageView through browser + server with shared event_id.
+				this.dispatch_initial_pageview();
+
+				this.initialized = true;
+				this.log_debug( 'tracker initialized', { initialized: this.initialized } );
+				if (this._resolveReady) {
+					this._resolveReady();
+				}
 			}
-
-			try {
-				this.data.geolocation = await this.get_geolocation();
-			} catch (e) {
-				this.data.geolocation = {};
-			}
-
-			// Start form monitoring for lead capture
-			this.monitor_forms();
-
-			// Always dispatch a default PageView through browser + server with shared event_id.
-			this.dispatch_initial_pageview();
-
-			this.initialized = true;
-			if (this._resolveReady) {
-				this._resolveReady();
-			}
-		}
 
 		/**
 		 * Initialize Facebook Pixel SDK.
@@ -92,22 +167,25 @@
 		 * PageView is dispatched by send_event() so browser and server share
 		 * the same event_id for deduplication.
 		 */
-		init_fb_sdk(pixel_ids_str) {
-			var ids = pixel_ids_str.split( ',' ).map(
-				function (s) {
-					return s.trim(); }
-			).filter( Boolean ).filter(
-				function (id, index, arr) {
-					return arr.indexOf( id ) === index;
+			init_fb_sdk(pixel_ids_str) {
+				var ids = pixel_ids_str.split( ',' ).map(
+					function (s) {
+						return s.trim(); }
+				).filter( Boolean ).filter(
+					function (id, index, arr) {
+						return arr.indexOf( id ) === index;
+					}
+				);
+				if ( ! ids.length) {
+					this.log_warn( 'init_fb_sdk aborted: no valid pixel IDs', { pixel_ids_str: pixel_ids_str } );
+					return;
 				}
-			);
-			if ( ! ids.length) {
-				return;
-			}
+				this.log_debug( 'init_fb_sdk', { requested: pixel_ids_str, deduped_ids: ids } );
 
 			// Load fbevents.js if not already loaded
-			if ( ! window.fbq) {
-				var n = window.fbq = function () {
+				if ( ! window.fbq) {
+					this.log_debug( 'loading Facebook SDK script' );
+					var n = window.fbq = function () {
 					n.callMethod ? n.callMethod.apply( n, arguments ) : n.queue.push( arguments );
 				};
 				if ( ! window._fbq) {
@@ -127,23 +205,26 @@
 				}
 			}
 
-			// Init each pixel
-			for (var i = 0; i < ids.length; i++) {
-				window.fbq( 'init', ids[i] );
-			}
+				// Init each pixel
+				for (var i = 0; i < ids.length; i++) {
+					window.fbq( 'init', ids[i] );
+					this.log_debug( 'fbq init', { pixel_id: ids[i] } );
+				}
 
-		}
+			}
 
 		/**
 		 * Send the default PageView once per page load.
 		 */
-		dispatch_initial_pageview() {
-			if (this.initial_pageview_sent) {
-				return;
-			}
+			dispatch_initial_pageview() {
+				if (this.initial_pageview_sent) {
+					this.log_debug( 'initial PageView skipped: already sent' );
+					return;
+				}
 
-			this.initial_pageview_sent = true;
-			this.send_event(
+				this.initial_pageview_sent = true;
+				this.log_debug( 'dispatching initial PageView' );
+				this.send_event(
 				{
 					event_name: 'PageView',
 					event_custom: false,
@@ -156,81 +237,96 @@
 		/**
 		 * Get visitor IP via Cloudflare cdn-cgi/trace.
 		 */
-		async get_ip() {
-			var cachedIp = '';
-			try {
-				cachedIp = sessionStorage.getItem( 'alvobot_ip' ) || '';
-			} catch (e) {
-				cachedIp = '';
-			}
-
-			if (cachedIp) {
-				if ( ! this.is_private_ip( cachedIp )) {
-					return cachedIp;
-				}
+			async get_ip() {
+				var cachedIp = '';
+				this.log_debug( 'get_ip(): start' );
 				try {
-					sessionStorage.removeItem( 'alvobot_ip' );
+					cachedIp = sessionStorage.getItem( 'alvobot_ip' ) || '';
 				} catch (e) {
-					/* ignore */ }
-			}
+					cachedIp = '';
+				}
 
-			if (this.config.cf_trace_enabled) {
+				if (cachedIp) {
+					if ( ! this.is_private_ip( cachedIp )) {
+						this.log_debug( 'get_ip(): using cached public IP', { ip: cachedIp } );
+						return cachedIp;
+					}
+					this.log_warn( 'get_ip(): cached IP is private/reserved; removing', { ip: cachedIp } );
+					try {
+						sessionStorage.removeItem( 'alvobot_ip' );
+					} catch (e) {
+						/* ignore */ }
+				}
+
+				if (this.config.cf_trace_enabled) {
+					this.log_debug( 'get_ip(): trying /cdn-cgi/trace' );
+					try {
+						var cfResp  = await this.fetch_with_timeout( '/cdn-cgi/trace', {}, 2500 );
+						if (cfResp && cfResp.ok) {
+							var cfText  = await cfResp.text();
+							var cfMatch = cfText.match( /ip=([^\n]+)/ );
+							if (cfMatch && cfMatch[1] && ! this.is_private_ip( cfMatch[1] )) {
+								this.log_debug( 'get_ip(): resolved by Cloudflare trace', { ip: cfMatch[1] } );
+								try {
+									sessionStorage.setItem( 'alvobot_ip', cfMatch[1] );
+								} catch (e) {
+									/* ignore */ }
+								return cfMatch[1];
+							}
+							this.log_warn( 'get_ip(): Cloudflare trace had no usable IP' );
+						}
+					} catch (e) {
+						this.log_warn( 'get_ip(): Cloudflare trace request failed', e && e.message ? e.message : e );
+						/* continue fallback */ }
+				}
+
 				try {
-					var cfResp  = await this.fetch_with_timeout( '/cdn-cgi/trace', {}, 2500 );
-					if (cfResp && cfResp.ok) {
-						var cfText  = await cfResp.text();
-						var cfMatch = cfText.match( /ip=([^\n]+)/ );
-						if (cfMatch && cfMatch[1] && ! this.is_private_ip( cfMatch[1] )) {
+					this.log_debug( 'get_ip(): trying api64.ipify.org' );
+					var ipifyResp = await this.fetch_with_timeout( 'https://api64.ipify.org?format=json', {}, 2500 );
+					if (ipifyResp && ipifyResp.ok) {
+						var ipifyData = await ipifyResp.json();
+						if (ipifyData && ipifyData.ip && ! this.is_private_ip( ipifyData.ip )) {
+							this.log_debug( 'get_ip(): resolved by ipify', { ip: ipifyData.ip } );
 							try {
-								sessionStorage.setItem( 'alvobot_ip', cfMatch[1] );
+								sessionStorage.setItem( 'alvobot_ip', ipifyData.ip );
 							} catch (e) {
 								/* ignore */ }
-							return cfMatch[1];
+							return ipifyData.ip;
 						}
 					}
 				} catch (e) {
+					this.log_warn( 'get_ip(): ipify request failed', e && e.message ? e.message : e );
 					/* continue fallback */ }
+
+				try {
+					this.log_debug( 'get_ip(): trying ipwho.is' );
+					var ipwhoResp = await this.fetch_with_timeout( 'https://ipwho.is/', {}, 3000 );
+					if (ipwhoResp && ipwhoResp.ok) {
+						var ipwhoData = await ipwhoResp.json();
+						if (ipwhoData && ipwhoData.ip && ! this.is_private_ip( ipwhoData.ip )) {
+							this.log_debug( 'get_ip(): resolved by ipwho.is', { ip: ipwhoData.ip } );
+							try {
+								sessionStorage.setItem( 'alvobot_ip', ipwhoData.ip );
+							} catch (e) {
+								/* ignore */ }
+							return ipwhoData.ip;
+						}
+					}
+				} catch (e) {
+					this.log_warn( 'get_ip(): ipwho.is request failed', e && e.message ? e.message : e );
+					/* ignore */ }
+
+				this.log_warn( 'get_ip(): failed to resolve a public IP' );
+				return '';
 			}
-
-			try {
-				var ipifyResp = await this.fetch_with_timeout( 'https://api64.ipify.org?format=json', {}, 2500 );
-				if (ipifyResp && ipifyResp.ok) {
-					var ipifyData = await ipifyResp.json();
-					if (ipifyData && ipifyData.ip && ! this.is_private_ip( ipifyData.ip )) {
-						try {
-							sessionStorage.setItem( 'alvobot_ip', ipifyData.ip );
-						} catch (e) {
-							/* ignore */ }
-						return ipifyData.ip;
-					}
-				}
-			} catch (e) {
-				/* continue fallback */ }
-
-			try {
-				var ipwhoResp = await this.fetch_with_timeout( 'https://ipwho.is/', {}, 3000 );
-				if (ipwhoResp && ipwhoResp.ok) {
-					var ipwhoData = await ipwhoResp.json();
-					if (ipwhoData && ipwhoData.ip && ! this.is_private_ip( ipwhoData.ip )) {
-						try {
-							sessionStorage.setItem( 'alvobot_ip', ipwhoData.ip );
-						} catch (e) {
-							/* ignore */ }
-						return ipwhoData.ip;
-					}
-				}
-			} catch (e) {
-				/* ignore */ }
-
-			return '';
-		}
 
 		/**
 		 * Fetch helper with timeout support.
 		 */
-		async fetch_with_timeout(url, options, timeoutMs) {
-			var opts = options || {};
-			var ms   = timeoutMs || 3000;
+			async fetch_with_timeout(url, options, timeoutMs) {
+				var opts = options || {};
+				var ms   = timeoutMs || 3000;
+				this.log_debug( 'fetch_with_timeout()', { url: url, timeout_ms: ms } );
 
 			if (typeof AbortController === 'undefined') {
 				return fetch( url, opts );
@@ -265,11 +361,13 @@
 		 * Results are cached in localStorage per IP with 24h TTL.
 		 * If browser geo fails, the server-side fallback handles it.
 		 */
-		async get_geolocation() {
-			var ip = this.data.ip;
-			if ( ! ip) {
-				return {};
-			}
+			async get_geolocation() {
+				var ip = this.data.ip;
+				if ( ! ip) {
+					this.log_warn( 'get_geolocation(): skipped because IP is empty' );
+					return {};
+				}
+				this.log_debug( 'get_geolocation(): start', { ip: ip } );
 
 			var GEO_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -277,24 +375,26 @@
 			var cacheKey = 'alvobot_geo_' + ip;
 			try {
 				var cached = localStorage.getItem( cacheKey );
-				if (cached) {
-					var parsed = JSON.parse( cached );
-					if (parsed && parsed.city && parsed._ts && (Date.now() - parsed._ts) < GEO_CACHE_TTL) {
-						return parsed;
+					if (cached) {
+						var parsed = JSON.parse( cached );
+						if (parsed && parsed.city && parsed._ts && (Date.now() - parsed._ts) < GEO_CACHE_TTL) {
+							this.log_debug( 'get_geolocation(): cache hit', parsed );
+							return parsed;
+						}
+						localStorage.removeItem( cacheKey );
 					}
-					localStorage.removeItem( cacheKey );
-				}
 			} catch (e) {
 				/* ignore */ }
 
 			var geo = null;
 
-			// Primary: ip-api.com Pro (HTTPS, higher rate limit)
-			try {
-				var resp = await fetch( 'https://pro.ip-api.com/json/' + ip + '?key=TOLoWxdNIA0zIZm&fields=status,city,regionName,country,countryCode,zip,currency,timezone' );
-				if (resp.ok) {
-					var data = await resp.json();
-					if (data && data.status === 'success' && data.city) {
+				// Primary: ip-api.com Pro (HTTPS, higher rate limit)
+				try {
+					this.log_debug( 'get_geolocation(): trying ip-api.com' );
+					var resp = await fetch( 'https://pro.ip-api.com/json/' + ip + '?key=TOLoWxdNIA0zIZm&fields=status,city,regionName,country,countryCode,zip,currency,timezone' );
+					if (resp.ok) {
+						var data = await resp.json();
+						if (data && data.status === 'success' && data.city) {
 						geo = {
 							city: data.city,
 							state: data.regionName,
@@ -302,21 +402,24 @@
 							country_code: data.countryCode,
 							zipcode: data.zip || '',
 							currency: data.currency || '',
-							timezone: data.timezone || '',
-							_ts: Date.now(),
-						};
+								timezone: data.timezone || '',
+								_ts: Date.now(),
+							};
+							this.log_debug( 'get_geolocation(): resolved via ip-api.com', geo );
+						}
 					}
-				}
-			} catch (e) {
-				/* fallback */ }
+				} catch (e) {
+					this.log_warn( 'get_geolocation(): ip-api.com failed', e && e.message ? e.message : e );
+					/* fallback */ }
 
 			// Fallback: ipwho.is (HTTPS, free, no key)
-			if ( ! geo) {
-				try {
-					var resp2 = await fetch( 'https://ipwho.is/' + ip );
-					if (resp2.ok) {
-						var data2 = await resp2.json();
-						if (data2 && data2.success && data2.city) {
+				if ( ! geo) {
+					try {
+						this.log_debug( 'get_geolocation(): trying ipwho.is fallback' );
+						var resp2 = await fetch( 'https://ipwho.is/' + ip );
+						if (resp2.ok) {
+							var data2 = await resp2.json();
+							if (data2 && data2.success && data2.city) {
 							geo = {
 								city: data2.city,
 								state: data2.region,
@@ -324,129 +427,147 @@
 								country_code: data2.country_code,
 								zipcode: data2.postal || '',
 								currency: data2.currency && data2.currency.code ? data2.currency.code : '',
-								timezone: data2.timezone && data2.timezone.id ? data2.timezone.id : '',
-								_ts: Date.now(),
-							};
+									timezone: data2.timezone && data2.timezone.id ? data2.timezone.id : '',
+									_ts: Date.now(),
+								};
+								this.log_debug( 'get_geolocation(): resolved via ipwho.is', geo );
+							}
 						}
-					}
-				} catch (e) {
-					/* server-side fallback will handle geo */ }
-			}
+					} catch (e) {
+						this.log_warn( 'get_geolocation(): ipwho.is failed', e && e.message ? e.message : e );
+						/* server-side fallback will handle geo */ }
+				}
 
 			if (geo) {
-				try {
-					localStorage.setItem( cacheKey, JSON.stringify( geo ) );
-				} catch (e) {
-					/* ignore */ }
-				return geo;
-			}
+					try {
+						localStorage.setItem( cacheKey, JSON.stringify( geo ) );
+					} catch (e) {
+						/* ignore */ }
+					this.log_debug( 'get_geolocation(): final geo', geo );
+					return geo;
+				}
 
-			return {};
-		}
+				this.log_warn( 'get_geolocation(): no geo available' );
+				return {};
+			}
 
 		/**
 		 * Get or generate _fbp cookie.
 		 */
-		get_fbp() {
-			var match = document.cookie.match( /(^|;)\s*_fbp=([^;]+)/ );
-			if (match) {
-				return match[2];
-			}
+			get_fbp() {
+				var match = document.cookie.match( /(^|;)\s*_fbp=([^;]+)/ );
+				if (match) {
+					this.log_debug( 'get_fbp(): cookie found', { fbp: match[2] } );
+					return match[2];
+				}
 
 			// Generate fbp
 			var ts   = Date.now();
-			var rand = Math.floor( Math.random() * 10000000000 );
-			var fbp  = 'fb.1.' + ts + '.' + rand;
-			this.set_cookie( '_fbp', fbp );
-			return fbp;
-		}
+				var rand = Math.floor( Math.random() * 10000000000 );
+				var fbp  = 'fb.1.' + ts + '.' + rand;
+				this.set_cookie( '_fbp', fbp );
+				this.log_debug( 'get_fbp(): generated new fbp', { fbp: fbp } );
+				return fbp;
+			}
 
 		/**
 		 * Get or generate _fbc from fbclid URL param.
 		 */
-		get_fbc() {
-			var match = document.cookie.match( /(^|;)\s*_fbc=([^;]+)/ );
-			if (match) {
-				return match[2];
-			}
+			get_fbc() {
+				var match = document.cookie.match( /(^|;)\s*_fbc=([^;]+)/ );
+				if (match) {
+					this.log_debug( 'get_fbc(): cookie found', { fbc: match[2] } );
+					return match[2];
+				}
 
 			// Check for fbclid in URL
 			var params = new URLSearchParams( window.location.search );
-			var fbclid = params.get( 'fbclid' );
-			if (fbclid) {
-				var fbc = 'fb.1.' + Date.now() + '.' + fbclid;
-				this.set_cookie( '_fbc', fbc );
-				return fbc;
-			}
+				var fbclid = params.get( 'fbclid' );
+				if (fbclid) {
+					var fbc = 'fb.1.' + Date.now() + '.' + fbclid;
+					this.set_cookie( '_fbc', fbc );
+					this.log_debug( 'get_fbc(): built from fbclid', { fbc: fbc, fbclid: fbclid } );
+					return fbc;
+				}
 
-			return '';
-		}
+				this.log_debug( 'get_fbc(): no value resolved' );
+				return '';
+			}
 
 		/**
 		 * Parse UTM parameters from URL.
 		 */
-		get_utms() {
-			var params = new URLSearchParams( window.location.search );
+			get_utms() {
+				var params = new URLSearchParams( window.location.search );
 			var keys   = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content', 'src', 'sck'];
 			var utms   = {};
-			for (var i = 0; i < keys.length; i++) {
+				for (var i = 0; i < keys.length; i++) {
 				var val = params.get( keys[i] );
 				if (val) {
 					utms[keys[i]] = val;
 				}
+				}
+				this.log_debug( 'get_utms()', utms );
+				return utms;
 			}
-			return utms;
-		}
 
 		/**
 		 * Check if tracking consent is given.
 		 */
-		check_consent() {
-			var cookieName = this.config.consent_cookie || 'alvobot_tracking_consent';
+			check_consent() {
+				var cookieName = this.config.consent_cookie || 'alvobot_tracking_consent';
 
 			// Check cookie
-			if (document.cookie.indexOf( cookieName + '=true' ) !== -1) {
-				return true;
-			}
-			if (document.cookie.indexOf( cookieName + '=1' ) !== -1) {
-				return true;
-			}
+				if (document.cookie.indexOf( cookieName + '=true' ) !== -1) {
+					this.log_debug( 'check_consent(): true via cookie=true', { cookie: cookieName } );
+					return true;
+				}
+				if (document.cookie.indexOf( cookieName + '=1' ) !== -1) {
+					this.log_debug( 'check_consent(): true via cookie=1', { cookie: cookieName } );
+					return true;
+				}
 
 			// Check JS variable
-			if (window.alvobot_tracking_consent === true) {
-				return true;
-			}
+				if (window.alvobot_tracking_consent === true) {
+					this.log_debug( 'check_consent(): true via window.alvobot_tracking_consent' );
+					return true;
+				}
 
 			// CookieYes integration
 			if (window.CookieYes && typeof window.CookieYes.getConsent === 'function') {
-				if (window.CookieYes.getConsent( 'analytics' ) === 'yes') {
-					return true;
+					if (window.CookieYes.getConsent( 'analytics' ) === 'yes') {
+						this.log_debug( 'check_consent(): true via CookieYes analytics=yes' );
+						return true;
+					}
 				}
-			}
 
 			// Complianz integration
 			if (typeof window.cmplz_get_consent === 'function') {
-				if (window.cmplz_get_consent( 'statistics' ) === 'allow') {
-					return true;
+					if (window.cmplz_get_consent( 'statistics' ) === 'allow') {
+						this.log_debug( 'check_consent(): true via Complianz statistics=allow' );
+						return true;
+					}
 				}
-			}
 
-			return false;
-		}
+				this.log_warn( 'check_consent(): consent not granted' );
+				return false;
+			}
 
 		/**
 		 * Check if current visitor is a bot.
 		 */
-		is_bot() {
-			var ua   = navigator.userAgent;
+			is_bot() {
+				var ua   = navigator.userAgent;
 			var bots = ['bot', 'Bot', 'crawl', 'spider', 'HTTrack', 'Lighthouse', 'GTmetrix', 'Page Speed'];
 			for (var i = 0; i < bots.length; i++) {
-				if (ua.indexOf( bots[i] ) !== -1) {
-					return true;
+					if (ua.indexOf( bots[i] ) !== -1) {
+						this.log_warn( 'is_bot(): matched signature', { signature: bots[i], user_agent: ua } );
+						return true;
+					}
 				}
+				this.log_debug( 'is_bot(): false' );
+				return false;
 			}
-			return false;
-		}
 
 		/**
 		 * Returns true when the IP is private, loopback, or reserved.
@@ -498,20 +619,24 @@
 		/**
 		 * Generate a unique event ID.
 		 */
-		generate_event_id() {
-			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-				return crypto.randomUUID();
-			}
-			// UUID v4 fallback
-			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
-				/[xy]/g,
-				function (c) {
-					var r = Math.random() * 16 | 0;
-					var v = c === 'x' ? r : (r & 0x3 | 0x8);
-					return v.toString( 16 );
+			generate_event_id() {
+				if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+					var uuid = crypto.randomUUID();
+					this.log_debug( 'generate_event_id(): crypto.randomUUID', { event_id: uuid } );
+					return uuid;
 				}
-			);
-		}
+				// UUID v4 fallback
+				var fallbackUuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+					/[xy]/g,
+					function (c) {
+						var r = Math.random() * 16 | 0;
+						var v = c === 'x' ? r : (r & 0x3 | 0x8);
+						return v.toString( 16 );
+					}
+				);
+				this.log_debug( 'generate_event_id(): fallback UUID', { event_id: fallbackUuid } );
+				return fallbackUuid;
+			}
 
 		/**
 		 * Hash a value with SHA-256 using Web Crypto API.
@@ -538,10 +663,10 @@
 		/**
 		 * Send a tracking event (browser + server).
 		 */
-		async send_event(params) {
-			var event_id   = this.generate_event_id();
-			var event_name = params.event_name || 'PageView';
-			var self       = this;
+			async send_event(params) {
+				var event_id   = this.generate_event_id();
+				var event_name = params.event_name || 'PageView';
+				var self       = this;
 
 			// Build enriched custom_data
 			var custom_data = {
@@ -553,14 +678,31 @@
 			if (this.config.content_category) {
 				custom_data.content_category = this.config.content_category;
 			}
-			if (this.data.geolocation && this.data.geolocation.currency) {
-				custom_data.currency = this.data.geolocation.currency;
-			}
+				if (this.data.geolocation && this.data.geolocation.currency) {
+					custom_data.currency = this.data.geolocation.currency;
+				}
+				this.log_debug(
+					'send_event(): prepared',
+					{
+						event_id: event_id,
+						event_name: event_name,
+						params: params,
+						custom_data: custom_data,
+					}
+				);
 
 			// 1. Fire browser-side via fbq with enriched data
-				if (window.fbq) {
-					var fbq_method = params.event_custom ? 'trackCustom' : 'track';
-					window.fbq(
+					if (window.fbq) {
+						var fbq_method = params.event_custom ? 'trackCustom' : 'track';
+						this.log_debug(
+							'send_event(): fbq dispatch',
+							{
+								method: fbq_method,
+								event_name: event_name,
+								event_id: event_id,
+							}
+						);
+						window.fbq(
 						fbq_method,
 						event_name,
 						{
@@ -573,97 +715,119 @@
 							eventID: event_id,
 						}
 					);
-				}
-
-			// 2. POST to WordPress for server-side dispatch
-			try {
-				fetch(
-					this.config.api_event,
-					{
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'X-Alvobot-Nonce': this.config.nonce || '',
-							},
-						body: JSON.stringify(
-							{
-								event_id: event_id,
-								event_name: event_name,
-								event_url: window.location.href,
-								page_url: window.location.href,
-								page_title: document.title,
-								page_id: this.config.page_id,
-								referrer: document.referrer || '',
-								fbp: this.data.fbp,
-								fbc: this.data.fbc,
-								ip: this.data.ip,
-								browser_ip: this.data.ip,
-								user_agent: this.data.user_agent,
-								geo: this.data.geolocation,
-								utms: this.data.utms,
-								lead_id: this.data.lead_id || '',
-								user_data_hashed: this.config.user_data_hashed || {},
-								custom_data: custom_data,
-								pixel_ids: params.fb_pixels || this.config.pixel_ids,
-							}
-						),
-					keepalive: true,
 					}
-				).then(
-					function (resp) {
-						if ( ! resp || ! resp.ok) {
-							return null;
+
+				// 2. POST to WordPress for server-side dispatch
+				try {
+					var eventPayload = {
+						event_id: event_id,
+						event_name: event_name,
+						event_url: window.location.href,
+						page_url: window.location.href,
+						page_title: document.title,
+						page_id: this.config.page_id,
+						referrer: document.referrer || '',
+						fbp: this.data.fbp,
+						fbc: this.data.fbc,
+						ip: this.data.ip,
+						browser_ip: this.data.ip,
+						user_agent: this.data.user_agent,
+						geo: this.data.geolocation,
+						utms: this.data.utms,
+						lead_id: this.data.lead_id || '',
+						user_data_hashed: this.config.user_data_hashed || {},
+						custom_data: custom_data,
+						pixel_ids: params.fb_pixels || this.config.pixel_ids,
+					};
+					this.log_debug( 'send_event(): POST /events/track payload', eventPayload );
+					fetch(
+						this.config.api_event,
+						{
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'X-Alvobot-Nonce': this.config.nonce || '',
+								},
+							body: JSON.stringify( eventPayload ),
+						keepalive: true,
 						}
+					).then(
+						function (resp) {
+							self.log_debug(
+								'send_event(): /events/track response headers',
+								{
+									ok: !! (resp && resp.ok),
+									status: resp ? resp.status : 0,
+								}
+							);
+							if ( ! resp || ! resp.ok) {
+								return null;
+							}
 						return resp.json().catch(
 							function () {
 								return null;
 							}
 						);
 					}
-				).then(
-					function (result) {
-						if ( ! result) {
-							return;
-						}
+					).then(
+						function (result) {
+							if ( ! result) {
+								self.log_warn( 'send_event(): empty/non-OK response body from /events/track' );
+								return;
+							}
+							self.log_debug( 'send_event(): /events/track response body', result );
 
 						if (result.resolved_ip) {
 							var currentIsPublic  = self.data.ip && ! self.is_private_ip( self.data.ip );
 							var resolvedIsPublic = ! self.is_private_ip( result.resolved_ip );
-							if (resolvedIsPublic && ! currentIsPublic) {
-								self.data.ip = result.resolved_ip;
-								try {
-									sessionStorage.setItem( 'alvobot_ip', result.resolved_ip );
-								} catch (e) {
+								if (resolvedIsPublic && ! currentIsPublic) {
+									self.data.ip = result.resolved_ip;
+									self.log_debug( 'send_event(): updated in-memory IP from server', { resolved_ip: result.resolved_ip } );
+									try {
+										sessionStorage.setItem( 'alvobot_ip', result.resolved_ip );
+									} catch (e) {
 									/* ignore */ }
 							}
 						}
 
-						if (result.resolved_geo && result.resolved_geo.city && ( ! self.data.geolocation || ! self.data.geolocation.city )) {
-							self.data.geolocation = result.resolved_geo;
+							if (result.resolved_geo && result.resolved_geo.city && ( ! self.data.geolocation || ! self.data.geolocation.city )) {
+								self.data.geolocation = result.resolved_geo;
+								self.log_debug( 'send_event(): updated in-memory geo from server', result.resolved_geo );
+							}
 						}
-					}
-				).catch(
-					function () {
-						/* ignore */ }
-				);
-			} catch (e) {
-				// Fire-and-forget
+					).catch(
+						function (err) {
+							self.log_error( 'send_event(): fetch failed', err && err.message ? err.message : err );
+							/* ignore */ }
+					);
+				} catch (e) {
+					this.log_error( 'send_event(): unexpected error before fetch', e && e.message ? e.message : e );
+					// Fire-and-forget
+				}
 			}
-		}
 
 		/**
 		 * Monitor forms for lead capture.
 		 */
-		monitor_forms() {
-			var self = this;
+			monitor_forms() {
+				var self = this;
+				this.log_debug( 'monitor_forms(): starting DOM scan loop' );
 
-			function scanForms() {
-				document.querySelectorAll( 'form' ).forEach(
-					function (form) {
-						if (form.classList.contains( 'alvobot_tracked' )) {
-							return;
-						}
-						form.classList.add( 'alvobot_tracked' );
+				function scanForms() {
+					document.querySelectorAll( 'form' ).forEach(
+						function (form) {
+							if (form.classList.contains( 'alvobot_tracked' )) {
+								return;
+							}
+							form.classList.add( 'alvobot_tracked' );
+							self.log_debug(
+								'monitor_forms(): form instrumented',
+								{
+									action: form.getAttribute( 'action' ) || '',
+									id: form.getAttribute( 'id' ) || '',
+									name: form.getAttribute( 'name' ) || '',
+								}
+							);
 
 						form.addEventListener(
 							'submit',
@@ -696,9 +860,9 @@
 		/**
 		 * Extract lead data from a form and send to server.
 		 */
-		capture_form_data(form) {
-			var data   = {};
-			var inputs = form.querySelectorAll( 'input, select, textarea' );
+			capture_form_data(form) {
+				var data   = {};
+				var inputs = form.querySelectorAll( 'input, select, textarea' );
 
 			for (var i = 0; i < inputs.length; i++) {
 				var input = inputs[i];
@@ -730,19 +894,22 @@
 				}
 			}
 
-			// Only send if we have at least an email
-			if (data.email) {
-				this.send_lead_data( data );
+				// Only send if we have at least an email
+				if (data.email) {
+					this.log_debug( 'capture_form_data(): lead candidate found', data );
+					this.send_lead_data( data );
+				} else {
+					this.log_debug( 'capture_form_data(): skipped, no email found' );
+				}
 			}
-		}
 
 		/**
 		 * Send lead data to the WordPress REST API.
 		 */
-		async send_lead_data(formData) {
-			var lead_id = this.data.lead_id || this.generate_event_id();
+			async send_lead_data(formData) {
+				var lead_id = this.data.lead_id || this.generate_event_id();
 
-			var payload = {
+				var payload = {
 				lead_id: lead_id,
 				email: formData.email || '',
 				name: formData.name || '',
@@ -757,11 +924,12 @@
 				geo: this.data.geolocation,
 				utms: this.data.utms,
 				src: this.data.utms ? this.data.utms.src : '',
-				sck: this.data.utms ? this.data.utms.sck : '',
-			};
+					sck: this.data.utms ? this.data.utms.sck : '',
+				};
+				this.log_debug( 'send_lead_data(): POST /leads/track payload', payload );
 
-			try {
-				var resp = await fetch(
+				try {
+					var resp = await fetch(
 					this.config.api_lead,
 					{
 							method: 'POST',
@@ -770,47 +938,60 @@
 								'X-Alvobot-Nonce': this.config.nonce || '',
 							},
 						body: JSON.stringify( payload ),
-					}
-				);
+						}
+					);
+					this.log_debug(
+						'send_lead_data(): /leads/track response headers',
+						{
+							ok: !! (resp && resp.ok),
+							status: resp ? resp.status : 0,
+						}
+					);
 
-				var result = await resp.json();
-				if (result && result.success && result.lead_id) {
-						this.data.lead_id = result.lead_id;
-						this.set_cookie( 'alvobot_lead_id', result.lead_id );
-				}
+					var result = await resp.json();
+					this.log_debug( 'send_lead_data(): /leads/track response body', result );
+					if (result && result.success && result.lead_id) {
+							this.data.lead_id = result.lead_id;
+							this.set_cookie( 'alvobot_lead_id', result.lead_id );
+							this.log_debug( 'send_lead_data(): lead_id updated', { lead_id: result.lead_id } );
+					}
 				if (result && result.resolved_ip) {
 					var currentIsPublic  = this.data.ip && ! this.is_private_ip( this.data.ip );
 					var resolvedIsPublic = ! this.is_private_ip( result.resolved_ip );
-					if (resolvedIsPublic && ! currentIsPublic) {
-						this.data.ip = result.resolved_ip;
-						try {
+						if (resolvedIsPublic && ! currentIsPublic) {
+							this.data.ip = result.resolved_ip;
+							this.log_debug( 'send_lead_data(): updated in-memory IP from server', { resolved_ip: result.resolved_ip } );
+							try {
 							sessionStorage.setItem( 'alvobot_ip', result.resolved_ip );
 						} catch (e) {
 							/* ignore */ }
 					}
 				}
-				if (result && result.resolved_geo && result.resolved_geo.city && ( ! this.data.geolocation || ! this.data.geolocation.city )) {
-					this.data.geolocation = result.resolved_geo;
+					if (result && result.resolved_geo && result.resolved_geo.city && ( ! this.data.geolocation || ! this.data.geolocation.city )) {
+						this.data.geolocation = result.resolved_geo;
+						this.log_debug( 'send_lead_data(): updated in-memory geo from server', result.resolved_geo );
+					}
+				} catch (e) {
+					this.log_error( 'send_lead_data(): request failed', e && e.message ? e.message : e );
+					// Silent failure for lead capture
 				}
-			} catch (e) {
-				// Silent failure for lead capture
 			}
-		}
 
 		/**
 		 * Set a cookie with standard tracking defaults.
 		 */
-		set_cookie(name, value) {
+			set_cookie(name, value) {
 			var expires = new Date();
 			expires.setTime( expires.getTime() + (180 * 24 * 60 * 60 * 1000) ); // 180 days
 			var cookie = name + '=' + encodeURIComponent( value ) +
 			';expires=' + expires.toUTCString() +
 			';path=/;SameSite=Lax';
-			if (window.location.protocol === 'https:') {
-				cookie += ';Secure';
+				if (window.location.protocol === 'https:') {
+					cookie += ';Secure';
+				}
+				document.cookie = cookie;
+				this.log_debug( 'set_cookie()', { name: name, value: value } );
 			}
-			document.cookie = cookie;
-		}
 	}
 
 	// Create global instance and auto-start
