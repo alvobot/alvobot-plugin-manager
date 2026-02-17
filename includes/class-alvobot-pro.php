@@ -143,7 +143,7 @@ class AlvoBotPro {
 			'file'          => 'includes/modules/pixel-tracking/class-pixel-tracking.php',
 			'class'         => 'AlvoBotPro_PixelTracking',
 			'name'          => 'Pixel Tracking',
-			'description'   => 'Gerencie pixels de rastreamento (Meta, Google, TikTok) em um só lugar.',
+			'description'   => 'Gerencie o Pixel da Meta em um só lugar.',
 			'default'       => true,
 			'settings_slug' => 'alvobot-pro-pixel-tracking',
 			'admin_menu'    => array(
