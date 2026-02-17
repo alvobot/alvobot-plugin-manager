@@ -105,11 +105,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<input type="checkbox" id="events-select-all" aria-label="<?php esc_attr_e( 'Selecionar todos os eventos visiveis', 'alvobot-pro' ); ?>">
 						</th>
 						<th><?php esc_html_e( 'Evento', 'alvobot-pro' ); ?></th>
-						<th><?php esc_html_e( 'Status', 'alvobot-pro' ); ?></th>
-						<th><?php esc_html_e( 'Pagina', 'alvobot-pro' ); ?></th>
+						<th class="alvobot-events-col-status"><?php esc_html_e( 'Status', 'alvobot-pro' ); ?></th>
+						<th class="alvobot-events-col-page"><?php esc_html_e( 'Pagina', 'alvobot-pro' ); ?></th>
 						<th><?php esc_html_e( 'IP / Localizacao', 'alvobot-pro' ); ?></th>
 						<th><?php esc_html_e( 'Identificadores', 'alvobot-pro' ); ?></th>
-						<th><?php esc_html_e( 'Pixels', 'alvobot-pro' ); ?></th>
+						<th class="alvobot-events-col-pixels"><?php esc_html_e( 'Pixels', 'alvobot-pro' ); ?></th>
 						<th><?php esc_html_e( 'Data', 'alvobot-pro' ); ?></th>
 						<th class="alvobot-events-col-actions"><?php esc_html_e( 'Acoes', 'alvobot-pro' ); ?></th>
 					</tr>

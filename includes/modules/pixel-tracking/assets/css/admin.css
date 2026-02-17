@@ -988,87 +988,97 @@
 
 /* Actions column */
 .alvobot-events-col-actions {
-	width: 50px;
+	width: 132px;
 	text-align: center;
 }
 
-/* 3-dot dropdown */
-.alvobot-events-actions-wrap {
-	position: relative;
-	display: inline-block;
+.alvobot-events-col-pixels {
+	width: 320px;
+	min-width: 320px;
 }
 
-.alvobot-events-actions-btn {
-	background: none;
-	border: 1px solid transparent;
+.alvobot-events-col-status {
+	width: 170px;
+	min-width: 170px;
+}
+
+.alvobot-events-col-page {
+	width: 320px;
+	min-width: 320px;
+}
+
+/* Inline actions */
+.alvobot-events-actions-inline {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+
+.alvobot-events-action-btn {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	background: var(--alvobot-white);
+	border: 1px solid var(--alvobot-gray-300);
 	border-radius: 4px;
 	cursor: pointer;
-	padding: 4px;
+	padding: 0;
 	color: var(--alvobot-gray-500);
 	transition: background 0.15s, border-color 0.15s;
 }
 
-.alvobot-events-actions-btn:hover {
+.alvobot-events-action-btn:hover {
 	background: var(--alvobot-gray-100);
 	border-color: var(--alvobot-gray-300);
 	color: var(--alvobot-gray-700);
 }
 
-.alvobot-events-actions-btn .alvobot-icon {
-	width: 16px;
-	height: 16px;
+.alvobot-events-action-btn .alvobot-icon {
+	width: 13px;
+	height: 13px;
 }
 
-.alvobot-events-dropdown {
+.alvobot-events-action-btn-danger {
+	color: var(--alvobot-error);
+	border-color: #f5c2c7;
+	background: #fff5f5;
+}
+
+.alvobot-events-action-btn-danger:hover {
+	border-color: #ef9a9a;
+	background: #ffecec;
+	color: #b91c1c;
+}
+
+.alvobot-events-action-btn::after {
+	content: attr(data-tooltip);
 	position: absolute;
-	right: 0;
-	top: 100%;
-	z-index: 100;
-	min-width: 160px;
-	background: var(--alvobot-white);
-	border: 1px solid var(--alvobot-gray-300);
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-	padding: 4px 0;
+	right: calc(100% + 8px);
+	top: 50%;
+	transform: translateY(-50%);
+	padding: 4px 6px;
+	border-radius: 4px;
+	background: #111827;
+	color: #fff;
+	font-size: 11px;
+	line-height: 1;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.12s ease;
+	z-index: 100050;
 }
 
-.alvobot-events-dropdown-item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	width: 100%;
-	padding: 8px 12px;
-	border: none;
-	background: none;
-	cursor: pointer;
-	font-size: 13px;
-	color: var(--alvobot-gray-700);
-	text-align: left;
-	transition: background 0.1s;
-}
-
-.alvobot-events-dropdown-item:hover {
-	background: var(--alvobot-gray-100);
-}
-
-.alvobot-events-dropdown-item .alvobot-icon {
-	width: 14px;
-	height: 14px;
-	color: var(--alvobot-gray-500);
-}
-
-.alvobot-events-dropdown-danger {
-	color: var(--alvobot-error);
-}
-
-.alvobot-events-dropdown-danger .alvobot-icon {
-	color: var(--alvobot-error);
-}
-
-.alvobot-events-dropdown-divider {
-	border: none;
-	border-top: 1px solid var(--alvobot-gray-200);
-	margin: 4px 0;
+.alvobot-events-action-btn:hover::after,
+.alvobot-events-action-btn:focus-visible::after {
+	opacity: 1;
+	visibility: visible;
 }
 
 /* Pagination */

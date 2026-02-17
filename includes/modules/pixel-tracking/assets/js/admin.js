@@ -1098,10 +1098,10 @@
 				html += '</td>';
 
 				// Status badge
-					html += '<td>' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</td>';
+					html += '<td class="alvobot-events-col-status">' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</td>';
 
 				// Page URL + title
-				html += '<td>';
+				html += '<td class="alvobot-events-col-page">';
 				html += '<div class="alvobot-events-cell-page">';
 				if (e.page_title) {
 					html += '<span class="alvobot-events-page-title">' + escHtml( truncate( e.page_title, 30 ) ) + '</span>';
@@ -1142,7 +1142,7 @@
 				html += '</td>';
 
 				// Pixels
-				html += '<td>';
+				html += '<td class="alvobot-events-col-pixels">';
 				html += '<div class="alvobot-events-cell-pixels">';
 				if (e.pixel_ids) {
 					var pIds = e.pixel_ids.split( ',' );
@@ -1171,27 +1171,21 @@
 				html += '</div>';
 				html += '</td>';
 
-				// Actions (3-dot menu)
+				// Actions (icon buttons)
 				html += '<td class="alvobot-events-col-actions">';
-				html += '<div class="alvobot-events-actions-wrap">';
-				html += '<button type="button" class="alvobot-events-actions-btn" data-event-id="' + escAttr( e.event_id ) + '">';
-				html += '<i data-lucide="more-vertical" class="alvobot-icon"></i>';
+				html += '<div class="alvobot-events-actions-inline">';
+				html += '<button type="button" class="alvobot-events-action-btn" data-action="view" data-event-id="' + escAttr( e.event_id ) + '" data-tooltip="Detalhes" title="Detalhes" aria-label="Detalhes">';
+				html += '<i data-lucide="eye" class="alvobot-icon"></i>';
 				html += '</button>';
-				html += '<div class="alvobot-events-dropdown" style="display:none;">';
-				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="view" data-event-id="' + escAttr( e.event_id ) + '">';
-				html += '<i data-lucide="eye" class="alvobot-icon"></i> Detalhes';
+				html += '<button type="button" class="alvobot-events-action-btn" data-action="logs" data-event-id="' + escAttr( e.event_id ) + '" data-tooltip="Logs CAPI" title="Logs CAPI" aria-label="Logs CAPI">';
+				html += '<i data-lucide="file-text" class="alvobot-icon"></i>';
 				html += '</button>';
-				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="logs" data-event-id="' + escAttr( e.event_id ) + '">';
-				html += '<i data-lucide="file-text" class="alvobot-icon"></i> Logs CAPI';
+				html += '<button type="button" class="alvobot-events-action-btn" data-action="resend" data-event-id="' + escAttr( e.event_id ) + '" data-tooltip="Reenviar" title="Reenviar" aria-label="Reenviar">';
+				html += '<i data-lucide="refresh-cw" class="alvobot-icon"></i>';
 				html += '</button>';
-				html += '<button type="button" class="alvobot-events-dropdown-item" data-action="resend" data-event-id="' + escAttr( e.event_id ) + '">';
-				html += '<i data-lucide="refresh-cw" class="alvobot-icon"></i> Reenviar';
+				html += '<button type="button" class="alvobot-events-action-btn alvobot-events-action-btn-danger" data-action="delete" data-event-id="' + escAttr( e.event_id ) + '" data-tooltip="Excluir" title="Excluir" aria-label="Excluir">';
+				html += '<i data-lucide="trash-2" class="alvobot-icon"></i>';
 				html += '</button>';
-				html += '<hr class="alvobot-events-dropdown-divider">';
-				html += '<button type="button" class="alvobot-events-dropdown-item alvobot-events-dropdown-danger" data-action="delete" data-event-id="' + escAttr( e.event_id ) + '">';
-				html += '<i data-lucide="trash-2" class="alvobot-icon"></i> Excluir';
-				html += '</button>';
-				html += '</div>';
 				html += '</div>';
 				html += '</td>';
 
@@ -1359,117 +1353,20 @@
 				$( '#events-next-btn' ).prop( 'disabled', currentPage >= maxPage );
 			}
 
-			function closeEventDropdowns() {
-				$( '.alvobot-events-dropdown' )
-				.hide()
-				.removeClass( 'is-open' )
-				.css(
-					{
-						position: '',
-						left: '',
-						top: '',
-						right: '',
-						bottom: '',
-						transform: '',
-						visibility: '',
-						zIndex: '',
-					}
-				);
-			}
-
-			function openEventDropdown($btn, $dropdown) {
-				var gap   = 8;
-				var rect  = $btn[0].getBoundingClientRect();
-
-				closeEventDropdowns();
-
-				// Temporarily render invisibly to measure and then place in viewport.
-				$dropdown.css(
-					{
-						display: 'block',
-						visibility: 'hidden',
-						position: 'fixed',
-						right: 'auto',
-						bottom: 'auto',
-						transform: 'none',
-					}
-				);
-
-				var menuWidth  = $dropdown.outerWidth() || 160;
-				var menuHeight = $dropdown.outerHeight() || 140;
-				var left       = rect.right + gap;
-				var top        = rect.top;
-
-				// Prefer opening to the right of the actions column; fallback to left.
-				if (left + menuWidth > window.innerWidth - gap) {
-					left = rect.left - menuWidth - gap;
-				}
-				if (left < gap) {
-					left = gap;
-				}
-
-				// Keep menu fully visible vertically.
-				if (top + menuHeight > window.innerHeight - gap) {
-					top = window.innerHeight - menuHeight - gap;
-				}
-				if (top < gap) {
-					top = gap;
-				}
-
-				$dropdown
-				.css(
-					{
-						left: left + 'px',
-						top: top + 'px',
-						visibility: 'visible',
-						zIndex: 100050,
-					}
-				)
-				.addClass( 'is-open' );
-			}
-
-			// ---- 3-dot menu + item actions (deterministic handlers) ----
+			// ---- Direct icon actions ----
 			$( document )
-			.off( 'click.alvobotEventsActionBtn', '.alvobot-events-actions-btn' )
+			.off( 'click.alvobotEventsIconAction', '.alvobot-events-action-btn' )
 			.on(
-				'click.alvobotEventsActionBtn',
-				'.alvobot-events-actions-btn',
+				'click.alvobotEventsIconAction',
+				'.alvobot-events-action-btn',
 				function (e) {
 					e.preventDefault();
-					e.stopPropagation();
+					e.stopImmediatePropagation();
 
-					var $btn      = $( this );
-					var $dropdown = $btn.siblings( '.alvobot-events-dropdown' );
-					var eventId   = String( $btn.data( 'event-id' ) || '' );
-					var isOpen    = $dropdown.hasClass( 'is-open' ) && $dropdown.is( ':visible' );
-
-					debugLog( 'events tab: action button clicked', { event_id: eventId, was_open: isOpen } );
-
-					if (isOpen) {
-						closeEventDropdowns();
-						debugLog( 'events tab: action menu closed', { event_id: eventId } );
-						return;
-					}
-
-					openEventDropdown( $btn, $dropdown );
-					debugLog( 'events tab: action menu opened', { event_id: eventId } );
-				}
-			);
-
-			$( document )
-			.off( 'click.alvobotEventsActionItem', '.alvobot-events-dropdown-item' )
-			.on(
-				'click.alvobotEventsActionItem',
-				'.alvobot-events-dropdown-item',
-				function (e) {
-					e.preventDefault();
-					e.stopPropagation();
-
-					var $item   = $( this );
-					var action  = $item.data( 'action' );
-					var eventId = $item.data( 'event-id' );
-					debugLog( 'events tab: dropdown action clicked', { action: action, event_id: eventId } );
-					closeEventDropdowns();
+					var $btn    = $( this );
+					var action  = String( $btn.data( 'action' ) || '' );
+					var eventId = String( $btn.data( 'event-id' ) || '' );
+					debugLog( 'events tab: inline action clicked', { action: action, event_id: eventId } );
 
 					switch (action) {
 						case 'view':
@@ -1484,52 +1381,6 @@
 						case 'delete':
 							deleteEvent( eventId );
 							break;
-					}
-				}
-			);
-
-			// Keep dropdown open when clicking inside its container.
-			$( document )
-			.off( 'click.alvobotEventsDropdownShell', '.alvobot-events-dropdown' )
-			.on(
-				'click.alvobotEventsDropdownShell',
-				'.alvobot-events-dropdown',
-				function (e) {
-					e.stopPropagation();
-				}
-			);
-
-			// Click outside closes all menus.
-			$( document )
-			.off( 'click.alvobotEventsOutside' )
-			.on(
-				'click.alvobotEventsOutside',
-				function (e) {
-					var $target = $( e.target );
-					if ( $target.closest( '.alvobot-events-actions-wrap' ).length || $target.closest( '.alvobot-events-dropdown' ).length ) {
-						return;
-					}
-					closeEventDropdowns();
-				}
-			);
-
-			// Close floating menus when viewport changes.
-			$( window )
-			.off( 'scroll.alvobotEventsPosition resize.alvobotEventsPosition' )
-			.on(
-				'scroll.alvobotEventsPosition resize.alvobotEventsPosition',
-				function () {
-					closeEventDropdowns();
-				}
-			);
-
-			$( document )
-			.off( 'keydown.alvobotEventsEsc' )
-			.on(
-				'keydown.alvobotEventsEsc',
-				function (e) {
-					if (e.key === 'Escape') {
-						closeEventDropdowns();
 					}
 				}
 			);

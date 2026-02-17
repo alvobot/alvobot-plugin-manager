@@ -18,6 +18,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 		private $module;
 		private $max_retries = 3;
+		private $dispatch_lock_key = 'alvobot_pixel_dispatch_process_lock';
+		private $dispatch_lock_ttl = 600;
 
 	public function __construct( $module ) {
 			$this->module = $module;
@@ -74,107 +76,229 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$target_event_post_id = absint( $context['event_post_id'] );
 		}
 
-		$settings = $this->module->get_settings();
-		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-
-		if ( empty( $pixels ) ) {
-			return array(
-				'events_sent'   => 0,
-				'events_failed' => 0,
-			);
-		}
-
-		$min_age_seconds = 'queue' === $dispatch_source ? 300 : 0;
-		$events          = $this->module->cpt->get_pending_events( 250, $min_age_seconds );
-
-		// For real-time dispatch triggered by track_event, send only that event.
-		if ( 'track_event' === $dispatch_source && $target_event_post_id > 0 ) {
-			$target_event = get_post( $target_event_post_id );
-			if ( $target_event instanceof WP_Post
-				&& 'alvobot_pixel_event' === $target_event->post_type
-				&& 'pixel_pending' === $target_event->post_status ) {
-				$events = array( $target_event );
-			} else {
-				$events = array();
-			}
-		}
-
-		if ( empty( $events ) ) {
-			return array(
-				'events_sent'   => 0,
-				'events_failed' => 0,
-			);
-		}
-
-		AlvoBotPro::debug_log( 'pixel-tracking', 'Processing ' . count( $events ) . " pending events ({$dispatch_source})" );
-
-		// Build two lists:
-		// - $all_capi_pixels: all pixels with a token (including expired) — used for delivery check
-		// so events for expired pixels stay pending until token is refreshed.
-		// - $active_pixels: only pixels with a valid (non-expired) token — used for actual sending.
-		$all_capi_pixels = array();
-		$active_pixels   = array();
-		foreach ( $pixels as $pixel_config ) {
-			if ( empty( $pixel_config['pixel_id'] ) || empty( $pixel_config['api_token'] ) ) {
-				continue;
-			}
-			$all_capi_pixels[] = $pixel_config;
-			if ( ! empty( $pixel_config['token_expired'] ) ) {
-				AlvoBotPro::debug_log( 'pixel-tracking', "Skipping pixel {$pixel_config['pixel_id']}: token expired (events kept pending)" );
-				continue;
-			}
-			$active_pixels[] = $pixel_config;
-		}
-
-		if ( empty( $all_capi_pixels ) ) {
-			AlvoBotPro::debug_log( 'pixel-tracking', 'No CAPI-capable pixels configured, skipping dispatch' );
-			return array(
-				'events_sent'   => 0,
-				'events_failed' => 0,
-			);
-		}
-
-		if ( empty( $active_pixels ) ) {
-			AlvoBotPro::debug_log( 'pixel-tracking', 'All CAPI pixels have expired tokens — events kept pending for backlog' );
-			return array(
-				'events_sent'   => 0,
-				'events_failed' => 0,
-			);
-		}
-
-		// Send to each active pixel using split-batch logic on failure.
-		foreach ( $active_pixels as $pixel_config ) {
-			$this->process_pixel_batch( $events, $pixel_config, $settings );
-		}
-
-		$sent   = 0;
-		$failed = 0;
-		$ids    = wp_list_pluck( $events, 'ID' );
-
-		foreach ( $ids as $event_post_id ) {
-			$current_status = get_post_status( $event_post_id );
-
-			if ( 'pixel_error' === $current_status ) {
-				++$failed;
-				continue;
-			}
-
-			// Check delivery against ALL CAPI pixels (including expired).
-			// Events missing delivery to an expired pixel stay pending for backlog.
-			if ( ! $this->all_pixels_delivered( $event_post_id, $all_capi_pixels ) ) {
-				++$failed;
-				continue;
-			}
-
-			update_post_meta( $event_post_id, '_dispatch_channel', 'track_event' === $dispatch_source ? 'realtime' : 'queue' );
-			$this->module->cpt->mark_events_sent( array( $event_post_id ) );
-			++$sent;
-		}
-
-		return array(
-			'events_sent'   => $sent,
-			'events_failed' => $failed,
+		$lock_context = array(
+			'source'        => $dispatch_source,
+			'event_post_id' => $target_event_post_id,
 		);
+		if ( ! $this->acquire_dispatch_lock( $lock_context ) ) {
+			if ( 'track_event' === $dispatch_source && $target_event_post_id > 0 ) {
+				$this->schedule_dispatch_retry( $lock_context, 2 );
+			}
+			return array(
+				'events_sent'   => 0,
+				'events_failed' => 0,
+			);
+		}
+
+		try {
+			$settings = $this->module->get_settings();
+			$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+
+			if ( empty( $pixels ) ) {
+				return array(
+					'events_sent'   => 0,
+					'events_failed' => 0,
+				);
+			}
+
+			$min_age_seconds = 'queue' === $dispatch_source ? 300 : 0;
+			$events          = $this->module->cpt->get_pending_events( 250, $min_age_seconds );
+
+			// For real-time dispatch triggered by track_event, send only that event.
+			if ( 'track_event' === $dispatch_source && $target_event_post_id > 0 ) {
+				$target_event = get_post( $target_event_post_id );
+				if ( $target_event instanceof WP_Post
+					&& 'alvobot_pixel_event' === $target_event->post_type
+					&& 'pixel_pending' === $target_event->post_status ) {
+					$events = array( $target_event );
+				} else {
+					$events = array();
+				}
+			}
+
+			if ( empty( $events ) ) {
+				return array(
+					'events_sent'   => 0,
+					'events_failed' => 0,
+				);
+			}
+
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Processing ' . count( $events ) . " pending events ({$dispatch_source})" );
+
+			// Build two lists:
+			// - $all_capi_pixels: all pixels with a token (including expired) — used for delivery check
+			// so events for expired pixels stay pending until token is refreshed.
+			// - $active_pixels: only pixels with a valid (non-expired) token — used for actual sending.
+			$all_capi_pixels = array();
+			$active_pixels   = array();
+			foreach ( $pixels as $pixel_config ) {
+				if ( empty( $pixel_config['pixel_id'] ) || empty( $pixel_config['api_token'] ) ) {
+					continue;
+				}
+				$all_capi_pixels[] = $pixel_config;
+				if ( ! empty( $pixel_config['token_expired'] ) ) {
+					AlvoBotPro::debug_log( 'pixel-tracking', "Skipping pixel {$pixel_config['pixel_id']}: token expired (events kept pending)" );
+					continue;
+				}
+				$active_pixels[] = $pixel_config;
+			}
+
+			if ( empty( $all_capi_pixels ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'No CAPI-capable pixels configured, skipping dispatch' );
+				return array(
+					'events_sent'   => 0,
+					'events_failed' => 0,
+				);
+			}
+
+			if ( empty( $active_pixels ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'All CAPI pixels have expired tokens — events kept pending for backlog' );
+				return array(
+					'events_sent'   => 0,
+					'events_failed' => 0,
+				);
+			}
+
+			// Send to each active pixel using split-batch logic on failure.
+			foreach ( $active_pixels as $pixel_config ) {
+				$this->process_pixel_batch( $events, $pixel_config, $settings );
+			}
+
+			$sent   = 0;
+			$failed = 0;
+			$ids    = wp_list_pluck( $events, 'ID' );
+
+			foreach ( $ids as $event_post_id ) {
+				$current_status = get_post_status( $event_post_id );
+
+				if ( 'pixel_error' === $current_status ) {
+					++$failed;
+					continue;
+				}
+
+				// Check delivery against ALL CAPI pixels (including expired).
+				// Events missing delivery to an expired pixel stay pending for backlog.
+				if ( ! $this->all_pixels_delivered( $event_post_id, $all_capi_pixels ) ) {
+					++$failed;
+					continue;
+				}
+
+				update_post_meta( $event_post_id, '_dispatch_channel', 'track_event' === $dispatch_source ? 'realtime' : 'queue' );
+				$this->module->cpt->mark_events_sent( array( $event_post_id ) );
+				++$sent;
+			}
+
+			return array(
+				'events_sent'   => $sent,
+				'events_failed' => $failed,
+			);
+		} finally {
+			$this->release_dispatch_lock();
+		}
+	}
+
+	/**
+	 * Acquire a process-wide dispatch lock to prevent concurrent sends.
+	 *
+	 * @param array $context Lock context for debugging.
+	 * @return bool
+	 */
+	private function acquire_dispatch_lock( $context = array() ) {
+		$now      = time();
+		$existing = get_option( $this->dispatch_lock_key, false );
+
+		if ( false !== $existing ) {
+			$started_at = $this->extract_lock_started_at( $existing );
+			if ( $started_at > 0 && ( $now - $started_at ) > $this->dispatch_lock_ttl ) {
+				delete_option( $this->dispatch_lock_key );
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Dispatch lock was stale and got released automatically' );
+			} else {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Dispatch lock is active, skipping concurrent sender run' );
+				return false;
+			}
+		}
+
+		$payload = array(
+			'started_at' => $now,
+			'context'    => $context,
+		);
+		$acquired = add_option( $this->dispatch_lock_key, wp_json_encode( $payload ), '', 'no' );
+		if ( ! $acquired ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Dispatch lock race detected, skipping concurrent sender run' );
+			return false;
+		}
+
+		AlvoBotPro::debug_log( 'pixel-tracking', 'Dispatch lock acquired' );
+		return true;
+	}
+
+	/**
+	 * Release the process-wide dispatch lock.
+	 */
+	private function release_dispatch_lock() {
+		if ( false !== get_option( $this->dispatch_lock_key, false ) ) {
+			delete_option( $this->dispatch_lock_key );
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Dispatch lock released' );
+		}
+	}
+
+	/**
+	 * Extract lock timestamp from stored lock payload.
+	 *
+	 * @param mixed $stored_lock Stored lock value.
+	 * @return int
+	 */
+	private function extract_lock_started_at( $stored_lock ) {
+		if ( is_numeric( $stored_lock ) ) {
+			return absint( $stored_lock );
+		}
+
+		if ( is_string( $stored_lock ) && '' !== $stored_lock ) {
+			$decoded = json_decode( $stored_lock, true );
+			if ( is_array( $decoded ) && ! empty( $decoded['started_at'] ) ) {
+				return absint( $decoded['started_at'] );
+			}
+		}
+
+		if ( is_array( $stored_lock ) && ! empty( $stored_lock['started_at'] ) ) {
+			return absint( $stored_lock['started_at'] );
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Schedule a short retry for a single dispatch context.
+	 *
+	 * Used when an immediate run collides with an active lock.
+	 *
+	 * @param array $context    Dispatch context.
+	 * @param int   $delay_secs Retry delay in seconds.
+	 */
+	private function schedule_dispatch_retry( $context, $delay_secs = 2 ) {
+		$context          = is_array( $context ) ? $context : array();
+		$source           = isset( $context['source'] ) ? sanitize_key( (string) $context['source'] ) : 'manual';
+		$event_post_id    = isset( $context['event_post_id'] ) ? absint( $context['event_post_id'] ) : 0;
+		$delay_secs       = max( 1, absint( $delay_secs ) );
+		$retry_lock_key   = 'alvobot_pixel_dispatch_retry_lock_' . $source . '_' . $event_post_id;
+		$retry_lock_ttl   = max( 3, $delay_secs + 2 );
+
+		if ( get_transient( $retry_lock_key ) ) {
+			return;
+		}
+		set_transient( $retry_lock_key, 1, $retry_lock_ttl );
+
+		if ( function_exists( 'as_schedule_single_action' ) ) {
+			as_schedule_single_action( time() + $delay_secs, 'alvobot_pixel_send_events', array( $context ) );
+			AlvoBotPro::debug_log( 'pixel-tracking', "Dispatch retry scheduled via Action Scheduler (+{$delay_secs}s)" );
+			return;
+		}
+
+		wp_schedule_single_event( time() + $delay_secs, 'alvobot_pixel_send_events', array( $context ) );
+		if ( function_exists( 'spawn_cron' ) ) {
+			spawn_cron( time() );
+		}
+		AlvoBotPro::debug_log( 'pixel-tracking', "Dispatch retry scheduled via WP-Cron (+{$delay_secs}s)" );
 	}
 
 	/**
@@ -1030,16 +1154,19 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * for the next recurring cycle.
 	 */
 	public function schedule_immediate_dispatch( $reason = 'manual', $event_post_id = 0 ) {
-		$lock_key = 'alvobot_pixel_immediate_dispatch_lock';
+		$event_post_id = absint( $event_post_id );
+		$lock_key      = $event_post_id > 0
+			? 'alvobot_pixel_immediate_dispatch_lock_' . $event_post_id
+			: 'alvobot_pixel_immediate_dispatch_lock';
+
 		if ( get_transient( $lock_key ) ) {
 			return;
 		}
 		// Coalesce bursts of events into a single immediate dispatch.
 		set_transient( $lock_key, 1, 10 );
-		$context = array(
-			'source' => sanitize_key( (string) $reason ),
-		);
-		$event_post_id = absint( $event_post_id );
+			$context = array(
+				'source' => sanitize_key( (string) $reason ),
+			);
 		if ( $event_post_id > 0 ) {
 			$context['event_post_id'] = $event_post_id;
 		}
