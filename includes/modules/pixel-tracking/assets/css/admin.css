@@ -619,83 +619,117 @@
 	Events Tab
 	======================== */
 
-/* Filters bar */
+/* Flush card: removes default card padding so children control their own */
+.alvobot-card-flush {
+	padding: 0;
+}
+
+/* Toolbar container */
+.alvobot-events-toolbar {
+	padding: var(--alvobot-space-lg) var(--alvobot-space-xl);
+}
+
+/* Row: filters left, stats right — single horizontal line */
+.alvobot-events-toolbar-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--alvobot-space-lg);
+}
+
+/* Filters (left side, never wrap) */
 .alvobot-events-filters {
 	display: flex;
 	align-items: flex-end;
-	gap: 16px;
-	flex-wrap: wrap;
+	gap: var(--alvobot-space-md);
 }
 
 .alvobot-filter-group {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--alvobot-space-xs);
 }
 
 .alvobot-filter-group label {
-	font-size: 12px;
+	font-size: var(--alvobot-font-size-xs);
 	font-weight: 600;
-	color: var(--alvobot-gray-600);
+	color: var(--alvobot-gray-500);
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
 }
 
 .alvobot-filter-group .alvobot-select {
-	min-width: 160px;
-	padding: 6px 10px;
+	min-width: 150px;
+	height: 34px;
+	padding: var(--alvobot-space-xs) var(--alvobot-space-sm);
 	border: 1px solid var(--alvobot-gray-300);
-	border-radius: 6px;
-	font-size: 13px;
+	border-radius: var(--alvobot-radius-md);
+	font-size: var(--alvobot-font-size-sm);
 	background: var(--alvobot-white);
 }
 
 .alvobot-filter-actions {
 	flex-direction: row;
 	align-items: center;
-	gap: 8px;
+	gap: var(--alvobot-space-xs);
 	padding-bottom: 1px;
 }
 
-.alvobot-events-bulk-bar {
-	margin-top: 12px;
-	padding-top: 12px;
-	border-top: 1px solid var(--alvobot-gray-200);
+/* Stats summary (right side, compact pill) */
+.alvobot-events-stats-bar {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	flex-wrap: wrap;
+	gap: var(--alvobot-space-md);
+	padding: var(--alvobot-space-xs) var(--alvobot-space-md);
+	background: var(--alvobot-gray-50, #f9fafb);
+	border: 1px solid var(--alvobot-gray-200);
+	border-radius: var(--alvobot-radius-md);
+	font-size: var(--alvobot-font-size-xs);
+	color: var(--alvobot-gray-600);
+	flex-shrink: 0;
+}
+
+/* Bulk actions bar: hidden by default, slides in on selection */
+.alvobot-events-bulk-bar {
+	display: none;
+	align-items: center;
+	gap: var(--alvobot-space-lg);
+	padding: var(--alvobot-space-sm) var(--alvobot-space-xl);
+	background: var(--alvobot-primary-light, #FFFBEC);
+	border-top: 1px solid var(--alvobot-gray-200);
+	border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.alvobot-events-bulk-bar.is-visible {
+	display: flex;
 }
 
 .alvobot-events-bulk-summary {
-	font-size: 13px;
-	color: var(--alvobot-gray-700);
+	display: flex;
+	align-items: center;
+	gap: var(--alvobot-space-xs);
+	font-size: var(--alvobot-font-size-sm);
+	font-weight: 600;
+	color: var(--alvobot-gray-900);
+	white-space: nowrap;
+}
+
+.alvobot-events-bulk-summary .alvobot-icon {
+	width: 14px;
+	height: 14px;
+	color: var(--alvobot-primary-dark);
 }
 
 .alvobot-events-bulk-actions {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
+	gap: var(--alvobot-space-sm);
+	margin-left: auto;
 }
 
 .alvobot-events-bulk-actions .alvobot-select {
-	min-width: 210px;
-}
-
-/* Stats summary bar */
-.alvobot-events-stats-bar {
-	display: flex;
-	align-items: center;
-	gap: 20px;
-	padding: 10px 16px;
-	background: var(--alvobot-gray-100);
-	border: 1px solid var(--alvobot-gray-300);
-	border-radius: 8px;
-	margin-bottom: 0;
-	font-size: 13px;
-	color: var(--alvobot-gray-600);
+	min-width: 190px;
+	height: 34px;
 }
 
 .alvobot-events-stat strong {
@@ -704,14 +738,14 @@
 
 .alvobot-dot {
 	display: inline-block;
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	margin-right: 4px;
+	width: 7px;
+	height: 7px;
+	border-radius: var(--alvobot-radius-full);
+	margin-right: var(--alvobot-space-xs);
 }
 
 .alvobot-dot-warning {
-	background: var(--alvobot-warning-dark, #856404);
+	background: var(--alvobot-warning-dark);
 }
 
 .alvobot-dot-success {
@@ -740,18 +774,18 @@
 	width: 100%;
 	min-width: 1120px;
 	border-collapse: collapse;
-	font-size: 13px;
+	font-size: var(--alvobot-font-size-sm);
 }
 
 .alvobot-events-table thead th {
-	padding: 10px 12px;
+	padding: var(--alvobot-space-sm) var(--alvobot-space-md);
 	font-weight: 600;
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	color: var(--alvobot-gray-600);
-	background: var(--alvobot-gray-100);
-	border-bottom: 1px solid var(--alvobot-gray-300);
+	color: var(--alvobot-gray-500);
+	background: var(--alvobot-gray-50, #f9fafb);
+	border-bottom: 1px solid var(--alvobot-gray-200);
 	text-align: left;
 	white-space: nowrap;
 }
@@ -766,8 +800,8 @@
 }
 
 .alvobot-events-table tbody td {
-	padding: 10px 12px;
-	border-bottom: 1px solid var(--alvobot-gray-200);
+	padding: var(--alvobot-space-sm) var(--alvobot-space-md);
+	border-bottom: 1px solid var(--alvobot-gray-100);
 	vertical-align: top;
 }
 
@@ -1042,17 +1076,18 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 12px 0;
+	padding: var(--alvobot-space-md) var(--alvobot-space-xl);
+	border-top: 1px solid var(--alvobot-gray-100);
 }
 
 .alvobot-events-pagination-info {
-	font-size: 13px;
-	color: var(--alvobot-gray-600);
+	font-size: var(--alvobot-font-size-sm);
+	color: var(--alvobot-gray-500);
 }
 
 .alvobot-events-pagination-btns {
 	display: flex;
-	gap: 8px;
+	gap: var(--alvobot-space-sm);
 }
 
 /* ========================
@@ -1256,28 +1291,35 @@
 
 /* Events responsive */
 @media (max-width: 960px) {
-	.alvobot-events-filters {
+	.alvobot-events-toolbar-row {
 		flex-direction: column;
 		align-items: stretch;
+		gap: var(--alvobot-space-md);
 	}
 
-	.alvobot-events-bulk-bar {
-		flex-direction: column;
-		align-items: stretch;
+	.alvobot-events-filters {
+		flex-wrap: wrap;
+	}
+
+	.alvobot-events-stats-bar {
+		flex-wrap: wrap;
+	}
+
+	.alvobot-events-bulk-bar.is-visible {
+		flex-wrap: wrap;
 	}
 
 	.alvobot-events-bulk-actions {
-		width: 100%;
+		margin-left: 0;
 	}
 
 	.alvobot-events-bulk-actions .alvobot-select {
 		min-width: auto;
-		width: 100%;
+		flex: 1;
 	}
 
 	.alvobot-filter-group .alvobot-select {
 		min-width: auto;
-		width: 100%;
 	}
 
 	.alvobot-modal-content {
@@ -1287,13 +1329,13 @@
 }
 
 @media (max-width: 782px) {
-	.alvobot-events-stats-bar {
-		flex-wrap: wrap;
-		gap: 12px;
+	.alvobot-events-filters {
+		flex-direction: column;
+		align-items: stretch;
 	}
 
 	.alvobot-events-pagination {
 		flex-direction: column;
-		gap: 8px;
+		gap: var(--alvobot-space-sm);
 	}
 }

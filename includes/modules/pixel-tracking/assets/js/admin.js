@@ -1184,6 +1184,15 @@
 			$( '#events-bulk-clear-btn' ).prop( 'disabled', selectedCount === 0 );
 			$( '#events-bulk-apply-btn' ).prop( 'disabled', ! canApply );
 
+			// Show/hide bulk bar based on selection
+			var $bulkBar = $( '#events-bulk-bar' );
+			if (selectedCount > 0) {
+				$bulkBar.addClass( 'is-visible' );
+			} else {
+				$bulkBar.removeClass( 'is-visible' );
+				$( '#events-bulk-action' ).val( '' );
+			}
+
 			var $visibleChecks = $( '.alvobot-events-row-check' );
 			if ( ! $visibleChecks.length) {
 				$( '#events-select-all' ).prop( 'checked', false );

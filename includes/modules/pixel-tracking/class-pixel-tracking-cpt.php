@@ -445,7 +445,18 @@ class AlvoBotPro_PixelTracking_CPT {
 			return $query->posts;
 	}
 
-	public function get_pending_events( $limit = 250 ) {
+	public function get_pending_events( $limit = 250, $min_age_seconds = 300 ) {
+			$date_query = array(
+				array(
+					'after' => '7 days ago',
+				),
+			);
+
+		$min_age_seconds = absint( $min_age_seconds );
+		if ( $min_age_seconds > 0 ) {
+				$date_query[0]['before'] = $min_age_seconds . ' seconds ago';
+		}
+
 			$query = new WP_Query(
 				array(
 					'post_type'      => 'alvobot_pixel_event',
@@ -453,12 +464,7 @@ class AlvoBotPro_PixelTracking_CPT {
 					'posts_per_page' => $limit,
 					'orderby'        => 'date',
 					'order'          => 'ASC',
-					'date_query'     => array(
-						array(
-							'before' => '5 minutes ago',
-							'after'  => '7 days ago',
-						),
-					),
+					'date_query'     => $date_query,
 				)
 			);
 			return $query->posts;

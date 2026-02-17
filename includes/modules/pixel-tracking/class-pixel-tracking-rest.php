@@ -1142,7 +1142,11 @@ class AlvoBotPro_PixelTracking_REST {
 	 * Authenticated: Force send pending events.
 	 */
 	public function action_send_pending() {
-		$result = $this->module->capi->process_pending_events();
+		$result = $this->module->capi->process_pending_events(
+			array(
+				'source' => 'manual',
+			)
+		);
 		return rest_ensure_response(
 			array(
 				'success' => true,
@@ -1570,6 +1574,7 @@ class AlvoBotPro_PixelTracking_REST {
 		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		$remote_addr = $this->sanitize_ip_value( $remote_addr );
 		$remote_ip   = $this->first_valid_ip_from_list( $remote_addr, true );
+		$private_fallback_ip = $remote_ip;
 
 		// Direct public client IP.
 		if ( $remote_ip && ! $this->is_private_or_loopback_ip( $remote_ip ) ) {
@@ -1586,18 +1591,27 @@ class AlvoBotPro_PixelTracking_REST {
 
 			$header_value = $this->sanitize_ip_value( (string) $raw_header );
 			$forwarded_ip = $this->first_valid_ip_from_list( $header_value, true );
-			if ( $forwarded_ip ) {
+			if ( ! $forwarded_ip ) {
+				continue;
+			}
+
+			// Prefer public forwarded addresses; keep private only as a final fallback.
+			if ( ! $this->is_private_or_loopback_ip( $forwarded_ip ) ) {
 				return $forwarded_ip;
+			}
+
+			if ( ! $private_fallback_ip ) {
+				$private_fallback_ip = $forwarded_ip;
 			}
 		}
 
 		// Browser-provided fallback is only used when server-side signals are private/loopback.
 		$browser_candidate = $this->first_valid_ip_from_list( $this->sanitize_ip_value( (string) $browser_ip ), true );
-		if ( $browser_candidate && ( ! $remote_ip || $this->is_private_or_loopback_ip( $remote_ip ) ) ) {
+		if ( $browser_candidate && ! $this->is_private_or_loopback_ip( $browser_candidate ) ) {
 			return $browser_candidate;
 		}
 
-		return $remote_ip ? $remote_ip : '0.0.0.0';
+		return $private_fallback_ip ? $private_fallback_ip : '0.0.0.0';
 	}
 
 	/**

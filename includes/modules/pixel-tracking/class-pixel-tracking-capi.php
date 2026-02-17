@@ -80,7 +80,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 			);
 		}
 
-		$events = $this->module->cpt->get_pending_events( 250 );
+		$min_age_seconds = 'queue' === $dispatch_source ? 300 : 0;
+		$events          = $this->module->cpt->get_pending_events( 250, $min_age_seconds );
 
 		if ( empty( $events ) ) {
 			return array(
