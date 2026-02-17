@@ -605,11 +605,14 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['mode'] = isset( $settings['mode'] ) && in_array( $settings['mode'], array( 'alvobot', 'manual' ), true )
 			? $settings['mode'] : 'alvobot';
 
-		// Parse pixels from hidden JSON field
-		$pixels_json = isset( $settings['pixels_json'] ) ? $settings['pixels_json'] : '[]';
-		$pixels      = json_decode( wp_unslash( $pixels_json ), true );
-		if ( ! is_array( $pixels ) ) {
-			$pixels = array();
+		// Parse pixels: use pixels_json (from pixels tab POST) or fall back to existing pixels array.
+		if ( isset( $settings['pixels_json'] ) ) {
+			$pixels = json_decode( wp_unslash( $settings['pixels_json'] ), true );
+			if ( ! is_array( $pixels ) ) {
+				$pixels = array();
+			}
+		} else {
+			$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
 		}
 
 		// Detect removed pixels and handle pending events
