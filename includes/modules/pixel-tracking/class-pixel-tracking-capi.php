@@ -464,7 +464,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 				'event_name'       => $event_name,
 				'event_time'       => $event_ts,
 				'event_id'         => $event_id,
-				'event_source_url' => get_post_meta( $post_id, '_page_url', true ),
+				'event_source_url' => $this->resolve_event_source_url( $post_id ),
 				'action_source'    => 'website',
 				'user_data'        => $user_data,
 			);
@@ -474,6 +474,178 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			return $payload;
+	}
+
+	/**
+	 * Resolve the best event_source_url for CAPI payloads.
+	 *
+	 * Prefers the captured page URL, but when it is empty or only root/home
+	 * and we have a concrete page_id, falls back to that post permalink.
+	 *
+	 * @param int $post_id Event post ID.
+	 * @return string
+	 */
+	private function resolve_event_source_url( $post_id ) {
+		$page_url = $this->normalize_event_source_url( (string) get_post_meta( $post_id, '_page_url', true ) );
+		$page_id  = absint( get_post_meta( $post_id, '_page_id', true ) );
+		$fallback = home_url( '/' );
+
+		if ( $page_id > 0 ) {
+			$permalink = get_permalink( $page_id );
+			if ( is_string( $permalink ) && '' !== $permalink ) {
+				$permalink = esc_url_raw( $permalink );
+				if ( '' !== $permalink ) {
+					$fallback = $permalink;
+				}
+			}
+		}
+
+		// Keep captured URL when it points to this site.
+		if ( '' !== $page_url && $this->is_allowed_event_source_url( $page_url ) ) {
+			// Root/home URLs can lose path in some environments; use permalink fallback.
+			if ( $this->is_home_url( $page_url ) && '' !== $fallback ) {
+				return $this->merge_url_query_fragment( $fallback, $page_url );
+			}
+			return $page_url;
+		}
+
+		return $fallback;
+	}
+
+	/**
+	 * Merge query string and fragment from source URL into base URL.
+	 *
+	 * @param string $base_url   Base URL (usually permalink).
+	 * @param string $source_url Source URL that may contain query/fragment.
+	 * @return string
+	 */
+	private function merge_url_query_fragment( $base_url, $source_url ) {
+		$base_url   = esc_url_raw( (string) $base_url );
+		$source_url = esc_url_raw( (string) $source_url );
+
+		if ( '' === $base_url || '' === $source_url ) {
+			return $base_url;
+		}
+
+		$parts    = wp_parse_url( $source_url );
+		$query    = isset( $parts['query'] ) ? (string) $parts['query'] : '';
+		$fragment = isset( $parts['fragment'] ) ? (string) $parts['fragment'] : '';
+
+		if ( '' !== $query ) {
+			$base_url .= ( false === strpos( $base_url, '?' ) ? '?' : '&' ) . $query;
+		}
+
+		if ( '' !== $fragment ) {
+			$base_url .= '#' . $fragment;
+		}
+
+		return $base_url;
+	}
+
+	/**
+	 * Normalize incoming event source URLs into absolute URLs.
+	 *
+	 * @param string $url Raw URL.
+	 * @return string
+	 */
+	private function normalize_event_source_url( $url ) {
+		$url = trim( (string) $url );
+		if ( '' === $url ) {
+			return '';
+		}
+
+		// Scheme-relative URL: //example.com/path.
+		if ( 0 === strpos( $url, '//' ) ) {
+			$home_scheme = wp_parse_url( home_url( '/' ), PHP_URL_SCHEME );
+			$url         = ( $home_scheme ? $home_scheme : 'https' ) . ':' . $url;
+		}
+
+		$parts = wp_parse_url( $url );
+		if ( false === $parts ) {
+			return '';
+		}
+
+		// Relative URL: /path or path.
+		if ( ! isset( $parts['scheme'] ) && ! isset( $parts['host'] ) ) {
+			$url = '/' === substr( $url, 0, 1 ) ? $url : '/' . ltrim( $url, '/' );
+			$url = home_url( $url );
+		}
+
+		return esc_url_raw( $url );
+	}
+
+	/**
+	 * Check whether URL host belongs to the current site.
+	 *
+	 * @param string $url Candidate URL.
+	 * @return bool
+	 */
+	private function is_allowed_event_source_url( $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return false;
+		}
+
+		$host = $this->normalize_host_for_compare( $host );
+		if ( '' === $host ) {
+			return false;
+		}
+
+		$home_host = $this->normalize_host_for_compare( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$site_host = $this->normalize_host_for_compare( (string) wp_parse_url( site_url( '/' ), PHP_URL_HOST ) );
+
+		return in_array( $host, array_filter( array( $home_host, $site_host ) ), true );
+	}
+
+	/**
+	 * Check whether a URL points to site/home root.
+	 *
+	 * @param string $url URL candidate.
+	 * @return bool
+	 */
+	private function is_home_url( $url ) {
+		$parts = wp_parse_url( esc_url_raw( (string) $url ) );
+		if ( false === $parts || empty( $parts['host'] ) ) {
+			return false;
+		}
+
+		$host = $this->normalize_host_for_compare( (string) $parts['host'] );
+		if ( '' === $host ) {
+			return false;
+		}
+
+		$path      = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
+		$path      = '/' . ltrim( $path, '/' );
+		$path      = untrailingslashit( $path );
+		$path      = '' === $path ? '/' : $path;
+		$home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$site_path = wp_parse_url( site_url( '/' ), PHP_URL_PATH );
+		$home_path = '/' . ltrim( (string) $home_path, '/' );
+		$site_path = '/' . ltrim( (string) $site_path, '/' );
+		$home_path = untrailingslashit( $home_path );
+		$site_path = untrailingslashit( $site_path );
+		$home_path = '' === $home_path ? '/' : $home_path;
+		$site_path = '' === $site_path ? '/' : $site_path;
+
+		$home_host = $this->normalize_host_for_compare( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$site_host = $this->normalize_host_for_compare( (string) wp_parse_url( site_url( '/' ), PHP_URL_HOST ) );
+
+		return ( $host === $home_host && $path === $home_path ) || ( $host === $site_host && $path === $site_path );
+	}
+
+	/**
+	 * Normalize hostnames for safe comparisons.
+	 *
+	 * @param string $host Hostname.
+	 * @return string
+	 */
+	private function normalize_host_for_compare( $host ) {
+		$host = strtolower( trim( (string) $host ) );
+		$host = rtrim( $host, '.' );
+		if ( 0 === strpos( $host, 'www.' ) ) {
+			$host = substr( $host, 4 );
+		}
+		return $host;
 	}
 
 	/**
@@ -672,6 +844,10 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 */
 	private function store_debug_payloads( $events, $payload_batch, $result, $pixel_id ) {
 		$response_payload = isset( $result['response_payload'] ) ? $result['response_payload'] : array();
+		$test_event_code = '';
+		if ( isset( $result['request_payload']['test_event_code'] ) ) {
+			$test_event_code = sanitize_text_field( (string) $result['request_payload']['test_event_code'] );
+		}
 
 		foreach ( $events as $index => $event ) {
 			$event_payload = isset( $payload_batch[ $index ] ) ? $payload_batch[ $index ] : array();
@@ -683,6 +859,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 				'event'     => $event_payload,
 				'timestamp' => time(),
 			);
+			if ( '' !== $test_event_code ) {
+				$per_event_request['test_event_code'] = $test_event_code;
+			}
 
 			// Append to existing log (multiple pixels may write to same event).
 			$existing_log = get_post_meta( $event->ID, '_fb_request_payload', true );

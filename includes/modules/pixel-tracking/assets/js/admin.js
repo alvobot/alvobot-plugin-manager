@@ -1291,53 +1291,61 @@
 				.addClass( 'is-open' );
 			}
 
-			// ---- 3-dot menu toggle ----
+			// ---- 3-dot menu + item actions (single handler to avoid click race) ----
 			$( document )
-			.off( 'click.alvobotEventsActions', '.alvobot-events-actions-btn' )
+			.off( 'click.alvobotEventsMenu' )
 			.on(
-				'click.alvobotEventsActions',
-				'.alvobot-events-actions-btn',
+				'click.alvobotEventsMenu',
 				function (e) {
-					e.preventDefault();
-					e.stopPropagation();
-					var $btn      = $( this );
-					var $dropdown = $( this ).siblings( '.alvobot-events-dropdown' );
-					var isOpen    = $dropdown.is( ':visible' );
-					if (isOpen) {
+					var $target = $( e.target );
+					var $item   = $target.closest( '.alvobot-events-dropdown-item' );
+					if ( $item.length ) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+
+						var action  = $item.data( 'action' );
+						var eventId = $item.data( 'event-id' );
+						closeEventDropdowns();
+
+						switch (action) {
+							case 'view':
+								openEventModal( eventId, 'details' );
+								break;
+							case 'logs':
+								openEventModal( eventId, 'logs' );
+								break;
+							case 'resend':
+								resendEvent( eventId );
+								break;
+							case 'delete':
+								deleteEvent( eventId );
+								break;
+						}
+						return;
+					}
+
+					var $btn = $target.closest( '.alvobot-events-actions-btn' );
+					if ( $btn.length ) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+
+						var $dropdown = $btn.siblings( '.alvobot-events-dropdown' );
+						if ( $dropdown.is( ':visible' ) ) {
+							closeEventDropdowns();
+							return;
+						}
+
+						openEventDropdown( $btn, $dropdown );
+						return;
+					}
+
+					// Clicked inside dropdown shell (outside items).
+					if ( $target.closest( '.alvobot-events-dropdown' ).length ) {
 						closeEventDropdowns();
 						return;
 					}
-					openEventDropdown( $btn, $dropdown );
-				}
-			);
 
-			// Close dropdown on outside click.
-			$( document )
-			.off( 'click.alvobotEventsOutside' )
-			.on(
-				'click.alvobotEventsOutside',
-				function (e) {
-					// Keep dropdown open while interacting with the action button/menu.
-					if (
-						$( e.target ).closest( '.alvobot-events-actions-btn' ).length ||
-						$( e.target ).closest( '.alvobot-events-dropdown' ).length
-					) {
-						return;
-					}
-					closeEventDropdowns();
-				}
-			);
-
-			// Clicking the dropdown shell (not an item) should close it.
-			$( document )
-			.off( 'click.alvobotEventsDropdownShell', '.alvobot-events-dropdown' )
-			.on(
-				'click.alvobotEventsDropdownShell',
-				'.alvobot-events-dropdown',
-				function (e) {
-					if ( $( e.target ).closest( '.alvobot-events-dropdown-item' ).length ) {
-						return;
-					}
+					// Outside click.
 					closeEventDropdowns();
 				}
 			);
@@ -1362,36 +1370,6 @@
 					}
 				}
 			);
-
-		// ---- Dropdown action handlers ----
-		$( document )
-		.off( 'click.alvobotEventsItem', '.alvobot-events-dropdown-item' )
-		.on(
-			'click.alvobotEventsItem',
-			'.alvobot-events-dropdown-item',
-				function (e) {
-					e.preventDefault();
-					e.stopPropagation();
-					var action  = $( this ).data( 'action' );
-					var eventId = $( this ).data( 'event-id' );
-					closeEventDropdowns();
-
-				switch (action) {
-					case 'view':
-						openEventModal( eventId, 'details' );
-						break;
-					case 'logs':
-						openEventModal( eventId, 'logs' );
-						break;
-					case 'resend':
-						resendEvent( eventId );
-						break;
-					case 'delete':
-						deleteEvent( eventId );
-						break;
-				}
-			}
-		);
 
 		// ---- Modal ----
 		function openEventModal(eventId, view) {
