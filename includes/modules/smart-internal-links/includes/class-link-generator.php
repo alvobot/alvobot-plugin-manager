@@ -2,12 +2,17 @@
 /**
  * Smart Internal Links - Link Generator
  * Busca posts candidatos e chama a AI API para gerar textos dos links.
+ *
+ * @package AlvoBotPro
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Gera e valida blocos de Smart Internal Links para posts.
+ */
 class AlvoBotPro_Smart_Links_Generator {
 
 	/**
@@ -20,7 +25,7 @@ class AlvoBotPro_Smart_Links_Generator {
 		$language   = null;
 
 		if ( function_exists( 'pll_get_post_language' ) ) {
-			$language = pll_get_post_language( $post_id, 'slug' );
+			$language = $this->normalize_language_slug( pll_get_post_language( $post_id, 'slug' ) );
 		}
 
 		$args = array(
@@ -90,7 +95,7 @@ class AlvoBotPro_Smart_Links_Generator {
 	 */
 	public function generate_for_post( $post_id, $settings = array() ) {
 		$post = get_post( $post_id );
-		if ( ! $post || $post->post_status !== 'publish' ) {
+		if ( ! $post || 'publish' !== $post->post_status ) {
 			return new WP_Error( 'invalid_post', 'Post não encontrado ou não publicado.' );
 		}
 
@@ -123,8 +128,9 @@ class AlvoBotPro_Smart_Links_Generator {
 			$num_blocks = max( 1, intval( floor( $available / $links_per_block ) ) );
 		}
 
-		// Determinar língua
-		$language = $this->get_language_name( $post_id );
+		// Hint de idioma (Polylang/WPML/locale) para ajudar a IA quando houver ambiguidade.
+		$language_hint_slug = $this->detect_post_language_slug( $post_id );
+		$language_hint_name = $this->get_language_name_from_slug( $language_hint_slug );
 
 		// Mapear candidatos para formato da API
 		$candidate_data = array_map(
@@ -147,7 +153,8 @@ class AlvoBotPro_Smart_Links_Generator {
 					'excerpt' => wp_trim_words( wp_strip_all_tags( $post->post_content ), 50, '' ),
 				),
 				'candidate_posts' => $candidate_data,
-				'language'        => $language,
+				'language'        => 'auto-detect',
+				'language_hint'   => $language_hint_name,
 				'links_per_block' => $links_per_block,
 				'num_blocks'      => $num_blocks,
 			)
@@ -172,6 +179,14 @@ class AlvoBotPro_Smart_Links_Generator {
 			return new WP_Error( 'invalid_response', 'A API não retornou links válidos.' );
 		}
 
+		$detected_language_slug = '';
+		if ( isset( $result['data']['detected_language'] ) && is_string( $result['data']['detected_language'] ) ) {
+			$detected_language_slug = $this->normalize_language_slug( $result['data']['detected_language'] );
+		}
+		if ( '' === $detected_language_slug ) {
+			$detected_language_slug = $language_hint_slug;
+		}
+
 		// Adicionar posições aos blocos
 		foreach ( $blocks as $i => &$block ) {
 			$block['position'] = isset( $positions[ $i ] ) ? $positions[ $i ] : $positions[0];
@@ -182,7 +197,7 @@ class AlvoBotPro_Smart_Links_Generator {
 		$meta = array(
 			'enabled'      => true,
 			'generated_at' => current_time( 'mysql' ),
-			'language'     => function_exists( 'pll_get_post_language' ) ? pll_get_post_language( $post_id, 'slug' ) : substr( get_locale(), 0, 2 ),
+			'language'     => $detected_language_slug,
 			'disclaimer'   => isset( $result['data']['disclaimer'] ) && is_string( $result['data']['disclaimer'] ) ? $result['data']['disclaimer'] : '',
 			'blocks'       => $blocks,
 		);
@@ -249,7 +264,7 @@ class AlvoBotPro_Smart_Links_Generator {
 				// Verificar se o post_id é de um candidato ou ao menos existe e está publicado
 				if ( ! isset( $valid_ids[ $link_post_id ] ) ) {
 					$link_post = get_post( $link_post_id );
-					if ( ! $link_post || $link_post->post_status !== 'publish' ) {
+					if ( ! $link_post || 'publish' !== $link_post->post_status ) {
 						continue;
 					}
 				}
@@ -278,20 +293,68 @@ class AlvoBotPro_Smart_Links_Generator {
 	}
 
 	/**
-	 * Obtém o nome legível da língua do post
+	 * Detecta slug de idioma do post por integrações da plataforma.
+	 * Não faz inferência textual local; a detecção fina fica a cargo da IA.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string
 	 */
-	private function get_language_name( $post_id ) {
-		$slug = null;
+	private function detect_post_language_slug( $post_id ) {
+		$slug = '';
 
 		if ( function_exists( 'pll_get_post_language' ) ) {
-			$slug = pll_get_post_language( $post_id, 'slug' );
+			$slug = $this->normalize_language_slug( pll_get_post_language( $post_id, 'slug' ) );
 		}
 
-		if ( ! $slug ) {
-			$slug = substr( get_locale(), 0, 2 );
+		if ( '' === $slug ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External WPML hook.
+			$wpml_details = apply_filters( 'wpml_post_language_details', null, $post_id );
+			if ( is_array( $wpml_details ) && ! empty( $wpml_details['language_code'] ) ) {
+				$slug = $this->normalize_language_slug( (string) $wpml_details['language_code'] );
+			}
 		}
 
-		// Tentar pegar nome do Polylang
+		if ( '' === $slug ) {
+			$slug = $this->normalize_language_slug( (string) substr( get_locale(), 0, 2 ) );
+		}
+
+		return '' !== $slug ? $slug : 'pt';
+	}
+
+	/**
+	 * Normaliza slug de idioma (pt_BR -> pt, ja -> ja).
+	 *
+	 * @param string $slug Slug bruto.
+	 * @return string
+	 */
+	private function normalize_language_slug( $slug ) {
+		$slug = is_string( $slug ) ? trim( strtolower( str_replace( '_', '-', $slug ) ) ) : '';
+		if ( '' === $slug ) {
+			return '';
+		}
+
+		$parts   = explode( '-', $slug );
+		$primary = isset( $parts[0] ) ? preg_replace( '/[^a-z]/', '', $parts[0] ) : '';
+		if ( ! is_string( $primary ) || '' === $primary ) {
+			return '';
+		}
+
+		return substr( $primary, 0, 3 );
+	}
+
+	/**
+	 * Obtém o nome legível da língua a partir do slug.
+	 *
+	 * @param string $slug Slug ISO de idioma.
+	 * @return string
+	 */
+	private function get_language_name_from_slug( $slug ) {
+		$slug = $this->normalize_language_slug( $slug );
+		if ( '' === $slug ) {
+			$slug = 'pt';
+		}
+
+		// Tentar pegar nome do Polylang.
 		if ( function_exists( 'PLL' ) && PLL()->model ) {
 			$lang = PLL()->model->get_language( $slug );
 			if ( $lang ) {
