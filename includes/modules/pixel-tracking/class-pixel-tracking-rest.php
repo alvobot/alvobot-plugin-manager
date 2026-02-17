@@ -295,6 +295,19 @@ class AlvoBotPro_PixelTracking_REST {
 			$data = array();
 		}
 
+		$resolved_event_url = $this->resolve_event_url_from_request( $data, $request );
+		if ( '' !== $resolved_event_url ) {
+			$data['event_url'] = $resolved_event_url;
+			if ( empty( $data['page_url'] ) || $this->is_site_root_url( (string) $data['page_url'] ) ) {
+				$data['page_url'] = $resolved_event_url;
+			}
+		}
+
+		$request_referer = $this->normalize_event_url_candidate( (string) $request->get_header( 'Referer' ) );
+		if ( '' !== $request_referer && $this->url_matches_allowed_hosts( $request_referer, $this->get_allowed_hosts() ) ) {
+			$data['request_referer'] = $request_referer;
+		}
+
 		$browser_ip = $this->extract_browser_ip_from_payload( $data );
 		$ip         = $this->get_client_ip( $browser_ip );
 
@@ -808,6 +821,7 @@ class AlvoBotPro_PixelTracking_REST {
 				'event_id'    => get_post_meta( $post->ID, '_event_id', true ),
 				'event_name'  => get_post_meta( $post->ID, '_event_name', true ),
 				'status'      => $post->post_status,
+				'event_url'   => get_post_meta( $post->ID, '_event_url', true ),
 				'page_url'    => get_post_meta( $post->ID, '_page_url', true ),
 				'page_title'  => get_post_meta( $post->ID, '_page_title', true ),
 				'ip'          => $display_ip,
@@ -902,10 +916,12 @@ class AlvoBotPro_PixelTracking_REST {
 					'event_name'       => get_post_meta( $pid, '_event_name', true ),
 					'event_time'       => get_post_meta( $pid, '_event_time', true ),
 					'status'           => $post->post_status,
+					'event_url'        => get_post_meta( $pid, '_event_url', true ),
 					'page_url'         => get_post_meta( $pid, '_page_url', true ),
 					'page_title'       => get_post_meta( $pid, '_page_title', true ),
 					'page_id'          => get_post_meta( $pid, '_page_id', true ),
 					'referrer'         => get_post_meta( $pid, '_referrer', true ),
+					'request_referer'  => get_post_meta( $pid, '_request_referer', true ),
 					'ip'               => $display_ip,
 					'browser_ip'       => $browser_ip,
 					'user_agent'       => get_post_meta( $pid, '_user_agent', true ),
@@ -1539,6 +1555,142 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		return in_array( $normalized, $allowed_hosts, true );
+	}
+
+	/**
+	 * Resolve the canonical event URL from payload + request context.
+	 *
+	 * Priority:
+	 * 1) event_url (if present)
+	 * 2) page_url
+	 * 3) request Referer (same host only)
+	 *
+	 * If payload URL collapses to root and page_id is known, prefer a non-root
+	 * same-host Referer when available.
+	 *
+	 * @param array           $data    Request payload.
+	 * @param WP_REST_Request $request REST request.
+	 * @return string
+	 */
+	private function resolve_event_url_from_request( $data, $request ) {
+		$allowed_hosts = $this->get_allowed_hosts();
+		if ( empty( $allowed_hosts ) ) {
+			return '';
+		}
+
+		$page_id   = isset( $data['page_id'] ) ? absint( $data['page_id'] ) : 0;
+		$event_url = $this->normalize_event_url_candidate( isset( $data['event_url'] ) ? (string) $data['event_url'] : '' );
+		$page_url  = $this->normalize_event_url_candidate( isset( $data['page_url'] ) ? (string) $data['page_url'] : '' );
+		$referer   = $this->normalize_event_url_candidate( (string) $request->get_header( 'Referer' ) );
+
+		$chosen = '';
+		foreach ( array( $event_url, $page_url ) as $candidate ) {
+			if ( '' === $candidate ) {
+				continue;
+			}
+			if ( $this->url_matches_allowed_hosts( $candidate, $allowed_hosts ) ) {
+				$chosen = $candidate;
+				break;
+			}
+		}
+
+		$referer_is_valid = '' !== $referer && $this->url_matches_allowed_hosts( $referer, $allowed_hosts );
+		if ( '' === $chosen ) {
+			return $referer_is_valid ? $referer : '';
+		}
+
+		if ( $page_id > 0 && $this->is_site_root_url( $chosen, $allowed_hosts ) && $referer_is_valid && ! $this->is_site_root_url( $referer, $allowed_hosts ) ) {
+			return $referer;
+		}
+
+		return $chosen;
+	}
+
+	/**
+	 * Normalize event URL candidates into absolute same-format URLs.
+	 *
+	 * @param string $url Raw URL.
+	 * @return string
+	 */
+	private function normalize_event_url_candidate( $url ) {
+		$url = trim( (string) $url );
+		if ( '' === $url ) {
+			return '';
+		}
+
+		// Scheme-relative URL: //example.com/path.
+		if ( 0 === strpos( $url, '//' ) ) {
+			$home_scheme = wp_parse_url( home_url( '/' ), PHP_URL_SCHEME );
+			$url         = ( $home_scheme ? $home_scheme : 'https' ) . ':' . $url;
+		}
+
+		$parts = wp_parse_url( $url );
+		if ( false === $parts ) {
+			return '';
+		}
+
+		// Relative URL: /path or path.
+		if ( ! isset( $parts['scheme'] ) && ! isset( $parts['host'] ) ) {
+			$url = '/' === substr( $url, 0, 1 ) ? $url : '/' . ltrim( $url, '/' );
+			$url = home_url( $url );
+		}
+
+		return esc_url_raw( $url );
+	}
+
+	/**
+	 * Check whether URL host is allowed for this site.
+	 *
+	 * @param string   $url           Candidate URL.
+	 * @param string[] $allowed_hosts Normalized host list.
+	 * @return bool
+	 */
+	private function url_matches_allowed_hosts( $url, $allowed_hosts ) {
+		$host = wp_parse_url( (string) $url, PHP_URL_HOST );
+		return $this->host_matches_allowed( $host, $allowed_hosts );
+	}
+
+	/**
+	 * Check whether URL points to site root/home.
+	 *
+	 * @param string   $url           URL candidate.
+	 * @param string[] $allowed_hosts Normalized host list.
+	 * @return bool
+	 */
+	private function is_site_root_url( $url, $allowed_hosts = array() ) {
+		$url = $this->normalize_event_url_candidate( $url );
+		if ( '' === $url ) {
+			return false;
+		}
+
+		if ( empty( $allowed_hosts ) ) {
+			$allowed_hosts = $this->get_allowed_hosts();
+		}
+
+		$parts = wp_parse_url( $url );
+		if ( false === $parts || empty( $parts['host'] ) ) {
+			return false;
+		}
+
+		if ( ! $this->host_matches_allowed( $parts['host'], $allowed_hosts ) ) {
+			return false;
+		}
+
+		$path = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
+		$path = '/' . ltrim( $path, '/' );
+		$path = untrailingslashit( $path );
+		$path = '' === $path ? '/' : $path;
+
+		$home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$site_path = wp_parse_url( site_url( '/' ), PHP_URL_PATH );
+		$home_path = '/' . ltrim( (string) $home_path, '/' );
+		$site_path = '/' . ltrim( (string) $site_path, '/' );
+		$home_path = untrailingslashit( $home_path );
+		$site_path = untrailingslashit( $site_path );
+		$home_path = '' === $home_path ? '/' : $home_path;
+		$site_path = '' === $site_path ? '/' : $site_path;
+
+		return $path === $home_path || $path === $site_path;
 	}
 
 	/**

@@ -585,6 +585,7 @@
 							{
 								event_id: event_id,
 								event_name: event_name,
+								event_url: window.location.href,
 								page_url: window.location.href,
 								page_title: document.title,
 								page_id: this.config.page_id,

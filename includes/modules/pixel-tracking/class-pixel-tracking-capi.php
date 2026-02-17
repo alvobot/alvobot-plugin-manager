@@ -316,7 +316,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$event_name = get_post_meta( $post_id, '_event_name', true );
 			$event_id   = get_post_meta( $post_id, '_event_id', true );
 			$event_time = get_post_meta( $post_id, '_event_time', true );
+			$page_id    = absint( get_post_meta( $post_id, '_page_id', true ) );
 			$public_ip  = $this->resolve_public_ip_for_capi( $post_id );
+			$event_source_url = $this->resolve_event_source_url( $post_id );
 
 			// --- user_data: not-hashed fields ---
 			$user_data = array(
@@ -427,6 +429,18 @@ class AlvoBotPro_PixelTracking_CAPI {
 					$custom_data = array();
 			}
 
+			// When page_id is known, prefer the canonical post title if content_name
+			// is missing or source URL collapsed to root/home.
+			if ( $page_id > 0 ) {
+				$needs_content_name = empty( $custom_data['content_name'] ) || ( '' !== $event_source_url && $this->is_home_url( $event_source_url ) );
+				if ( $needs_content_name ) {
+					$resolved_title = get_the_title( $page_id );
+					if ( is_string( $resolved_title ) && '' !== trim( $resolved_title ) ) {
+						$custom_data['content_name'] = $resolved_title;
+					}
+				}
+			}
+
 			// Currency from geo (fallback if not set by browser).
 			if ( empty( $custom_data['currency'] ) ) {
 					$geo_currency = get_post_meta( $post_id, '_geo_currency', true );
@@ -464,10 +478,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 				'event_name'       => $event_name,
 				'event_time'       => $event_ts,
 				'event_id'         => $event_id,
-				'event_source_url' => $this->resolve_event_source_url( $post_id ),
 				'action_source'    => 'website',
 				'user_data'        => $user_data,
 			);
+			if ( '' !== $event_source_url ) {
+				$payload['event_source_url'] = $event_source_url;
+			}
 
 			if ( ! empty( $custom_data ) ) {
 					$payload['custom_data'] = $custom_data;
@@ -486,9 +502,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * @return string
 	 */
 	private function resolve_event_source_url( $post_id ) {
-		$page_url = $this->normalize_event_source_url( (string) get_post_meta( $post_id, '_page_url', true ) );
-		$page_id  = absint( get_post_meta( $post_id, '_page_id', true ) );
-		$fallback = home_url( '/' );
+		$event_url       = $this->normalize_event_source_url( (string) get_post_meta( $post_id, '_event_url', true ) );
+		$page_url        = $this->normalize_event_source_url( (string) get_post_meta( $post_id, '_page_url', true ) );
+		$request_referer = $this->normalize_event_source_url( (string) get_post_meta( $post_id, '_request_referer', true ) );
+		$page_id         = absint( get_post_meta( $post_id, '_page_id', true ) );
+		$fallback        = '';
+		$candidates      = array( $event_url, $page_url, $request_referer );
 
 		if ( $page_id > 0 ) {
 			$permalink = get_permalink( $page_id );
@@ -500,16 +519,29 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 		}
 
-		// Keep captured URL when it points to this site.
-		if ( '' !== $page_url && $this->is_allowed_event_source_url( $page_url ) ) {
-			// Root/home URLs can lose path in some environments; use permalink fallback.
-			if ( $this->is_home_url( $page_url ) && '' !== $fallback ) {
-				return $this->merge_url_query_fragment( $fallback, $page_url );
+		// Prefer first allowed non-home URL (event_url/page_url/referer).
+		foreach ( $candidates as $candidate ) {
+			if ( '' === $candidate || ! $this->is_allowed_event_source_url( $candidate ) ) {
+				continue;
 			}
-			return $page_url;
+			if ( ! $this->is_home_url( $candidate ) ) {
+				return $candidate;
+			}
 		}
 
-		return $fallback;
+		// If only root/home is available, use permalink fallback when possible.
+		foreach ( $candidates as $candidate ) {
+			if ( '' === $candidate || ! $this->is_allowed_event_source_url( $candidate ) ) {
+				continue;
+			}
+			if ( $this->is_home_url( $candidate ) && '' !== $fallback ) {
+				return $this->merge_url_query_fragment( $fallback, $candidate );
+			}
+
+			return $candidate;
+		}
+
+		return esc_url_raw( (string) $fallback );
 	}
 
 	/**
