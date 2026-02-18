@@ -519,19 +519,28 @@
 	//
 	// Técnica blur/focus para detectar cliques em iframes cross-origin.
 	//
-	// Proteção anti-falso-positivo para vinheta:
-	//   Quando a vinheta abre, o Google auto-foca o iframe (programaticamente),
-	//   disparando window.blur sem nenhum clique real. Esse blur ocorre dentro
-	//   do primeiro segundo após a abertura.
+	// Proteção anti-falso-positivo para vinheta (3 camadas):
 	//
-	//   Solução: ignorar blurs de iframe interstitial que chegam com menos de
-	//   VIGNETTE_CLICK_GRACE_MS desde vignetteOpenTimestamp. Ao suprimir o
-	//   auto-foco, restaura-se window.focus() para que o blur do clique real
-	//   possa ser detectado na sequência.
+	//   Camada 1 — Grace period:
+	//     Quando a vinheta abre, o Google auto-foca o iframe (programaticamente),
+	//     disparando window.blur sem nenhum clique real. Esse blur ocorre dentro
+	//     do primeiro segundo após a abertura. Blurs nesse período são ignorados.
+	//
+	//   Camada 2 — Validação por navegação (deferred dispatch):
+	//     Após o grace period, blur no iframe da vinheta NÃO dispara o evento
+	//     imediatamente. Em vez disso, aguardamos um curto período para distinguir:
+	//       - Clique real no anúncio → abre nova aba ou navega (page hidden / beforeunload)
+	//       - Dismissal (fechar/clicar fora) → vinheta fecha (body aria-hidden muda)
+	//     Apenas cliques que causam navegação são contados como ad_vignette_click.
+	//
+	//   Camada 3 — Deduplicação:
+	//     clicksFired[iframeId] evita duplicatas por iframe (cooldown de 3s).
 	// -------------------------------------------------------------------------
 
-	var VIGNETTE_CLICK_GRACE_MS = 1000; // ms de grace period após abertura da vinheta
-	var clicksFired             = {};
+	var VIGNETTE_CLICK_GRACE_MS   = 1000; // ms de grace period após abertura da vinheta
+	var VIGNETTE_CLICK_CONFIRM_MS = 2000; // ms para confirmar se houve navegação
+	var clicksFired               = {};
+	var pendingVignetteClick      = null; // apenas um pendente por vez
 
 	function isAdIframe(el) {
 		if ( ! el || el.tagName !== 'IFRAME') {
@@ -548,6 +557,144 @@
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Validação deferred de clique na vinheta.
+	 *
+	 * Em vez de disparar ad_vignette_click imediatamente no blur, aguarda sinais
+	 * que confirmem que o usuário realmente clicou no anúncio (navegação) ou que
+	 * simplesmente fechou a vinheta (dismissal).
+	 *
+	 * Sinais de CONFIRMAÇÃO (clique real):
+	 *   - visibilitychange → hidden  (nova aba abriu ou navegação ocorreu)
+	 *   - beforeunload               (navegação na mesma aba)
+	 *
+	 * Sinais de CANCELAMENTO (dismissal):
+	 *   - body aria-hidden muda de 'true' para qualquer outro valor (vinheta fechou)
+	 *   - #google_vignette removido da URL
+	 *   - timeout sem nenhum sinal de navegação
+	 */
+	function deferVignetteClick(position, slotId, iframeId) {
+		// Apenas um clique pendente por vez
+		if (pendingVignetteClick) {
+			log( 'Vignette click já pendente — ignorando blur adicional' );
+			return;
+		}
+
+		log( 'Vignette click detectado — aguardando confirmação de navegação (' + VIGNETTE_CLICK_CONFIRM_MS + 'ms)' );
+
+		var resolved  = false;
+		var timeoutId = null;
+		var dismissObs = null;
+
+		function confirm(source) {
+			if (resolved) {
+				return;
+			}
+			resolved = true;
+			cleanup();
+
+			if (clicksFired[iframeId]) {
+				log( 'Vignette click confirmado mas já disparado para:', iframeId );
+				return;
+			}
+			clicksFired[iframeId] = true;
+
+			log( 'Vignette click CONFIRMADO:', source );
+			dispatchAdEvent( 'ad_vignette_click', position, slotId );
+
+			setTimeout(
+				function () {
+					delete clicksFired[iframeId];
+				},
+				3000
+			);
+		}
+
+		function cancel(source) {
+			if (resolved) {
+				return;
+			}
+			resolved = true;
+			cleanup();
+			log( 'Vignette click DESCARTADO:', source );
+
+			// Restaura foco para detectar próximos eventos
+			setTimeout(
+				function () {
+					if (typeof window.focus === 'function') {
+						window.focus();
+					}
+				},
+				500
+			);
+		}
+
+		function cleanup() {
+			pendingVignetteClick = null;
+			if (timeoutId) {
+				clearTimeout( timeoutId );
+			}
+			document.removeEventListener( 'visibilitychange', onVisibilityChange );
+			window.removeEventListener( 'beforeunload', onBeforeUnload );
+			window.removeEventListener( 'hashchange', onHashPopstate );
+			window.removeEventListener( 'popstate', onHashPopstate );
+			if (dismissObs) {
+				dismissObs.disconnect();
+			}
+		}
+
+		// --- Sinais de confirmação (clique real) ---
+
+		function onVisibilityChange() {
+			if (document.hidden) {
+				confirm( 'page hidden (nova aba ou navegação)' );
+			}
+		}
+
+		function onBeforeUnload() {
+			confirm( 'beforeunload (navegação na mesma aba)' );
+		}
+
+		// --- Sinais de cancelamento (dismissal) ---
+
+		function onHashPopstate() {
+			if ( ! hasGoogleVignetteMarker( window.location.href )) {
+				cancel( 'vinheta fechou (#google_vignette removido da URL)' );
+			}
+		}
+
+		// Observa body aria-hidden mudando de 'true' (vinheta fechando)
+		if ('MutationObserver' in window) {
+			dismissObs = new MutationObserver(
+				function () {
+					var val = document.body.getAttribute( 'aria-hidden' );
+					if (val !== 'true') {
+						cancel( 'vinheta fechou (body aria-hidden=' + (val || 'removed') + ')' );
+					}
+				}
+			);
+			dismissObs.observe(
+				document.body,
+				{attributes: true, attributeFilter: ['aria-hidden']}
+			);
+		}
+
+		document.addEventListener( 'visibilitychange', onVisibilityChange );
+		window.addEventListener( 'beforeunload', onBeforeUnload );
+		window.addEventListener( 'hashchange', onHashPopstate );
+		window.addEventListener( 'popstate', onHashPopstate );
+
+		pendingVignetteClick = {confirm: confirm, cancel: cancel};
+
+		// Timeout: sem sinal de navegação → descarta (conservador)
+		timeoutId = setTimeout(
+			function () {
+				cancel( 'timeout — nenhuma navegação detectada em ' + VIGNETTE_CLICK_CONFIRM_MS + 'ms' );
+			},
+			VIGNETTE_CLICK_CONFIRM_MS
+		);
 	}
 
 	function setupClickTracking() {
@@ -571,10 +718,7 @@
 
 							// Proteção 1: vinheta ainda não detectada
 							if ( ! vignetteOpened) {
-								// O iframe de interstitial tem foco → vinheta abriu.
-								// Fallback final para cenários onde URL/DOM não entregam sinal confiável.
 								markVignetteAsOpen( 'blur fallback: interstitial iframe got focus' );
-								// elapsed ≈ 0ms → cai no grace period abaixo e suprime o auto-foco
 							}
 
 							// Proteção 2: grace period — auto-foco do Google ao abrir a vinheta
@@ -584,7 +728,6 @@
 									'Blur ignorado: auto-foco da abertura (' + elapsed + 'ms < grace period) —',
 									'restaurando foco em 1s'
 								);
-								// Restaura foco para que o clique real possa gerar um novo blur
 								setTimeout(
 									function () {
 										if (typeof window.focus === 'function') {
@@ -596,9 +739,12 @@
 								return;
 							}
 
-							eventName = 'ad_vignette_click';
+							// Proteção 3: validação deferred — só confirma se houver navegação
+							deferVignetteClick( position, slotId, iframeId );
+							return;
 						}
 
+						// Banners normais: dispatch imediato (sem ambiguidade)
 						if (clicksFired[iframeId]) {
 							log( 'Clique já registrado para:', iframeId );
 							return;
@@ -608,7 +754,6 @@
 						log( 'Clique detectado (blur/focus):', eventName, position, iframeId );
 						dispatchAdEvent( eventName, position, slotId );
 
-						// Devolve foco após 3s para permitir novos cliques
 						setTimeout(
 							function () {
 								if (typeof window.focus === 'function') {
