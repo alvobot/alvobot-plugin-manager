@@ -8,6 +8,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.21] - 2026-02-18
+
+### 🐛 Corrigido
+- **Pixel Tracking / AdTracker**: Detecção de vinheta (interstitial) reforçada para funcionar de forma consistente em diferentes navegadores e dispositivos
+  - Fallback multi-sinal para abertura de vinheta (`hash/query`, `history.pushState/replaceState`, DOM/iframe e `aria-hidden`)
+  - Proteção contra sinal stale de `slotRenderEnded` com janela temporal
+  - Melhor tratamento do auto-foco inicial para evitar falso positivo em `ad_vignette_click`
+
+### 🔧 Melhorado
+- **Admin UI**: Badge de versão visível no topo das páginas do plugin para facilitar validação rápida de build em produção
+
+---
+
 ## [2.7.2] - 2026-01-08
 
 ### ✨ Adicionado

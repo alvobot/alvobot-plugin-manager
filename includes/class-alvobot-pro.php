@@ -771,6 +771,16 @@ class AlvoBotPro {
 					'site_title' => get_bloginfo( 'name' ),
 				)
 			);
+
+			// Badge de versão — aparece no canto superior direito de todas as páginas do plugin.
+			wp_add_inline_style(
+				'alvobot-pro-styles',
+				'.alvobot-version-badge{position:fixed;top:38px;right:16px;background:rgba(14,16,13,.82);color:#fbbf24;font-family:\'Inter\',-apple-system,sans-serif;font-size:10px;font-weight:600;line-height:1;padding:4px 9px;border-radius:9999px;border:1px solid rgba(251,191,36,.35);letter-spacing:.4px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:99999;user-select:none;pointer-events:none;}'
+			);
+			wp_add_inline_script(
+				'alvobot-pro-admin',
+				'(function(){var b=document.createElement("span");b.className="alvobot-version-badge";b.textContent="v' . esc_js( ALVOBOT_PRO_VERSION ) . '";document.body.appendChild(b);})();'
+			);
 		}
 	}
 

@@ -212,6 +212,8 @@
 	var vignetteOpened        = false;
 	var vignetteOpenTimestamp = 0; // timestamp da abertura — usado no grace period anti-auto-foco
 	var interstitialFilled    = false; // set true quando slotRenderEnded reporta interstitial preenchido
+	var interstitialFilledAt  = 0; // timestamp do último slotRenderEnded preenchido do interstitial
+	var INTERSTITIAL_SIGNAL_TTL_MS = 45000; // janela para considerar sinal de interstitial "recente"
 
 	/**
 	 * Marca a vinheta como aberta e dispara ad_vignette_open (uma vez por página).
@@ -228,14 +230,92 @@
 		dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
 	}
 
+	function hasGoogleVignetteMarker(url) {
+		var candidate = url || window.location.href || '';
+		if (candidate.indexOf( '#google_vignette' ) !== -1) {
+			return true;
+		}
+		return /(?:\?|&)google_vignette(?:=|&|$)/.test( candidate );
+	}
+
+	function hasInterstitialIframeInDom() {
+		return !! document.querySelector( 'iframe[id*="google_ads_iframe"][id*="interstitial"]' );
+	}
+
+	function hasRecentInterstitialFillSignal() {
+		if ( ! interstitialFilled || ! interstitialFilledAt) {
+			return false;
+		}
+		if ((Date.now() - interstitialFilledAt) > INTERSTITIAL_SIGNAL_TTL_MS) {
+			interstitialFilled = false; // evita sinal stale em sessões longas
+			return false;
+		}
+		return true;
+	}
+
+	function checkVignetteSignals(source) {
+		if (vignetteOpened) {
+			return false;
+		}
+
+		var hasUrlSignal  = hasGoogleVignetteMarker( window.location.href );
+		var hasDomSignal  = hasInterstitialIframeInDom();
+		var hasBodySignal = !! (
+			document.body &&
+			document.body.getAttribute( 'aria-hidden' ) === 'true'
+		);
+		var hasFillSignal = hasRecentInterstitialFillSignal();
+
+		// URL de vignette + algum sinal contextual de interstitial.
+		if (hasUrlSignal && (hasFillSignal || hasDomSignal || hasBodySignal)) {
+			markVignetteAsOpen( source + ': url marker + interstitial context' );
+			return true;
+		}
+
+		// Fallback quando URL não muda, mas o body foi ocultado no fluxo de interstitial.
+		if (hasBodySignal && (hasFillSignal || hasDomSignal)) {
+			markVignetteAsOpen( source + ': body aria-hidden + interstitial context' );
+			return true;
+		}
+
+		return false;
+	}
+
+	function installHistoryHooks() {
+		if (
+			! window.history ||
+			window.alvobot_vignette_history_hooked
+		) {
+			return;
+		}
+		window.alvobot_vignette_history_hooked = true;
+
+		var originalPushState = window.history.pushState;
+		var originalReplaceState = window.history.replaceState;
+
+		if (typeof originalPushState === 'function') {
+			window.history.pushState = function () {
+				var ret = originalPushState.apply( window.history, arguments );
+				checkVignetteSignals( 'history.pushState' );
+				return ret;
+			};
+		}
+
+		if (typeof originalReplaceState === 'function') {
+			window.history.replaceState = function () {
+				var ret = originalReplaceState.apply( window.history, arguments );
+				checkVignetteSignals( 'history.replaceState' );
+				return ret;
+			};
+		}
+	}
+
 	/**
 	 * Verifica hash da URL.
-	 * Chamado apenas em resposta a mudanças dinâmicas (hashchange / popstate).
+	 * Chamado em mudanças dinâmicas da URL (hash/popstate/history hooks).
 	 */
 	function checkVignetteHash() {
-		if (window.location.hash === '#google_vignette') {
-			markVignetteAsOpen( 'hash' );
-		}
+		checkVignetteSignals( 'url change' );
 	}
 
 	/**
@@ -247,8 +327,13 @@
 			return;
 		}
 
+		// Em alguns dispositivos o hash chega antes do observer.
+		if (checkVignetteSignals( 'dom watcher bootstrap' )) {
+			return;
+		}
+
 		// Verifica se iframe já existe ao carregar (ex: retorno do histórico)
-		if (document.querySelector( 'iframe[id*="google_ads_iframe"][id*="interstitial"]' )) {
+		if (hasInterstitialIframeInDom()) {
 			markVignetteAsOpen( 'iframe found on load' );
 			return;
 		}
@@ -256,6 +341,11 @@
 		var obs = new MutationObserver(
 			function (mutations) {
 				if (vignetteOpened) {
+					obs.disconnect();
+					return;
+				}
+
+				if (checkVignetteSignals( 'mutation pre-check' )) {
 					obs.disconnect();
 					return;
 				}
@@ -268,13 +358,11 @@
 						var t   = m.target;
 						var tid = t.id || '';
 
-						// Estratégia C: body recebe aria-hidden=true + interstitial carregado.
-						// Chrome emite warning de acessibilidade mas o atributo é setado no DOM.
-						// Este é o sinal mais confiável de que a vinheta foi exibida.
+						// Estratégia C: body recebe aria-hidden=true + interstitial recém-preenchido.
 						if (
 							t === document.body &&
 							t.getAttribute( 'aria-hidden' ) === 'true' &&
-							interstitialFilled
+							hasRecentInterstitialFillSignal()
 						) {
 							markVignetteAsOpen( 'body aria-hidden=true' );
 							obs.disconnect();
@@ -344,7 +432,7 @@
 				childList:       true,
 				subtree:         true,
 				attributes:      true,
-				attributeFilter: ['aria-hidden'],
+				attributeFilter: ['aria-hidden', 'style', 'class', 'hidden'],
 			}
 		);
 
@@ -414,7 +502,9 @@
 						// esse flag para confirmar que body aria-hidden=true é da vinheta
 						if ( ! event.isEmpty && event.slot.getAdUnitPath().indexOf( 'interstitial' ) !== -1) {
 							interstitialFilled = true;
+							interstitialFilledAt = Date.now();
 							log( 'Interstitial preenchido — aguardando abertura visual' );
+							checkVignetteSignals( 'slotRenderEnded interstitial' );
 						}
 					}
 				);
@@ -477,18 +567,14 @@
 						var eventName = 'ad_click';
 
 						if (position === 'interstitial') {
+							checkVignetteSignals( 'blur pre-check' );
+
 							// Proteção 1: vinheta ainda não detectada
 							if ( ! vignetteOpened) {
-								if (interstitialFilled) {
-									// O iframe de interstitial tem foco → vinheta abriu.
-									// Fallback: Chrome bloqueia body aria-hidden no DOM (não gera mutação),
-									// então usamos o blur no iframe como sinal de abertura.
-									markVignetteAsOpen( 'blur fallback: interstitial iframe got focus' );
-									// elapsed ≈ 0ms → cai no grace period abaixo e suprime o auto-foco
-								} else {
-									log( 'Blur ignorado: vinheta não abriu e interstitial não carregou' );
-									return;
-								}
+								// O iframe de interstitial tem foco → vinheta abriu.
+								// Fallback final para cenários onde URL/DOM não entregam sinal confiável.
+								markVignetteAsOpen( 'blur fallback: interstitial iframe got focus' );
+								// elapsed ≈ 0ms → cai no grace period abaixo e suprime o auto-foco
 							}
 
 							// Proteção 2: grace period — auto-foco do Google ao abrir a vinheta
@@ -548,13 +634,23 @@
 	function init() {
 		log( 'Inicializando AlvoBot Ad Tracker' );
 
-		// 1. Vinheta via mudança dinâmica da URL (hashchange / popstate)
-		//    NÃO chamamos checkVignetteHash() no init — hash pré-existente é stale.
+		// 1. Vinheta via mudança dinâmica da URL (hashchange / popstate + history API)
+		installHistoryHooks();
 		window.addEventListener( 'hashchange', checkVignetteHash );
 		window.addEventListener( 'popstate',   checkVignetteHash );
+		window.addEventListener(
+			'pageshow',
+			function () {
+				checkVignetteSignals( 'pageshow' );
+			}
+		);
 
 		// 2. Vinheta via DOM (MutationObserver)
 		watchVignetteDom();
+
+		// 2.1 Checagem guardada no init para capturar timing em que hash/URL já mudou
+		//     mas o observer ainda não recebeu mutação.
+		checkVignetteSignals( 'init' );
 
 		// 3. Impressões de banner (GPT impressionViewable — Active View nativo)
 		setupGptListeners();
