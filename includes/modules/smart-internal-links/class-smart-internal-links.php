@@ -48,6 +48,7 @@ class AlvoBotPro_Smart_Internal_Links {
 		add_action( 'wp_ajax_alvobot_get_smart_links', array( $this, 'ajax_get_links' ) );
 		add_action( 'wp_ajax_alvobot_update_smart_links', array( $this, 'ajax_update_links' ) );
 		add_action( 'wp_ajax_alvobot_search_posts_for_links', array( $this, 'ajax_search_posts' ) );
+		add_action( 'wp_ajax_alvobot_get_all_post_ids_for_bulk', array( $this, 'ajax_get_all_post_ids' ) );
 
 		// REST API
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
@@ -405,6 +406,34 @@ class AlvoBotPro_Smart_Internal_Links {
 		);
 	}
 
+	private function build_bulk_query_args( $args, $status, $category, $language ) {
+		if ( $category ) {
+			$args['cat'] = $category;
+		}
+
+		if ( $language && function_exists( 'pll_get_post_language' ) ) {
+			$args['lang'] = $language;
+		}
+
+		if ( 'missing' === $status ) {
+			$args['meta_query'] = array(
+				array(
+					'key'     => '_alvobot_smart_links',
+					'compare' => 'NOT EXISTS',
+				),
+			);
+		} elseif ( 'generated' === $status ) {
+			$args['meta_query'] = array(
+				array(
+					'key'     => '_alvobot_smart_links',
+					'compare' => 'EXISTS',
+				),
+			);
+		}
+
+		return apply_filters( 'alvobot_smart_links_bulk_query_args', $args, $category, $language );
+	}
+
 	public function ajax_load_posts() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
@@ -415,33 +444,22 @@ class AlvoBotPro_Smart_Internal_Links {
 		$category = isset( $_POST['category'] ) ? absint( $_POST['category'] ) : 0;
 		$language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
 		$page     = isset( $_POST['page'] ) ? max( 1, absint( $_POST['page'] ) ) : 1;
+		$status   = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'all';
 		$per_page = 50;
 
-		$args = array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => $per_page,
-			'paged'          => $page,
-			'orderby'        => 'title',
-			'order'          => 'ASC',
+		$args = $this->build_bulk_query_args(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => $per_page,
+				'paged'          => $page,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			),
+			$status,
+			$category,
+			$language
 		);
-
-		if ( $category ) {
-			$args['cat'] = $category;
-		}
-
-		if ( $language && function_exists( 'pll_get_post_language' ) ) {
-			$args['lang'] = $language;
-		}
-
-		/**
-		 * Filtra os argumentos de query para carregar posts no bulk.
-		 *
-		 * @param array  $args     WP_Query arguments.
-		 * @param int    $category Categoria selecionada.
-		 * @param string $language Código de idioma selecionado.
-		 */
-		$args = apply_filters( 'alvobot_smart_links_bulk_query_args', $args, $category, $language );
 
 		$query = new WP_Query( $args );
 		$posts = $query->posts;
@@ -469,6 +487,49 @@ class AlvoBotPro_Smart_Internal_Links {
 				'per_page'    => $per_page,
 			)
 		);
+	}
+
+	public function ajax_get_all_post_ids() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Permissão negada' ) );
+		}
+
+		check_ajax_referer( 'alvobot_smart_links_nonce', 'nonce' );
+
+		$category = isset( $_POST['category'] ) ? absint( $_POST['category'] ) : 0;
+		$language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
+		$status   = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'all';
+
+		$max_posts = 5000;
+
+		$args = $this->build_bulk_query_args(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => $max_posts,
+				'fields'         => 'ids',
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+				'no_found_rows'  => false,
+			),
+			$status,
+			$category,
+			$language
+		);
+
+		$query = new WP_Query( $args );
+
+		$response = array(
+			'ids'   => array_map( 'intval', $query->posts ),
+			'total' => count( $query->posts ),
+		);
+
+		if ( $query->found_posts > $max_posts ) {
+			$response['truncated'] = true;
+			$response['total_available'] = (int) $query->found_posts;
+		}
+
+		wp_send_json_success( $response );
 	}
 
 	public function ajax_save_settings() {

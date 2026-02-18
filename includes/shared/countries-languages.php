@@ -2,11 +2,11 @@
 /**
  * Dados compartilhados de países e idiomas para todo o plugin AlvoBot.
  *
- * Países: ISO 3166-1 alpha-2 => nome em português (254 entradas).
+ * Países: ISO 3166-1 alpha-2 => nome em português (249 entradas).
  * Idiomas: ISO 639-1 => label em português (183 entradas, populares primeiro).
  * Fonte: alvobot-app/frontend/src/shared/constants/countries.ts e languages.ts
  *
- * Usado por: Author Box, Essential Pages, Multi-Languages, AI API.
+ * Usado por: Author Box, Essential Pages, Multi-Languages, Smart Internal Links, AI API.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Retorna lista completa de países (254) com nomes em português.
+ * Retorna lista completa de países (249) com nomes em português.
  * Chave = código ISO 3166-1 alpha-2, valor = nome em português.
  */
 function alvobot_get_countries() {

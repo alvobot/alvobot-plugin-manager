@@ -250,12 +250,30 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 							</td>
 						</tr>
 						<?php endif; ?>
+						<tr>
+							<th><label for="sil_bulk_status">Status</label></th>
+							<td>
+								<select id="sil_bulk_status" class="alvobot-select">
+									<option value="all">Todos</option>
+									<option value="missing">Não gerado</option>
+									<option value="generated">Gerado</option>
+								</select>
+							</td>
+						</tr>
 					</table>
 
 					<div class="alvobot-btn-group" style="margin-top:var(--alvobot-space-lg);">
 						<button type="button" class="alvobot-btn alvobot-btn-primary" id="alvobot-sil-load-posts">
 							<i data-lucide="download" class="alvobot-icon"></i>
 							Carregar Posts
+						</button>
+						<button type="button" class="alvobot-btn alvobot-btn-secondary" id="alvobot-sil-generate-missing">
+							<i data-lucide="zap" class="alvobot-icon"></i>
+							Gerar Faltantes
+						</button>
+						<button type="button" class="alvobot-btn alvobot-btn-secondary" id="alvobot-sil-generate-all">
+							<i data-lucide="refresh-cw" class="alvobot-icon"></i>
+							Gerar Tudo Novamente
 						</button>
 					</div>
 

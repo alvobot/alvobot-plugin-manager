@@ -11,6 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Base compartilhada de países/idiomas (mantida em sincronia com frontend).
+ */
+if ( file_exists( dirname( __DIR__, 3 ) . '/shared/countries-languages.php' ) ) {
+	require_once dirname( __DIR__, 3 ) . '/shared/countries-languages.php';
+}
+
+/**
  * Gera e valida blocos de Smart Internal Links para posts.
  */
 class AlvoBotPro_Smart_Links_Generator {
@@ -128,7 +135,7 @@ class AlvoBotPro_Smart_Links_Generator {
 			$num_blocks = max( 1, intval( floor( $available / $links_per_block ) ) );
 		}
 
-		// Hint de idioma (Polylang/WPML/locale) para ajudar a IA quando houver ambiguidade.
+		// Hint de idioma canônico (ISO) para evitar ambiguidades no parser remoto.
 		$language_hint_slug = $this->detect_post_language_slug( $post_id );
 		$language_hint_name = $this->get_language_name_from_slug( $language_hint_slug );
 
@@ -148,15 +155,16 @@ class AlvoBotPro_Smart_Links_Generator {
 		$result = $api->call(
 			'generate_internal_links',
 			array(
-				'current_post'    => array(
+				'current_post'       => array(
 					'title'   => $post->post_title,
 					'excerpt' => wp_trim_words( wp_strip_all_tags( $post->post_content ), 50, '' ),
 				),
-				'candidate_posts' => $candidate_data,
-				'language'        => 'auto-detect',
-				'language_hint'   => $language_hint_name,
-				'links_per_block' => $links_per_block,
-				'num_blocks'      => $num_blocks,
+				'candidate_posts'    => $candidate_data,
+				'language'           => 'auto-detect',
+				'language_hint'      => $language_hint_slug,
+				'language_hint_name' => $language_hint_name,
+				'links_per_block'    => $links_per_block,
+				'num_blocks'         => $num_blocks,
 			)
 		);
 
@@ -354,7 +362,34 @@ class AlvoBotPro_Smart_Links_Generator {
 			$slug = 'pt';
 		}
 
-		// Tentar pegar nome do Polylang.
+		$language_name = '';
+		$native_name   = '';
+
+		if ( function_exists( 'alvobot_get_languages' ) ) {
+			$languages = alvobot_get_languages();
+			if ( isset( $languages[ $slug ] ) && is_string( $languages[ $slug ] ) ) {
+				$language_name = trim( $languages[ $slug ] );
+			}
+		}
+
+		if ( function_exists( 'alvobot_get_language_native_name' ) ) {
+			$maybe_native_name = alvobot_get_language_native_name( $slug );
+			if ( is_string( $maybe_native_name ) && $slug !== $maybe_native_name ) {
+				$native_name = trim( $maybe_native_name );
+			}
+		}
+
+		if ( '' !== $language_name && '' !== $native_name && $language_name !== $native_name ) {
+			return "{$language_name} ({$native_name})";
+		}
+		if ( '' !== $native_name ) {
+			return $native_name;
+		}
+		if ( '' !== $language_name ) {
+			return $language_name;
+		}
+
+		// Fallback para nome vindo do Polylang.
 		if ( function_exists( 'PLL' ) && PLL()->model ) {
 			$lang = PLL()->model->get_language( $slug );
 			if ( $lang ) {
@@ -362,24 +397,6 @@ class AlvoBotPro_Smart_Links_Generator {
 			}
 		}
 
-		$map = array(
-			'pt' => 'Português',
-			'en' => 'English',
-			'es' => 'Español',
-			'fr' => 'Français',
-			'de' => 'Deutsch',
-			'it' => 'Italiano',
-			'ro' => 'Română',
-			'nl' => 'Nederlands',
-			'pl' => 'Polski',
-			'tr' => 'Türkçe',
-			'ja' => '日本語',
-			'zh' => '中文',
-			'ko' => '한국어',
-			'ar' => 'العربية',
-			'ru' => 'Русский',
-		);
-
-		return isset( $map[ $slug ] ) ? $map[ $slug ] : $slug;
+		return $slug;
 	}
 }
