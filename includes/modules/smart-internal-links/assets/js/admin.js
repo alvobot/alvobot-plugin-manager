@@ -166,6 +166,7 @@
 		page: 1,
 		totalPages: 1,
 		total: 0,
+		allSelectedIds: null, // null = current page only; array = all pages selected
 	};
 
 	// Load posts
@@ -180,6 +181,7 @@
 		var $list = $('#alvobot-sil-post-list');
 		var category = $('#sil_bulk_category').val();
 		var language = $('#sil_bulk_language').val();
+		var status = $('#sil_bulk_status').val() || 'all';
 
 		if (page) {
 			bulkState.page = page;
@@ -196,6 +198,7 @@
 				nonce: alvobotSmartLinks.nonce,
 				category: category,
 				language: language,
+				status: status,
 				page: bulkState.page,
 			},
 			success: function (response) {
@@ -206,7 +209,7 @@
 					var html = '<table class="alvobot-table alvobot-table-striped">';
 					html +=
 						'<thead><tr>' +
-						'<th style="width:30px"><input type="checkbox" id="sil-select-all"></th>' +
+						'<th style="width:30px"><input type="checkbox" id="sil-select-all" title="Selecionar esta página"></th>' +
 						'<th>Título</th>' +
 						'<th>Status</th>' +
 						'<th style="width:80px;text-align:center;">Ações</th>' +
@@ -247,6 +250,15 @@
 
 					html += '</tbody></table>';
 
+					// Banner: selecionar todos de todas as páginas
+					html += '<div id="sil-select-all-banner" style="display:none;margin-top:var(--alvobot-space-sm);padding:var(--alvobot-space-sm) var(--alvobot-space-md);background:var(--alvobot-primary-50,#eff6ff);border:1px solid var(--alvobot-primary-200,#bfdbfe);border-radius:var(--alvobot-radius-md);font-size:var(--alvobot-font-size-sm);align-items:center;gap:var(--alvobot-space-sm);">' +
+						'<span id="sil-banner-text"></span>' +
+						' <button type="button" id="sil-select-all-pages" class="alvobot-btn alvobot-btn-sm"></button>' +
+						'</div>';
+
+					// Reset selection across pages on fresh load
+					bulkState.allSelectedIds = null;
+
 					// Paginação
 					if (bulkState.totalPages > 1) {
 						html += '<div style="margin-top:var(--alvobot-space-md);display:flex;align-items:center;gap:var(--alvobot-space-sm);justify-content:space-between;">';
@@ -268,7 +280,9 @@
 						'<strong id="sil-total-credits">0</strong> créditos' +
 						'</p>';
 					html +=
-						'<button type="button" class="alvobot-btn alvobot-btn-primary" id="alvobot-sil-bulk-generate" disabled>Gerar para Selecionados</button>';
+						'<div style="display:flex;gap:var(--alvobot-space-sm);flex-wrap:wrap;">' +
+					'<button type="button" class="alvobot-btn alvobot-btn-primary" id="alvobot-sil-bulk-generate" disabled>Gerar para Selecionados</button>' +
+					'</div>';
 					$list.html(html);
 				} else {
 					$list.html(
@@ -289,6 +303,7 @@
 	$(document).on('click', '#sil-page-prev', function (e) {
 		e.preventDefault();
 		if (bulkState.page > 1) {
+			bulkState.allSelectedIds = null;
 			loadBulkPosts(bulkState.page - 1);
 		}
 	});
@@ -296,17 +311,79 @@
 	$(document).on('click', '#sil-page-next', function (e) {
 		e.preventDefault();
 		if (bulkState.page < bulkState.totalPages) {
+			bulkState.allSelectedIds = null;
 			loadBulkPosts(bulkState.page + 1);
 		}
 	});
 
-	// Select all
+	// Select all (current page)
 	$(document).on('change', '#sil-select-all', function () {
-		$('.sil-post-check').prop('checked', $(this).is(':checked')).trigger('change');
+		var checked = $(this).is(':checked');
+		$('.sil-post-check').prop('checked', checked).trigger('change');
+
+		// Show "select all pages" banner only when checking all and there are multiple pages
+		if (checked && bulkState.totalPages > 1 && !bulkState.allSelectedIds) {
+			var pageCount = $('.sil-post-check').length;
+			$('#sil-banner-text').text(
+				'Todos os ' + pageCount + ' posts desta página estão selecionados.'
+			);
+			$('#sil-select-all-pages')
+				.text('Selecionar todos os ' + bulkState.total + ' posts desta busca')
+				.show();
+			$('#sil-select-all-banner').css('display', 'flex');
+		} else if (!checked) {
+			bulkState.allSelectedIds = null;
+			$('#sil-select-all-banner').hide();
+		}
+	});
+
+	// Select all pages
+	$(document).on('click', '#sil-select-all-pages', function () {
+		var $btn = $(this);
+		$btn.prop('disabled', true).text('Carregando...');
+
+		$.ajax({
+			url: alvobotSmartLinks.ajax_url,
+			type: 'POST',
+			data: {
+				action: 'alvobot_get_all_post_ids_for_bulk',
+				nonce: alvobotSmartLinks.nonce,
+				category: $('#sil_bulk_category').val(),
+				language: $('#sil_bulk_language').val(),
+				status: $('#sil_bulk_status').val() || 'all',
+			},
+			success: function (response) {
+				if (response.success) {
+					bulkState.allSelectedIds = response.data.ids;
+					var total = response.data.total;
+					$('#sil-banner-text').text(
+						'Todos os ' + total + ' posts desta busca estão selecionados.'
+					);
+					$btn.text('Cancelar seleção').prop('disabled', false).off('click').on('click', function () {
+						bulkState.allSelectedIds = null;
+						$('#sil-select-all-banner').hide();
+						$('#sil-select-all').prop('checked', false);
+						$('.sil-post-check').prop('checked', false).trigger('change');
+					});
+					// Update credits counter
+					$('#sil-selected-count').text(total);
+					$('#sil-total-credits').text(total * 2);
+					$('#alvobot-sil-bulk-generate').prop('disabled', false);
+				}
+			},
+			error: function () {
+				$btn.prop('disabled', false).text('Erro — tentar de novo');
+			},
+		});
 	});
 
 	// Update count
 	$(document).on('change', '.sil-post-check', function () {
+		// If allSelectedIds is active, unchecking a box clears the all-pages selection
+		if (bulkState.allSelectedIds) {
+			bulkState.allSelectedIds = null;
+			$('#sil-select-all-banner').hide();
+		}
 		var count = $('.sil-post-check:checked').length;
 		$('#sil-selected-count').text(count);
 		$('#sil-total-credits').text(count * 2);
@@ -318,10 +395,16 @@
 		e.preventDefault();
 
 		var $btn = $(this);
-		var postIds = [];
-		$('.sil-post-check:checked').each(function () {
-			postIds.push(parseInt($(this).val()));
-		});
+		var postIds;
+
+		if (bulkState.allSelectedIds && bulkState.allSelectedIds.length > 0) {
+			postIds = bulkState.allSelectedIds.slice();
+		} else {
+			postIds = [];
+			$('.sil-post-check:checked').each(function () {
+				postIds.push(parseInt($(this).val()));
+			});
+		}
 
 		if (postIds.length === 0) return;
 
@@ -422,7 +505,129 @@
 		processNext();
 	});
 
-	// Retry failed posts
+	// Gerar Faltantes / Gerar Tudo Novamente
+	function bulkGenerateByFilter(statusFilter) {
+		var $btn = statusFilter === 'missing'
+			? $('#alvobot-sil-generate-missing')
+			: $('#alvobot-sil-generate-all');
+		var originalHtml = $btn.html();
+
+		$btn.prop('disabled', true).text('Buscando posts...');
+
+		$.ajax({
+			url: alvobotSmartLinks.ajax_url,
+			type: 'POST',
+			data: {
+				action: 'alvobot_get_all_post_ids_for_bulk',
+				nonce: alvobotSmartLinks.nonce,
+				category: $('#sil_bulk_category').val(),
+				language: $('#sil_bulk_language').val(),
+				status: statusFilter,
+			},
+			success: function (response) {
+				if (response.success && response.data.ids.length > 0) {
+					var label = statusFilter === 'missing' ? 'Gerar Faltantes' : 'Gerar Tudo Novamente';
+					runBulkGeneration(response.data.ids, $btn, label, originalHtml);
+				} else {
+					$btn.prop('disabled', false).html(originalHtml);
+					alert('Nenhum post encontrado para gerar.');
+				}
+			},
+			error: function () {
+				$btn.prop('disabled', false).html(originalHtml);
+				alert('Erro ao buscar posts.');
+			},
+		});
+	}
+
+	function runBulkGeneration(postIds, $triggerBtn, label, restoreHtml) {
+		var total = postIds.length;
+		var current = 0;
+		var success = 0;
+		var failed = 0;
+		var retryQueue = [];
+
+		$triggerBtn.prop('disabled', true);
+
+		// Show progress in post list area
+		var $list = $('#alvobot-sil-post-list');
+		$('#sil-bulk-progress-ext').remove();
+		var $progress = $(
+			'<div id="sil-bulk-progress-ext" style="margin-top:var(--alvobot-space-md);">' +
+				'<p style="font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);margin-bottom:var(--alvobot-space-xs);">' + label + ': 0 / ' + total + ' posts</p>' +
+				'<div style="background:var(--alvobot-gray-100);border-radius:var(--alvobot-radius-md);overflow:hidden;height:24px;">' +
+				'<div id="sil-progress-bar-ext" style="background:var(--alvobot-primary);height:100%;width:0;transition:width 0.3s;display:flex;align-items:center;justify-content:center;color:var(--alvobot-white);font-size:var(--alvobot-font-size-xs);font-weight:600;">0%</div>' +
+				'</div>' +
+				'<p id="sil-progress-text-ext" style="margin:var(--alvobot-space-sm) 0;font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);">Iniciando...</p>' +
+				'</div>'
+		);
+
+		if ($list.children().length > 0) {
+			$list.prepend($progress);
+		} else {
+			$list.html($progress);
+		}
+
+		function processNextExt() {
+			if (current >= total) {
+				var resultHtml = '<strong>Concluído!</strong> ' + success + ' sucesso, ' + failed + ' falha(s)';
+				$('#sil-progress-text-ext').html(resultHtml);
+				$triggerBtn.prop('disabled', false).html(restoreHtml);
+				return;
+			}
+
+			var postId = postIds[current];
+			$('#sil-progress-text-ext').text('Gerando ' + (current + 1) + ' de ' + total + '...');
+
+			$.ajax({
+				url: alvobotSmartLinks.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'alvobot_bulk_generate_smart_links',
+					nonce: alvobotSmartLinks.nonce,
+					post_id: postId,
+				},
+				timeout: 90000,
+				success: function (response) {
+					if (response.success) {
+						success++;
+					} else {
+						failed++;
+						retryQueue.push(postId);
+					}
+				},
+				error: function () {
+					failed++;
+					retryQueue.push(postId);
+				},
+				complete: function () {
+					current++;
+					var pct = Math.round((current / total) * 100);
+					$('#sil-progress-bar-ext').css('width', pct + '%').text(pct + '%');
+					$('#sil-progress-text-ext').text(
+						label + ': ' + current + ' / ' + total + ' posts'
+					);
+					processNextExt();
+				},
+			});
+		}
+
+		processNextExt();
+	}
+
+	$(document).on('click', '#alvobot-sil-generate-missing', function (e) {
+		e.preventDefault();
+		if (!confirm('Gerar links para todos os posts que ainda não possuem links (com os filtros atuais)?')) return;
+		bulkGenerateByFilter('missing');
+	});
+
+	$(document).on('click', '#alvobot-sil-generate-all', function (e) {
+		e.preventDefault();
+		if (!confirm('Gerar/regenerar links para TODOS os posts (com os filtros atuais)? Isso irá sobrescrever links já existentes.')) return;
+		bulkGenerateByFilter('all');
+	});
+
+		// Retry failed posts
 	$(document).on('click', '#sil-retry-failed', function (e) {
 		e.preventDefault();
 		// Re-check only the failed posts
