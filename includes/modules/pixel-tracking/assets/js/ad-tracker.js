@@ -209,8 +209,9 @@
 	// 1. VINHETA — ad_vignette_open + ad_vignette_click
 	// -------------------------------------------------------------------------
 
-	var vignetteOpened    = false;
+	var vignetteOpened        = false;
 	var vignetteOpenTimestamp = 0; // timestamp da abertura — usado no grace period anti-auto-foco
+	var interstitialFilled    = false; // set true quando slotRenderEnded reporta interstitial preenchido
 
 	/**
 	 * Marca a vinheta como aberta e dispara ad_vignette_open (uma vez por página).
@@ -266,7 +267,21 @@
 					if (m.type === 'attributes' && m.attributeName === 'aria-hidden') {
 						var t   = m.target;
 						var tid = t.id || '';
-						// Ignora <body> e <html> — o GAM seta aria-hidden no body também
+
+						// Estratégia C: body recebe aria-hidden=true + interstitial carregado.
+						// Chrome emite warning de acessibilidade mas o atributo é setado no DOM.
+						// Este é o sinal mais confiável de que a vinheta foi exibida.
+						if (
+							t === document.body &&
+							t.getAttribute( 'aria-hidden' ) === 'true' &&
+							interstitialFilled
+						) {
+							markVignetteAsOpen( 'body aria-hidden=true' );
+							obs.disconnect();
+							return;
+						}
+
+						// Estratégia A original: container da vinheta tornou-se visível
 						if (
 							t !== document.body &&
 							t !== document.documentElement &&
@@ -386,7 +401,7 @@
 					}
 				);
 
-				// slotRenderEnded: debug de fill/no-fill
+				// slotRenderEnded: debug de fill/no-fill + guarda de interstitial
 				window.googletag.pubads().addEventListener(
 					'slotRenderEnded',
 					function (event) {
@@ -395,6 +410,12 @@
 							event.slot.getSlotElementId(),
 							event.isEmpty ? 'vazio (no-fill)' : 'preenchido'
 						);
+						// Marca que o interstitial carregou — o MutationObserver usa
+						// esse flag para confirmar que body aria-hidden=true é da vinheta
+						if ( ! event.isEmpty && event.slot.getAdUnitPath().indexOf( 'interstitial' ) !== -1) {
+							interstitialFilled = true;
+							log( 'Interstitial preenchido — aguardando abertura visual' );
+						}
 					}
 				);
 
