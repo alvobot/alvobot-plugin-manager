@@ -477,10 +477,18 @@
 						var eventName = 'ad_click';
 
 						if (position === 'interstitial') {
-							// Proteção 1: vinheta nem abriu ainda (foco no iframe antes de detectarmos)
+							// Proteção 1: vinheta ainda não detectada
 							if ( ! vignetteOpened) {
-								log( 'Blur ignorado: vinheta não estava aberta' );
-								return;
+								if (interstitialFilled) {
+									// O iframe de interstitial tem foco → vinheta abriu.
+									// Fallback: Chrome bloqueia body aria-hidden no DOM (não gera mutação),
+									// então usamos o blur no iframe como sinal de abertura.
+									markVignetteAsOpen( 'blur fallback: interstitial iframe got focus' );
+									// elapsed ≈ 0ms → cai no grace period abaixo e suprime o auto-foco
+								} else {
+									log( 'Blur ignorado: vinheta não abriu e interstitial não carregou' );
+									return;
+								}
 							}
 
 							// Proteção 2: grace period — auto-foco do Google ao abrir a vinheta
