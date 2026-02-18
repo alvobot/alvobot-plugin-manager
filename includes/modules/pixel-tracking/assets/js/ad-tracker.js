@@ -286,7 +286,9 @@
 
 	/**
 	 * Verifica hash da URL.
-	 * Disparado em init(), hashchange, popstate e visibilitychange.
+	 * Chamado apenas em resposta a mudanças dinâmicas da URL (hashchange / popstate).
+	 * NÃO é chamado no carregamento inicial — hash pré-existente é stale e não
+	 * indica vinheta ativa. A detecção de vinheta já presente usa o MutationObserver.
 	 */
 	function checkVignetteHash() {
 		if (vignetteOpened) {
@@ -633,22 +635,16 @@
 	function init() {
 		log( 'Inicializando AlvoBot Ad Tracker' );
 
-		// 1. Vinheta via hash da URL
-		//    - init: URL já carregou com #google_vignette
-		//    - hashchange: navegação interna muda o hash
-		//    - popstate: Google usa history.pushState/replaceState em vez de hash
-		//    - visibilitychange: usuário retorna à aba; hash já estará presente
-		checkVignetteHash();
+		// 1. Vinheta via mudança dinâmica da URL
+		//    - hashchange: hash muda para #google_vignette durante a sessão
+		//    - popstate: Google usa history.pushState/replaceState para setar o hash
+		//
+		//    NÃO chamamos checkVignetteHash() aqui no init:
+		//    se a URL já carregou com #google_vignette, é um hash stale (copiado,
+		//    histórico do browser) — não indica vinheta ativa. O MutationObserver
+		//    detecta vinhetas que já estão no DOM ao carregar a página.
 		window.addEventListener( 'hashchange', checkVignetteHash );
 		window.addEventListener( 'popstate',   checkVignetteHash );
-		document.addEventListener(
-			'visibilitychange',
-			function () {
-				if (document.visibilityState === 'visible') {
-					checkVignetteHash();
-				}
-			}
-		);
 
 		// 2. Vinheta via DOM (MutationObserver — iframe inserido + aria-hidden)
 		watchVignetteDom();
