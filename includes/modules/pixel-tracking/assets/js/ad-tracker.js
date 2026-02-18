@@ -1,19 +1,27 @@
 /**
  * AlvoBot Ad Tracker
  *
- * Captura eventos de anúncios do Google Ad Manager e envia para
- * Meta Pixel (fbq) e Google Analytics 4 (gtag).
+ * Captura eventos de anúncios do Google Ad Manager e envia para:
+ *   - Meta Pixel (fbq)           — browser-side
+ *   - Google Analytics 4 (gtag) — browser-side
+ *   - AlvoBot REST API           — server-side → Meta CAPI (com deduplicação por event_id)
  *
  * Eventos rastreados:
- *   - ad_vignette_open : abertura de interstitial/vinheta
- *   - ad_impression    : visualização de banner (via GPT impressionViewable + IntersectionObserver)
- *   - ad_click         : clique em banner ou vinheta (blur/focus)
+ *   - ad_impression      : banner viewable (GPT impressionViewable — padrão Active View IAB)
+ *   - ad_click           : clique em banner (blur/focus)
+ *   - ad_vignette_open   : abertura de vinheta/interstitial
+ *   - ad_vignette_click  : clique dentro da vinheta
  *
- * Estratégia de impressão (dois disparadores, uma deduplicação):
- *   Chave de dedup = elementId do GPT slot (ex: "av_top").
- *   Isso garante que IntersectionObserver e GPT impressionViewable
- *   nunca contam a mesma impressão duas vezes, mesmo que o adUnitPath
- *   do GPT contenha sufixos como "_rebid".
+ * Estratégia de impressão:
+ *   Usa exclusivamente o evento nativo 'impressionViewable' da GPT API.
+ *   Isso implementa o padrão Active View (≥50% visível por ≥1s) sem código extra,
+ *   elimina duplicidade e é a abordagem oficial recomendada pelo Google.
+ *   Ref: https://developers.google.com/publisher-tag/reference#googletag.events.ImpressionViewableEvent
+ *
+ * Deduplicação browser ↔ CAPI:
+ *   Cada evento gera um UUID (event_id).
+ *   fbq recebe {eventID} e a REST API recebe o mesmo event_id.
+ *   Meta usa esse campo para não contar a mesma conversão duas vezes.
  */
 (function () {
 	'use strict';
@@ -35,25 +43,82 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Utilitários
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Gera um UUID v4.
+	 * Usa crypto.randomUUID() quando disponível; fallback via Math.random().
+	 *
+	 * @return {string}
+	 */
+	function generateUUID() {
+		if (
+			typeof window.crypto !== 'undefined' &&
+			typeof window.crypto.randomUUID === 'function'
+		) {
+			return window.crypto.randomUUID();
+		}
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+			/[xy]/g,
+			function (c) {
+				var r = Math.random() * 16 | 0;
+				return (c === 'x' ? r : (r & 0x3 | 0x8)).toString( 16 );
+			}
+		);
+	}
+
+	/**
+	 * Lê um cookie por nome.
+	 *
+	 * @param  {string} name
+	 * @return {string}
+	 */
+	function getCookie(name) {
+		var match = document.cookie.match(
+			new RegExp( '(?:^|;\\s*)' + name + '=([^;]*)' )
+		);
+		return match ? decodeURIComponent( match[1] ) : '';
+	}
+
+	// -------------------------------------------------------------------------
 	// Dispatch helpers
 	// -------------------------------------------------------------------------
 
+	/**
+	 * Mapa de nomes de evento GA4 → Meta (trackCustom).
+	 * Mantém consistência entre browser-side e CAPI.
+	 */
 	var META_EVENT_NAMES = {
-		ad_vignette_open: 'AdVignetteOpen',
-		ad_impression:    'AdImpression',
-		ad_click:         'AdClick',
+		ad_impression:     'AdImpression',
+		ad_click:          'AdClick',
+		ad_vignette_open:  'AdVignetteOpen',
+		ad_vignette_click: 'AdVignetteClick',
 	};
 
-	function sendToMeta(ga4EventName, params) {
+	/**
+	 * Envia evento ao Meta Pixel com eventID para deduplicação com CAPI.
+	 *
+	 * @param {string} ga4EventName
+	 * @param {Object} params
+	 * @param {string} eventId       UUID gerado por dispatchAdEvent
+	 */
+	function sendToMeta(ga4EventName, params, eventId) {
 		if (typeof window.fbq !== 'function') {
 			log( 'fbq indisponível para', ga4EventName );
 			return;
 		}
 		var metaName = META_EVENT_NAMES[ga4EventName] || ga4EventName;
-		window.fbq( 'trackCustom', metaName, params );
-		log( 'Meta evento enviado:', metaName, params );
+		window.fbq( 'trackCustom', metaName, params, {eventID: eventId} );
+		log( 'Meta evento enviado:', metaName, '(eventID:', eventId, ')', params );
 	}
 
+	/**
+	 * Envia evento ao GA4.
+	 *
+	 * @param {string} eventName
+	 * @param {Object} params
+	 */
 	function sendToGA4(eventName, params) {
 		if (typeof window.gtag !== 'function') {
 			log( 'gtag indisponível para', eventName );
@@ -63,19 +128,111 @@
 		log( 'GA4 evento enviado:', eventName, params );
 	}
 
+	/**
+	 * Envia evento à REST API do AlvoBot para armazenamento e disparo via CAPI.
+	 *
+	 * O backend:
+	 *   1. Salva o evento no banco (CPT) — aparece nos logs do painel
+	 *   2. Resolve IP real, geo, UTMs server-side
+	 *   3. Despacha para graph.facebook.com/v24.0/{pixel}/events (CAPI)
+	 *   4. Usa o mesmo event_id para deduplicação com o evento browser-side
+	 *
+	 * keepalive: true garante entrega mesmo em navegações imediatas (ad_click).
+	 *
+	 * @param {string} ga4EventName
+	 * @param {Object} adParams     { ad_position, ad_slot_id }
+	 * @param {string} eventId      UUID compartilhado com fbq
+	 */
+	function sendToRestAPI(ga4EventName, adParams, eventId) {
+		var config = window.alvobot_pixel_config;
+		if ( ! config || ! config.api_event) {
+			log( 'REST API indisponível (alvobot_pixel_config.api_event ausente)' );
+			return;
+		}
+
+		var metaName = META_EVENT_NAMES[ga4EventName] || ga4EventName;
+
+		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
+
+		var payload = {
+			event_id:    eventId,
+			event_name:  metaName,
+			event_url:   cleanUrl,
+			page_url:    cleanUrl,
+			page_title:  document.title || '',
+			page_id:     config.page_id || '0',
+			fbp:         getCookie( '_fbp' ),
+			fbc:         getCookie( '_fbc' ),
+			user_agent:  navigator.userAgent || '',
+			pixel_ids:   config.pixel_ids || '',
+			custom_data: {
+				ad_position: adParams.ad_position || '',
+				ad_slot_id:  adParams.ad_slot_id  || '',
+			},
+		};
+
+		var headers = {'Content-Type': 'application/json'};
+		if (config.nonce) {
+			headers['X-Alvobot-Nonce'] = config.nonce;
+		}
+
+		try {
+			fetch(
+				config.api_event,
+				{
+					method:    'POST',
+					headers:   headers,
+					body:      JSON.stringify( payload ),
+					keepalive: true,
+				}
+			).then(
+				function (response) {
+					log( 'REST API resposta:', response.status, metaName, eventId );
+				}
+			).catch(
+				function (err) {
+					log( 'REST API erro:', metaName, err.message );
+				}
+			);
+		} catch (e) {
+			log( 'REST API exceção:', metaName, e.message );
+		}
+	}
+
+	/**
+	 * Ponto de entrada para todos os eventos de ad tracking.
+	 * Gera um UUID único e despacha para Meta Pixel, GA4 e REST API (CAPI).
+	 *
+	 * @param {string} eventName   Chave GA4 (ex: "ad_impression")
+	 * @param {string} adPosition  top | content_1 | content_2 | interstitial | unknown
+	 * @param {string} adSlotId    adUnitPath ou '' para vinheta
+	 */
 	function dispatchAdEvent(eventName, adPosition, adSlotId) {
-		var params = {
+		var eventId = generateUUID();
+
+		// Remove #google_vignette da URL para não poluir relatórios com o hash de controle do GAM.
+		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
+
+		var adParams = {
 			ad_position: adPosition,
 			ad_slot_id:  adSlotId || '',
-			page_url:    window.location.href,
+		};
+		var fullParams = {
+			ad_position: adPosition,
+			ad_slot_id:  adSlotId || '',
+			page_url:    cleanUrl,
 			timestamp:   new Date().toISOString(),
 		};
-		sendToMeta( eventName, params );
-		sendToGA4( eventName, params );
+
+		log( 'dispatchAdEvent:', eventName, adPosition, '(eventId:', eventId, ')' );
+
+		sendToMeta(    eventName, fullParams, eventId );
+		sendToGA4(     eventName, fullParams           );
+		sendToRestAPI( eventName, adParams,   eventId  );
 	}
 
 	// -------------------------------------------------------------------------
-	// Helpers de posição
+	// Helpers de posição / identificador
 	// -------------------------------------------------------------------------
 
 	/**
@@ -117,53 +274,19 @@
 		if ( ! iframeId) {
 			return '';
 		}
-		// Remove prefixo "google_ads_iframe_" e sufixo numérico "_N"
-		var match = iframeId.match( /^google_ads_iframe_(\/[\w/]+?)_\d+$/ );
+		var match = iframeId.match( /^google_ads_iframe_(\/[\w/.\-]+?)_\d+$/ );
 		return match ? match[1] : '';
 	}
 
 	// -------------------------------------------------------------------------
-	// GPT Slot Map
-	// Consulta googletag.pubads().getSlots() para obter o mapeamento
-	// elementId → adUnitPath real (com possíveis sufixos como _rebid).
-	// -------------------------------------------------------------------------
-
-	/**
-	 * Retorna mapa: elementId → adUnitPath, para todos os slots GPT registrados.
-	 * Chamado de forma síncrona (nosso script roda diferido, após o GPT estar pronto).
-	 *
-	 * @return {Object} ex: { "av_top": "/22976784714/exp_desktop_top_rebid", ... }
-	 */
-	function buildGPTSlotMap() {
-		var map = {};
-		if (
-			typeof window.googletag === 'undefined' ||
-			! window.googletag.pubads ||
-			typeof window.googletag.pubads().getSlots !== 'function'
-		) {
-			return map;
-		}
-		try {
-			window.googletag.pubads().getSlots().forEach(
-				function (slot) {
-					map[slot.getSlotElementId()] = slot.getAdUnitPath();
-				}
-			);
-		} catch (e) {
-			log( 'buildGPTSlotMap(): erro ao consultar GPT slots', e.message );
-		}
-		log( 'GPT slot map:', map );
-		return map;
-	}
-
-	// -------------------------------------------------------------------------
-	// 1. VINHETA (ad_vignette_open)
+	// 1. VINHETA — ad_vignette_open + ad_vignette_click
 	// -------------------------------------------------------------------------
 
 	var vignetteOpened = false;
 
 	/**
-	 * Verifica hash da URL. Disparado no load e em cada hashchange.
+	 * Verifica hash da URL.
+	 * Disparado em init(), hashchange, popstate e visibilitychange.
 	 */
 	function checkVignetteHash() {
 		if (vignetteOpened) {
@@ -179,16 +302,16 @@
 	/**
 	 * Observa o DOM em busca do container da vinheta.
 	 *
-	 * Duas estratégias simultâneas:
+	 * Estratégia A — Inserção do iframe real da vinheta:
+	 *   ID padrão: "google_ads_iframe_/22976784714/exp_desktop_interstitial_N"
+	 *   A inserção deste iframe é o sinal mais confiável de que a vinheta abriu.
 	 *
-	 * A) Inserção do iframe de anúncio da vinheta:
-	 *    O iframe real da vinheta tem ID no padrão:
-	 *    "google_ads_iframe_/22976784714/exp_desktop_interstitial_N"
-	 *    Quando esse iframe é inserido no DOM → vinheta abriu.
+	 * Estratégia B — Mudança de aria-hidden → "false" no container GPT:
+	 *   Container: ins#gpt_unit_.../exp_desktop_interstitial_0
+	 *   Nota: o Google também seta aria-hidden no <body>, que é ignorado aqui.
 	 *
-	 * B) Mudança de aria-hidden → "false" em elemento com "interstitial" no ID:
-	 *    O GPT registra a vinheta em ins#gpt_unit_.../exp_desktop_interstitial_0
-	 *    com aria-hidden="true" inicialmente. Quando abre → aria-hidden="false".
+	 * O observer desconecta automaticamente após 30s caso a vinheta não apareça
+	 * no carregamento inicial — a detecção via hash cobre navegações futuras.
 	 */
 	function watchVignetteDom() {
 		if ( ! ('MutationObserver' in window)) {
@@ -196,7 +319,7 @@
 			return;
 		}
 
-		// Verifica se iframe de vinheta já existe (ex: retorno do histórico)
+		// Verifica se iframe de vinheta já existe ao carregar (ex: retorno do histórico)
 		var existingIframe = document.querySelector(
 			'iframe[id*="google_ads_iframe"][id*="interstitial"]'
 		);
@@ -207,23 +330,13 @@
 			return;
 		}
 
-		// Verifica também via aria-hidden (fallback)
-		var existingVignette = document.querySelector(
-			'[id*="interstitial"][data-vignette-loaded="true"]'
-		);
-		if (existingVignette && existingVignette.getAttribute( 'aria-hidden' ) === 'false') {
-			vignetteOpened = true;
-			log( 'Vinheta já visível no carregamento (aria-hidden=false)' );
-			dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
-			return;
-		}
-
 		function isVignetteNode(node) {
 			if (node.nodeType !== 1) {
 				return false;
 			}
 			var nodeId = node.id || '';
-			// Estratégia A: iframe do anúncio da vinheta inserido
+
+			// Estratégia A: iframe do anúncio da vinheta
 			if (
 				node.tagName === 'IFRAME' &&
 				nodeId.indexOf( 'google_ads_iframe' ) !== -1 &&
@@ -231,14 +344,27 @@
 			) {
 				return true;
 			}
-			// Estratégia B: qualquer elemento com "interstitial" no ID que está visível
+
+			// Estratégia B: container com "interstitial" no ID já visível
 			if (
 				nodeId.indexOf( 'interstitial' ) !== -1 &&
 				node.getAttribute( 'aria-hidden' ) === 'false'
 			) {
 				return true;
 			}
+
 			return false;
+		}
+
+		var domObserverTimeout = null;
+
+		function fireVignetteOpen(reason) {
+			if (domObserverTimeout) {
+				clearTimeout( domObserverTimeout );
+			}
+			vignetteOpened = true;
+			log( 'Vinheta detectada via MutationObserver:', reason );
+			dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
 		}
 
 		function handleMutations(mutations, observer) {
@@ -250,45 +376,48 @@
 			for (var i = 0; i < mutations.length; i++) {
 				var mutation = mutations[i];
 
-				// Estratégia B: mudança de aria-hidden em elemento "interstitial"
+				// Estratégia B: atributo aria-hidden mudou
 				if (
 					mutation.type === 'attributes' &&
 					mutation.attributeName === 'aria-hidden'
 				) {
-					var target   = mutation.target;
+					var target = mutation.target;
+
+					// Ignora <body> e <html>: o Google Ad Manager seta aria-hidden no <body>
+					// durante a vinheta, mas isso não é o container que procuramos.
+					if (target === document.body || target === document.documentElement) {
+						continue;
+					}
+
 					var targetId = target.id || '';
 					if (
 						targetId.indexOf( 'interstitial' ) !== -1 &&
 						target.getAttribute( 'aria-hidden' ) === 'false'
 					) {
-						vignetteOpened = true;
-						log( 'Vinheta detectada via MutationObserver (aria-hidden → false)', targetId );
-						dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
+						fireVignetteOpen( 'aria-hidden → false em ' + targetId );
 						observer.disconnect();
 						return;
 					}
 				}
 
-				// Estratégias A e B: nó inserido
+				// Estratégia A: nó inserido no DOM
 				if (mutation.type === 'childList') {
 					for (var j = 0; j < mutation.addedNodes.length; j++) {
 						var node = mutation.addedNodes[j];
+
 						if (isVignetteNode( node )) {
-							vignetteOpened = true;
-							log( 'Vinheta detectada via nó inserido:', node.id || node.tagName );
-							dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
+							fireVignetteOpen( 'nó inserido: ' + (node.id || node.tagName) );
 							observer.disconnect();
 							return;
 						}
-						// Verifica descendentes do nó inserido (iframe pode estar aninhado)
+
+						// Iframe pode estar aninhado dentro de um wrapper inserido
 						if (node.nodeType === 1) {
 							var nestedIframe = node.querySelector(
 								'iframe[id*="google_ads_iframe"][id*="interstitial"]'
 							);
 							if (nestedIframe) {
-								vignetteOpened = true;
-								log( 'Vinheta detectada via iframe aninhado em nó inserido:', nestedIframe.id );
-								dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
+								fireVignetteOpen( 'iframe aninhado: ' + nestedIframe.id );
 								observer.disconnect();
 								return;
 							}
@@ -308,240 +437,119 @@
 				attributeFilter: ['aria-hidden'],
 			}
 		);
-		log( 'MutationObserver de vinheta configurado' );
+
+		// Desconecta automaticamente após 30s caso a vinheta nunca apareça.
+		domObserverTimeout = setTimeout(
+			function () {
+				domObserver.disconnect();
+				log( 'MutationObserver: desconectado por timeout (30s sem vinheta)' );
+			},
+			30000
+		);
+
+		log( 'MutationObserver de vinheta configurado (timeout: 30s)' );
 	}
 
 	// -------------------------------------------------------------------------
 	// 2. IMPRESSÃO DE BANNER (ad_impression)
 	//
-	// Chave de dedup: elementId do slot GPT (ex: "av_top").
-	// Isso é consistente entre GPT impressionViewable (usa getSlotElementId())
-	// e IntersectionObserver (usa el.id), independente de sufixos como _rebid.
+	// Usa exclusivamente o evento nativo 'impressionViewable' da GPT API.
+	// O GPT já implementa o padrão Active View (≥50% visível por ≥1s) internamente,
+	// sem necessidade de IntersectionObserver manual.
 	// -------------------------------------------------------------------------
 
-	/** Mapa de deduplicação: elementId → true */
+	/** Mapa de deduplicação: elementId → true (proteção contra disparo duplo) */
 	var impressionsFired = {};
 
 	/**
-	 * Descobre slots de anúncios a monitorar.
-	 * Usa GPT slot map como fonte de verdade quando disponível:
-	 *   - Inclui apenas elementos registrados no GPT (exclui _wrappers e elementos extras)
-	 *   - Obtém o adUnitPath real (ex: /22976784714/exp_desktop_top_rebid)
-	 * Fallback: descobre via [id^="av_"] excluindo _wrapper elements.
+	 * Registra listeners nativos do GPT para impressões e debug de renderização.
 	 *
-	 * @param  {Object} gptSlotMap  { elementId: adUnitPath }
-	 * @return {Array<{el, id, position, adUnitPath}>}
-	 */
-	function buildSlotsFromDom(gptSlotMap) {
-		var slots      = [];
-		var hasGPTData = Object.keys( gptSlotMap ).length > 0;
-
-		document.querySelectorAll( '[id^="av_"]' ).forEach(
-			function (el) {
-				var elId = el.id;
-				var name = elId.slice( 3 ); // remove "av_"
-
-				if ( ! name) {
-					return;
-				}
-
-				// Se GPT está disponível: inclui apenas slots realmente registrados
-				// (exclui automaticamente _wrapper e outros elementos extras)
-				if (hasGPTData) {
-					if ( ! gptSlotMap.hasOwnProperty( elId )) {
-						log( 'Slot não registrado no GPT; ignorado:', elId );
-						return;
-					}
-				} else {
-					// Fallback: sem GPT, filtra manualmente _wrapper
-					if (name.indexOf( '_wrapper' ) !== -1) {
-						return;
-					}
-				}
-
-				// adUnitPath real do GPT (inclui _rebid etc.) ou construído como fallback
-				var adUnitPath = hasGPTData
-					? gptSlotMap[elId]
-					: '/22976784714/exp_desktop_' + name;
-
-				slots.push(
-					{
-						el:          el,
-						id:          elId,         // chave de dedup (elementId)
-						position:    positionFromAdIdentifier( elId ),
-						adUnitPath:  adUnitPath,   // para o campo ad_slot_id no evento
-					}
-				);
-			}
-		);
-
-		log(
-			'Slots para monitorar:',
-			slots.map( function (s) { return s.id + ' → ' + s.adUnitPath; } )
-		);
-		return slots;
-	}
-
-	/**
-	 * Estratégia primária: GPT pubads 'impressionViewable'.
-	 * Implementa a definição IAB (50% visível por 1s) nativamente.
-	 * Usa elementId como chave de dedup (consistente com IntersectionObserver).
+	 * impressionViewable: dispara quando o slot atinge o padrão Active View IAB
+	 *   (≥50% visível por ≥1s). Fonte oficial para contagem de impressões.
 	 *
-	 * @return {boolean} true se o listener foi registrado.
+	 * slotRenderEnded: dispara ao final da renderização do slot.
+	 *   isEmpty === true significa no-fill. Usado apenas para logging de debug.
+	 *
+	 * Guard alvobot_gpt_listeners_added previne registro duplo caso init()
+	 * seja chamado mais de uma vez.
 	 */
-	function setupGPTImpressionTracking() {
+	function setupGptListeners() {
 		if (
 			typeof window.googletag === 'undefined' ||
 			! window.googletag.cmd
 		) {
-			log( 'googletag não disponível; pulando estratégia GPT' );
-			return false;
+			log( 'googletag não disponível; rastreamento de impressão inativo' );
+			return;
 		}
 
 		window.googletag.cmd.push(
 			function () {
+				if (window.alvobot_gpt_listeners_added) {
+					return;
+				}
+				window.alvobot_gpt_listeners_added = true;
+
+				// --- impressionViewable: contagem de impressão via Active View ---
 				window.googletag.pubads().addEventListener(
 					'impressionViewable',
 					function (event) {
 						var slot      = event.slot;
-						var elementId = slot.getSlotElementId();  // ex: "av_top"
-						var unitPath  = slot.getAdUnitPath();     // ex: "/22976784714/exp_desktop_top_rebid"
+						var elementId = slot.getSlotElementId();
+						var unitPath  = slot.getAdUnitPath();
 						var position  = positionFromAdIdentifier( unitPath );
 
-						// Ignora vinhetas (tratadas separadamente)
-						if (position === 'interstitial' || position === 'unknown') {
-							log( 'GPT impressionViewable: ignorado (', position, ')', unitPath );
+						// Vinhetas são tratadas separadamente via MutationObserver + hash
+						if (position === 'interstitial') {
+							log( 'impressionViewable: ignorado (interstitial tratado separadamente)', unitPath );
 							return;
 						}
 
-						// Dedup por elementId — chave consistente com IntersectionObserver
 						if (impressionsFired[elementId]) {
-							log( 'GPT impressionViewable: já disparado para', elementId );
+							log( 'impressionViewable: já disparado para', elementId );
 							return;
 						}
 
 						impressionsFired[elementId] = true;
-						log( 'GPT impressionViewable disparado:', position, unitPath, '(key:', elementId, ')' );
+						log( 'impressionViewable:', position, unitPath, '(elementId:', elementId, ')' );
 						dispatchAdEvent( 'ad_impression', position, unitPath );
 					}
 				);
-			}
-		);
 
-		log( 'GPT impressionViewable listener configurado' );
-		return true;
-	}
-
-	/**
-	 * Estratégia de fallback: IntersectionObserver.
-	 * Ativado mesmo quando GPT está disponível (impressionsFired previne duplo disparo).
-	 * Verifica data-google-query-id antes de contar (confirma que o anúncio carregou).
-	 *
-	 * @param {Array} slots Retornado por buildSlotsFromDom().
-	 */
-	function setupImpressionObserver(slots) {
-		if ( ! ('IntersectionObserver' in window)) {
-			log( 'IntersectionObserver indisponível' );
-			return;
-		}
-
-		slots.forEach(
-			function (slot) {
-				var el              = slot.el;
-				var dedupeKey       = slot.id;   // elementId = "av_top"
-				var visibilityTimer = null;
-
-				var observer = new IntersectionObserver(
-					function (entries) {
-						entries.forEach(
-							function (entry) {
-								// GPT pode ter disparado primeiro — cancela o observer
-								if (impressionsFired[dedupeKey]) {
-									observer.disconnect();
-									if (visibilityTimer) {
-										clearTimeout( visibilityTimer );
-										visibilityTimer = null;
-									}
-									return;
-								}
-
-								if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-									if ( ! visibilityTimer) {
-										log( 'Banner visível ≥50%, timer de 1s iniciado:', slot.position );
-										visibilityTimer = setTimeout(
-											function () {
-												visibilityTimer = null;
-
-												// GPT pode ter disparado durante o timer
-												if (impressionsFired[dedupeKey]) {
-													log( 'IO timer: GPT já disparou para', dedupeKey, '; cancelado' );
-													observer.disconnect();
-													return;
-												}
-
-												// Confirma que o anúncio foi realmente carregado
-												if ( ! el.hasAttribute( 'data-google-query-id' )) {
-													log( 'IO: impressão ignorada — anúncio não carregado (sem data-google-query-id):', slot.id );
-													return;
-												}
-
-												impressionsFired[dedupeKey] = true;
-												log( 'IO: impressão disparada:', slot.position, '(key:', dedupeKey, ')' );
-												dispatchAdEvent( 'ad_impression', slot.position, slot.adUnitPath );
-												observer.disconnect();
-											},
-											1000
-										);
-									}
-								} else {
-									// Saiu de visibilidade antes de 1s
-									if (visibilityTimer) {
-										clearTimeout( visibilityTimer );
-										visibilityTimer = null;
-										log( 'IO: timer cancelado (banner saiu de visibilidade):', slot.position );
-									}
-								}
-							}
+				// --- slotRenderEnded: debug de fill/no-fill ---
+				window.googletag.pubads().addEventListener(
+					'slotRenderEnded',
+					function (event) {
+						log(
+							'slotRenderEnded:',
+							event.slot.getSlotElementId(),
+							event.isEmpty ? 'vazio (no-fill)' : 'preenchido'
 						);
-					},
-					{threshold: 0.5}
+					}
 				);
 
-				observer.observe( el );
-				log( 'IO configurado para:', slot.id );
+				log( 'GPT listeners registrados (impressionViewable + slotRenderEnded)' );
 			}
 		);
-	}
-
-	/**
-	 * Orquestra as duas estratégias de impressão com dedup unificado por elementId.
-	 */
-	function setupImpressions() {
-		var gptSlotMap = buildGPTSlotMap();
-		var slots      = buildSlotsFromDom( gptSlotMap );
-
-		if ( ! slots.length) {
-			log( 'Nenhum slot encontrado; rastreamento de impressão inativo' );
-		}
-
-		var gptActive = setupGPTImpressionTracking();
-		if ( ! gptActive) {
-			log( 'GPT não disponível; usando apenas IntersectionObserver' );
-		}
-
-		// IO sempre ativo como fallback/complemento
-		// impressionsFired[elementId] previne duplo disparo entre GPT e IO
-		setupImpressionObserver( slots );
 	}
 
 	// -------------------------------------------------------------------------
-	// 3. CLIQUE EM ANÚNCIO (ad_click)
+	// 3. CLIQUE EM BANNER (ad_click) e CLIQUE EM VINHETA (ad_vignette_click)
+	//
+	// Técnica blur/focus: quando a window perde foco e document.activeElement
+	// é um iframe de anúncio, o usuário clicou naquele anúncio.
+	//
+	// Diferenciação:
+	//   - iframe com "interstitial" no ID → ad_vignette_click
+	//   - qualquer outro iframe de anúncio → ad_click
 	// -------------------------------------------------------------------------
 
 	var clicksFired = {};
 
 	/**
 	 * Verifica se um elemento é um iframe do Google Ads.
+	 *
+	 * @param  {Element} el
+	 * @return {boolean}
 	 */
 	function isAdIframe(el) {
 		if ( ! el || el.tagName !== 'IFRAME') {
@@ -561,14 +569,19 @@
 	}
 
 	/**
-	 * Detecta clique em anúncio via técnica blur/focus.
-	 * Quando a window perde foco e activeElement é um iframe de anúncio → ad_click.
-	 * Após 3s devolve o foco para permitir detecção de cliques subsequentes.
+	 * Detecta cliques em anúncios via blur/focus.
+	 *
+	 * Cenários cobertos:
+	 *   1. Clique em banner regular → ad_click (position: top | content_1 | content_2)
+	 *   2. Clique em vinheta aberta → ad_vignette_click (position: interstitial)
+	 *
+	 * Após 3s devolve o foco à janela para permitir detecção de cliques subsequentes.
 	 */
 	function setupClickTracking() {
 		window.addEventListener(
 			'blur',
 			function () {
+				// setTimeout 0: aguarda o browser atualizar document.activeElement
 				setTimeout(
 					function () {
 						var activeEl = document.activeElement;
@@ -580,14 +593,19 @@
 						var position = positionFromAdIdentifier( iframeId );
 						var slotId   = slotIdFromIframeId( iframeId );
 
+						// Determina tipo de clique: vinheta ou banner
+						var eventName = (position === 'interstitial')
+							? 'ad_vignette_click'
+							: 'ad_click';
+
 						if (clicksFired[iframeId]) {
 							log( 'Clique já registrado para:', iframeId );
 							return;
 						}
 						clicksFired[iframeId] = true;
 
-						log( 'Clique detectado (blur/focus):', position, iframeId );
-						dispatchAdEvent( 'ad_click', position, slotId );
+						log( 'Clique detectado (blur/focus):', eventName, position, iframeId );
+						dispatchAdEvent( eventName, position, slotId );
 
 						// Devolve foco após 3s para permitir novos cliques
 						setTimeout(
@@ -605,7 +623,7 @@
 			}
 		);
 
-		log( 'Rastreamento de cliques configurado' );
+		log( 'Rastreamento de cliques configurado (ad_click + ad_vignette_click)' );
 	}
 
 	// -------------------------------------------------------------------------
@@ -616,18 +634,29 @@
 		log( 'Inicializando AlvoBot Ad Tracker' );
 
 		// 1. Vinheta via hash da URL
+		//    - init: URL já carregou com #google_vignette
+		//    - hashchange: navegação interna muda o hash
+		//    - popstate: Google usa history.pushState/replaceState em vez de hash
+		//    - visibilitychange: usuário retorna à aba; hash já estará presente
 		checkVignetteHash();
 		window.addEventListener( 'hashchange', checkVignetteHash );
-		// popstate cobre casos onde o Google usa history.pushState/replaceState
-		window.addEventListener( 'popstate', checkVignetteHash );
+		window.addEventListener( 'popstate',   checkVignetteHash );
+		document.addEventListener(
+			'visibilitychange',
+			function () {
+				if (document.visibilityState === 'visible') {
+					checkVignetteHash();
+				}
+			}
+		);
 
-		// 2. Vinheta via DOM (MutationObserver)
+		// 2. Vinheta via DOM (MutationObserver — iframe inserido + aria-hidden)
 		watchVignetteDom();
 
-		// 3. Impressões (GPT + IntersectionObserver com dedup por elementId)
-		setupImpressions();
+		// 3. Impressões de banner (GPT impressionViewable — Active View nativo)
+		setupGptListeners();
 
-		// 4. Cliques (blur/focus)
+		// 4. Cliques em anúncios e vinheta (blur/focus)
 		setupClickTracking();
 
 		log( 'AlvoBot Ad Tracker inicializado' );
