@@ -3,7 +3,7 @@
 Plugin Name: AlvoBot Pro
 Plugin URI: https://app.alvobot.com/
 Description: Suite completa de ferramentas AlvoBot incluindo gerador de logo, author box e gerenciamento de plugins.
-Version: 2.9.14
+Version: 2.9.15
 Author: Alvobot - Cris Franklin
 Author URI: https://app.alvobot.com/
 Text Domain: alvobot-pro
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constantes do plugin
-define( 'ALVOBOT_PRO_VERSION', '2.9.14' );
+define( 'ALVOBOT_PRO_VERSION', '2.9.15' );
 define( 'ALVOBOT_PRO_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ALVOBOT_PRO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ALVOBOT_PRO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -42,6 +42,33 @@ AlvoBotPro::get_instance();
 if ( is_admin() ) {
 	new AlvoBotPro_Updater( __FILE__ );
 }
+
+// Repara o transient update_plugins se no_update ou response forem stdClass em vez de array.
+// Roda em todas as requisições (frontend + admin) para sanar sites afetados pela versão 2.9.13
+// que gravava stdClass e causava fatal error em class-wp-plugins-list-table.php:206 (PHP 8.x).
+function alvobot_pro_repair_update_transient() {
+	$transient = get_site_transient( 'update_plugins' );
+	if ( empty( $transient ) ) {
+		return;
+	}
+
+	$repaired = false;
+
+	if ( isset( $transient->no_update ) && ! is_array( $transient->no_update ) ) {
+		$transient->no_update = is_object( $transient->no_update ) ? (array) $transient->no_update : array();
+		$repaired             = true;
+	}
+
+	if ( isset( $transient->response ) && ! is_array( $transient->response ) ) {
+		$transient->response = is_object( $transient->response ) ? (array) $transient->response : array();
+		$repaired            = true;
+	}
+
+	if ( $repaired ) {
+		set_site_transient( 'update_plugins', $transient );
+	}
+}
+add_action( 'init', 'alvobot_pro_repair_update_transient', 1 );
 
 // Hook para inicialização completa do plugin
 function alvobot_pro_init() {

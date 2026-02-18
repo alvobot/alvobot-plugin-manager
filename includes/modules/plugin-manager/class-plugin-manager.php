@@ -1460,6 +1460,17 @@ class AlvoBotPro_PluginManager {
 			case 'reset':
 				return $this->handle_reset( $request );
 
+			case 'fix_update_transient':
+				delete_site_transient( 'update_plugins' );
+				delete_site_transient( 'alvobotpro_github_latest_release' );
+				wp_clean_plugins_cache( true );
+				return new WP_REST_Response(
+					array(
+						'success' => true,
+						'message' => 'Transient de updates limpo com sucesso',
+					)
+				);
+
 			default:
 				return new WP_REST_Response(
 					array(

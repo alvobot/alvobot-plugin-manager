@@ -79,10 +79,11 @@ class AlvoBotPro_Updater {
 		if ( version_compare( $entry->new_version, ALVOBOT_PRO_VERSION, 'le' ) ) {
 			unset( $transient->response[ $this->basename ] );
 
-			if ( ! isset( $transient->no_update ) || ! is_object( $transient->no_update ) ) {
-				$transient->no_update = new stdClass();
+			// WordPress espera no_update como array associativo (não stdClass).
+			if ( ! isset( $transient->no_update ) || ! is_array( $transient->no_update ) ) {
+				$transient->no_update = array();
 			}
-			$transient->no_update->{ $this->basename } = (object) array(
+			$transient->no_update[ $this->basename ] = (object) array(
 				'slug'        => dirname( $this->basename ),
 				'plugin'      => $this->basename,
 				'new_version' => ALVOBOT_PRO_VERSION,
@@ -325,10 +326,11 @@ class AlvoBotPro_Updater {
 			unset( $transient->response[ $this->basename ] );
 
 			// Registra como atualizado para o WordPress não exibir o aviso.
-			if ( ! isset( $transient->no_update ) || ! is_object( $transient->no_update ) ) {
-				$transient->no_update = new stdClass();
+			// WordPress espera no_update como array associativo (não stdClass).
+			if ( ! isset( $transient->no_update ) || ! is_array( $transient->no_update ) ) {
+				$transient->no_update = array();
 			}
-			$transient->no_update->{ $this->basename } = (object) array(
+			$transient->no_update[ $this->basename ] = (object) array(
 				'slug'        => dirname( $this->basename ),
 				'plugin'      => $this->basename,
 				'new_version' => $current_version,
