@@ -340,6 +340,17 @@
 	// Select all pages
 	$(document).on('click', '#sil-select-all-pages', function () {
 		var $btn = $(this);
+
+		// If already in "all selected" mode, cancel the selection
+		if (bulkState.allSelectedIds) {
+			bulkState.allSelectedIds = null;
+			$('#sil-select-all-banner').hide();
+			$('#sil-select-all').prop('checked', false);
+			$('.sil-post-check').prop('checked', false).trigger('change');
+			$btn.text('Selecionar todos os posts');
+			return;
+		}
+
 		$btn.prop('disabled', true).text('Carregando...');
 
 		$.ajax({
@@ -356,15 +367,12 @@
 				if (response.success) {
 					bulkState.allSelectedIds = response.data.ids;
 					var total = response.data.total;
-					$('#sil-banner-text').text(
-						'Todos os ' + total + ' posts desta busca estão selecionados.'
-					);
-					$btn.text('Cancelar seleção').prop('disabled', false).off('click').on('click', function () {
-						bulkState.allSelectedIds = null;
-						$('#sil-select-all-banner').hide();
-						$('#sil-select-all').prop('checked', false);
-						$('.sil-post-check').prop('checked', false).trigger('change');
-					});
+					var bannerText = 'Todos os ' + total + ' posts desta busca estão selecionados.';
+					if (response.data.truncated) {
+						bannerText += ' (Limitado a ' + total + ' de ' + response.data.total_available + ' posts)';
+					}
+					$('#sil-banner-text').text(bannerText);
+					$btn.text('Cancelar seleção').prop('disabled', false);
 					// Update credits counter
 					$('#sil-selected-count').text(total);
 					$('#sil-total-credits').text(total * 2);
@@ -526,6 +534,9 @@
 			},
 			success: function (response) {
 				if (response.success && response.data.ids.length > 0) {
+					if (response.data.truncated) {
+						alert('Atenção: Existem ' + response.data.total_available + ' posts, mas o limite é de ' + response.data.ids.length + '. Os primeiros ' + response.data.ids.length + ' serão processados.');
+					}
 					var label = statusFilter === 'missing' ? 'Gerar Faltantes' : 'Gerar Tudo Novamente';
 					runBulkGeneration(response.data.ids, $btn, label, originalHtml);
 				} else {
@@ -571,8 +582,20 @@
 		function processNextExt() {
 			if (current >= total) {
 				var resultHtml = '<strong>Concluído!</strong> ' + success + ' sucesso, ' + failed + ' falha(s)';
+				if (retryQueue.length > 0) {
+					resultHtml += ' <button id="sil-retry-bulk-ext" class="button button-small" style="margin-left:var(--alvobot-space-sm);">Tentar novamente (' + retryQueue.length + ')</button>';
+				}
 				$('#sil-progress-text-ext').html(resultHtml);
 				$triggerBtn.prop('disabled', false).html(restoreHtml);
+
+				// Bind retry for failed posts from this run
+				$('#sil-retry-bulk-ext').off('click').on('click', function (e) {
+					e.preventDefault();
+					var idsToRetry = retryQueue.slice();
+					retryQueue = [];
+					$(this).remove();
+					runBulkGeneration(idsToRetry, $triggerBtn, label, restoreHtml);
+				});
 				return;
 			}
 

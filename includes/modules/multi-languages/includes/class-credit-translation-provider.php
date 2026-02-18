@@ -81,6 +81,7 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 			$source_language_name = isset( $this->polylang_languages[ $source_lang ] )
 				? $this->polylang_languages[ $source_lang ]['native_name']
 				: 'auto-detect';
+			$source_language_code = isset( $this->polylang_languages[ $source_lang ] ) ? $source_lang : 'auto-detect';
 
 			$target_language_name = $this->polylang_languages[ $target_lang ]['native_name'];
 
@@ -89,8 +90,9 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 
 			$params = array(
 				'text'            => $text,
-				'source_language' => $source_language_name,
+				'source_language' => $source_language_code,
 				'target_language' => $target_language_name,
+				'language_hint'   => $source_language_name,
 				'preserve_html'   => $preserve_html,
 				'context'         => $context,
 			);
@@ -119,7 +121,7 @@ class AlvoBotPro_Credit_Translation_Provider implements AlvoBotPro_Translation_P
 			return array(
 				'success'         => true,
 				'translated_text' => $translated_text,
-				'source_language' => $source_lang,
+				'source_language' => isset( $result['data']['detected_language'] ) ? $result['data']['detected_language'] : $source_lang,
 				'target_language' => $target_lang,
 				'provider'        => 'credits',
 				'usage'           => array(
