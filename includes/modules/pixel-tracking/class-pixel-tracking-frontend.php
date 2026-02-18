@@ -125,6 +125,25 @@ class AlvoBotPro_PixelTracking_Frontend {
 				)
 			);
 		}
+
+		if ( file_exists( $module_dir . 'assets/js/ad-tracker.js' ) ) {
+			$ad_script_path   = $module_dir . 'assets/js/ad-tracker.js';
+			$ad_asset_version = (string) filemtime( $ad_script_path );
+			if ( empty( $ad_asset_version ) ) {
+				$ad_asset_version = ALVOBOT_PRO_VERSION;
+			}
+
+			wp_enqueue_script(
+				'alvobot-ad-tracker',
+				$module_url . 'assets/js/ad-tracker.js',
+				array( 'alvobot-pixel-tracking' ),
+				$ad_asset_version,
+				array(
+					'strategy'  => 'defer',
+					'in_footer' => true,
+				)
+			);
+		}
 	}
 
 	/**
