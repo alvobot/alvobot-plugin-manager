@@ -179,14 +179,16 @@
 	function loadBulkPosts(page) {
 		var $btn = $('#alvobot-sil-load-posts');
 		var $list = $('#alvobot-sil-post-list');
-		var category = $('#sil_bulk_category').val();
-		var language = $('#sil_bulk_language').val();
+		var category = $('#sil_bulk_category').val() || '';
+		var language = $('#sil_bulk_language').val() || '';
 		var status = $('#sil_bulk_status').val() || 'all';
 		var sort = $('#sil_bulk_sort').val() || 'title_asc';
 
 		if (page) {
 			bulkState.page = page;
 		}
+
+		console.log('[SmartLinks] loadBulkPosts: category=' + category + ' status=' + status + ' sort=' + sort + ' page=' + bulkState.page);
 
 		$btn.prop('disabled', true).text('Carregando...');
 		$list.html('<p>Carregando posts...</p>');
@@ -204,6 +206,7 @@
 				page: bulkState.page,
 			},
 			success: function (response) {
+				console.log('[SmartLinks] response: total=' + (response.data ? response.data.total : 'N/A') + ' posts=' + (response.data && response.data.posts ? response.data.posts.length : 0));
 				if (response.success && response.data.posts.length > 0) {
 					bulkState.totalPages = response.data.total_pages || 1;
 					bulkState.total = response.data.total || 0;

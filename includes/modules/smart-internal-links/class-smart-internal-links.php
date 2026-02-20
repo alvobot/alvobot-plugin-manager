@@ -408,7 +408,14 @@ class AlvoBotPro_Smart_Internal_Links {
 
 	private function build_bulk_query_args( $args, $status, $category, $language ) {
 		if ( $category ) {
-			$args['cat'] = $category;
+			$args['tax_query'] = array(
+				array(
+					'taxonomy'         => 'category',
+					'field'            => 'term_id',
+					'terms'            => array( intval( $category ) ),
+					'include_children' => false,
+				),
+			);
 		}
 
 		if ( $language && function_exists( 'pll_get_post_language' ) ) {
@@ -430,6 +437,8 @@ class AlvoBotPro_Smart_Internal_Links {
 				),
 			);
 		}
+
+		AlvoBotPro::debug_log( 'smart-links', 'build_bulk_query_args: category=' . $category . ' status=' . $status . ' args=' . wp_json_encode( $args ) );
 
 		return apply_filters( 'alvobot_smart_links_bulk_query_args', $args, $category, $language );
 	}
@@ -470,7 +479,12 @@ class AlvoBotPro_Smart_Internal_Links {
 			$language
 		);
 
+		AlvoBotPro::debug_log( 'smart-links', 'ajax_load_posts: POST[category]=' . ( isset( $_POST['category'] ) ? $_POST['category'] : 'NOT SET' ) . ' resolved=$category=' . $category );
+
 		$query = new WP_Query( $args );
+
+		AlvoBotPro::debug_log( 'smart-links', 'ajax_load_posts: found_posts=' . $query->found_posts . ' SQL=' . $query->request );
+
 		$posts = $query->posts;
 		$data  = array();
 
