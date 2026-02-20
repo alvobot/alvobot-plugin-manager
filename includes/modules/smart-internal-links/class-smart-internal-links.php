@@ -445,7 +445,16 @@ class AlvoBotPro_Smart_Internal_Links {
 		$language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
 		$page     = isset( $_POST['page'] ) ? max( 1, absint( $_POST['page'] ) ) : 1;
 		$status   = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'all';
+		$sort     = isset( $_POST['sort'] ) ? sanitize_text_field( wp_unslash( $_POST['sort'] ) ) : 'title_asc';
 		$per_page = 50;
+
+		$sort_map = array(
+			'title_asc'  => array( 'orderby' => 'title', 'order' => 'ASC' ),
+			'title_desc' => array( 'orderby' => 'title', 'order' => 'DESC' ),
+			'date_desc'  => array( 'orderby' => 'date', 'order' => 'DESC' ),
+			'date_asc'   => array( 'orderby' => 'date', 'order' => 'ASC' ),
+		);
+		$sort_cfg = isset( $sort_map[ $sort ] ) ? $sort_map[ $sort ] : $sort_map['title_asc'];
 
 		$args = $this->build_bulk_query_args(
 			array(
@@ -453,8 +462,8 @@ class AlvoBotPro_Smart_Internal_Links {
 				'post_status'    => 'publish',
 				'posts_per_page' => $per_page,
 				'paged'          => $page,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
+				'orderby'        => $sort_cfg['orderby'],
+				'order'          => $sort_cfg['order'],
 			),
 			$status,
 			$category,
@@ -475,6 +484,7 @@ class AlvoBotPro_Smart_Internal_Links {
 				'url'          => get_permalink( $post->ID ),
 				'has_links'    => $has_links,
 				'generated_at' => $has_links ? $meta['generated_at'] : '',
+				'post_date'    => get_the_date( 'd/m/Y', $post->ID ),
 			);
 		}
 

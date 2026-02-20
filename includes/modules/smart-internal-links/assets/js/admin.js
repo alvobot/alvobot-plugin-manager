@@ -182,6 +182,7 @@
 		var category = $('#sil_bulk_category').val();
 		var language = $('#sil_bulk_language').val();
 		var status = $('#sil_bulk_status').val() || 'all';
+		var sort = $('#sil_bulk_sort').val() || 'title_asc';
 
 		if (page) {
 			bulkState.page = page;
@@ -199,6 +200,7 @@
 				category: category,
 				language: language,
 				status: status,
+				sort: sort,
 				page: bulkState.page,
 			},
 			success: function (response) {
@@ -211,6 +213,7 @@
 						'<thead><tr>' +
 						'<th style="width:30px"><input type="checkbox" id="sil-select-all" title="Selecionar esta página"></th>' +
 						'<th>Título</th>' +
+						'<th style="width:110px;">Publicado</th>' +
 						'<th>Status</th>' +
 						'<th style="width:80px;text-align:center;">Ações</th>' +
 						'</tr></thead><tbody>';
@@ -230,6 +233,7 @@
 							'<td>' +
 							escHtml(post.title) +
 							'</td>';
+						html += '<td style="white-space:nowrap;color:var(--alvobot-gray-500);font-size:var(--alvobot-font-size-sm,13px);">' + escHtml(post.post_date || '') + '</td>';
 						html += '<td>' + status + '</td>';
 						html += '<td style="text-align:center;display:flex;gap:4px;justify-content:center;">';
 						if (post.has_links) {

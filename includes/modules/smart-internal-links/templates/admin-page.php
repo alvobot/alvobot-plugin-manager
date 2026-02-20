@@ -260,6 +260,17 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 								</select>
 							</td>
 						</tr>
+						<tr>
+							<th><label for="sil_bulk_sort">Ordenar por</label></th>
+							<td>
+								<select id="sil_bulk_sort" class="alvobot-select">
+									<option value="title_asc">Título (A → Z)</option>
+									<option value="title_desc">Título (Z → A)</option>
+									<option value="date_desc">Mais recentes</option>
+									<option value="date_asc">Mais antigos</option>
+								</select>
+							</td>
+						</tr>
 					</table>
 
 					<div class="alvobot-btn-group" style="margin-top:var(--alvobot-space-lg);">
