@@ -49,7 +49,14 @@ class AlvoBotPro_Smart_Links_Renderer {
 		$html .= '<div class="alvobot-sil__list">';
 
 		foreach ( $links as $link ) {
-			$url  = ! empty( $link['url'] ) ? $link['url'] : get_permalink( $link['post_id'] );
+			// Recomputa o permalink em tempo de render para garantir URL atualizada
+			// (slug do post pode ter mudado desde a geração; em sites Polylang/WPML
+			// o contexto de idioma correto é o do momento de exibição).
+			$post_id_link = isset( $link['post_id'] ) ? absint( $link['post_id'] ) : 0;
+			$url          = $post_id_link ? get_permalink( $post_id_link ) : '';
+			if ( empty( $url ) ) {
+				$url = ! empty( $link['url'] ) ? $link['url'] : '';
+			}
 			$text = isset( $link['text'] ) && is_string( $link['text'] ) ? $link['text'] : '';
 
 			if ( empty( $text ) ) {

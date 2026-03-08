@@ -91,18 +91,6 @@ class AlvoBotPro {
 				'menu_title' => 'Páginas Essenciais',
 			),
 		),
-		'multi-languages'      => array(
-			'file'          => 'includes/modules/multi-languages/class-multi-languages.php',
-			'class'         => 'AlvoBotPro_MultiLanguages',
-			'name'          => 'Multi Languages',
-			'description'   => 'Gerencie traduções e conteúdo multilíngue para seu site WordPress com Polylang.',
-			'default'       => true,
-			'settings_slug' => 'alvobot-pro-multi-languages',
-			'admin_menu'    => array(
-				'page_title' => 'Gerenciamento Multilíngue',
-				'menu_title' => 'Multilíngue',
-			),
-		),
 		'temporary-login'      => array(
 			'file'          => 'includes/modules/temporary-login/class-temporary-login.php',
 			'class'         => 'AlvoBotPro_TemporaryLogin',

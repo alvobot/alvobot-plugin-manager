@@ -135,6 +135,19 @@ class AlvoBotPro_Smart_Links_Generator {
 			$num_blocks = max( 1, intval( floor( $available / $links_per_block ) ) );
 		}
 
+		// Limitar num_blocks pelo número de parágrafos do post para não gerar
+		// blocos que o injector não vai conseguir inserir (e cobrar créditos em vão).
+		// Os thresholds espelham class-content-injector.php: middle >= 6, before_last >= 4.
+		$para_count   = substr_count( $post->post_content, '</p>' );
+		$max_by_paras = 1; // after_first sempre disponível se total >= 2
+		if ( $para_count >= 6 ) {
+			$max_by_paras = 3;
+		} elseif ( $para_count >= 4 ) {
+			$max_by_paras = 2;
+		}
+		$num_blocks = min( $num_blocks, $max_by_paras );
+		AlvoBotPro::debug_log( 'smart-internal-links', "Post {$post_id}: {$para_count} parágrafos → máx {$max_by_paras} blocos renderizáveis; usando {$num_blocks}" );
+
 		// Hint de idioma canônico (ISO) para evitar ambiguidades no parser remoto.
 		$language_hint_slug = $this->detect_post_language_slug( $post_id );
 		$language_hint_name = $this->get_language_name_from_slug( $language_hint_slug );

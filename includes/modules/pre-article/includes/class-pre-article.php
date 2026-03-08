@@ -1604,13 +1604,12 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 			$translations   = array();
 			$language_names = array();
 
-			// Se o módulo multi-languages está ativo, usa ele
-			if ( class_exists( 'AlvoBotPro_MultiLanguages' ) ) {
+			if ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 				foreach ( $languages as $lang ) {
 					$translations[ $lang ] = array();
 
 					foreach ( $ctas as $cta ) {
-						$translated_text = $this->translate_text_with_service( $cta['text'], $lang );
+						$translated_text = Alvobot_PreArticle_CTA_Translations::translate_default_cta( $cta['text'], $lang );
 
 						$translations[ $lang ][] = array(
 							'index'      => $cta['index'],
@@ -1619,35 +1618,7 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 						);
 					}
 
-					// Nome do idioma
-					if ( function_exists( 'PLL' ) && PLL()->model ) {
-						$pll_languages = PLL()->model->get_languages_list();
-						foreach ( $pll_languages as $pll_lang ) {
-							if ( $pll_lang->slug === $lang ) {
-								$language_names[ $lang ] = $pll_lang->name;
-								break;
-							}
-						}
-					}
-				}
-			} else {
-				// Fallback: usa traduções estáticas da classe CTA_Translations
-				if ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
-					foreach ( $languages as $lang ) {
-						$translations[ $lang ] = array();
-
-						foreach ( $ctas as $cta ) {
-							$translated_text = Alvobot_PreArticle_CTA_Translations::translate_default_cta( $cta['text'], $lang );
-
-							$translations[ $lang ][] = array(
-								'index'      => $cta['index'],
-								'original'   => $cta['text'],
-								'translated' => $translated_text,
-							);
-						}
-
-						$language_names[ $lang ] = Alvobot_PreArticle_CTA_Translations::get_language_native_name( $lang );
-					}
+					$language_names[ $lang ] = Alvobot_PreArticle_CTA_Translations::get_language_native_name( $lang );
 				}
 			}
 
@@ -1697,27 +1668,6 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 			);
 		}
 
-		/**
-		 * Traduz texto usando o serviço de tradução
-		 */
-		private function translate_text_with_service( $text, $target_language ) {
-			// Tenta usar o serviço do módulo multi-languages
-			if ( class_exists( 'AlvoBotPro_MultiLanguages' ) ) {
-				$multi_lang = AlvoBotPro_MultiLanguages::get_instance();
-
-				if ( method_exists( $multi_lang, 'translate_text_simple' ) ) {
-					return $multi_lang->translate_text_simple( $text, $target_language );
-				}
-			}
-
-			// Fallback: usa traduções estáticas
-			if ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
-				return Alvobot_PreArticle_CTA_Translations::translate_default_cta( $text, $target_language );
-			}
-
-			// Último fallback: retorna com prefixo do idioma
-			return '[' . strtoupper( $target_language ) . '] ' . $text;
-		}
 
 		/**
 		 * Obtém o idioma atual

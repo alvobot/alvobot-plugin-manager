@@ -61,11 +61,12 @@ class AlvoBotPro_Smart_Links_Injector {
 		}
 		$disclaimer = isset( $meta['disclaimer'] ) ? $meta['disclaimer'] : '';
 
-		// Mapear blocos por posição
+		// Mapear blocos por posição — primeiro bloco com determinada posição vence;
+		// duplicatas são descartadas (podem ocorrer por edição manual no modal).
 		$blocks_by_position = array();
 		foreach ( $meta['blocks'] as $block ) {
 			$pos = isset( $block['position'] ) ? $block['position'] : '';
-			if ( $pos ) {
+			if ( $pos && ! isset( $blocks_by_position[ $pos ] ) ) {
 				$blocks_by_position[ $pos ] = $block;
 			}
 		}
@@ -163,18 +164,27 @@ class AlvoBotPro_Smart_Links_Injector {
 		// Padrão 3: Conteúdo baseado em <br> (editor simples)
 		$parts = preg_split( '/(<br\s*\/?>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
 		if ( count( $parts ) > 2 ) {
-			$paragraphs = array();
+			$paragraphs     = array();
+			$pending_prefix = '';
 			for ( $i = 0; $i < count( $parts ); $i += 2 ) {
 				$para = $parts[ $i ];
 				if ( isset( $parts[ $i + 1 ] ) ) {
 					$para .= $parts[ $i + 1 ];
 				}
-				if ( trim( wp_strip_all_tags( $para ) ) ) {
-					$paragraphs[] = $para;
-				} elseif ( ! empty( $paragraphs ) ) {
-					$paragraphs[ count( $paragraphs ) - 1 ] .= $para;
+				if ( $this->is_ad_block( $para ) ) {
+					$pending_prefix .= $para;
+				} elseif ( trim( wp_strip_all_tags( $para ) ) ) {
+					$paragraphs[]   = $pending_prefix . $para;
+					$pending_prefix = '';
 				} else {
-					$paragraphs[] = $para;
+					$pending_prefix .= $para;
+				}
+			}
+			if ( $pending_prefix !== '' ) {
+				if ( ! empty( $paragraphs ) ) {
+					$paragraphs[ count( $paragraphs ) - 1 ] .= $pending_prefix;
+				} else {
+					$paragraphs[] = $pending_prefix;
 				}
 			}
 			if ( count( $paragraphs ) >= 2 ) {
@@ -187,31 +197,93 @@ class AlvoBotPro_Smart_Links_Injector {
 	}
 
 	/**
-	 * Separa conteúdo por tag de fechamento (</p>, </div>, etc.)
+	 * Separa conteúdo por tag de fechamento (</p>, </div>, etc.).
+	 *
+	 * Blocos de anúncio detectados por is_ad_block() não são contados como
+	 * parágrafos reais: ficam como prefixo do próximo parágrafo de texto.
+	 * Isso garante que os botões de Smart Links nunca sejam inseridos logo
+	 * após um bloco de anúncio.
 	 */
 	private function parse_by_tag( $content, $tag ) {
 		$parts = preg_split( '/(<\/' . preg_quote( $tag, '/' ) . '>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
 
-		$paragraphs = array();
+		$raw_blocks = array();
 		for ( $i = 0; $i < count( $parts ); $i += 2 ) {
 			$para = $parts[ $i ];
 			if ( isset( $parts[ $i + 1 ] ) ) {
 				$para .= $parts[ $i + 1 ];
 			}
+			$raw_blocks[] = $para;
+		}
 
-			// Só conta como parágrafo se tem texto visível
-			if ( trim( wp_strip_all_tags( $para ) ) ) {
-				$paragraphs[] = $para;
+		$paragraphs     = array();
+		$pending_prefix = ''; // HTML de anúncio/vazio a ser prefixado no próximo parágrafo real
+
+		foreach ( $raw_blocks as $block ) {
+			if ( $this->is_ad_block( $block ) ) {
+				// Bloco de anúncio: adia para o próximo parágrafo real
+				$pending_prefix .= $block;
+			} elseif ( trim( wp_strip_all_tags( $block ) ) ) {
+				// Parágrafo com texto: consome o prefixo pendente
+				$paragraphs[]   = $pending_prefix . $block;
+				$pending_prefix = '';
 			} else {
-				// Anexar ao parágrafo anterior (whitespace, empty divs, etc.)
-				if ( ! empty( $paragraphs ) ) {
-					$paragraphs[ count( $paragraphs ) - 1 ] .= $para;
-				} else {
-					$paragraphs[] = $para;
-				}
+				// Vazio/whitespace: adia junto com qualquer anúncio pendente
+				$pending_prefix .= $block;
+			}
+		}
+
+		// Qualquer bloco pendente no final vai para o último parágrafo
+		if ( $pending_prefix !== '' ) {
+			if ( ! empty( $paragraphs ) ) {
+				$paragraphs[ count( $paragraphs ) - 1 ] .= $pending_prefix;
+			} else {
+				$paragraphs[] = $pending_prefix;
 			}
 		}
 
 		return $paragraphs;
+	}
+
+	/**
+	 * Detecta se um bloco HTML é um bloco de anúncio.
+	 *
+	 * Verifica padrões comuns de ad networks e plugins de anúncios para
+	 * WordPress (AdSense, Advanced Ads, WP QUADS, Ezoic, Ad Inserter, etc.).
+	 *
+	 * @param string $html HTML do bloco.
+	 * @return bool
+	 */
+	private function is_ad_block( $html ) {
+		$patterns = array(
+			// Google AdSense — tag <ins> com classe adsbygoogle
+			'/<ins\b[^>]*\badsbygoogle\b/i',
+			// Advanced Ads
+			'/class=["\'][^"\']*\badvads[-_]/i',
+			'/class=["\'][^"\']*[-_]advads\b/i',
+			// WP QUADS / Quick AdSense
+			'/class=["\'][^"\']*\bwp[-_]quads\b/i',
+			'/class=["\'][^"\']*\bquadsmiddle\b/i',
+			// Ezoic
+			'/class=["\'][^"\']*\bezoic[-_]/i',
+			// Ad Inserter
+			'/class=["\'][^"\']*\bcode[-_]block\b/i',
+			// Padrão genérico: classe que começa ou termina com "ad" / "ads"
+			'/class=["\'][^"\']*(?:^|\s)ads?(?:\s|[-_]|$)/i',
+			'/class=["\'][^"\']*[-_]ads?\b/i',
+			'/class=["\'][^"\']*\bads?[-_]/i',
+			// id contendo "advert" ou "ad-" no início
+			'/\bid=["\'](?:ad[-_]|ads[-_]|advert)/i',
+			// Comentários de blocos Gutenberg de plugins de anúncio
+			'/<!--\s*wp:(?:advads|advanced-ads|ad-inserter|adsense)\//i',
+		);
+
+		foreach ( $patterns as $pattern ) {
+			if ( preg_match( $pattern, $html ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

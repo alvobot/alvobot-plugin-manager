@@ -423,17 +423,27 @@ class AlvoBotPro_Smart_Internal_Links {
 		}
 
 		if ( 'missing' === $status ) {
+			// "Faltantes" = meta não existe OU existe mas com enabled=false (links desativados).
+			// A serialização PHP de `enabled => false` contém `"enabled";b:0`.
 			$args['meta_query'] = array(
+				'relation' => 'OR',
 				array(
 					'key'     => '_alvobot_smart_links',
 					'compare' => 'NOT EXISTS',
 				),
+				array(
+					'key'     => '_alvobot_smart_links',
+					'value'   => '"enabled";b:0',
+					'compare' => 'LIKE',
+				),
 			);
 		} elseif ( 'generated' === $status ) {
+			// "Gerado" = meta existe E enabled=true.
 			$args['meta_query'] = array(
 				array(
 					'key'     => '_alvobot_smart_links',
-					'compare' => 'EXISTS',
+					'value'   => '"enabled";b:1',
+					'compare' => 'LIKE',
 				),
 			);
 		}
@@ -463,11 +473,12 @@ class AlvoBotPro_Smart_Internal_Links {
 			'date_desc'  => array( 'orderby' => 'date', 'order' => 'DESC' ),
 			'date_asc'   => array( 'orderby' => 'date', 'order' => 'ASC' ),
 		);
-		$sort_cfg = isset( $sort_map[ $sort ] ) ? $sort_map[ $sort ] : $sort_map['title_asc'];
+		$sort_cfg   = isset( $sort_map[ $sort ] ) ? $sort_map[ $sort ] : $sort_map['title_asc'];
+		$post_types = $this->get_settings()['post_types'];
 
 		$args = $this->build_bulk_query_args(
 			array(
-				'post_type'      => 'post',
+				'post_type'      => $post_types,
 				'post_status'    => 'publish',
 				'posts_per_page' => $per_page,
 				'paged'          => $page,
@@ -524,11 +535,12 @@ class AlvoBotPro_Smart_Internal_Links {
 		$language = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : '';
 		$status   = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : 'all';
 
-		$max_posts = 5000;
+		$max_posts  = 5000;
+		$post_types = $this->get_settings()['post_types'];
 
 		$args = $this->build_bulk_query_args(
 			array(
-				'post_type'      => 'post',
+				'post_type'      => $post_types,
 				'post_status'    => 'publish',
 				'posts_per_page' => $max_posts,
 				'fields'         => 'ids',
