@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AlvoBot Essential Pages
  * Description: Cria páginas essenciais (Termos de Uso, Política de Privacidade e Contato) e fornece um painel de gerenciamento com ações individuais e globais. Inclui também um formulário de contato via shortcode.
- * Version:     1.1
+ * Version:     1.2
  * Author:      Seu Nome
  * License:     GPL2
  */
@@ -183,31 +183,70 @@ add_shortcode( 'alvobot_contact_form', 'alvobot_contact_form_shortcode' );
  * -----------------------------------------------------------------
  */
 class AlvoBotPro_EssentialPages {
-	private $plugin_version = '1.1';
+	private $plugin_version = '1.2';
 
 	/**
-	 * Páginas essenciais e suas configurações
+	 * Configuração de páginas por locale
 	 *
 	 * @var array
 	 */
-	private array $essential_pages = [
-		'terms'   => [
-			'title' => 'Termos de Uso',
-			'slug'  => 'termos-de-uso',
+	private static array $locale_pages_config = [
+		'pt_BR' => [
+			'terms'   => [ 'title' => 'Termos de Uso',                'slug' => 'termos-de-uso' ],
+			'privacy' => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
+			'contact' => [ 'title' => 'Contato',                       'slug' => 'contato' ],
+			'about'   => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
 		],
-		'privacy' => [
-			'title' => 'Política de Privacidade',
-			'slug'  => 'politica-de-privacidade',
+		'pt_PT' => [
+			'terms'   => [ 'title' => 'Termos de Utilização',         'slug' => 'termos-de-utilizacao' ],
+			'privacy' => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
+			'contact' => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
+			'about'   => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
 		],
-		'contact' => [
-			'title' => 'Contato',
-			'slug'  => 'contato',
+		'en_US' => [
+			'terms'   => [ 'title' => 'Terms of Use',                 'slug' => 'terms-of-use' ],
+			'privacy' => [ 'title' => 'Privacy Policy',               'slug' => 'privacy-policy' ],
+			'contact' => [ 'title' => 'Contact',                       'slug' => 'contact' ],
+			'about'   => [ 'title' => 'About Us',                     'slug' => 'about-us' ],
 		],
-		'about'   => [
-			'title' => 'Sobre Nós',
-			'slug'  => 'sobre-nos',
+		'es_ES' => [
+			'terms'   => [ 'title' => 'Términos de Uso',              'slug' => 'terminos-de-uso' ],
+			'privacy' => [ 'title' => 'Política de Privacidad',       'slug' => 'politica-de-privacidad' ],
+			'contact' => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
+			'about'   => [ 'title' => 'Sobre Nosotros',               'slug' => 'sobre-nosotros' ],
+		],
+		'fr_FR' => [
+			'terms'   => [ 'title' => "Conditions d'Utilisation",     'slug' => 'conditions-utilisation' ],
+			'privacy' => [ 'title' => 'Politique de Confidentialité', 'slug' => 'politique-confidentialite' ],
+			'contact' => [ 'title' => 'Contact',                       'slug' => 'contact' ],
+			'about'   => [ 'title' => 'À Propos',                     'slug' => 'a-propos' ],
+		],
+		'de_DE' => [
+			'terms'   => [ 'title' => 'Nutzungsbedingungen',          'slug' => 'nutzungsbedingungen' ],
+			'privacy' => [ 'title' => 'Datenschutzrichtlinie',        'slug' => 'datenschutzrichtlinie' ],
+			'contact' => [ 'title' => 'Kontakt',                       'slug' => 'kontakt' ],
+			'about'   => [ 'title' => 'Über Uns',                     'slug' => 'ueber-uns' ],
+		],
+		'it_IT' => [
+			'terms'   => [ 'title' => 'Termini di Utilizzo',          'slug' => 'termini-di-utilizzo' ],
+			'privacy' => [ 'title' => 'Informativa sulla Privacy',    'slug' => 'informativa-privacy' ],
+			'contact' => [ 'title' => 'Contatti',                      'slug' => 'contatti' ],
+			'about'   => [ 'title' => 'Chi Siamo',                    'slug' => 'chi-siamo' ],
+		],
+		'ja'    => [
+			'terms'   => [ 'title' => '利用規約',                      'slug' => 'terms-of-use' ],
+			'privacy' => [ 'title' => 'プライバシーポリシー',           'slug' => 'privacy-policy' ],
+			'contact' => [ 'title' => 'お問い合わせ',                  'slug' => 'contact' ],
+			'about'   => [ 'title' => '私たちについて',               'slug' => 'about-us' ],
 		],
 	];
+
+	/**
+	 * Páginas essenciais e suas configurações (inicializado no construtor conforme locale ativo)
+	 *
+	 * @var array
+	 */
+	private array $essential_pages = [];
 
 	/**
 	 * Diretório base do módulo
@@ -220,7 +259,9 @@ class AlvoBotPro_EssentialPages {
 	 * Construtor
 	 */
 	public function __construct() {
-		$this->base_dir = __DIR__ . '/';
+		$this->base_dir      = __DIR__ . '/';
+		$this->essential_pages = $this->get_pages_config();
+
 		// Removido: não precisamos adicionar o menu aqui, pois já é adicionado pela classe principal
 		// add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
@@ -228,6 +269,40 @@ class AlvoBotPro_EssentialPages {
 
 		// Debug para verificar o caminho dos templates
 		AlvoBotPro::debug_log( 'essential_pages', 'base_dir: ' . $this->base_dir );
+	}
+
+	/**
+	 * Retorna o locale ativo para os templates.
+	 * Se a opção for 'auto', usa o locale do WordPress com fallback para pt_BR.
+	 *
+	 * @return string
+	 */
+	private function get_active_language(): string {
+		$setting = get_option( 'alvobot_essential_pages_language', 'auto' );
+
+		if ( 'auto' === $setting ) {
+			$wp_locale = get_locale();
+			if ( isset( self::$locale_pages_config[ $wp_locale ] ) ) {
+				return $wp_locale;
+			}
+			return 'pt_BR';
+		}
+
+		if ( isset( self::$locale_pages_config[ $setting ] ) ) {
+			return $setting;
+		}
+
+		return 'pt_BR';
+	}
+
+	/**
+	 * Retorna a configuração de páginas para o locale ativo.
+	 *
+	 * @return array
+	 */
+	private function get_pages_config(): array {
+		$locale = $this->get_active_language();
+		return self::$locale_pages_config[ $locale ] ?? self::$locale_pages_config['pt_BR'];
 	}
 
 	/**
@@ -368,6 +443,18 @@ class AlvoBotPro_EssentialPages {
 						}
 					}
 					break;
+
+				case 'save_language':
+					if ( isset( $_POST['template_language'] ) ) {
+						$lang        = sanitize_text_field( wp_unslash( $_POST['template_language'] ) );
+						$valid_langs = array_merge( [ 'auto' ], array_keys( self::$locale_pages_config ) );
+						if ( in_array( $lang, $valid_langs, true ) ) {
+							update_option( 'alvobot_essential_pages_language', $lang );
+							$this->essential_pages = $this->get_pages_config();
+						}
+						$action_complete = 'language_saved';
+					}
+					break;
 			}
 
 			// Define mensagens para exibir na página após o processamento
@@ -437,6 +524,9 @@ class AlvoBotPro_EssentialPages {
 								break;
 							case 'error':
 								$message = __( 'Ocorreu um erro ao processar a ação solicitada.', 'alvobot-pro' );
+								break;
+							case 'language_saved':
+								$message = __( 'Idioma dos templates salvo com sucesso!', 'alvobot-pro' );
 								break;
 							default:
 								$message = __( 'Operação concluída com sucesso!', 'alvobot-pro' );
@@ -522,6 +612,57 @@ class AlvoBotPro_EssentialPages {
 		<?php endforeach; ?>
 	</div>
 
+				<!-- Cartão para Configurações de Idioma -->
+				<div class="alvobot-card">
+					<div class="alvobot-card-header">
+						<div>
+							<h2 class="alvobot-card-title"><?php esc_html_e( 'Idioma dos Templates', 'alvobot-pro' ); ?></h2>
+							<p class="alvobot-card-subtitle"><?php esc_html_e( 'Escolha o idioma dos templates ao criar as páginas. Use "Automático" para seguir o idioma do WordPress.', 'alvobot-pro' ); ?></p>
+						</div>
+					</div>
+					<div class="alvobot-card-footer">
+						<form method="post" class="alvobot-w-full">
+							<?php wp_nonce_field( 'alvobot_essential_pages_nonce', 'alvobot_nonce' ); ?>
+							<div class="alvobot-btn-group" style="align-items:center;gap:12px;">
+								<?php
+								$current_lang = get_option( 'alvobot_essential_pages_language', 'auto' );
+								$lang_labels  = [
+									'auto'  => __( 'Automático (WordPress)', 'alvobot-pro' ),
+									'pt_BR' => 'Português (Brasil)',
+									'pt_PT' => 'Português (Portugal)',
+									'en_US' => 'English (US)',
+									'es_ES' => 'Español',
+									'fr_FR' => 'Français',
+									'de_DE' => 'Deutsch',
+									'it_IT' => 'Italiano',
+									'ja'    => '日本語',
+								];
+								?>
+								<select name="template_language" style="height:36px;padding:0 10px;border-radius:6px;border:1px solid #ccd0d4;flex:1;">
+									<?php foreach ( $lang_labels as $code => $label ) : ?>
+										<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $current_lang, $code ); ?>>
+											<?php echo esc_html( $label ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<button type="submit" name="alvobot_action" value="save_language" class="alvobot-btn alvobot-btn-primary">
+									<?php esc_html_e( 'Salvar Idioma', 'alvobot-pro' ); ?>
+								</button>
+							</div>
+							<p style="margin-top:8px;font-size:12px;color:#666;">
+								<?php
+								$active_lang = $this->get_active_language();
+								printf(
+									/* translators: %s: locale code */
+									esc_html__( 'Locale ativo: %s', 'alvobot-pro' ),
+									'<strong>' . esc_html( $lang_labels[ $active_lang ] ?? $active_lang ) . '</strong>'
+								);
+								?>
+							</p>
+						</form>
+					</div>
+				</div>
+
 				<!-- Cartão para Ações Globais -->
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
@@ -556,13 +697,27 @@ class AlvoBotPro_EssentialPages {
 	 * @return string
 	 */
 	private function get_template_content( string $template ): string {
-		$template_file = $this->base_dir . 'templates/' . $template . '.php';
+		$locale = $this->get_active_language();
+
+		// 1) Template do locale selecionado
+		$template_file = $this->base_dir . 'templates/' . $locale . '/' . $template . '.php';
+
+		// 2) Fallback para pt_BR
+		if ( ! file_exists( $template_file ) ) {
+			$template_file = $this->base_dir . 'templates/pt_BR/' . $template . '.php';
+		}
+
+		// 3) Fallback legado (localização antiga, sem subpasta)
+		if ( ! file_exists( $template_file ) ) {
+			$template_file = $this->base_dir . 'templates/' . $template . '.php';
+		}
 
 		if ( ! file_exists( $template_file ) ) {
-			AlvoBotPro::debug_log( 'essential-pages', sprintf( 'Template file not found: %s', $template_file ) );
+			AlvoBotPro::debug_log( 'essential-pages', sprintf( 'Template file not found: %s', $template ) );
 			return '';
 		}
 
+		AlvoBotPro::debug_log( 'essential-pages', sprintf( 'Loading template: %s', $template_file ) );
 		ob_start();
 		include $template_file;
 		return ob_get_clean();
@@ -621,6 +776,7 @@ class AlvoBotPro_EssentialPages {
 		$company      = $this->get_company_info();
 		$current_year = date( 'Y' );
 		$current_date = wp_date( get_option( 'date_format' ) );
+		$config       = $this->get_pages_config();
 
 		$replacements = [
 			// Informações básicas do site
@@ -635,12 +791,12 @@ class AlvoBotPro_EssentialPages {
 			'[company_legal_name]' => $company['legal_name'],
 			'[contact_email]'      => $company['email'],
 
-			// Placeholders essenciais
+			// Placeholders essenciais — URLs baseadas no locale ativo
 			'[site_description]'   => get_bloginfo( 'description' ) ?: 'informações e serviços de qualidade',
 			'[minimum_age]'        => '18',
-			'[privacy_policy_url]' => home_url( '/politica-de-privacidade' ),
-			'[contact_url]'        => home_url( '/contato' ),
-			'[terms_url]'          => home_url( '/termos-de-uso' ),
+			'[privacy_policy_url]' => home_url( '/' . $config['privacy']['slug'] ),
+			'[contact_url]'        => home_url( '/' . $config['contact']['slug'] ),
+			'[terms_url]'          => home_url( '/' . $config['terms']['slug'] ),
 			'[dpo_email]'          => 'dpo@' . parse_url( home_url(), PHP_URL_HOST ),
 
 			// Seção legal minimalista
