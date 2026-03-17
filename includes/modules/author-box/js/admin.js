@@ -270,6 +270,23 @@ jQuery(document).ready(function ($) {
 			if (response.success) {
 				$status.text(response.data.message).fadeIn(200);
 				setTimeout(function () { $status.fadeOut(200); }, 3000);
+
+				// Atualiza o preview com a bio da aba ativa
+				var activeLang = $('.ab-bio-lang-tab-btn.active').data('lang');
+				var previewBio = bios[activeLang] || '';
+				if (!previewBio) {
+					Object.keys(bios).forEach(function (lang) {
+						if (!previewBio && bios[lang]) { previewBio = bios[lang]; }
+					});
+				}
+				var $desc = $('.alvobot-author-box .author-description');
+				if (previewBio) {
+					if ($desc.length) {
+						$desc.html(previewBio);
+					} else {
+						$('.alvobot-author-box .author-info').append('<div class="author-description">' + previewBio + '</div>');
+					}
+				}
 			}
 		});
 	});

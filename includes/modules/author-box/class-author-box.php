@@ -403,6 +403,15 @@ class AlvoBotPro_AuthorBox {
 			$author_name        = $author->display_name;
 			$author_description = $author->description;
 			$author_url         = get_author_posts_url( $author_id );
+
+			// Bio multilíngue: tenta carregar bio do idioma atual (consistente com o frontend)
+			if ( class_exists( 'Alvobot_AuthorBox_Translations' ) ) {
+				$current_lang = Alvobot_AuthorBox_Translations::get_current_language();
+				$lang_bio     = get_user_meta( $author_id, 'ab_bio_' . $current_lang, true );
+				if ( ! empty( $lang_bio ) ) {
+					$author_description = $lang_bio;
+				}
+			}
 		} else {
 			$author_id          = get_the_author_meta( 'ID' );
 			$author_name        = get_the_author();
@@ -751,7 +760,8 @@ class AlvoBotPro_AuthorBox {
 						'pt' => 'Português',
 						'en' => 'English',
 					);
-					$first_user_id  = ! empty( $bio_users ) ? $bio_users[0]->ID : 0;
+					$current_uid   = get_current_user_id();
+					$first_user_id = $current_uid ? $current_uid : ( ! empty( $bio_users ) ? $bio_users[0]->ID : 0 );
 					?>
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
@@ -773,8 +783,11 @@ class AlvoBotPro_AuthorBox {
 								</th>
 								<td>
 									<select id="bio-lang-user" class="regular-text">
-										<?php foreach ( $bio_users as $bio_user ) : ?>
-											<option value="<?php echo esc_attr( $bio_user->ID ); ?>">
+										<?php
+										$current_user_id = get_current_user_id();
+										foreach ( $bio_users as $bio_user ) :
+										?>
+											<option value="<?php echo esc_attr( $bio_user->ID ); ?>" <?php selected( $bio_user->ID, $current_user_id ); ?>>
 												<?php echo esc_html( $bio_user->display_name . ' (' . $bio_user->user_login . ')' ); ?>
 											</option>
 										<?php endforeach; ?>
@@ -993,10 +1006,11 @@ endforeach;
 			}
 		}
 
-		// Também atualiza o description padrão do WP com o idioma principal do site
-		$site_lang = substr( get_locale(), 0, 2 );
-		if ( isset( $bios[ $site_lang ] ) && ! empty( $bios[ $site_lang ] ) ) {
-			update_user_meta( $user_id, 'description', wp_kses_post( $bios[ $site_lang ] ) );
+		// Atualiza o description padrão do WP (Biographical Info)
+		$site_lang    = substr( get_locale(), 0, 2 );
+		$primary_lang = isset( $bios[ $site_lang ] ) ? $site_lang : key( $bios );
+		if ( $primary_lang && isset( $bios[ $primary_lang ] ) ) {
+			update_user_meta( $user_id, 'description', wp_kses_post( $bios[ $primary_lang ] ) );
 		}
 
 		$t = class_exists( 'Alvobot_AuthorBox_Translations' ) ? 'Alvobot_AuthorBox_Translations' : null;

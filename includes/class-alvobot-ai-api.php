@@ -284,9 +284,12 @@ class AlvoBotPro_AI_API {
 				update_user_meta( $user_id, 'ab_bio_' . $lang_code, $description );
 				$updated[] = 'description_' . $lang_code;
 
-				// Also update default WP description if this is the site's primary language
-				$site_lang = substr( get_locale(), 0, 2 );
-				if ( $lang_code === $site_lang ) {
+				// Update default WP description (Biographical Info):
+				// - Always for non-multilingual sites
+				// - For multilingual sites: only when lang_code matches the site's primary language
+				$site_lang       = substr( get_locale(), 0, 2 );
+				$is_multilingual = function_exists( 'PLL' ) || function_exists( 'icl_get_languages' );
+				if ( ! $is_multilingual || $lang_code === $site_lang ) {
 					update_user_meta( $user_id, 'description', $description );
 					$updated[] = 'description';
 				}
