@@ -143,19 +143,16 @@
 	}
 
 	function renderSidebar(quiz) {
-		return /* Identidade */
-			card('Identidade',
+		return card('Identidade',
 				field('Título *',              'text',  'aqf-f-title',         quiz.title,         'Ex: Qual é o melhor cartão para você?') +
 				field('Subtítulo',             'text',  'aqf-f-subtitle',      quiz.subtitle,      'Ex: (É rápido e fácil)') +
 				field('Logo — texto',          'text',  'aqf-f-logo-text',     quiz.logo_text,     'Nome da marca') +
 				field('Logo — URL da imagem',  'url',   'aqf-f-logo-url',      quiz.logo_url,      'https://...')
 			) +
-			/* Aparência */
 			card('Aparência',
 				colorField('Cor primária (botões / barra)', 'aqf-f-color-primary', quiz.color_primary || '#22c55e') +
 				colorField('Fundo dos botões',              'aqf-f-color-btn-bg',  quiz.color_btn_bg  || '#f0fdf4')
 			) +
-			/* Destino */
 			card('Destino e Rodapé',
 				field('URL final',        'url',  'aqf-f-final-url',    quiz.final_url,   'https://... (redireciona quando não há URL na resposta)') +
 				field('Texto do rodapé',  'text', 'aqf-f-footer-text',  quiz.footer_text, 'Ex: © 2025 Marca')
