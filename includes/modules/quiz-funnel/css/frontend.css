@@ -1,0 +1,184 @@
+/* ============================================================
+   Quiz Funnel — Frontend
+   AlvoBot Pro
+   ============================================================ */
+
+/* Full-page body reset */
+.aqf-page {
+	margin: 0;
+	padding: 0;
+	background: #f8fafc;
+	min-height: 100vh;
+}
+
+/* ── Root ── */
+.aqf {
+	--aqf-p:  #22c55e;
+	--aqf-bb: #f0fdf4;
+
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+		'Helvetica Neue', Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	max-width: 640px;
+	margin: 0 auto;
+	padding: 40px 20px 72px;
+	box-sizing: border-box;
+	color: #0f172a;
+}
+
+.aqf--fullpage {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+/* ── Header (logo) ── */
+.aqf__header {
+	text-align: center;
+	margin-bottom: 32px;
+}
+
+.aqf__logo-img {
+	max-height: 38px;
+	width: auto;
+	object-fit: contain;
+}
+
+.aqf__logo-text {
+	display: inline-block;
+	font-size: 21px;
+	font-weight: 800;
+	letter-spacing: -0.5px;
+	color: #0f172a;
+}
+
+/* ── Hero ── */
+.aqf__hero {
+	text-align: center;
+	margin-bottom: 28px;
+}
+
+.aqf__title {
+	font-size: clamp(20px, 5vw, 28px);
+	font-weight: 800;
+	line-height: 1.25;
+	margin: 0 0 10px;
+	color: #0f172a;
+}
+
+.aqf__subtitle {
+	font-size: 15px;
+	color: #64748b;
+	margin: 0;
+}
+
+/* ── Progress bar ── */
+.aqf__progress {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 36px;
+}
+
+.aqf__step {
+	height: 10px;
+	flex: 1;
+	border-radius: 99px;
+	background: #e2e8f0;
+	transition: background 0.35s ease;
+}
+
+.aqf__step--on {
+	background: var(--aqf-p);
+}
+
+/* ── Questions ── */
+.aqf__body {
+	position: relative;
+}
+
+.aqf__q {
+	display: none;
+}
+
+.aqf__q--on {
+	display: block;
+	animation: aqfSlideIn 0.28s ease;
+}
+
+@keyframes aqfSlideIn {
+	from { opacity: 0; transform: translateY(12px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.aqf__q-text {
+	font-size: clamp(17px, 4vw, 22px);
+	font-weight: 700;
+	text-align: center;
+	margin: 0 0 28px;
+	line-height: 1.4;
+	color: #1e293b;
+}
+
+/* ── Answers ── */
+.aqf__answers {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.aqf__ans {
+	display: block;
+	width: 100%;
+	padding: 15px 20px;
+	background: var(--aqf-bb);
+	border: 2px solid var(--aqf-p);
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 500;
+	font-family: inherit;
+	color: #1e293b;
+	cursor: pointer;
+	text-align: center;
+	line-height: 1.4;
+	transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.aqf__ans:hover:not(:disabled) {
+	background: var(--aqf-p);
+	color: #fff;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.aqf__ans:active:not(:disabled) {
+	transform: translateY(0) scale(0.98);
+	box-shadow: none;
+}
+
+.aqf__ans--picked {
+	background: var(--aqf-p);
+	color: #fff;
+	pointer-events: none;
+	transform: scale(0.98);
+}
+
+/* ── Footer ── */
+.aqf__footer {
+	margin-top: 52px;
+	padding-top: 20px;
+	text-align: center;
+	font-size: 12px;
+	color: #94a3b8;
+	border-top: 1px solid #e2e8f0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+	.aqf {
+		padding: 28px 16px 56px;
+	}
+	.aqf__ans {
+		padding: 13px 16px;
+		font-size: 14px;
+	}
+}

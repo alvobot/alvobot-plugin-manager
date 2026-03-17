@@ -1,0 +1,438 @@
+/* ============================================================
+   Quiz Funnel — Admin Styles
+   AlvoBot Pro
+   ============================================================ */
+
+/* ── Layout ── */
+#aqf-root {
+	margin-top: 8px;
+}
+
+/* ── Toolbar ── */
+.aqf-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 24px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.aqf-toolbar__title {
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--alvobot-secondary);
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.aqf-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--alvobot-primary);
+	color: var(--alvobot-secondary);
+	font-size: 12px;
+	font-weight: 700;
+	border-radius: 99px;
+	padding: 2px 9px;
+	min-width: 24px;
+}
+
+/* ── Quiz Grid ── */
+.aqf-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 20px;
+}
+
+/* ── Quiz Card ── */
+.aqf-card {
+	background: #fff;
+	border: 1px solid var(--alvobot-gray-200);
+	border-radius: var(--alvobot-radius-lg);
+	overflow: hidden;
+	box-shadow: var(--alvobot-shadow-sm);
+	transition: box-shadow 0.2s ease;
+}
+
+.aqf-card:hover {
+	box-shadow: var(--alvobot-shadow-md);
+}
+
+.aqf-card__hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--alvobot-gray-100);
+	background: var(--alvobot-gray-50);
+}
+
+.aqf-card__title {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--alvobot-secondary);
+	margin: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.aqf-card__actions {
+	display: flex;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.aqf-card__bd {
+	padding: 16px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.aqf-card__meta {
+	font-size: 12px;
+	color: var(--alvobot-gray-500);
+	margin-top: 4px;
+}
+
+/* ── Code rows ── */
+.aqf-code-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.aqf-label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--alvobot-gray-500);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	flex-shrink: 0;
+}
+
+.aqf-code {
+	font-family: 'Courier New', Courier, monospace;
+	font-size: 12px;
+	background: var(--alvobot-gray-100);
+	border: 1px solid var(--alvobot-gray-200);
+	border-radius: var(--alvobot-radius-sm);
+	padding: 4px 8px;
+	color: var(--alvobot-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 220px;
+}
+
+.aqf-copy-btn {
+	background: none;
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-sm);
+	padding: 4px 10px;
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--alvobot-gray-600);
+	cursor: pointer;
+	white-space: nowrap;
+	transition: all 0.15s ease;
+}
+
+.aqf-copy-btn:hover {
+	background: var(--alvobot-gray-100);
+	color: var(--alvobot-secondary);
+}
+
+/* ── Empty state ── */
+.aqf-empty {
+	text-align: center;
+	padding: 64px 24px;
+	background: #fff;
+	border: 2px dashed var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-xl);
+}
+
+.aqf-empty h3 {
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--alvobot-secondary);
+	margin: 16px 0 8px;
+}
+
+.aqf-empty p {
+	font-size: 14px;
+	color: var(--alvobot-gray-500);
+	margin: 0 0 24px;
+}
+
+/* ── Editor ── */
+.aqf-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.aqf-editor__topbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 24px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid var(--alvobot-gray-200);
+}
+
+.aqf-back-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-md);
+	padding: 7px 14px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--alvobot-gray-600);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.aqf-back-btn:hover {
+	background: var(--alvobot-gray-100);
+	color: var(--alvobot-secondary);
+}
+
+.aqf-editor__heading {
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--alvobot-secondary);
+	flex: 1;
+}
+
+/* Two-column layout */
+.aqf-editor__layout {
+	display: grid;
+	grid-template-columns: 320px 1fr;
+	gap: 24px;
+	align-items: start;
+}
+
+@media (max-width: 900px) {
+	.aqf-editor__layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+.aqf-editor__sidebar {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	position: sticky;
+	top: 32px;
+}
+
+.aqf-editor__main {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.aqf-editor__q-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 4px;
+}
+
+.aqf-editor__q-header h3 {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--alvobot-secondary);
+	margin: 0;
+}
+
+/* ── Question block ── */
+.aqf-q-block {
+	background: #fff;
+	border: 1px solid var(--alvobot-gray-200);
+	border-radius: var(--alvobot-radius-lg);
+	overflow: hidden;
+	box-shadow: var(--alvobot-shadow-sm);
+}
+
+.aqf-q-block__hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	background: var(--alvobot-gray-50);
+	border-bottom: 1px solid var(--alvobot-gray-100);
+}
+
+.aqf-q-num {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--alvobot-gray-600);
+}
+
+.aqf-q-block__bd {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.aqf-q-text {
+	width: 100%;
+	resize: vertical;
+	min-height: 52px;
+	font-size: 14px;
+}
+
+/* ── Answer rows ── */
+.aqf-ans-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.aqf-ans-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.aqf-ans-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 1;
+}
+
+.aqf-ans-text,
+.aqf-ans-url {
+	width: 100%;
+	font-size: 13px;
+}
+
+.aqf-ans-url {
+	color: var(--alvobot-accent);
+}
+
+/* ── Icon buttons ── */
+.aqf-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-md);
+	background: #fff;
+	color: var(--alvobot-gray-500);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: all 0.15s ease;
+}
+
+.aqf-icon-btn:hover {
+	border-color: var(--alvobot-error);
+	color: var(--alvobot-error);
+	background: var(--alvobot-error-bg);
+}
+
+/* ── Add answer button ── */
+.aqf-add-ans-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	background: none;
+	border: 1px dashed var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-md);
+	padding: 6px 12px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--alvobot-gray-500);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	align-self: flex-start;
+}
+
+.aqf-add-ans-btn:hover {
+	border-color: var(--alvobot-accent);
+	color: var(--alvobot-accent);
+}
+
+/* ── Danger button ── */
+.aqf-btn-danger {
+	background: #fff !important;
+	border-color: var(--alvobot-gray-300) !important;
+	color: var(--alvobot-error) !important;
+}
+
+.aqf-btn-danger:hover {
+	border-color: var(--alvobot-error) !important;
+	background: var(--alvobot-error-bg) !important;
+}
+
+/* ── Color field ── */
+.aqf-color-field .alvobot-form-label {
+	margin-bottom: 6px;
+}
+
+.aqf-color-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.aqf-color-picker {
+	width: 40px;
+	height: 36px;
+	border: 1px solid var(--alvobot-gray-300);
+	border-radius: var(--alvobot-radius-md);
+	padding: 2px;
+	cursor: pointer;
+	background: #fff;
+	flex-shrink: 0;
+}
+
+.aqf-color-text {
+	width: 100px !important;
+	font-family: 'Courier New', monospace;
+	font-size: 13px;
+}
+
+/* ── Save status ── */
+.aqf-save-status {
+	display: none;
+	margin-top: 16px;
+	padding: 10px 16px;
+	border-radius: var(--alvobot-radius-md);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.aqf-save-status.aqf-status--ok {
+	display: block;
+	background: var(--alvobot-success-bg);
+	border: 1px solid var(--alvobot-success);
+	color: #065f46;
+}
+
+/* ── Empty questions placeholder ── */
+.aqf-empty-q {
+	text-align: center;
+	padding: 32px;
+	color: var(--alvobot-gray-400);
+	font-size: 14px;
+	border: 2px dashed var(--alvobot-gray-200);
+	border-radius: var(--alvobot-radius-lg);
+}

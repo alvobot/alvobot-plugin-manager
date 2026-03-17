@@ -109,6 +109,30 @@ class AlvoBotPro {
 			'settings_slug' => 'alvobot-quiz-builder',
 			'admin_menu'    => false,
 		),
+		'quiz-builder-v2'      => array(
+			'file'          => 'includes/modules/quiz-builder-v2/class-quiz-builder-v2.php',
+			'class'         => 'AlvoBotPro_QuizBuilderV2',
+			'name'          => 'Quiz Builder V2',
+			'description'   => 'Exibe quiz em tela cheia com gatilho por parâmetro de URL (?quiz=true).',
+			'default'       => false,
+			'settings_slug' => 'alvobot-quiz-builder-v2',
+			'admin_menu'    => array(
+				'page_title' => 'Quiz Builder V2',
+				'menu_title' => 'Quiz Builder V2',
+			),
+		),
+		'quiz-funnel'          => array(
+			'file'          => 'includes/modules/quiz-funnel/class-quiz-funnel.php',
+			'class'         => 'AlvoBotPro_QuizFunnel',
+			'name'          => 'Quiz Funnel',
+			'description'   => 'Crie quizzes interativos que encaminham visitantes para artigos específicos.',
+			'default'       => true,
+			'settings_slug' => 'alvobot-quiz-funnel',
+			'admin_menu'    => array(
+				'page_title' => 'Quiz Funnel',
+				'menu_title' => 'Quiz Funnel',
+			),
+		),
 		'cta-cards'            => array(
 			'file'          => 'includes/modules/cta-cards/class-cta-cards.php',
 			'class'         => 'AlvoBotPro_CTACards',
