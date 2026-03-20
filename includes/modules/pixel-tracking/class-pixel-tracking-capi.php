@@ -38,13 +38,15 @@ class AlvoBotPro_PixelTracking_CAPI {
 				as_schedule_recurring_action( time() + 300, 300, 'alvobot_pixel_send_events' );
 			}
 		} else {
-				// Fallback to WP Cron
-			if ( ! wp_next_scheduled( 'alvobot_pixel_send_events' ) ) {
-					wp_schedule_event( time() + 300, 'five_minutes', 'alvobot_pixel_send_events' );
-			}
+			// Fallback to WP Cron.
+			// Register the custom interval BEFORE scheduling so WordPress recognises
+			// 'five_minutes' when wp_schedule_event() is called for the first time.
 			// phpcs:ignore WordPress.WP.CronInterval.CronSchedulesInterval -- Product requirement: dispatch every 5 minutes.
 			add_filter( 'cron_schedules', array( $this, 'add_cron_interval' ) );
-				AlvoBotPro::debug_log( 'pixel-tracking', 'Action Scheduler not available, using WP Cron fallback' );
+			if ( ! wp_next_scheduled( 'alvobot_pixel_send_events' ) ) {
+				wp_schedule_event( time() + 300, 'five_minutes', 'alvobot_pixel_send_events' );
+			}
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Action Scheduler not available, using WP Cron fallback' );
 		}
 	}
 

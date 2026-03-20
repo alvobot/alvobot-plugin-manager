@@ -196,10 +196,7 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 						<div class="form-field">
 							<label>
 								<input type="radio" name="alvobot_cta_type" value="default" 
-								<?php
-								checked( $use_shortcode, '' );
-								checked( $use_shortcode, '0' );
-								?>
+								<?php if ( '' === $use_shortcode || '0' === $use_shortcode ) { echo 'checked="checked"'; } ?>
 								/>
 								<?php esc_html_e( 'Usar CTAs padrão', 'alvobot-pro' ); ?>
 							</label>

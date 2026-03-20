@@ -115,7 +115,47 @@ class SmartLinksInjectorTest extends BrainMonkeyTestCase
     }
 
     /**
+     * inject_links() returns content unchanged when meta is disabled.
+     *
+     * Must run BEFORE testInjectLinksReturnEarlyForRestRequest because that test
+     * defines the REST_REQUEST constant (PHP constants are immutable). Once set,
+     * inject_links() always takes the REST early-return path, making it impossible
+     * to test the meta-disabled branch in the same process.
+     */
+    public function testInjectLinksReturnEarlyWhenMetaDisabled(): void
+    {
+        Functions\expect('is_singular')->andReturn(true);
+        Functions\expect('is_admin')->andReturn(false);
+        Functions\expect('wp_doing_ajax')->andReturn(false);
+        Functions\expect('in_the_loop')->andReturn(true);
+        Functions\expect('is_main_query')->andReturn(true);
+        Functions\expect('get_the_ID')->andReturn(99);
+
+        // get_validated_meta() is a static call on AlvoBotPro_Smart_Internal_Links.
+        // We mock get_option to return an empty array so the guard kicks in.
+        Functions\expect('get_option')->andReturn([]);
+
+        // Stub the static call by defining the class if not present.
+        if (!class_exists('AlvoBotPro_Smart_Internal_Links')) {
+            eval('class AlvoBotPro_Smart_Internal_Links {
+                public static function get_validated_meta($post_id) { return null; }
+            }');
+        }
+
+        $injector = new AlvoBotPro_Smart_Links_Injector();
+        $original = '<p>Article paragraph one.</p><p>Article paragraph two.</p>';
+
+        $result = $injector->inject_links($original);
+
+        $this->assertSame($original, $result, 'Content must be returned unchanged when link meta is disabled.');
+    }
+
+    /**
      * inject_links() returns content unchanged inside a REST request.
+     *
+     * MUST run last in this class: it defines REST_REQUEST=true (an immutable PHP
+     * constant) which would cause every subsequent test in the same process to
+     * take the REST early-return path, masking unrelated failures.
      */
     public function testInjectLinksReturnEarlyForRestRequest(): void
     {
@@ -136,42 +176,5 @@ class SmartLinksInjectorTest extends BrainMonkeyTestCase
         $result = $injector->inject_links($original);
 
         $this->assertSame($original, $result, 'Content must be returned unchanged for REST API requests.');
-    }
-
-    /**
-     * inject_links() returns content unchanged when meta is disabled.
-     */
-    public function testInjectLinksReturnEarlyWhenMetaDisabled(): void
-    {
-        // Skip if REST_REQUEST is already defined from previous test.
-        if (defined('REST_REQUEST') && REST_REQUEST) {
-            $this->markTestSkipped('REST_REQUEST is defined as true — cannot test non-REST path in same process.');
-        }
-
-        Functions\expect('is_singular')->andReturn(true);
-        Functions\expect('is_admin')->andReturn(false);
-        Functions\expect('wp_doing_ajax')->andReturn(false);
-        Functions\expect('in_the_loop')->andReturn(true);
-        Functions\expect('is_main_query')->andReturn(true);
-        Functions\expect('get_the_ID')->andReturn(99);
-
-        // get_validated_meta() is a static call on AlvoBotPro_Smart_Internal_Links.
-        // Since that class isn't loaded, we stub it via a static wrapper.
-        // We instead mock get_option to return an empty array so the guard kicks in.
-        Functions\expect('get_option')->andReturn([]);
-
-        // Stub the static call by defining the class if not present.
-        if (!class_exists('AlvoBotPro_Smart_Internal_Links')) {
-            eval('class AlvoBotPro_Smart_Internal_Links {
-                public static function get_validated_meta($post_id) { return null; }
-            }');
-        }
-
-        $injector = new AlvoBotPro_Smart_Links_Injector();
-        $original = '<p>Article paragraph one.</p><p>Article paragraph two.</p>';
-
-        $result = $injector->inject_links($original);
-
-        $this->assertSame($original, $result, 'Content must be returned unchanged when link meta is disabled.');
     }
 }

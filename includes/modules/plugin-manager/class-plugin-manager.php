@@ -795,14 +795,17 @@ class AlvoBotPro_PluginManager {
 			)
 		);
 
-		// Endpoint para testar se o Authorization header chega ao PHP
+		// Endpoint para testar se o Authorization header chega ao PHP.
+		// Restrito a administradores — evita expor informações de configuração publicamente.
 		register_rest_route(
 			$this->namespace,
 			'/auth-header-test',
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'rest_auth_header_test' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				},
 			)
 		);
 	}
@@ -810,15 +813,15 @@ class AlvoBotPro_PluginManager {
 	/**
 	 * REST endpoint that echoes whether the Authorization header was received.
 	 * Used by the health check to verify header passthrough.
+	 * Restricted to manage_options to prevent server configuration leakage.
 	 */
 	public function rest_auth_header_test( $request ) {
 		$auth_header = $request->get_header( 'authorization' );
 
 		return new WP_REST_Response(
 			array(
-				'received'              => ! empty( $auth_header ),
-				'header_value'          => $auth_header ? substr( $auth_header, 0, 20 ) . '...' : null,
-				'http_authorization'    => isset( $_SERVER['HTTP_AUTHORIZATION'] ),
+				'received'               => ! empty( $auth_header ),
+				'http_authorization'     => isset( $_SERVER['HTTP_AUTHORIZATION'] ),
 				'redirect_authorization' => isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ),
 			),
 			200
@@ -1458,7 +1461,14 @@ class AlvoBotPro_PluginManager {
 
 			case 'activate_plugin':
 				if ( isset( $params['plugin'] ) ) {
-					$result = activate_plugin( $params['plugin'] );
+					$plugin_file = sanitize_text_field( $params['plugin'] );
+					if ( ! function_exists( 'get_plugins' ) ) {
+						require_once ABSPATH . 'wp-admin/includes/plugin.php';
+					}
+					if ( ! isset( get_plugins()[ $plugin_file ] ) ) {
+						return new WP_Error( 'invalid_plugin', 'Plugin não encontrado' );
+					}
+					$result = activate_plugin( $plugin_file );
 					return new WP_REST_Response(
 						array(
 							'success' => ! is_wp_error( $result ),
@@ -1470,7 +1480,14 @@ class AlvoBotPro_PluginManager {
 
 			case 'deactivate_plugin':
 				if ( isset( $params['plugin'] ) ) {
-					deactivate_plugins( $params['plugin'] );
+					$plugin_file = sanitize_text_field( $params['plugin'] );
+					if ( ! function_exists( 'get_plugins' ) ) {
+						require_once ABSPATH . 'wp-admin/includes/plugin.php';
+					}
+					if ( ! isset( get_plugins()[ $plugin_file ] ) ) {
+						return new WP_Error( 'invalid_plugin', 'Plugin não encontrado' );
+					}
+					deactivate_plugins( $plugin_file );
 					return new WP_REST_Response(
 						array(
 							'success' => true,
@@ -1485,9 +1502,12 @@ class AlvoBotPro_PluginManager {
 					require_once ABSPATH . 'wp-admin/includes/plugin.php';
 				}
 
-				$plugin_file = isset( $params['plugin'] ) ? $params['plugin'] : '';
+				$plugin_file = isset( $params['plugin'] ) ? sanitize_text_field( $params['plugin'] ) : '';
 				if ( empty( $plugin_file ) ) {
 					return new WP_Error( 'missing_plugin', 'Plugin não especificado' );
+				}
+				if ( ! isset( get_plugins()[ $plugin_file ] ) ) {
+					return new WP_Error( 'invalid_plugin', 'Plugin não encontrado' );
 				}
 
 				// Desativa o plugin antes de deletar
