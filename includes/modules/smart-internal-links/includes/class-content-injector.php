@@ -132,7 +132,12 @@ class AlvoBotPro_Smart_Links_Injector {
 			$used = array_keys( $adjusted_insertions );
 			$safe = $this->find_non_ad_adjacent_index( $index, $paragraphs, $total, $used );
 
-			// Re-verificar distância mínima contra posições já confirmadas
+			// Nenhuma posição viável encontrada: descarta a inserção.
+			if ( null === $safe ) {
+				continue;
+			}
+
+			// Re-verificar distância mínima contra posições já confirmadas.
 			$too_close = false;
 			foreach ( $used as $u ) {
 				if ( abs( $safe - $u ) < 2 ) {
@@ -141,8 +146,7 @@ class AlvoBotPro_Smart_Links_Injector {
 				}
 			}
 
-			// Se ficou muito perto após o ajuste, descarta este bloco nesta rodada
-			// (mantém comportamento conservador: não insere do que inserir errado)
+			// Conservador: não insere se ficou muito perto de outra CTA.
 			if ( ! $too_close ) {
 				$adjusted_insertions[ $safe ] = $block;
 			}
@@ -186,11 +190,12 @@ class AlvoBotPro_Smart_Links_Injector {
 		}
 
 		// Padrão 3: Conteúdo baseado em <br> (editor simples)
-		$parts = preg_split( '/(<br\s*\/?>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
-		if ( count( $parts ) > 2 ) {
+		$parts       = preg_split( '/(<br\s*\/?>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
+		$parts_count = count( $parts );
+		if ( $parts_count > 2 ) {
 			$paragraphs     = array();
 			$pending_prefix = '';
-			for ( $i = 0; $i < count( $parts ); $i += 2 ) {
+			for ( $i = 0; $i < $parts_count; $i += 2 ) {
 				$para = $parts[ $i ];
 				if ( isset( $parts[ $i + 1 ] ) ) {
 					$para .= $parts[ $i + 1 ];
@@ -239,8 +244,9 @@ class AlvoBotPro_Smart_Links_Injector {
 	private function parse_by_tag( $content, $tag ) {
 		$parts = preg_split( '/(<\/' . preg_quote( $tag, '/' ) . '>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
 
-		$raw_blocks = array();
-		for ( $i = 0; $i < count( $parts ); $i += 2 ) {
+		$raw_blocks  = array();
+		$parts_count = count( $parts );
+		for ( $i = 0; $i < $parts_count; $i += 2 ) {
 			$para = $parts[ $i ];
 			if ( isset( $parts[ $i + 1 ] ) ) {
 				$para .= $parts[ $i + 1 ];
@@ -311,21 +317,29 @@ class AlvoBotPro_Smart_Links_Injector {
 	 * e, pelo fato do preg_split cortar em </p>, essa div vazia fica colada
 	 * ao início do próximo raw_block junto com o <h2>, <p> etc. seguintes.
 	 *
-	 * O método extrai todos os elementos de nível de bloco VAZIOS (sem texto) no
-	 * início do bloco que sejam detectados como anúncio, e retorna:
+	 * O método extrai 1+ elementos de bloco VAZIOS (apenas whitespace entre open/close)
+	 * no início do raw_block, retornando:
 	 *   ['ad'  => '<div...></div>',          // sufixo para o parágrafo anterior
 	 *    'text' => '<h2>...</h2><p>...</p>']  // texto que vira novo parágrafo
 	 *
 	 * Retorna null se nenhum elemento de anúncio vazio for encontrado no início.
 	 *
+	 * NOTA: apenas pares open/close são considerados (não self-closing) para evitar
+	 * capturar erroneamente tags de abertura de elementos com conteúdo visível.
+	 *
 	 * @param string $block HTML do bloco misto.
 	 * @return array|null
 	 */
 	private function extract_leading_ad( $block ) {
-		// Captura 1 ou mais elementos de bloco vazios no início:
-		// <tag [attrs]></tag> ou <tag [attrs]/> (self-closing)
-		// onde o conteúdo interno é só whitespace.
-		$pattern = '/^(\s*(?:<(?:div|ins|aside|section|figure|span)\b[^>]*>\s*<\/(?:div|ins|aside|section|figure|span)>|<(?:div|ins|aside|section|figure|span)\b[^>]*\/?>)\s*)+/is';
+		// Captura 1 ou mais pares <tag></tag> VAZIOS (só whitespace entre eles) no início.
+		// Apenas pares open+close são aceitos — evita capturar a tag de abertura de um
+		// elemento que ainda tem conteúdo (o que partiria o HTML e deixaria tags órfãs).
+		// A tag de fechamento não precisa ser a mesma tag de abertura (o PHP não valida HTML),
+		// mas na prática Ad Inserter sempre emite <div></div>.
+		$tag_names = 'div|ins|aside|section|figure|span|noscript';
+		$open_tag  = '<(?:' . $tag_names . ')\b[^>]*>';
+		$close_tag = '<\/(?:' . $tag_names . ')>';
+		$pattern   = '/^(?:\s*' . $open_tag . '\s*' . $close_tag . '\s*)+/is';
 
 		if ( ! preg_match( $pattern, $block, $matches ) ) {
 			return null;
@@ -334,13 +348,13 @@ class AlvoBotPro_Smart_Links_Injector {
 		$ad_part   = $matches[0];
 		$text_part = substr( $block, strlen( $ad_part ) );
 
-		// Só vale se a parte de anúncio for de fato detectada como ad
+		// Só vale se a parte de anúncio for de fato detectada como ad.
 		if ( ! $this->is_ad_block( $ad_part ) ) {
 			return null;
 		}
 
-		// E a parte de texto deve ter conteúdo real
-		if ( ! trim( wp_strip_all_tags( $text_part ) ) ) {
+		// A parte de texto restante deve ter conteúdo real.
+		if ( '' === trim( wp_strip_all_tags( $text_part ) ) ) {
 			return null;
 		}
 
@@ -376,33 +390,36 @@ class AlvoBotPro_Smart_Links_Injector {
 	 * depois -1. Nunca sai do intervalo [1, $total - 1] para respeitar a regra de
 	 * inserção somente a partir do 2° parágrafo.
 	 *
+	 * Retorna null quando nenhuma posição segura for encontrada — o chamador deve
+	 * descartar a inserção nesses casos (melhor não inserir do que inserir adjacente ao ad).
+	 *
 	 * @param int   $index        Índice proposto.
 	 * @param array $paragraphs   Array de parágrafos parseados.
 	 * @param int   $total        Total de parágrafos.
 	 * @param array $used_indices Índices já ocupados por outras inserções.
-	 * @return int Índice seguro (pode ser o original se nenhuma alternativa for melhor).
+	 * @return int|null Índice seguro ou null se nenhuma posição viável existir.
 	 */
 	private function find_non_ad_adjacent_index( $index, $paragraphs, $total, $used_indices ) {
-		$min = 1; // Nunca antes do 2° parágrafo
+		$min = 1; // Nunca antes do 2° parágrafo.
 
 		if ( ! $this->is_adjacent_to_ad( $index, $paragraphs ) ) {
 			return $index;
 		}
 
-		// Tenta ir para baixo (+1)
+		// Tenta ir para baixo (+1).
 		$down = $index + 1;
 		if ( $down < $total && ! in_array( $down, $used_indices, true ) && ! $this->is_adjacent_to_ad( $down, $paragraphs ) ) {
 			return $down;
 		}
 
-		// Tenta ir para cima (-1)
+		// Tenta ir para cima (-1).
 		$up = $index - 1;
 		if ( $up >= $min && ! in_array( $up, $used_indices, true ) && ! $this->is_adjacent_to_ad( $up, $paragraphs ) ) {
 			return $up;
 		}
 
-		// Fallback: mantém posição original
-		return $index;
+		// Nenhuma posição segura disponível: descarta a inserção.
+		return null;
 	}
 
 	/**
