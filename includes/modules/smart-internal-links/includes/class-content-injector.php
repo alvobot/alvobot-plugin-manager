@@ -325,36 +325,139 @@ class AlvoBotPro_Smart_Links_Injector {
 	}
 
 	/**
-	 * Detecta se um bloco HTML é um bloco de anúncio.
+	 * Detecta se um bloco HTML é um bloco de anúncio ou placeholder de anúncio.
 	 *
-	 * Verifica padrões comuns de ad networks e plugins de anúncios para
-	 * WordPress (AdSense, Advanced Ads, WP QUADS, Ezoic, Ad Inserter, etc.).
+	 * Cobre os seguintes cenários:
+	 *
+	 * INJEÇÃO PHP DIRETA (ad já renderizado no conteúdo):
+	 *   - Google AdSense (<ins class="adsbygoogle">)
+	 *   - Google Ad Manager / GPT (div-gpt-ad-*, googletag, gpt-ad-)
+	 *   - Advanced Ads (advads-)
+	 *   - WP QUADS / Quick AdSense (wp-quads, quadsmiddle)
+	 *   - Ezoic (ezoic-)
+	 *   - Raptive / CafeMedia (raptive-, cafemedia-)
+	 *   - Mediavine (mediavine-ad-)
+	 *   - AdThrive (adthrive-)
+	 *   - Setupad (setupad-)
+	 *   - Monumetric (monumetric-)
+	 *   - Carbon Ads (carbonads)
+	 *   - Media.net (medianet-ad, mn_)
+	 *   - Taboola (tbl-, taboola-)
+	 *   - Outbrain (OUTBRAIN, ob-widget-)
+	 *   - Mgid (mgid-)
+	 *   - PropellerAds (propeller-ads-)
+	 *   - BuySellAds (bsa-ads-)
+	 *
+	 * INJEÇÃO VIA JAVASCRIPT (placeholder PHP → ad injetado no DOM pelo JS):
+	 *   - Ad Inserter: ai-insert-{n}-{id}, ai-viewport-{n}, code-block-{n}
+	 *   - Advanced Ads: advads-placement-*, .advads-{id}
+	 *   - WP Ad Manager: wpad-placement-*
+	 *   - scripts inline com adsbygoogle.push, googletag.cmd.push, etc.
+	 *
+	 * PADRÕES GENÉRICOS:
+	 *   - Classes/IDs com prefixo/sufixo "ad", "ads", "advert"
+	 *   - Blocos Gutenberg de plugins de anúncio
 	 *
 	 * @param string $html HTML do bloco.
 	 * @return bool
 	 */
 	private function is_ad_block( $html ) {
 		$patterns = array(
-			// Google AdSense — tag <ins> com classe adsbygoogle
+
+			// ── Google AdSense ─────────────────────────────────────────────────
 			'/<ins\b[^>]*\badsbygoogle\b/i',
-			// Advanced Ads
+			'/adsbygoogle\s*=\s*window\.adsbygoogle/i',   // script push inline
+
+			// ── Google Ad Manager / GPT ────────────────────────────────────────
+			'/class=["\'][^"\']*\bdiv[-_]gpt[-_]ad\b/i',  // div-gpt-ad-*
+			'/\bid=["\']div[-_]gpt[-_]ad/i',
+			'/googletag\.(cmd|display|defineSlot)\b/i',    // inline GPT scripts
+			'/class=["\'][^"\']*\bgpt[-_]ad\b/i',
+
+			// ── Ad Inserter (WordPress plugin) ─────────────────────────────────
+			// Placeholder JS: ai-insert-{n}-{post_id} + ai-insert-{n}
+			'/class=["\'][^"\']*\bai[-_]insert[-_]\d/i',
+			// Viewport wrapper: ai-viewport-{n}
+			'/class=["\'][^"\']*\bai[-_]viewport[-_]\d/i',
+			// data attribute exclusivo do Ad Inserter JS
+			'/\bdata[-_]insertion[-_]position\s*=/i',
+			// code-block-{n} (classe gerada pelo Ad Inserter no wrapper do ad)
+			'/class=["\'][^"\']*\bcode[-_]block\b/i',
+
+			// ── Advanced Ads ───────────────────────────────────────────────────
 			'/class=["\'][^"\']*\badvads[-_]/i',
 			'/class=["\'][^"\']*[-_]advads\b/i',
-			// WP QUADS / Quick AdSense
+			'/class=["\'][^"\']*\badvads[-_]placement\b/i',
+
+			// ── WP QUADS / Quick AdSense ───────────────────────────────────────
 			'/class=["\'][^"\']*\bwp[-_]quads\b/i',
 			'/class=["\'][^"\']*\bquadsmiddle\b/i',
-			// Ezoic
+			'/class=["\'][^"\']*\bquads[-_]ad\b/i',
+
+			// ── Ezoic ──────────────────────────────────────────────────────────
 			'/class=["\'][^"\']*\bezoic[-_]/i',
-			// Ad Inserter
-			'/class=["\'][^"\']*\bcode[-_]block\b/i',
-			// Padrão genérico: classe que começa ou termina com "ad" / "ads"
-			'/class=["\'][^"\']*(?:^|\s)ads?(?:\s|[-_]|$)/i',
-			'/class=["\'][^"\']*[-_]ads?\b/i',
-			'/class=["\'][^"\']*\bads?[-_]/i',
-			// id contendo "advert" ou "ad-" no início
-			'/\bid=["\'](?:ad[-_]|ads[-_]|advert)/i',
-			// Comentários de blocos Gutenberg de plugins de anúncio
-			'/<!--\s*wp:(?:advads|advanced-ads|ad-inserter|adsense)\//i',
+			'/\bid=["\']ezoic[-_]/i',
+
+			// ── Raptive / CafeMedia ────────────────────────────────────────────
+			'/class=["\'][^"\']*\braptive[-_]/i',
+			'/class=["\'][^"\']*\bcafemedia[-_]/i',
+			'/class=["\'][^"\']*\badthrive[-_]/i',       // AdThrive (agora Raptive)
+
+			// ── Mediavine ──────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bmediavine[-_]ad[-_]/i',
+			'/\bid=["\']mediavine[-_]/i',
+
+			// ── Setupad ────────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bsetupad[-_]/i',
+
+			// ── Monumetric ─────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bmonumetric[-_]/i',
+
+			// ── Carbon Ads ─────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bcarbonads\b/i',
+			'/\bid=["\']carbonads\b/i',
+
+			// ── Media.net ──────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bmedianet[-_]ad\b/i',
+			'/\bid=["\']mn_/i',
+
+			// ── Taboola ────────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\btbl[-_]/i',
+			'/class=["\'][^"\']*\btaboola[-_]/i',
+			'/\brc\.taboola\.com\b/i',
+
+			// ── Outbrain ───────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bOUTBRAIN\b/',
+			'/class=["\'][^"\']*\bob[-_]widget[-_]/i',
+			'/\bwidgets\.outbrain\.com\b/i',
+
+			// ── Mgid ───────────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bmgid[-_]/i',
+			'/\bjsid\.mgid\.com\b/i',
+
+			// ── PropellerAds ───────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bpropeller[-_]ads[-_]/i',
+
+			// ── BuySellAds ─────────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bbsa[-_]ads[-_]/i',
+
+			// ── WP Ad Manager ──────────────────────────────────────────────────
+			'/class=["\'][^"\']*\bwpad[-_]placement[-_]/i',
+
+			// ── Padrões genéricos de classe/id com "ad" ────────────────────────
+			// classe começa com "ad-" ou "ads-"
+			'/class=["\'][^"\']*(?<![a-z])ads?[-_]/i',
+			// classe termina com "-ad" ou "_ad"
+			'/class=["\'][^"\']*[-_]ads?(?=["\'\s])/i',
+			// id começa com "ad-", "ads-" ou "advert"
+			'/\bid=["\'](?:ads?[-_]|advert)/i',
+
+			// ── Scripts inline de redes de anúncio ────────────────────────────
+			'/(adsbygoogle|googletag|_mgq|taboola|outbrain|medianet)\s*[=.].*push\s*\(/i',
+
+			// ── Comentários de blocos Gutenberg de plugins de anúncio ──────────
+			'/<!--\s*wp:(?:advads|advanced-ads|ad-inserter|adsense|gadsense)\//i',
+
 		);
 
 		foreach ( $patterns as $pattern ) {
