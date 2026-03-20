@@ -1621,6 +1621,36 @@ class AlvoBotPro_Smart_Internal_Links {
 			array(),
 			ALVOBOT_PRO_VERSION
 		);
+
+		// AMP pages do not support custom JS — skip the guard script entirely.
+		// PHP ad-detection still applies on AMP.
+		if ( function_exists( 'amp_is_request' ) && amp_is_request() ) {
+			return;
+		}
+
+		// Guard script: runs after window.load, detects actual rendered ads in the DOM,
+		// repositions or hides CTAs that ended up adjacent to an ad despite PHP detection.
+		// Loaded in the footer (true) so ad network scripts are registered first.
+		wp_enqueue_script(
+			'alvobot-smart-links-frontend',
+			ALVOBOT_PRO_PLUGIN_URL . 'includes/modules/smart-internal-links/assets/js/frontend.js',
+			array(),
+			ALVOBOT_PRO_VERSION,
+			true
+		);
+
+		// No-JS fallback: force CTAs visible when JavaScript is disabled.
+		// Without this, CTAs would remain opacity:0 forever for those users.
+		add_action( 'wp_head', array( $this, 'print_noscript_fallback' ) );
+	}
+
+	/**
+	 * Prints a <noscript> style block that makes CTAs fully visible
+	 * when JavaScript is disabled in the browser.
+	 * Only registered when the frontend guard script is enqueued.
+	 */
+	public function print_noscript_fallback() {
+		echo '<noscript><style>nav.alvobot-sil[data-sil-pending]{opacity:1!important}</style></noscript>' . "\n";
 	}
 
 	public function enqueue_admin_assets( $hook ) {

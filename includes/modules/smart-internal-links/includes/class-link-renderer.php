@@ -45,7 +45,7 @@ class AlvoBotPro_Smart_Links_Renderer {
 		$border_size  = isset( $settings['button_border_size'] ) ? absint( $settings['button_border_size'] ) : 2;
 		$border_style = $border_size > 0 ? 'border:' . $border_size . 'px solid ' . esc_attr( $border_color ) : 'border:none';
 
-		$html  = '<nav class="alvobot-sil" role="navigation" aria-label="Artigos relacionados">';
+		$html  = '<nav class="alvobot-sil" role="navigation" aria-label="Artigos relacionados" data-sil-pending>';
 		$html .= '<div class="alvobot-sil__list">';
 
 		foreach ( $links as $link ) {

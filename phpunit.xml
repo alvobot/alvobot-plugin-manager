@@ -8,9 +8,11 @@
         <testsuite name="Legacy">
             <directory suffix="Test.php">./tests/legacy</directory>
         </testsuite>
-        <testsuite name="BrainMonkey">
-            <directory suffix="Test.php">./tests/brain-monkey</directory>
-        </testsuite>
+        <!--
+            BrainMonkey suite usa phpunit-brain-monkey.xml (bootstrap separado).
+            Patchwork precisa ser carregado ANTES dos stubs WP — processos distintos garantem isso.
+            Use: composer test:brain-monkey
+        -->
         <testsuite name="Integration">
             <directory suffix="Test.php">./tests/integration</directory>
         </testsuite>

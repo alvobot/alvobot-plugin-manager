@@ -13,6 +13,25 @@
 	box-sizing: border-box;
 }
 
+/*
+ * Ad-adjacency guard: CTA is rendered invisible while JS evaluates its position.
+ * The element keeps its layout space so no CLS occurs if JS moves it.
+ * JS removes [data-sil-pending] to trigger the fade-in transition.
+ * The <noscript> fallback in wp_head overrides this for non-JS users.
+ */
+nav.alvobot-sil[data-sil-pending] {
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+/*
+ * Smooth reveal once [data-sil-pending] is removed by JS.
+ * Inherits the element's existing margin/layout — no reflow.
+ */
+nav.alvobot-sil:not([data-sil-pending]) {
+	transition: opacity 0.3s ease;
+}
+
 .alvobot-sil__list {
 	display: flex;
 	flex-direction: column;

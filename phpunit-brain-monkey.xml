@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Configuração separada para testes Brain Monkey.
+
+    Patchwork (usado internamente pelo Brain Monkey para interceptar chamadas de função)
+    exige ser carregado ANTES de qualquer definição das funções WP que serão mockadas.
+    O bootstrap-brain-monkey.php garante essa ordem — NÃO inclui os stubs do bootstrap.php
+    legado, que entrariam em conflito com o Patchwork.
+
+    Uso:
+        composer test:brain-monkey
+        ./vendor/bin/phpunit -c phpunit-brain-monkey.xml
+-->
+<phpunit
+    bootstrap="tests/bootstrap-brain-monkey.php"
+    colors="true"
+    verbose="true">
+
+    <testsuites>
+        <testsuite name="BrainMonkey">
+            <directory suffix="Test.php">./tests/brain-monkey</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage>
+        <include>
+            <directory suffix=".php">./includes</directory>
+        </include>
+        <exclude>
+            <directory>./vendor</directory>
+        </exclude>
+    </coverage>
+
+    <php>
+        <const name="WP_DEBUG" value="true"/>
+    </php>
+</phpunit>

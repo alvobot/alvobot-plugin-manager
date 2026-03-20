@@ -29,9 +29,9 @@
     }
   },
   "scripts": {
-    "test": "phpunit",
+    "test": "phpunit --testsuite=Legacy",
     "test:legacy": "phpunit --testsuite=Legacy",
-    "test:brain-monkey": "PHPUNIT_SUITE=brain-monkey phpunit --testsuite=BrainMonkey",
+    "test:brain-monkey": "phpunit -c phpunit-brain-monkey.xml",
     "test:all": [
       "@test:legacy",
       "@test:brain-monkey"
