@@ -27,7 +27,7 @@ class AlvoBotPro_TemporaryLogin_Options {
 	/**
 	 * The user role assigned to temporary users
 	 */
-	const USER_ROLE = 'administrator';
+	const USER_ROLE = 'editor';
 
 	/**
 	 * Option name for the site token

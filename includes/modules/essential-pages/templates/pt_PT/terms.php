@@ -29,7 +29,7 @@
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph -->
-	<p><strong>1.1</strong> <?php esc_html_e( 'Ao aceder ao nosso sítio, reconhece que leu, compreendeu e concorda em cumprir os nossos Termos e Condições de Utilização e a nossa', 'alvobot-pro' ); ?> <a href="a nossa Política de Privacidade"><?php esc_html_e( 'Política de Privacidade', 'alvobot-pro' ); ?></a>.</p>
+	<p><strong>1.1</strong> <?php esc_html_e( 'Ao aceder ao nosso sítio, reconhece que leu, compreendeu e concorda em cumprir os nossos Termos e Condições de Utilização e a nossa', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'Política de Privacidade', 'alvobot-pro' ); ?></a>.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -53,7 +53,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger a privacidade do utilizador é uma prioridade máxima. A nossa Política de Privacidade, disponível em', 'alvobot-pro' ); ?> <a href="a nossa Política de Privacidade">a nossa Política de Privacidade</a>, <?php esc_html_e( 'descreve como recolhemos, armazenamos e processamos dados do utilizador em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo o RGPD (Regulamento Geral de Proteção de Dados).', 'alvobot-pro' ); ?></p>
+	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger a privacidade do utilizador é uma prioridade máxima. A nossa Política de Privacidade, disponível em', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'a nossa Política de Privacidade', 'alvobot-pro' ); ?></a>, <?php esc_html_e( 'descreve como recolhemos, armazenamos e processamos dados do utilizador em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo o RGPD (Regulamento Geral de Proteção de Dados).', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -65,7 +65,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>3.2</strong> <?php esc_html_e( 'Se necessitar de assistência ou desejar entrar em contacto connosco, utilize o formulário de contacto oficial disponível em', 'alvobot-pro' ); ?> <a href="/contacto">a nossa página de contacto</a> <?php esc_html_e( 'para receber apoio em tempo útil.', 'alvobot-pro' ); ?></p>
+	<p><strong>3.2</strong> <?php esc_html_e( 'Se necessitar de assistência ou desejar entrar em contacto connosco, utilize o formulário de contacto oficial disponível em', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>"><?php esc_html_e( 'a nossa página de contacto', 'alvobot-pro' ); ?></a> <?php esc_html_e( 'para receber apoio em tempo útil.', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -101,7 +101,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>4.8</strong> <?php esc_html_e( 'Para proteção contra phishing, correios eletrónicos fraudulentos e roubo de identidade, recomendamos que os utilizadores tenham cuidado com mensagens não solicitadas que solicitem informações pessoais ou contenham anexos não verificados. Se receber tais comunicações, denuncie-as através do nosso formulário de contacto em', 'alvobot-pro' ); ?> <a href="a nossa página de contacto">a nossa página de contacto</a> <?php esc_html_e( 'para que possamos investigar adequadamente.', 'alvobot-pro' ); ?></p>
+	<p><strong>4.8</strong> <?php esc_html_e( 'Para proteção contra phishing, correios eletrónicos fraudulentos e roubo de identidade, recomendamos que os utilizadores tenham cuidado com mensagens não solicitadas que solicitem informações pessoais ou contenham anexos não verificados. Se receber tais comunicações, denuncie-as através do nosso formulário de contacto em', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>"><?php esc_html_e( 'a nossa página de contacto', 'alvobot-pro' ); ?></a> <?php esc_html_e( 'para que possamos investigar adequadamente.', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -413,7 +413,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><?php esc_html_e( '📌 Formulário de contacto:', 'alvobot-pro' ); ?> <a href="a nossa página de contacto">a nossa página de contacto</a></p>
+	<p><?php esc_html_e( '📌 Formulário de contacto:', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>"><?php esc_html_e( 'a nossa página de contacto', 'alvobot-pro' ); ?></a></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->

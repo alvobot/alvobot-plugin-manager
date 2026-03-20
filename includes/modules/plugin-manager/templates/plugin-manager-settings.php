@@ -104,7 +104,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<td>
 						<?php
 						if ( $connection_status && is_array( $connection_status ) ) :
-							$status      = $connection_status['status'];
+							$status      = isset( $connection_status['status'] ) ? $connection_status['status'] : '';
 							$error_type  = isset( $connection_status['error_type'] ) ? $connection_status['error_type'] : '';
 							$http_status = isset( $connection_status['http_status'] ) ? $connection_status['http_status'] : '';
 							$message     = isset( $connection_status['message'] ) ? $connection_status['message'] : '';

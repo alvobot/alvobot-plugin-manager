@@ -44,7 +44,7 @@ class Alvobot_Quiz_Assets {
 			'alvobot-quiz-frontend',
 			ALVOBOT_QUIZ_URL . 'assets/js/quiz-frontend.js',
 			array(),
-			ALVOBOT_QUIZ_VERSION . '.debug1', // Force cache refresh with debug logs
+			ALVOBOT_QUIZ_VERSION,
 			true
 		);
 	}
@@ -104,7 +104,7 @@ class Alvobot_Quiz_Assets {
 			'alvobot-quiz-builder',
 			ALVOBOT_QUIZ_URL . 'assets/js/quiz-builder.js',
 			array( 'jquery' ),
-			ALVOBOT_QUIZ_VERSION . '.3', // Force cache refresh after copy button fix
+			ALVOBOT_QUIZ_VERSION,
 			true
 		);
 

@@ -47,7 +47,7 @@ class AlvoBotPro_TemporaryLogin_AdminPointer {
 		<script>
 			jQuery(document).ready(function($) {
 				$('#menu-users').pointer({
-					content: '<?php echo wp_kses_post( $pointer_content ); ?>',
+					content: <?php echo wp_json_encode( wp_kses_post( $pointer_content ) ); ?>,
 					position: {
 						edge: <?php echo is_rtl() ? "'right'" : "'left'"; ?>,
 						align: 'center'

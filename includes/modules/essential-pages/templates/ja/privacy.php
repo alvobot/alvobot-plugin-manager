@@ -197,14 +197,14 @@
 	<h3><?php esc_html_e( '2.5 サイトセキュリティの強化と不正行為の防止', 'alvobot-pro' ); ?></h3>
 	<!-- /wp:heading -->
 	<p><?php esc_html_e( 'プラットフォームとお客様のデータのセキュリティは最重要事項です。すべての方にとって安全で保護されたオンライン環境を確保するために、データを積極的に活用します：', 'alvobot-pro' ); ?></p>
-	<!-- wp-list -->
+	<!-- wp:list -->
 	<ul>
 		<li><?php esc_html_e( '不正、不審または悪意のある活動の検出、調査および軽減。', 'alvobot-pro' ); ?></li>
 		<li><?php esc_html_e( 'ユーザーアカウントおよび内部システムへの不正アクセスの防止。', 'alvobot-pro' ); ?></li>
 		<li><?php esc_html_e( 'コンテンツの完全性と個人情報の機密性を潜在的なサイバー脅威から保護すること。', 'alvobot-pro' ); ?></li>
 		<li><?php esc_html_e( 'セキュリティ監視を必要とする法的および規制上の義務の履行。', 'alvobot-pro' ); ?></li>
 	</ul>
-	<!-- /wp-list -->
+	<!-- /wp:list -->
 
 	<!-- wp:heading {"level":2} -->
 	<h2><?php esc_html_e( 'III. Cookie詳細ポリシー', 'alvobot-pro' ); ?></h2>
@@ -309,9 +309,9 @@
 	<h3><?php esc_html_e( 'お客様の権利の認識', 'alvobot-pro' ); ?></h3>
 	<!-- /wp:heading -->
 
-	<!-- wp-paragraph -->
+	<!-- wp:paragraph -->
 	<p><?php esc_html_e( '当社は、ユーザーが個人データの収集、処理および保存に関して持つ権利を深く認識し、尊重しています。これらの権利は、お客様が自分の情報に対して持つコントロールの基盤です。お客様の地理的な場所と適用される法律（日本では個人情報保護法、EUではGDPR、カリフォルニアではCCPAなど）によっては、以下の権利を行使できます：', 'alvobot-pro' ); ?></p>
-	<!-- /wp-paragraph -->
+	<!-- /wp:paragraph -->
 
 	<!-- wp:list -->
 	<ul>

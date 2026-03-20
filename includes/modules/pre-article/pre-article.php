@@ -18,7 +18,7 @@ define( 'ALVOBOT_PRE_ARTICLE_BASENAME', plugin_basename( __FILE__ ) );
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-pre-article.php';
 
 // Registrar função de ativação para lidar com regras de rewrite
-register_activation_hook( __FILE__, [ 'Alvobot_Pre_Article', 'activate' ] );
+register_activation_hook( ALVOBOT_PRO_PLUGIN_FILE, array( 'Alvobot_Pre_Article', 'activate' ) );
 
 // Instancia a classe
 $alvobot_pre_article = new Alvobot_Pre_Article();
@@ -28,8 +28,11 @@ $alvobot_pre_article->run();
  * Função para logging (apenas quando WP_DEBUG está ativo)
  */
 function alvobot_log( $message, $data = null ) {
+	if ( ! class_exists( 'AlvoBotPro' ) ) {
+		return;
+	}
 	AlvoBotPro::debug_log( 'pre-article', $message );
-	if ( $data !== null ) {
+	if ( null !== $data ) {
 		AlvoBotPro::debug_log( 'pre-article', 'Data: ' . print_r( $data, true ) );
 	}
 }

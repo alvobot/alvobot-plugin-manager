@@ -336,8 +336,10 @@ class AlvoBotPro_QuizFunnel {
 
 	private function render_full_page( array $quiz ) {
 		$html  = $this->build_html( $quiz, true );
-		$css   = file_get_contents( __DIR__ . '/css/frontend.css' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$js    = file_get_contents( __DIR__ . '/js/frontend.js' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$css_file = __DIR__ . '/css/frontend.css';
+		$js_file  = __DIR__ . '/js/frontend.js';
+		$css = file_exists( $css_file ) ? file_get_contents( $css_file ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$js  = file_exists( $js_file )  ? file_get_contents( $js_file )  : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		$title = esc_html( $quiz['title'] );
 
 		// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped

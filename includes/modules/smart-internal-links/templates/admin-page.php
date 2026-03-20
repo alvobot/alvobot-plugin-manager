@@ -608,7 +608,8 @@ jQuery(function($) {
 	// Helper to rebuild button border style
 	function updatePreviewBorder() {
 		var size = parseInt($('#sil_button_border_size').val()) || 0;
-		var color = $('#sil_button_border_color').val();
+		var $colorInput = $('#sil_button_border_color');
+		var color = ($colorInput.data('wpColorPicker') ? $colorInput.wpColorPicker('color') : null) || $colorInput.val();
 		var border = size > 0 ? size + 'px solid ' + color : 'none';
 		$('#sil-preview .alvobot-sil__btn').css('border', border);
 	}

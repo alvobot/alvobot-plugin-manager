@@ -19,15 +19,15 @@
 		<?php
 		$pages = array(
 			'terms'   => array(
-				'title' => 'Termos de Uso',
+				'title' => __( 'Termos de Uso', 'alvobot-pro' ),
 				'slug'  => 'termos-de-uso',
 			),
 			'privacy' => array(
-				'title' => 'Política de Privacidade',
+				'title' => __( 'Política de Privacidade', 'alvobot-pro' ),
 				'slug'  => 'politica-de-privacidade',
 			),
 			'contact' => array(
-				'title' => 'Contato',
+				'title' => __( 'Contato', 'alvobot-pro' ),
 				'slug'  => 'contato',
 			),
 		);

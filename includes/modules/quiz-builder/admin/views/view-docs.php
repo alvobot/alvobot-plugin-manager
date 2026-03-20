@@ -1297,7 +1297,7 @@ Agora, com base nas informações fornecidas acima, gere o shortcode perfeito:
 			<ul>
 				<li><strong><?php esc_html_e( 'Modo Parâmetros (padrão):', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'Usa parâmetros GET (?question=2) - mais rápido', 'alvobot-pro' ); ?></li>
 				<li><strong><?php esc_html_e( 'Modo Sufixo:', 'alvobot-pro' ); ?></strong> <?php esc_html_e( 'URLs amigáveis (/post-name-1/, /post-name-2/) - compatível com AdSense', 'alvobot-pro' ); ?></li>
-			</ul>O
+			</ul>
 
 			<h3><?php esc_html_e( 'Dicas Importantes', 'alvobot-pro' ); ?></h3>
 			<ul>

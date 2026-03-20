@@ -107,12 +107,15 @@ class AlvoBotPro_AuthorBox_API {
 
 		// Atualiza o nome de exibição
 		if ( $display_name ) {
-			wp_update_user(
+			$result = wp_update_user(
 				array(
 					'ID'           => $user->ID,
 					'display_name' => sanitize_text_field( $display_name ),
 				)
 			);
+			if ( is_wp_error( $result ) ) {
+				return new WP_Error( 'update_error', 'Erro ao atualizar nome de exibição', array( 'status' => 500 ) );
+			}
 			$response['display_name'] = 'Nome de exibição atualizado com sucesso';
 		}
 

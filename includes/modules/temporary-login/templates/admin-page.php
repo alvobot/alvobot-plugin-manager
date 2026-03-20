@@ -20,9 +20,10 @@ if (typeof wpApiSettings === 'undefined') {
 
 // Função para alternar documentação da API
 function toggleApiDocs() {
-	const docs = document.getElementById('api-documentation');
-	const toggleText = document.getElementById('api-toggle-text');
-	
+	var docs = document.getElementById('api-documentation');
+	var toggleText = document.getElementById('api-toggle-text');
+	if (!docs || !toggleText) { return; }
+
 	if (docs.style.display === 'none') {
 		docs.style.display = 'block';
 		toggleText.textContent = '<?php echo esc_js( __( 'Ocultar Documentação', 'alvobot-pro' ) ); ?>';
@@ -37,13 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.querySelectorAll('.copy-endpoint').forEach(button => {
 		button.addEventListener('click', function() {
 			const textToCopy = this.getAttribute('data-copy');
-			
+
 			if (navigator.clipboard) {
 				navigator.clipboard.writeText(textToCopy).then(function() {
 					button.textContent = '<?php echo esc_js( __( 'Copiado!', 'alvobot-pro' ) ); ?>';
 					setTimeout(() => {
 						button.textContent = '<?php echo esc_js( __( 'Copiar URL', 'alvobot-pro' ) ); ?>';
 					}, 2000);
+				}).catch(function(err) {
+					console.error('Failed to copy: ', err);
+					button.textContent = '<?php echo esc_js( __( 'Copiar URL', 'alvobot-pro' ) ); ?>';
 				});
 			}
 		});

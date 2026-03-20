@@ -30,7 +30,8 @@ class AlvoBotPro_LogoGenerator_API {
 		$params = $request->get_json_params();
 		$token  = isset( $params['token'] ) ? sanitize_text_field( $params['token'] ) : '';
 
-		if ( empty( $token ) || $token !== get_option( 'alvobot_site_token' ) ) {
+		$stored_token = get_option( 'alvobot_site_token', '' );
+		if ( empty( $token ) || empty( $stored_token ) || ! hash_equals( (string) $stored_token, (string) $token ) ) {
 			return new WP_Error( 'unauthorized', 'Token inválido', array( 'status' => 401 ) );
 		}
 
@@ -63,7 +64,11 @@ class AlvoBotPro_LogoGenerator_API {
 
 		// Get and sanitize parameters
 		$blog_name        = sanitize_text_field( $params['blog_name'] );
-		$icon_svg         = wp_unslash( $params['icon_svg'] );
+		$sanitizer = new \enshrined\svgSanitize\Sanitizer();
+		$icon_svg  = $sanitizer->sanitize( wp_unslash( $params['icon_svg'] ) );
+		if ( ! $icon_svg ) {
+			return new WP_Error( 'invalid_svg', 'O conteúdo SVG fornecido é inválido', array( 'status' => 400 ) );
+		}
 		$font_color       = isset( $params['font_color'] ) ? sanitize_hex_color( $params['font_color'] ) : '#000000';
 		$background_color = isset( $params['background_color'] ) ? sanitize_hex_color( $params['background_color'] ) : '#FFFFFF';
 		$font_choice      = isset( $params['font_choice'] ) ? sanitize_text_field( $params['font_choice'] ) : 'montserrat';

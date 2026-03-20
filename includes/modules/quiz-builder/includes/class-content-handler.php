@@ -43,7 +43,9 @@ class Alvobot_Quiz_Content_Handler {
 		// Store original content for debugging
 		$original_content = $content;
 
-		AlvoBotPro::debug_log( 'quiz-builder', 'Processing content with quiz shortcode' );
+		if ( class_exists( 'AlvoBotPro' ) ) {
+			AlvoBotPro::debug_log( 'quiz-builder', 'Processing content with quiz shortcode' );
+		}
 
 		// Mark sections of content for preservation
 		$content = $this->mark_content_sections( $content );

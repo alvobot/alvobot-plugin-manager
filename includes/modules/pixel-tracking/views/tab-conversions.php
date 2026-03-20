@@ -31,6 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="alvobot-card-content">
 		<!-- Conversion Form (hidden by default) -->
 		<div id="alvobot-conversion-form" class="alvobot-conversion-form" style="display: none;">
+			<?php wp_nonce_field( 'alvobot_conversion_nonce', 'alvobot_nonce' ); ?>
 			<h3 id="alvobot-conversion-form-title" class="alvobot-conversion-form-title">
 				<?php esc_html_e( 'Nova Conversao', 'alvobot-pro' ); ?>
 			</h3>
@@ -80,7 +81,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<div id="conv-custom-name-field" class="alvobot-form-field alvobot-conditional-field">
 				<label for="conv_event_custom_name" class="alvobot-form-label"><?php esc_html_e( 'Nome do Evento Personalizado', 'alvobot-pro' ); ?></label>
-				<input type="text" id="conv_event_custom_name" class="alvobot-input" placeholder="MeuEvento">
+				<input type="text" id="conv_event_custom_name" class="alvobot-input" placeholder="<?php esc_attr_e( 'MeuEvento', 'alvobot-pro' ); ?>">
 			</div>
 
 			<div id="conv-trigger-value-field" class="alvobot-form-field alvobot-conditional-field">

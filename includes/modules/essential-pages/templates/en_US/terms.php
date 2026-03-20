@@ -29,7 +29,7 @@
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph -->
-	<p><strong>1.1</strong> <?php esc_html_e( 'By accessing our website, you acknowledge that you have read, understood and agree to comply with our Terms and Conditions of Use and our', 'alvobot-pro' ); ?> <a href="our Privacy Policy"><?php esc_html_e( 'Privacy Policy', 'alvobot-pro' ); ?></a>.</p>
+	<p><strong>1.1</strong> <?php esc_html_e( 'By accessing our website, you acknowledge that you have read, understood and agree to comply with our Terms and Conditions of Use and our', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'Privacy Policy', 'alvobot-pro' ); ?></a>.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -53,7 +53,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>2.2</strong> <?php esc_html_e( 'Protecting user privacy is a top priority. Our Privacy Policy, available at', 'alvobot-pro' ); ?> <a href="our Privacy Policy">our Privacy Policy</a>, <?php esc_html_e( 'describes how we collect, store and process user data in compliance with applicable data protection regulations, including applicable data protection laws (GDPR, CCPA etc.).', 'alvobot-pro' ); ?></p>
+	<p><strong>2.2</strong> <?php esc_html_e( 'Protecting user privacy is a top priority. Our Privacy Policy, available at', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'our Privacy Policy', 'alvobot-pro' ); ?></a>, <?php esc_html_e( 'describes how we collect, store and process user data in compliance with applicable data protection regulations, including applicable data protection laws (GDPR, CCPA etc.).', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -65,7 +65,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>3.2</strong> <?php esc_html_e( 'If you need assistance or wish to contact us, use the official contact form available at', 'alvobot-pro' ); ?> <a href="/contact">our contact page</a> <?php esc_html_e( 'to receive support in a timely manner.', 'alvobot-pro' ); ?></p>
+	<p><strong>3.2</strong> <?php esc_html_e( 'If you need assistance or wish to contact us, use the official contact form available at', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><?php esc_html_e( 'our contact page', 'alvobot-pro' ); ?></a> <?php esc_html_e( 'to receive support in a timely manner.', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -101,7 +101,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>4.8</strong> <?php esc_html_e( 'For protection against phishing, fraudulent emails and identity theft, we recommend that users exercise caution with unsolicited messages requesting personal information or containing unverified attachments. If you receive such communications, please report them through our contact form at', 'alvobot-pro' ); ?> <a href="our contact page">our contact page</a> <?php esc_html_e( 'so that we can investigate appropriately.', 'alvobot-pro' ); ?></p>
+	<p><strong>4.8</strong> <?php esc_html_e( 'For protection against phishing, fraudulent emails and identity theft, we recommend that users exercise caution with unsolicited messages requesting personal information or containing unverified attachments. If you receive such communications, please report them through our contact form at', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><?php esc_html_e( 'our contact page', 'alvobot-pro' ); ?></a> <?php esc_html_e( 'so that we can investigate appropriately.', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -413,7 +413,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><?php esc_html_e( '📌 Contact form:', 'alvobot-pro' ); ?> <a href="our contact page">our contact page</a></p>
+	<p><?php esc_html_e( '📌 Contact form:', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><?php esc_html_e( 'our contact page', 'alvobot-pro' ); ?></a></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -451,6 +451,7 @@
 	<!-- wp:heading {"level":2} -->
 	<h2><?php esc_html_e( 'Legal Information', 'alvobot-pro' ); ?></h2>
 	<!-- /wp:heading -->
+	<!-- TODO: Add legal entity information (company name, address, tax ID, contact) -->
 
 </div>
 <!-- /wp:group -->

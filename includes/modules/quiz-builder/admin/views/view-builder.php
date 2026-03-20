@@ -121,8 +121,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="drop-zone-empty">
 				<div class="empty-state">
 					<i data-lucide="grip-vertical" class="alvobot-icon empty-icon"></i>
-					<h4>Arraste componentes aqui</h4>
-					<p>Comece arrastando "Nova Questão" da barra lateral</p>
+					<?php esc_html_e( 'Arraste componentes aqui', 'alvobot-pro' ); ?>
+					<?php esc_html_e( 'Comece arrastando "Nova Questão" da barra lateral', 'alvobot-pro' ); ?>
 					<div class="empty-actions">
 						<button type="button" class="btn btn--primary" id="btn--add-question">
 							<i data-lucide="plus" class="alvobot-icon"></i>
@@ -144,7 +144,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="preview-frame desktop-frame is-active" id="preview-content">
 				<div class="preview-placeholder">
 					<i data-lucide="eye" class="alvobot-icon"></i>
-					<p>Crie uma questão para ver o preview aqui</p>
+					<?php esc_html_e( 'Crie uma questão para ver o preview aqui', 'alvobot-pro' ); ?>
 				</div>
 			</div>
 		</div>

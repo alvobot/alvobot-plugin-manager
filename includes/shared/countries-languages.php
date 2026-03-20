@@ -1259,5 +1259,5 @@ function alvobot_get_language_iso_code( $language_name ) {
 	);
 
 	$lang_key = mb_strtolower( trim( $language_name ) );
-	return isset( $iso_codes[ $lang_key ] ) ? $iso_codes[ $lang_key ] : strtolower( substr( $language_name, 0, 2 ) );
+	return isset( $iso_codes[ $lang_key ] ) ? $iso_codes[ $lang_key ] : '';
 }
