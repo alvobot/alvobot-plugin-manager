@@ -367,8 +367,15 @@ class AlvoBotPro_Smart_Links_Injector {
 	/**
 	 * Verifica se uma posição de inserção seria "insegura":
 	 *   - adjacente a um bloco de anúncio (antes ou depois), ou
-	 *   - imediatamente após um bloco que termina com h1/h2 (CTA abaixo de título), ou
-	 *   - imediatamente antes de um bloco que começa com h1/h2 (CTA acima de título).
+	 *   - o bloco ANTES da inserção termina com </h1>/</h2> (CTA abaixo de título standalone), ou
+	 *   - o bloco DEPOIS da inserção começa com <h1>/<h2> (CTA imediatamente acima de um título).
+	 *
+	 * IMPORTANTE — por que a verificação é direcional:
+	 * O split por </p> mescla um heading com o parágrafo seguinte num único bloco,
+	 * ex.: "<h2>Título</h2><p>Conteúdo</p>". Esse bloco COMEÇA com <h2>, mas a CTA
+	 * inserida APÓS ele aparece depois de todo o conteúdo do bloco (não colada ao heading).
+	 * Por isso, só verificamos se o bloco ANTES termina com heading (não se começa),
+	 * e só verificamos se o bloco DEPOIS começa com heading (não se termina).
 	 *
 	 * @param int    $index      Índice proposto para inserção.
 	 * @param array  $paragraphs Array de parágrafos já parseados.
@@ -378,40 +385,24 @@ class AlvoBotPro_Smart_Links_Injector {
 		// Bloco imediatamente antes da inserção
 		if ( $index > 0 ) {
 			$before = $paragraphs[ $index - 1 ];
-			if ( $this->is_ad_block( $before ) || $this->is_heading_block( $before ) ) {
+			if ( $this->is_ad_block( $before ) ) {
+				return true;
+			}
+			// Heading standalone no final (ex.: <h2>Veja também</h2> sem parágrafo seguinte)
+			if ( preg_match( '/<\/h[12]>\s*$/i', rtrim( $before ) ) ) {
 				return true;
 			}
 		}
 		// Bloco imediatamente depois da inserção
 		if ( isset( $paragraphs[ $index ] ) ) {
 			$after = $paragraphs[ $index ];
-			if ( $this->is_ad_block( $after ) || $this->is_heading_block( $after ) ) {
+			if ( $this->is_ad_block( $after ) ) {
 				return true;
 			}
-		}
-		return false;
-	}
-
-	/**
-	 * Verifica se um bloco HTML é encabeçado ou encerrado por h1/h2.
-	 *
-	 * Dois casos são verificados:
-	 *  - Bloco COMEÇA com <h1>/<h2>: inserir a CTA antes desse bloco colocaria ela
-	 *    imediatamente acima do título — confuso visualmente.
-	 *  - Bloco TERMINA com </h1>/</h2>: inserir a CTA depois colocaria ela logo
-	 *    abaixo de um título standalone — leitura interrompida antes do conteúdo.
-	 *
-	 * @param string $html HTML do bloco.
-	 * @return bool
-	 */
-	private function is_heading_block( $html ) {
-		// Começa com <h1> ou <h2> (whitespace inicial é ignorado)
-		if ( preg_match( '/^<h[12]\b/i', ltrim( $html ) ) ) {
-			return true;
-		}
-		// Termina com </h1> ou </h2> (whitespace/comentários finais são ignorados)
-		if ( preg_match( '/<\/h[12]>\s*$/i', rtrim( $html ) ) ) {
-			return true;
+			// Bloco começa com heading: CTA ficaria colada imediatamente acima do título
+			if ( preg_match( '/^<h[12]\b/i', ltrim( $after ) ) ) {
+				return true;
+			}
 		}
 		return false;
 	}
