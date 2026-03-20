@@ -1,0 +1,15 @@
+parameters:
+    level: 3
+    paths:
+        - includes
+        - alvobot-pro.php
+    excludePaths:
+        - vendor
+        - tests
+    bootstrapFiles:
+        - vendor/autoload.php
+    reportUnmatchedIgnoredErrors: false
+
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+    - phpstan-baseline.neon

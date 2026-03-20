@@ -56,6 +56,18 @@ API-TEST-RESULTS.md
 .phpunit.result.cache
 .phpunit.cache/
 
+# Environment files for integration tests
+.env.testing
+
+# PHPStan baseline (generated — do not track)
+phpstan-baseline.neon
+
+# Infection reports
+infection-report.txt
+infection-report.html
+infection-summary.log
+infection-per-mutator.md
+
 # Build e distribuição
 /build/
 /dist/

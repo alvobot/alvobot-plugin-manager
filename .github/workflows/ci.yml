@@ -5,8 +5,8 @@ on:
   push:
 
 jobs:
-  phpunit:
-    name: PHPUnit
+  phpunit-legacy:
+    name: PHPUnit Legacy
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +29,118 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Run PHPUnit
-        run: ./vendor/bin/phpunit --testdox
+      - name: Run PHPUnit Legacy
+        run: ./vendor/bin/phpunit --testsuite=Legacy --testdox
+
+  phpunit-brain-monkey:
+    name: PHPUnit Brain Monkey
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPUnit Brain Monkey
+        run: PHPUNIT_SUITE=brain-monkey ./vendor/bin/phpunit --testsuite=BrainMonkey --testdox
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: php -d memory_limit=-1 ./vendor/bin/phpstan analyse --no-progress
+
+  rector:
+    name: Rector (Advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Rector dry-run
+        run: ./vendor/bin/rector process --dry-run --no-progress-bar
+
+  infection:
+    name: Infection (Mutation Testing)
+    runs-on: ubuntu-latest
+    needs: phpunit-legacy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: xdebug
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Infection
+        run: ./vendor/bin/infection run --threads=max --min-msi=40 --min-covered-msi=65 --no-progress
 
   phpcs:
     name: PHPCS (Advisory)

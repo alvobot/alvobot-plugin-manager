@@ -1,0 +1,20 @@
+{
+    "source": {
+        "directories": ["includes"],
+        "excludes": ["vendor"]
+    },
+    "mutators": {
+        "@default": true
+    },
+    "testFramework": "phpunit",
+    "testFrameworkOptions": "--testsuite=Legacy",
+    "timeout": 10,
+    "logs": {
+        "text": "infection-report.txt",
+        "html": "infection-report.html",
+        "summary": "infection-summary.log"
+    },
+    "minMsi": 40,
+    "minCoveredMsi": 65,
+    "threads": "max"
+}
