@@ -796,16 +796,16 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// Endpoint para testar se o Authorization header chega ao PHP.
-		// Restrito a administradores — evita expor informações de configuração publicamente.
+		// Público intencionalmente: só retorna booleanos (header recebido ou não),
+		// sem revelar o valor do header. O self-test do health check faz uma requisição
+		// sem credenciais válidas — exigir manage_options quebraria o diagnóstico.
 		register_rest_route(
 			$this->namespace,
 			'/auth-header-test',
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'rest_auth_header_test' ),
-				'permission_callback' => function () {
-					return current_user_can( 'manage_options' );
-				},
+				'permission_callback' => '__return_true',
 			)
 		);
 	}
@@ -813,7 +813,7 @@ class AlvoBotPro_PluginManager {
 	/**
 	 * REST endpoint that echoes whether the Authorization header was received.
 	 * Used by the health check to verify header passthrough.
-	 * Restricted to manage_options to prevent server configuration leakage.
+	 * Public endpoint — only returns boolean flags, never the header value itself.
 	 */
 	public function rest_auth_header_test( $request ) {
 		$auth_header = $request->get_header( 'authorization' );
