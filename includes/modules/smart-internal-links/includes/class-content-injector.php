@@ -223,10 +223,18 @@ class AlvoBotPro_Smart_Links_Injector {
 	/**
 	 * Separa conteúdo por tag de fechamento (</p>, </div>, etc.).
 	 *
-	 * Blocos de anúncio detectados por is_ad_block() não são contados como
-	 * parágrafos reais: ficam como prefixo do próximo parágrafo de texto.
-	 * Isso garante que os botões de Smart Links nunca sejam inseridos logo
-	 * após um bloco de anúncio.
+	 * Blocos de anúncio são tratados de acordo com seu conteúdo:
+	 *
+	 * - Bloco de anúncio VAZIO (placeholder JS, ex: Ad Inserter):
+	 *   Ancorado ao parágrafo ANTERIOR como sufixo, para que is_adjacent_to_ad()
+	 *   o detecte corretamente ao verificar o parágrafo antes da inserção.
+	 *
+	 * - Bloco MISTO (div de anúncio vazia + texto no mesmo raw_block):
+	 *   extract_leading_ad() separa a parte de anúncio (sufixo do parágrafo anterior)
+	 *   do texto restante (novo parágrafo).
+	 *
+	 * - Bloco de anúncio COM TEXTO (ad renderizado diretamente com conteúdo):
+	 *   Mantido como pending_prefix para o próximo parágrafo (comportamento original).
 	 */
 	private function parse_by_tag( $content, $tag ) {
 		$parts = preg_split( '/(<\/' . preg_quote( $tag, '/' ) . '>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
@@ -245,8 +253,34 @@ class AlvoBotPro_Smart_Links_Injector {
 
 		foreach ( $raw_blocks as $block ) {
 			if ( $this->is_ad_block( $block ) ) {
-				// Bloco de anúncio: adia para o próximo parágrafo real
-				$pending_prefix .= $block;
+				$has_text = (bool) trim( wp_strip_all_tags( $block ) );
+
+				if ( ! $has_text ) {
+					// Placeholder vazio (ex: Ad Inserter div com data-code): ancora ao parágrafo anterior
+					// para que is_adjacent_to_ad() o detecte ao verificar paragraphs[$index - 1].
+					if ( ! empty( $paragraphs ) ) {
+						$paragraphs[ count( $paragraphs ) - 1 ] .= $block;
+					} else {
+						$pending_prefix .= $block;
+					}
+				} else {
+					// Bloco misto: tenta separar a div de anúncio vazia do texto que a acompanha
+					$split = $this->extract_leading_ad( $block );
+					if ( $split ) {
+						// Ancora o trecho de anúncio no parágrafo anterior
+						if ( ! empty( $paragraphs ) ) {
+							$paragraphs[ count( $paragraphs ) - 1 ] .= $split['ad'];
+						} else {
+							$pending_prefix .= $split['ad'];
+						}
+						// O texto restante vira um novo parágrafo
+						$paragraphs[]   = $pending_prefix . $split['text'];
+						$pending_prefix = '';
+					} else {
+						// Ad com conteúdo inline (ex: <ins adsbygoogle>): mantém como prefixo
+						$pending_prefix .= $block;
+					}
+				}
 			} elseif ( trim( wp_strip_all_tags( $block ) ) ) {
 				// Parágrafo com texto: consome o prefixo pendente
 				$paragraphs[]   = $pending_prefix . $block;
@@ -267,6 +301,53 @@ class AlvoBotPro_Smart_Links_Injector {
 		}
 
 		return $paragraphs;
+	}
+
+	/**
+	 * Separa um bloco misto (div vazia de anúncio + texto na mesma fatia) em duas partes.
+	 *
+	 * Padrão alvo: o Ad Inserter injeta divs como
+	 *   <div class='ai-viewports ...' data-code='BASE64...'></div>
+	 * e, pelo fato do preg_split cortar em </p>, essa div vazia fica colada
+	 * ao início do próximo raw_block junto com o <h2>, <p> etc. seguintes.
+	 *
+	 * O método extrai todos os elementos de nível de bloco VAZIOS (sem texto) no
+	 * início do bloco que sejam detectados como anúncio, e retorna:
+	 *   ['ad'  => '<div...></div>',          // sufixo para o parágrafo anterior
+	 *    'text' => '<h2>...</h2><p>...</p>']  // texto que vira novo parágrafo
+	 *
+	 * Retorna null se nenhum elemento de anúncio vazio for encontrado no início.
+	 *
+	 * @param string $block HTML do bloco misto.
+	 * @return array|null
+	 */
+	private function extract_leading_ad( $block ) {
+		// Captura 1 ou mais elementos de bloco vazios no início:
+		// <tag [attrs]></tag> ou <tag [attrs]/> (self-closing)
+		// onde o conteúdo interno é só whitespace.
+		$pattern = '/^(\s*(?:<(?:div|ins|aside|section|figure|span)\b[^>]*>\s*<\/(?:div|ins|aside|section|figure|span)>|<(?:div|ins|aside|section|figure|span)\b[^>]*\/?>)\s*)+/is';
+
+		if ( ! preg_match( $pattern, $block, $matches ) ) {
+			return null;
+		}
+
+		$ad_part   = $matches[0];
+		$text_part = substr( $block, strlen( $ad_part ) );
+
+		// Só vale se a parte de anúncio for de fato detectada como ad
+		if ( ! $this->is_ad_block( $ad_part ) ) {
+			return null;
+		}
+
+		// E a parte de texto deve ter conteúdo real
+		if ( ! trim( wp_strip_all_tags( $text_part ) ) ) {
+			return null;
+		}
+
+		return array(
+			'ad'   => $ad_part,
+			'text' => $text_part,
+		);
 	}
 
 	/**
