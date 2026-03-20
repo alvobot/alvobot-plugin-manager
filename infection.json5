@@ -7,7 +7,7 @@
         "@default": true
     },
     "testFramework": "phpunit",
-    "testFrameworkOptions": "--testsuite=Legacy",
+    "testFrameworkOptions": "--testsuite=BrainMonkey",
     "timeout": 10,
     "logs": {
         "text": "infection-report.txt",

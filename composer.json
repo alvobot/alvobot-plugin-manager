@@ -29,13 +29,9 @@
     }
   },
   "scripts": {
-    "test": "phpunit --testsuite=Legacy",
-    "test:legacy": "phpunit --testsuite=Legacy",
-    "test:brain-monkey": "phpunit -c phpunit-brain-monkey.xml",
-    "test:all": [
-      "@test:legacy",
-      "@test:brain-monkey"
-    ],
+    "test": "phpunit --testsuite=BrainMonkey",
+    "test:brain-monkey": "phpunit --testsuite=BrainMonkey",
+    "test:all": "phpunit",
     "stan": "phpstan analyse",
     "stan:baseline": "phpstan analyse --generate-baseline",
     "rector": "rector process",

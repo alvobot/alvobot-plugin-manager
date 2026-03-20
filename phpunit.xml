@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
-    bootstrap="tests/bootstrap.php"
+    bootstrap="tests/bootstrap-brain-monkey.php"
     colors="true"
     verbose="true">
 
     <testsuites>
-        <testsuite name="Legacy">
-            <directory suffix="Test.php">./tests/legacy</directory>
+        <testsuite name="BrainMonkey">
+            <directory suffix="Test.php">./tests/brain-monkey</directory>
         </testsuite>
-        <!--
-            BrainMonkey suite usa phpunit-brain-monkey.xml (bootstrap separado).
-            Patchwork precisa ser carregado ANTES dos stubs WP — processos distintos garantem isso.
-            Use: composer test:brain-monkey
-        -->
         <testsuite name="Integration">
             <directory suffix="Test.php">./tests/integration</directory>
         </testsuite>
