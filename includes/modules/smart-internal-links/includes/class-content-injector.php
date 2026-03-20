@@ -381,8 +381,9 @@ class AlvoBotPro_Smart_Links_Injector {
 			'/class=["\'][^"\']*\bai[-_]viewport[-_]\d/i',
 			// data attribute exclusivo do Ad Inserter JS
 			'/\bdata[-_]insertion[-_]position\s*=/i',
-			// code-block-{n} (classe gerada pelo Ad Inserter no wrapper do ad)
-			'/class=["\'][^"\']*\bcode[-_]block\b/i',
+			// code-block-{n} (classe numerada gerada pelo Ad Inserter no wrapper do ad)
+			// Exige sufixo numérico para não pegar syntax highlighters genéricos (ex: .code-block)
+			'/class=["\'][^"\']*\bcode[-_]block[-_]\d+\b/i',
 
 			// ── Advanced Ads ───────────────────────────────────────────────────
 			'/class=["\'][^"\']*\badvads[-_]/i',
