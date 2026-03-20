@@ -1,5 +1,5 @@
 /**
- * Smart Internal Links - Frontend Ad Adjacency Guard
+ * Smart Internal Links - Frontend Placement Guard
  *
  * Strategy:
  *  1. PHP renders CTAs with [data-sil-pending], keeping them invisible (opacity: 0).
@@ -8,14 +8,14 @@
  *     (AdSense, Ad Manager, Ad Inserter, Ezoic, Mediavine, etc.) have already
  *     placed their containers in the DOM.
  *  3. For each pending CTA:
- *     a. If NOT adjacent to an ad → reveal immediately.
- *     b. If adjacent → try ±1 slot within the content container.
+ *     a. If in a safe position (not next to an ad, not below/above a heading) → reveal.
+ *     b. If unsafe → try ±1 slot within the content container.
  *        - Success → move to safe slot → reveal.
- *        - Failure (e.g., surrounded by ads) → hide entirely (display:none).
- *           Better invisible than shown next to an ad.
+ *        - Failure → hide entirely (display:none).
+ *           Better invisible than shown in a bad position.
  *
  * No-JS fallback: a <noscript> tag in the <head> forces opacity:1 for all CTAs,
- * so users without JS see them normally (PHP ad-detection still applies).
+ * so users without JS see them normally (PHP detection still applies).
  */
 
 ( function () {
@@ -121,14 +121,29 @@
 	}
 
 	/**
-	 * Returns true if `el`'s immediate previous or next element sibling is an ad.
+	 * Returns true if `el` is an H1 or H2 element.
+	 *
+	 * @param {Element|null} el
+	 * @returns {boolean}
+	 */
+	function isHeadingElement( el ) {
+		return !! el && el.nodeType === 1 && /^H[12]$/.test( el.tagName );
+	}
+
+	/**
+	 * Returns true if `el` is in an unsafe position:
+	 *   - adjacent to an ad (either side), or
+	 *   - immediately below an H1/H2 (previous sibling is a heading), or
+	 *   - immediately above an H1/H2 (next sibling is a heading).
 	 *
 	 * @param {Element} el
 	 * @returns {boolean}
 	 */
-	function isAdjacentToAd( el ) {
-		return isAdElement( el.previousElementSibling ) ||
-			isAdElement( el.nextElementSibling );
+	function isUnsafePosition( el ) {
+		var prev = el.previousElementSibling;
+		var next = el.nextElementSibling;
+		return isAdElement( prev ) || isAdElement( next ) ||
+			isHeadingElement( prev ) || isHeadingElement( next );
 	}
 
 	/**
@@ -165,6 +180,7 @@
 		/**
 		 * Checks whether inserting at `slot` would be safe.
 		 * Slot < 1 is forbidden (never before the second content element).
+		 * A slot is unsafe if either neighbour is an ad or a heading (h1/h2).
 		 *
 		 * @param {number} slot
 		 * @returns {boolean}
@@ -175,7 +191,8 @@
 			}
 			var prevEl = slot > 0 ? ( siblings[ slot - 1 ] || null ) : null;
 			var nextEl = slot < siblings.length ? ( siblings[ slot ] || null ) : null;
-			return ! isAdElement( prevEl ) && ! isAdElement( nextEl );
+			return ! isAdElement( prevEl ) && ! isAdElement( nextEl ) &&
+				! isHeadingElement( prevEl ) && ! isHeadingElement( nextEl );
 		}
 
 		// Try one slot down, then one slot up.
@@ -217,19 +234,18 @@
 		}
 
 		Array.prototype.forEach.call( ctas, function ( cta ) {
-			if ( ! isAdjacentToAd( cta ) ) {
+			if ( ! isUnsafePosition( cta ) ) {
 				// PHP placed it correctly — just reveal.
 				reveal( cta );
 				return;
 			}
 
-			// Adjacent to an ad: attempt DOM repositioning.
+			// Unsafe position (ad or heading adjacent): attempt DOM repositioning.
 			var moved = tryReposition( cta );
 			if ( moved ) {
 				reveal( cta );
 			} else {
-				// Completely surrounded by ads and no safe slot exists.
-				// Hide entirely — never show a CTA glued to an ad.
+				// No safe slot found — hide entirely.
 				cta.style.display = 'none';
 				cta.removeAttribute( 'data-sil-pending' );
 			}

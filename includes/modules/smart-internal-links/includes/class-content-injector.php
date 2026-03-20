@@ -365,20 +365,52 @@ class AlvoBotPro_Smart_Links_Injector {
 	}
 
 	/**
-	 * Verifica se uma posição de inserção ficaria adjacente a um bloco de anúncio.
-	 * Adjacente = o parágrafo imediatamente antes ou depois da inserção contém anúncio.
+	 * Verifica se uma posição de inserção seria "insegura":
+	 *   - adjacente a um bloco de anúncio (antes ou depois), ou
+	 *   - imediatamente após um bloco que termina com h1/h2 (CTA abaixo de título), ou
+	 *   - imediatamente antes de um bloco que começa com h1/h2 (CTA acima de título).
 	 *
 	 * @param int    $index      Índice proposto para inserção.
 	 * @param array  $paragraphs Array de parágrafos já parseados.
 	 * @return bool
 	 */
 	private function is_adjacent_to_ad( $index, $paragraphs ) {
-		// Parágrafo imediatamente antes da inserção
-		if ( $index > 0 && $this->is_ad_block( $paragraphs[ $index - 1 ] ) ) {
+		// Bloco imediatamente antes da inserção
+		if ( $index > 0 ) {
+			$before = $paragraphs[ $index - 1 ];
+			if ( $this->is_ad_block( $before ) || $this->is_heading_block( $before ) ) {
+				return true;
+			}
+		}
+		// Bloco imediatamente depois da inserção
+		if ( isset( $paragraphs[ $index ] ) ) {
+			$after = $paragraphs[ $index ];
+			if ( $this->is_ad_block( $after ) || $this->is_heading_block( $after ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Verifica se um bloco HTML é encabeçado ou encerrado por h1/h2.
+	 *
+	 * Dois casos são verificados:
+	 *  - Bloco COMEÇA com <h1>/<h2>: inserir a CTA antes desse bloco colocaria ela
+	 *    imediatamente acima do título — confuso visualmente.
+	 *  - Bloco TERMINA com </h1>/</h2>: inserir a CTA depois colocaria ela logo
+	 *    abaixo de um título standalone — leitura interrompida antes do conteúdo.
+	 *
+	 * @param string $html HTML do bloco.
+	 * @return bool
+	 */
+	private function is_heading_block( $html ) {
+		// Começa com <h1> ou <h2> (whitespace inicial é ignorado)
+		if ( preg_match( '/^<h[12]\b/i', ltrim( $html ) ) ) {
 			return true;
 		}
-		// Parágrafo imediatamente depois da inserção
-		if ( isset( $paragraphs[ $index ] ) && $this->is_ad_block( $paragraphs[ $index ] ) ) {
+		// Termina com </h1> ou </h2> (whitespace/comentários finais são ignorados)
+		if ( preg_match( '/<\/h[12]>\s*$/i', rtrim( $html ) ) ) {
 			return true;
 		}
 		return false;
