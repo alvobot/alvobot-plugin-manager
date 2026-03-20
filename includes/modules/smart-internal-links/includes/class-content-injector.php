@@ -125,6 +125,30 @@ class AlvoBotPro_Smart_Links_Injector {
 			$filtered_insertions[ $key ] = $insertions[ $key ];
 		}
 
+		// Ajustar posições para evitar adjacência com blocos de anúncio,
+		// re-validando distância mínima de 2 parágrafos após cada ajuste.
+		$adjusted_insertions = array();
+		foreach ( $filtered_insertions as $index => $block ) {
+			$used = array_keys( $adjusted_insertions );
+			$safe = $this->find_non_ad_adjacent_index( $index, $paragraphs, $total, $used );
+
+			// Re-verificar distância mínima contra posições já confirmadas
+			$too_close = false;
+			foreach ( $used as $u ) {
+				if ( abs( $safe - $u ) < 2 ) {
+					$too_close = true;
+					break;
+				}
+			}
+
+			// Se ficou muito perto após o ajuste, descarta este bloco nesta rodada
+			// (mantém comportamento conservador: não insere do que inserir errado)
+			if ( ! $too_close ) {
+				$adjusted_insertions[ $safe ] = $block;
+			}
+		}
+		$filtered_insertions = $adjusted_insertions;
+
 		// Inserir blocos de trás para frente (para manter índices corretos)
 		krsort( $filtered_insertions );
 		foreach ( $filtered_insertions as $index => $block ) {
@@ -243,6 +267,61 @@ class AlvoBotPro_Smart_Links_Injector {
 		}
 
 		return $paragraphs;
+	}
+
+	/**
+	 * Verifica se uma posição de inserção ficaria adjacente a um bloco de anúncio.
+	 * Adjacente = o parágrafo imediatamente antes ou depois da inserção contém anúncio.
+	 *
+	 * @param int    $index      Índice proposto para inserção.
+	 * @param array  $paragraphs Array de parágrafos já parseados.
+	 * @return bool
+	 */
+	private function is_adjacent_to_ad( $index, $paragraphs ) {
+		// Parágrafo imediatamente antes da inserção
+		if ( $index > 0 && $this->is_ad_block( $paragraphs[ $index - 1 ] ) ) {
+			return true;
+		}
+		// Parágrafo imediatamente depois da inserção
+		if ( isset( $paragraphs[ $index ] ) && $this->is_ad_block( $paragraphs[ $index ] ) ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Dada uma posição de inserção proposta, retorna uma posição segura que não fique
+	 * colada a um bloco de anúncio. Tenta +1 primeiro (mais conteúdo entre CTA e anúncio),
+	 * depois -1. Nunca sai do intervalo [1, $total - 1] para respeitar a regra de
+	 * inserção somente a partir do 2° parágrafo.
+	 *
+	 * @param int   $index        Índice proposto.
+	 * @param array $paragraphs   Array de parágrafos parseados.
+	 * @param int   $total        Total de parágrafos.
+	 * @param array $used_indices Índices já ocupados por outras inserções.
+	 * @return int Índice seguro (pode ser o original se nenhuma alternativa for melhor).
+	 */
+	private function find_non_ad_adjacent_index( $index, $paragraphs, $total, $used_indices ) {
+		$min = 1; // Nunca antes do 2° parágrafo
+
+		if ( ! $this->is_adjacent_to_ad( $index, $paragraphs ) ) {
+			return $index;
+		}
+
+		// Tenta ir para baixo (+1)
+		$down = $index + 1;
+		if ( $down < $total && ! in_array( $down, $used_indices, true ) && ! $this->is_adjacent_to_ad( $down, $paragraphs ) ) {
+			return $down;
+		}
+
+		// Tenta ir para cima (-1)
+		$up = $index - 1;
+		if ( $up >= $min && ! in_array( $up, $used_indices, true ) && ! $this->is_adjacent_to_ad( $up, $paragraphs ) ) {
+			return $up;
+		}
+
+		// Fallback: mantém posição original
+		return $index;
 	}
 
 	/**

@@ -74,7 +74,7 @@ class AlvoBotPro_Smart_Links_Renderer {
 		$html .= '</div>';
 
 		if ( ! empty( $disclaimer ) ) {
-			$html .= '<p class="alvobot-sil__disclaimer">' . esc_html( $disclaimer ) . '</p>';
+			$html .= '<span class="alvobot-sil__disclaimer">' . esc_html( $disclaimer ) . '</span>';
 		}
 
 		$html .= '</nav>';

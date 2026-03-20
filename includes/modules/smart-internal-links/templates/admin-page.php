@@ -82,7 +82,7 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 								</span>
 							</a>
 						</div>
-						<p class="alvobot-sil__disclaimer">*Você permanecerá neste site.</p>
+						<span class="alvobot-sil__disclaimer">*Você permanecerá neste site.</span>
 					</div>
 				</div>
 			</div>
