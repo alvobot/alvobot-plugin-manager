@@ -164,7 +164,8 @@ class AlvoBotPro_PixelTracking_Frontend {
 			return;
 		}
 
-		$pixel_ids        = implode( ',', array_column( $pixels, 'pixel_id' ) );
+		$pixel_ids_list   = array_filter( array_column( $pixels, 'pixel_id' ) );
+		$pixel_ids        = implode( ',', $pixel_ids_list );
 		$consent_cookie   = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 		$consent_check    = ! empty( $settings['consent_check'] );
 		$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
@@ -201,23 +202,65 @@ class AlvoBotPro_PixelTracking_Frontend {
 			$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( (string) $wp_user->ID );
 		}
 
-		// Generate config object
+		// Generate a server-side event_id for the initial PageView.
+		// Shared with tracking.js so browser fbq() and CAPI use the same ID for deduplication.
+		$pageview_event_id = function_exists( 'wp_generate_uuid4' )
+			? wp_generate_uuid4()
+			: sprintf(
+				'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+				wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0x0fff ) | 0x4000,
+				wp_rand( 0, 0x3fff ) | 0x8000,
+				wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff )
+			);
+
+		// ── Standard Facebook Pixel base code ────────────────────────────────
+		// Inline script — cannot be deferred or combined by any caching/optimization
+		// plugin (LiteSpeed, WP Rocket, Autoptimize, etc.). Fires synchronously in
+		// <head> before any JS defer logic runs.  fbevents.js loads async in parallel.
+		// PageView is queued here with a server-generated event_id; tracking.js sends
+		// the matching CAPI event for server-side deduplication without double-firing.
+		?>
+<!-- Facebook Pixel Code (AlvoBot) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window,document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+<?php foreach ( $pixel_ids_list as $pid ) : ?>
+fbq('init',<?php echo wp_json_encode( (string) $pid ); ?>);
+<?php endforeach; ?>
+fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id ); ?>});
+</script>
+<?php foreach ( $pixel_ids_list as $pid ) : ?>
+<noscript><img height="1" width="1" style="display:none"
+ src="https://www.facebook.com/tr?id=<?php echo esc_attr( $pid ); ?>&ev=PageView&noscript=1"/></noscript>
+<?php endforeach; ?>
+<!-- End Facebook Pixel Code -->
+
+		<?php
+		// ── Config object for tracking.js ────────────────────────────────────
 		?>
 		<script>
 			var alvobot_pixel_config = {
 				pixel_ids: <?php echo wp_json_encode( $pixel_ids ); ?>,
-			api_event: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/events/track' ) ) ); ?>,
-			api_lead: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/leads/track' ) ) ); ?>,
-			nonce: <?php echo wp_json_encode( $tracking_nonce ); ?>,
-			page_id: <?php echo wp_json_encode( (string) $page_id ); ?>,
-			page_title: <?php echo wp_json_encode( $page_title ); ?>,
-			content_type: <?php echo wp_json_encode( $content_type ); ?>,
-			content_category: <?php echo wp_json_encode( $content_category ); ?>,
+				api_event: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/events/track' ) ) ); ?>,
+				api_lead: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/leads/track' ) ) ); ?>,
+				nonce: <?php echo wp_json_encode( $tracking_nonce ); ?>,
+				page_id: <?php echo wp_json_encode( (string) $page_id ); ?>,
+				page_title: <?php echo wp_json_encode( $page_title ); ?>,
+				content_type: <?php echo wp_json_encode( $content_type ); ?>,
+				content_category: <?php echo wp_json_encode( $content_category ); ?>,
 				consent_cookie: <?php echo wp_json_encode( $consent_cookie ); ?>,
 				consent_check: <?php echo $consent_check ? 'true' : 'false'; ?>,
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
-				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>
+				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>,
+				pageview_event_id: <?php echo wp_json_encode( $pageview_event_id ); ?>
 			};
 		</script>
 		<?php

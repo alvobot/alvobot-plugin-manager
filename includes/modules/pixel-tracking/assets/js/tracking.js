@@ -164,8 +164,10 @@
 		/**
 		 * Initialize Facebook Pixel SDK.
 		 *
-		 * PageView is dispatched by send_event() so browser and server share
-		 * the same event_id for deduplication.
+		 * The PHP base code already injected fbevents.js and called fbq('init') for
+		 * every pixel synchronously in <head>. This method is a safety net for cases
+		 * where the base code was not output (e.g., consent-gated flows where JS
+		 * fires after consent is granted without a page reload).
 		 */
 			init_fb_sdk(pixel_ids_str) {
 				var ids = pixel_ids_str.split( ',' ).map(
@@ -182,9 +184,10 @@
 				}
 				this.log_debug( 'init_fb_sdk', { requested: pixel_ids_str, deduped_ids: ids } );
 
-			// Load fbevents.js if not already loaded
+				// If fbq stub already exists (base code ran in <head>), skip stub creation
+				// and SDK script injection — fbevents.js is already loading.
 				if ( ! window.fbq) {
-					this.log_debug( 'loading Facebook SDK script' );
+					this.log_debug( 'loading Facebook SDK script (base code was not present)' );
 					var n = window.fbq = function () {
 					n.callMethod ? n.callMethod.apply( n, arguments ) : n.queue.push( arguments );
 				};
@@ -203,18 +206,27 @@
 				if (s && s.parentNode) {
 					s.parentNode.insertBefore( t, s );
 				}
-			}
 
-				// Init each pixel
-				for (var i = 0; i < ids.length; i++) {
-					window.fbq( 'init', ids[i] );
-					this.log_debug( 'fbq init', { pixel_id: ids[i] } );
+					// fbq('init') not yet called — do it now for each pixel.
+					for (var i = 0; i < ids.length; i++) {
+						window.fbq( 'init', ids[i] );
+						this.log_debug( 'fbq init (late — base code absent)', { pixel_id: ids[i] } );
+					}
+				} else {
+					this.log_debug( 'fbq already present from base code — skipping stub + SDK load', { ids: ids } );
 				}
-
 			}
 
 		/**
 		 * Send the default PageView once per page load.
+		 *
+		 * When the PHP base code is present, fbq('track','PageView') was already
+		 * called synchronously in <head> with a server-generated event_id.
+		 * Here we only POST to the CAPI endpoint using that same event_id so that
+		 * Meta can deduplicate the browser and server events — no double count.
+		 *
+		 * When the base code was NOT output (consent-gated fallback), we call
+		 * send_event() normally which fires both fbq and CAPI.
 		 */
 			dispatch_initial_pageview() {
 				if (this.initial_pageview_sent) {
@@ -223,16 +235,26 @@
 				}
 
 				this.initial_pageview_sent = true;
-				this.log_debug( 'dispatching initial PageView' );
-				this.send_event(
-				{
+
+				var pageview_params = {
 					event_name: 'PageView',
 					event_custom: false,
 					content_name: this.config.page_title || document.title || '',
 					fb_pixels: this.config.pixel_ids || '',
+				};
+
+				if (this.config.pageview_event_id) {
+					// Base code already fired fbq() in <head> — only send CAPI.
+					this.log_debug( 'initial PageView: base code present, sending CAPI only', { event_id: this.config.pageview_event_id } );
+					pageview_params.event_id_override = this.config.pageview_event_id;
+					pageview_params.skip_fbq = true;
+				} else {
+					// No base code — fire both fbq and CAPI normally.
+					this.log_debug( 'initial PageView: base code absent, firing fbq + CAPI' );
 				}
-			);
-		}
+
+				this.send_event( pageview_params );
+			}
 
 		/**
 		 * Get visitor IP via Cloudflare cdn-cgi/trace.
@@ -662,9 +684,13 @@
 
 		/**
 		 * Send a tracking event (browser + server).
+		 *
+		 * params.event_id_override — use this event_id instead of generating a new one
+		 *   (used when the base code already fired fbq with a server-generated event_id)
+		 * params.skip_fbq — if true, skip the fbq() call (base code already fired it)
 		 */
 			async send_event(params) {
-				var event_id   = this.generate_event_id();
+				var event_id   = params.event_id_override || this.generate_event_id();
 				var event_name = params.event_name || 'PageView';
 				var self       = this;
 
@@ -686,13 +712,14 @@
 					{
 						event_id: event_id,
 						event_name: event_name,
+						skip_fbq: !! params.skip_fbq,
 						params: params,
 						custom_data: custom_data,
 					}
 				);
 
-			// 1. Fire browser-side via fbq with enriched data
-					if (window.fbq) {
+			// 1. Fire browser-side via fbq (skip when base code already called fbq for this event)
+					if ( ! params.skip_fbq && window.fbq) {
 						var fbq_method = params.event_custom ? 'trackCustom' : 'track';
 						this.log_debug(
 							'send_event(): fbq dispatch',
