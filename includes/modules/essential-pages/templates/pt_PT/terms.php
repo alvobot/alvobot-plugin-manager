@@ -29,7 +29,7 @@
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph -->
-	<p><strong>1.1</strong> <?php esc_html_e( 'Ao aceder ao nosso sítio, reconhece que leu, compreendeu e concorda em cumprir os nossos Termos e Condições de Utilização e a nossa', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'Política de Privacidade', 'alvobot-pro' ); ?></a>.</p>
+	<p><strong>1.1</strong> <?php esc_html_e( 'Ao aceder ao nosso sítio, reconhece que leu, compreendeu e concorda em cumprir os nossos Termos e Condições de Utilização e a nossa', 'alvobot-pro' ); ?> <?php $privacy_url_11 = get_privacy_policy_url(); if ( $privacy_url_11 ) : ?><a href="<?php echo esc_url( $privacy_url_11 ); ?>"><?php esc_html_e( 'Política de Privacidade', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'Política de Privacidade', 'alvobot-pro' ); ?><?php endif; ?>.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -53,7 +53,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger a privacidade do utilizador é uma prioridade máxima. A nossa Política de Privacidade, disponível em', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'a nossa Política de Privacidade', 'alvobot-pro' ); ?></a>, <?php esc_html_e( 'descreve como recolhemos, armazenamos e processamos dados do utilizador em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo o RGPD (Regulamento Geral de Proteção de Dados).', 'alvobot-pro' ); ?></p>
+	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger a privacidade do utilizador é uma prioridade máxima. A nossa Política de Privacidade, disponível em', 'alvobot-pro' ); ?> <?php $privacy_url_22 = get_privacy_policy_url(); if ( $privacy_url_22 ) : ?><a href="<?php echo esc_url( $privacy_url_22 ); ?>"><?php esc_html_e( 'a nossa Política de Privacidade', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'a nossa Política de Privacidade', 'alvobot-pro' ); ?><?php endif; ?>, <?php esc_html_e( 'descreve como recolhemos, armazenamos e processamos dados do utilizador em conformidade com os regulamentos de proteção de dados aplicáveis, incluindo o RGPD (Regulamento Geral de Proteção de Dados).', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->

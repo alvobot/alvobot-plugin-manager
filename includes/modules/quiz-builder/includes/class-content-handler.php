@@ -65,7 +65,9 @@ class Alvobot_Quiz_Content_Handler {
 			return $content;
 		}
 
-		AlvoBotPro::debug_log( 'quiz-builder', 'Fixing content formatting after quiz' );
+		if ( class_exists( 'AlvoBotPro' ) ) {
+			AlvoBotPro::debug_log( 'quiz-builder', 'Fixing content formatting after quiz' );
+		}
 
 		// Split content by quiz sections
 		$parts = preg_split( '/<!-- quiz-processed -->/', $content );

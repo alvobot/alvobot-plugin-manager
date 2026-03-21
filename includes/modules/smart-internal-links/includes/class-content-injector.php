@@ -61,6 +61,13 @@ class AlvoBotPro_Smart_Links_Injector {
 		}
 		$disclaimer = isset( $meta['disclaimer'] ) ? $meta['disclaimer'] : '';
 
+		// Posições habilitadas nas configurações (fallback: todas as três).
+		$all_positions     = array( 'after_first', 'middle', 'before_last' );
+		$configured        = isset( $settings['positions'] ) && is_array( $settings['positions'] )
+			? $settings['positions']
+			: $all_positions;
+		$enabled_positions = array_flip( $configured ); // usar como set para lookup O(1)
+
 		// Mapear blocos por posição — primeiro bloco com determinada posição vence;
 		// duplicatas são descartadas (podem ocorrer por edição manual no modal).
 		$blocks_by_position = array();
@@ -71,19 +78,19 @@ class AlvoBotPro_Smart_Links_Injector {
 			}
 		}
 
-		// Calcular índices de inserção
+		// Calcular índices de inserção — respeita posições habilitadas nas configurações.
 		$insertions = array();
 
-		if ( isset( $blocks_by_position['after_first'] ) ) {
+		if ( isset( $enabled_positions['after_first'] ) && isset( $blocks_by_position['after_first'] ) ) {
 			$insertions[1] = $blocks_by_position['after_first'];
 		}
 
-		if ( isset( $blocks_by_position['middle'] ) && $total >= 6 ) {
+		if ( isset( $enabled_positions['middle'] ) && isset( $blocks_by_position['middle'] ) && $total >= 6 ) {
 			$mid_index                = intval( $total / 2 );
 			$insertions[ $mid_index ] = $blocks_by_position['middle'];
 		}
 
-		if ( isset( $blocks_by_position['before_last'] ) && $total >= 4 ) {
+		if ( isset( $enabled_positions['before_last'] ) && isset( $blocks_by_position['before_last'] ) && $total >= 4 ) {
 			$last_index                = $total - 1;
 			$insertions[ $last_index ] = $blocks_by_position['before_last'];
 		}
@@ -544,7 +551,6 @@ class AlvoBotPro_Smart_Links_Injector {
 			'/\bid=["\']mn_/i',
 
 			// ── Taboola ────────────────────────────────────────────────────────
-			'/class=["\'][^"\']*\btbl[-_]/i',
 			'/class=["\'][^"\']*\btaboola[-_]/i',
 			'/\brc\.taboola\.com\b/i',
 

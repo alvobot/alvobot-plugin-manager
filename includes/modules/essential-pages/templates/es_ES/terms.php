@@ -29,7 +29,7 @@
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph -->
-	<p><strong>1.1</strong> <?php esc_html_e( 'Al acceder a nuestro sitio, usted reconoce que ha leído, entendido y acepta cumplir nuestros Términos y Condiciones de Uso y nuestra', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'Política de Privacidad', 'alvobot-pro' ); ?></a>.</p>
+	<p><strong>1.1</strong> <?php esc_html_e( 'Al acceder a nuestro sitio, usted reconoce que ha leído, entendido y acepta cumplir nuestros Términos y Condiciones de Uso y nuestra', 'alvobot-pro' ); ?> <?php $privacy_url_11 = get_privacy_policy_url(); if ( $privacy_url_11 ) : ?><a href="<?php echo esc_url( $privacy_url_11 ); ?>"><?php esc_html_e( 'Política de Privacidad', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'Política de Privacidad', 'alvobot-pro' ); ?><?php endif; ?>.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -53,7 +53,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger la privacidad del usuario es una prioridad máxima. Nuestra Política de Privacidad, disponible en', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'nuestra Política de Privacidad', 'alvobot-pro' ); ?></a>, <?php esc_html_e( 'describe cómo recopilamos, almacenamos y procesamos datos de usuario en conformidad con los reglamentos de protección de datos aplicables, incluida la LOPD-GDD y RGPD (Ley Orgánica de Protección de Datos Personales y garantía de los derechos digitales y Reglamento General de Protección de Datos).', 'alvobot-pro' ); ?></p>
+	<p><strong>2.2</strong> <?php esc_html_e( 'Proteger la privacidad del usuario es una prioridad máxima. Nuestra Política de Privacidad, disponible en', 'alvobot-pro' ); ?> <?php $privacy_url_22 = get_privacy_policy_url(); if ( $privacy_url_22 ) : ?><a href="<?php echo esc_url( $privacy_url_22 ); ?>"><?php esc_html_e( 'nuestra Política de Privacidad', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'nuestra Política de Privacidad', 'alvobot-pro' ); ?><?php endif; ?>, <?php esc_html_e( 'describe cómo recopilamos, almacenamos y procesamos datos de usuario en conformidad con los reglamentos de protección de datos aplicables, incluida la LOPD-GDD y RGPD (Ley Orgánica de Protección de Datos Personales y garantía de los derechos digitales y Reglamento General de Protección de Datos).', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->
@@ -451,7 +451,17 @@
 	<!-- wp:heading {"level":2} -->
 	<h2><?php esc_html_e( 'Información Legal', 'alvobot-pro' ); ?></h2>
 	<!-- /wp:heading -->
-	<!-- TODO: Add legal entity information (company name, address, tax ID, contact) -->
+
+	<!-- wp:paragraph -->
+	<!-- PLACEHOLDER: Replace the values below with real company information before deploying. Required by LSSI (Art. 10). -->
+	<p>
+		<strong><?php esc_html_e( 'Razón social:', 'alvobot-pro' ); ?></strong> [<?php esc_html_e( 'Nombre de la empresa', 'alvobot-pro' ); ?>]<br>
+		<strong><?php esc_html_e( 'NIF/CIF:', 'alvobot-pro' ); ?></strong> [<?php esc_html_e( 'Número de identificación fiscal', 'alvobot-pro' ); ?>]<br>
+		<strong><?php esc_html_e( 'Domicilio social:', 'alvobot-pro' ); ?></strong> [<?php esc_html_e( 'Dirección registrada', 'alvobot-pro' ); ?>]<br>
+		<strong><?php esc_html_e( 'Contacto:', 'alvobot-pro' ); ?></strong> [<?php esc_html_e( 'correo electrónico o formulario de contacto', 'alvobot-pro' ); ?>]<br>
+		<strong><?php esc_html_e( 'Registro Mercantil:', 'alvobot-pro' ); ?></strong> [<?php esc_html_e( 'Datos de inscripción (si aplica)', 'alvobot-pro' ); ?>]
+	</p>
+	<!-- /wp:paragraph -->
 
 </div>
 <!-- /wp:group -->
