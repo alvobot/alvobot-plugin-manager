@@ -152,6 +152,15 @@
 		}
 	}
 
+	// Per-event check: only skip direct dispatch for event types that have conversion rules.
+	// This prevents a rule for ad_impression from silencing ad_click, ad_vignette_open, etc.
+	function isAdEventHandledByConversionRule(eventName) {
+		var cfg = window.alvobot_pixel_config;
+		if ( ! cfg || ! cfg.ad_conversions_active) { return false; }
+		var triggers = cfg.ad_conversion_triggers || [];
+		return triggers.indexOf( eventName ) !== -1;
+	}
+
 	function dispatchAdEvent(eventName, adPosition, adSlotId) {
 		var eventId  = generateUUID();
 		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
@@ -169,9 +178,29 @@
 
 		log( 'dispatchAdEvent:', eventName, adPosition, '(eventId:', eventId, ')' );
 
-		sendToMeta(    eventName, fullParams, eventId );
-		sendToGA4(     eventName, fullParams           );
-		sendToRestAPI( eventName, adParams,   eventId  );
+		// Emit custom DOM event for conversion rule triggers.
+		try {
+			document.dispatchEvent( new CustomEvent( 'alvobot:ad_event', {
+				detail: {
+					event_name:  eventName,
+					ad_position: adPosition,
+					ad_slot_id:  adSlotId || '',
+					event_id:    eventId,
+				},
+			} ) );
+		} catch (e) {
+			log( 'CustomEvent dispatch failed:', e.message );
+		}
+
+		// Skip direct Meta/GA4 dispatch ONLY for event types that have conversion rules (per-event check).
+		// This way, a rule for ad_impression won't silence ad_click, ad_vignette_open, etc.
+		if ( ! isAdEventHandledByConversionRule( eventName )) {
+			sendToMeta( eventName, fullParams, eventId );
+			sendToGA4(  eventName, fullParams );
+		}
+
+		// REST API always dispatches (server-side CAPI, independent of conversion rules).
+		sendToRestAPI( eventName, adParams, eventId );
 	}
 
 	// -------------------------------------------------------------------------

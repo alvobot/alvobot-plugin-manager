@@ -75,6 +75,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<option value="click"><?php esc_html_e( 'Clique em Elemento', 'alvobot-pro' ); ?></option>
 						<option value="scroll"><?php esc_html_e( 'Scroll (%)', 'alvobot-pro' ); ?></option>
 						<option value="view_element"><?php esc_html_e( 'Visualizacao de Elemento', 'alvobot-pro' ); ?></option>
+						<optgroup label="<?php esc_attr_e( 'Anuncios', 'alvobot-pro' ); ?>">
+							<option value="ad_impression"><?php esc_html_e( 'Impressao de Anuncio', 'alvobot-pro' ); ?></option>
+							<option value="ad_click"><?php esc_html_e( 'Clique em Anuncio', 'alvobot-pro' ); ?></option>
+							<option value="ad_vignette_open"><?php esc_html_e( 'Abertura de Vinheta', 'alvobot-pro' ); ?></option>
+							<option value="ad_vignette_click"><?php esc_html_e( 'Clique em Vinheta', 'alvobot-pro' ); ?></option>
+						</optgroup>
 					</select>
 				</div>
 			</div>
@@ -112,6 +118,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</div>
 			</div>
 
+			<!-- Pixel/Tracker Selector -->
+			<div class="alvobot-form-field">
+				<label class="alvobot-form-label"><?php esc_html_e( 'Pixels & Trackers', 'alvobot-pro' ); ?></label>
+				<p class="alvobot-description"><?php esc_html_e( 'Selecione onde disparar este evento. Nenhum selecionado = todos.', 'alvobot-pro' ); ?></p>
+				<div id="conv-pixel-selector" class="alvobot-pixel-selector">
+					<!-- Populated via JS from pixel_labels + google_trackers -->
+				</div>
+				<input type="hidden" id="conv_pixel_ids" value="">
+			</div>
+
+			<!-- Google Ads conversion fields (per-tracker labels) -->
+			<div id="conv-gads-fields" class="alvobot-conditional-field">
+				<div class="alvobot-form-field">
+					<label class="alvobot-form-label"><?php esc_html_e( 'Google Ads Conversion Labels', 'alvobot-pro' ); ?></label>
+					<p class="alvobot-description"><?php esc_html_e( 'Cada conta Google Ads tem seus proprios labels de conversao. Configure o label para cada conta selecionada.', 'alvobot-pro' ); ?></p>
+					<!-- Per-tracker label fields (populated dynamically by JS) -->
+					<div id="conv-gads-labels-container"></div>
+					<input type="hidden" id="conv_gads_labels_map" value="{}">
+					<!-- Legacy fallback field (hidden, for backward compat) -->
+					<input type="hidden" id="conv_gads_conversion_label" value="">
+					<!-- Per-tracker "Criar" links are rendered dynamically by JS inside each tracker row -->
+				</div>
+				<div class="alvobot-form-field" style="max-width:250px;">
+					<label for="conv_gads_conversion_value" class="alvobot-form-label"><?php esc_html_e( 'Valor da Conversao (R$)', 'alvobot-pro' ); ?></label>
+					<input type="number" id="conv_gads_conversion_value" class="alvobot-input" placeholder="0.00" step="0.01" min="0">
+				</div>
+			</div>
+
 			<div id="conv-page-paths-field" class="alvobot-form-field alvobot-conditional-field">
 				<label for="conv_page_paths" class="alvobot-form-label"><?php esc_html_e( 'Caminhos das Paginas', 'alvobot-pro' ); ?></label>
 				<input type="text" id="conv_page_paths" class="alvobot-input alvobot-input-lg" placeholder="/contato, /obrigado, /checkout">
@@ -129,20 +163,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 
+		<!-- Bulk Actions -->
+		<div id="alvobot-conversions-bulk-bar" style="display:none; margin-bottom: 12px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; align-items: center; gap: 12px;">
+			<span id="alvobot-bulk-count">0</span> <?php esc_html_e( 'selecionados', 'alvobot-pro' ); ?>
+			<button type="button" id="alvobot-bulk-delete-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger">
+				<i data-lucide="trash-2" class="alvobot-icon"></i>
+				<?php esc_html_e( 'Excluir Selecionados', 'alvobot-pro' ); ?>
+			</button>
+		</div>
+
 		<!-- Conversions Table -->
 		<table class="alvobot-conversions-table">
 			<thead>
 				<tr>
+					<th style="width:32px;"><input type="checkbox" id="alvobot-conv-select-all" title="<?php esc_attr_e( 'Selecionar todos', 'alvobot-pro' ); ?>"></th>
 					<th><?php esc_html_e( 'Nome', 'alvobot-pro' ); ?></th>
 					<th><?php esc_html_e( 'Evento', 'alvobot-pro' ); ?></th>
 					<th><?php esc_html_e( 'Gatilho', 'alvobot-pro' ); ?></th>
+					<th><?php esc_html_e( 'Plataforma', 'alvobot-pro' ); ?></th>
 					<th><?php esc_html_e( 'Ativo', 'alvobot-pro' ); ?></th>
 					<th></th>
 				</tr>
 			</thead>
 			<tbody id="alvobot-conversions-tbody">
 				<tr>
-					<td colspan="5" class="alvobot-empty-state">
+					<td colspan="7" class="alvobot-empty-state">
 						<span class="spinner is-active" style="float:none;"></span>
 						<p><?php esc_html_e( 'Carregando conversoes...', 'alvobot-pro' ); ?></p>
 					</td>

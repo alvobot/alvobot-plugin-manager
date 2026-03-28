@@ -78,8 +78,12 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		require_once $module_dir . 'class-pixel-tracking-cleanup.php';
 		$this->cleanup = new AlvoBotPro_PixelTracking_Cleanup( $this );
 
-		// AJAX handler for pixel fetch (AlvoBot mode)
+		// AJAX handlers for pixel/tracker fetch (AlvoBot mode)
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_pixels', array( $this, 'ajax_fetch_pixels' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_google_trackers', array( $this, 'ajax_fetch_google_trackers' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_conversion_actions', array( $this, 'ajax_fetch_google_conversion_actions' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_create_conversion_action', array( $this, 'ajax_create_google_conversion_action' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_update_conversion_action', array( $this, 'ajax_update_google_conversion_action' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_refresh_token', array( $this, 'ajax_refresh_token' ) );
 
 		// AJAX handlers for conversion CRUD
@@ -87,6 +91,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion', array( $this, 'ajax_delete_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_toggle_conversion', array( $this, 'ajax_toggle_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_get_conversions', array( $this, 'ajax_get_conversions' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_bulk_delete_conversions', array( $this, 'ajax_bulk_delete_conversions' ) );
 
 		// Admin notice for expired tokens.
 		add_action( 'admin_notices', array( $this, 'admin_notice_expired_tokens' ) );
@@ -182,6 +187,343 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		wp_send_json_success( array( 'pixels' => $pixels ) );
+	}
+
+	/**
+	 * Fetch Google trackers (GA4 + Google Ads) from AlvoBot platform.
+	 *
+	 * @param bool $force Force refresh (skip transient cache).
+	 * @return array|WP_Error Array of trackers or error.
+	 */
+	public function fetch_alvobot_google_trackers( $force = false ) {
+		if ( ! $force ) {
+			$cached = get_transient( 'alvobot_pixel_tracking_google_trackers' );
+			if ( false !== $cached ) {
+				return $cached;
+			}
+		}
+
+		$server_url = defined( 'ALVOBOT_SERVER_URL' ) ? ALVOBOT_SERVER_URL : '';
+		$site_token = get_option( 'alvobot_site_token', '' );
+
+		if ( empty( $site_token ) ) {
+			return new WP_Error( 'no_token', __( 'Site nao conectado ao AlvoBot. Configure o token primeiro.', 'alvobot-pro' ) );
+		}
+
+		if ( empty( $server_url ) ) {
+			return new WP_Error( 'no_server', __( 'URL do servidor AlvoBot nao configurada.', 'alvobot-pro' ) );
+		}
+
+		$response = wp_remote_post(
+			$server_url,
+			array(
+				'body'    => wp_json_encode(
+					array(
+						'action'   => 'get_google_trackers',
+						'site_url' => get_site_url(),
+						'token'    => $site_token,
+					)
+				),
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Erro ao buscar Google trackers: ' . $response->get_error_message() );
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $code ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', "Erro HTTP {$code} ao buscar Google trackers" );
+			return new WP_Error( 'http_error', sprintf( __( 'Erro ao buscar trackers (HTTP %d)', 'alvobot-pro' ), $code ) );
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( ! is_array( $body ) ) {
+			return new WP_Error( 'invalid_response', __( 'Resposta invalida ao buscar Google trackers.', 'alvobot-pro' ) );
+		}
+
+		$trackers = array();
+		if ( isset( $body['data'] ) && is_array( $body['data'] ) ) {
+			$trackers = $body['data'];
+		} elseif ( isset( $body['trackers'] ) && is_array( $body['trackers'] ) ) {
+			$trackers = $body['trackers'];
+		}
+
+		set_transient( 'alvobot_pixel_tracking_google_trackers', $trackers, 15 * MINUTE_IN_SECONDS );
+
+		AlvoBotPro::debug_log( 'pixel-tracking', 'Google trackers obtidos: ' . count( $trackers ) );
+		return $trackers;
+	}
+
+	/**
+	 * AJAX handler to fetch AlvoBot Google trackers.
+	 */
+	public function ajax_fetch_google_trackers() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$trackers = $this->fetch_alvobot_google_trackers( true );
+
+		if ( is_wp_error( $trackers ) ) {
+			wp_send_json_error( $trackers->get_error_message() );
+		}
+
+		wp_send_json_success( array( 'trackers' => $trackers ) );
+	}
+
+	/**
+	 * Fetch Google Ads ConversionActions from the Google Ads API via Edge Function.
+	 *
+	 * @param string $connection_id Connection UUID from Supabase.
+	 * @param string $customer_id   Google Ads customer ID (without hyphens).
+	 * @return array|WP_Error Array of conversion actions or error.
+	 */
+	public function fetch_google_conversion_actions( $connection_id, $customer_id ) {
+		$server_url = defined( 'ALVOBOT_SERVER_URL' ) ? ALVOBOT_SERVER_URL : '';
+		$site_token = get_option( 'alvobot_site_token', '' );
+
+		if ( empty( $site_token ) || empty( $server_url ) ) {
+			return new WP_Error( 'no_config', __( 'Site nao conectado ao AlvoBot.', 'alvobot-pro' ) );
+		}
+
+		$response = wp_remote_post(
+			$server_url,
+			array(
+				'body'    => wp_json_encode(
+					array(
+						'action'        => 'get_google_conversion_actions',
+						'site_url'      => get_site_url(),
+						'token'         => $site_token,
+						'connection_id' => $connection_id,
+						'customer_id'   => $customer_id,
+					)
+				),
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'timeout' => 20,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Erro ao buscar ConversionActions: ' . $response->get_error_message() );
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $code ) {
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			$msg  = isset( $body['error'] ) ? $body['error'] : sprintf( 'HTTP %d', $code );
+			AlvoBotPro::debug_log( 'pixel-tracking', "Erro ao buscar ConversionActions: {$msg}" );
+			return new WP_Error( 'api_error', $msg );
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( ! is_array( $body ) || empty( $body['success'] ) ) {
+			$msg = isset( $body['error'] ) ? $body['error'] : __( 'Resposta invalida.', 'alvobot-pro' );
+			return new WP_Error( 'invalid_response', $msg );
+		}
+
+		$actions = isset( $body['data'] ) && is_array( $body['data'] ) ? $body['data'] : array();
+		AlvoBotPro::debug_log( 'pixel-tracking', 'ConversionActions obtidas: ' . count( $actions ) );
+		return $actions;
+	}
+
+	/**
+	 * Create a new ConversionAction in Google Ads via Edge Function.
+	 */
+	public function create_google_conversion_action( $connection_id, $customer_id, $params ) {
+		$server_url = defined( 'ALVOBOT_SERVER_URL' ) ? ALVOBOT_SERVER_URL : '';
+		$site_token = get_option( 'alvobot_site_token', '' );
+
+		if ( empty( $site_token ) || empty( $server_url ) ) {
+			return new WP_Error( 'no_config', __( 'Site nao conectado ao AlvoBot.', 'alvobot-pro' ) );
+		}
+
+		$response = wp_remote_post(
+			$server_url,
+			array(
+				'body'    => wp_json_encode(
+					array_merge(
+						$params,
+						array(
+							'action'        => 'create_google_conversion_action',
+							'site_url'      => get_site_url(),
+							'token'         => $site_token,
+							'connection_id' => $connection_id,
+							'customer_id'   => $customer_id,
+						)
+					)
+				),
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'timeout' => 30,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $code || empty( $body['success'] ) ) {
+			$msg = isset( $body['error'] ) ? $body['error'] : sprintf( 'HTTP %d', $code );
+			return new WP_Error( 'api_error', $msg );
+		}
+
+		return isset( $body['data'] ) ? $body['data'] : array();
+	}
+
+	/**
+	 * Update an existing ConversionAction in Google Ads via Edge Function.
+	 */
+	public function update_google_conversion_action( $connection_id, $customer_id, $conversion_action_id, $params ) {
+		$server_url = defined( 'ALVOBOT_SERVER_URL' ) ? ALVOBOT_SERVER_URL : '';
+		$site_token = get_option( 'alvobot_site_token', '' );
+
+		if ( empty( $site_token ) || empty( $server_url ) ) {
+			return new WP_Error( 'no_config', __( 'Site nao conectado ao AlvoBot.', 'alvobot-pro' ) );
+		}
+
+		$response = wp_remote_post(
+			$server_url,
+			array(
+				'body'    => wp_json_encode(
+					array_merge(
+						$params,
+						array(
+							'action'               => 'update_google_conversion_action',
+							'site_url'             => get_site_url(),
+							'token'                => $site_token,
+							'connection_id'        => $connection_id,
+							'customer_id'          => $customer_id,
+							'conversion_action_id' => $conversion_action_id,
+						)
+					)
+				),
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'timeout' => 30,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $code || empty( $body['success'] ) ) {
+			$msg = isset( $body['error'] ) ? $body['error'] : sprintf( 'HTTP %d', $code );
+			return new WP_Error( 'api_error', $msg );
+		}
+
+		return isset( $body['data'] ) ? $body['data'] : array();
+	}
+
+	/**
+	 * AJAX: Create a ConversionAction in Google Ads.
+	 */
+	public function ajax_create_google_conversion_action() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$connection_id = isset( $_POST['connection_id'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_id'] ) ) : '';
+		$customer_id   = isset( $_POST['customer_id'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_id'] ) ) : '';
+		$name          = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+
+		if ( empty( $connection_id ) || empty( $customer_id ) || empty( $name ) ) {
+			wp_send_json_error( __( 'Campos obrigatorios: connection_id, customer_id, name.', 'alvobot-pro' ) );
+		}
+
+		$params = array(
+			'name'          => $name,
+			'category'      => isset( $_POST['category'] ) ? sanitize_text_field( wp_unslash( $_POST['category'] ) ) : 'DEFAULT',
+			'counting_type' => isset( $_POST['counting_type'] ) ? sanitize_text_field( wp_unslash( $_POST['counting_type'] ) ) : 'ONE_PER_CLICK',
+			'default_value' => isset( $_POST['default_value'] ) ? floatval( $_POST['default_value'] ) : 0,
+			'currency'      => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'BRL',
+		);
+
+		$result = $this->create_google_conversion_action( $connection_id, $customer_id, $params );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Update a ConversionAction in Google Ads.
+	 */
+	public function ajax_update_google_conversion_action() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$connection_id        = isset( $_POST['connection_id'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_id'] ) ) : '';
+		$customer_id          = isset( $_POST['customer_id'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_id'] ) ) : '';
+		$conversion_action_id = isset( $_POST['conversion_action_id'] ) ? sanitize_text_field( wp_unslash( $_POST['conversion_action_id'] ) ) : '';
+
+		if ( empty( $connection_id ) || empty( $customer_id ) || empty( $conversion_action_id ) ) {
+			wp_send_json_error( __( 'Campos obrigatorios: connection_id, customer_id, conversion_action_id.', 'alvobot-pro' ) );
+		}
+
+		$params = array();
+		if ( isset( $_POST['name'] ) ) {
+			$params['name'] = sanitize_text_field( wp_unslash( $_POST['name'] ) );
+		}
+		if ( isset( $_POST['status'] ) ) {
+			$params['status'] = sanitize_text_field( wp_unslash( $_POST['status'] ) );
+		}
+		if ( isset( $_POST['default_value'] ) ) {
+			$params['default_value'] = floatval( $_POST['default_value'] );
+			$params['currency']      = isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'BRL';
+		}
+
+		$result = $this->update_google_conversion_action( $connection_id, $customer_id, $conversion_action_id, $params );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX handler to fetch Google Ads ConversionActions.
+	 */
+	public function ajax_fetch_google_conversion_actions() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$connection_id = isset( $_POST['connection_id'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_id'] ) ) : '';
+		$customer_id   = isset( $_POST['customer_id'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_id'] ) ) : '';
+
+		if ( empty( $connection_id ) || empty( $customer_id ) ) {
+			wp_send_json_error( __( 'connection_id e customer_id sao obrigatorios.', 'alvobot-pro' ) );
+		}
+
+		$actions = $this->fetch_google_conversion_actions( $connection_id, $customer_id );
+
+		if ( is_wp_error( $actions ) ) {
+			wp_send_json_error( $actions->get_error_message() );
+		}
+
+		wp_send_json_success( array( 'conversion_actions' => $actions ) );
 	}
 
 	/**
@@ -371,15 +713,44 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			'name'              => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
 			'event_type'        => isset( $_POST['event_type'] ) ? sanitize_text_field( wp_unslash( $_POST['event_type'] ) ) : 'PageView',
 			'event_custom_name' => isset( $_POST['event_custom_name'] ) ? sanitize_text_field( wp_unslash( $_POST['event_custom_name'] ) ) : '',
-			'trigger_type'      => isset( $_POST['trigger_type'] ) ? sanitize_text_field( wp_unslash( $_POST['trigger_type'] ) ) : 'page_load',
+			'trigger_type'      => isset( $_POST['trigger_type'] ) && in_array( $_POST['trigger_type'], array( 'page_load', 'page_time', 'form_submit', 'click', 'scroll', 'view_element', 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' ), true )
+				? sanitize_text_field( wp_unslash( $_POST['trigger_type'] ) ) : 'page_load',
 			'trigger_value'     => isset( $_POST['trigger_value'] ) ? absint( $_POST['trigger_value'] ) : 0,
 			'display_on'        => isset( $_POST['display_on'] ) ? sanitize_text_field( wp_unslash( $_POST['display_on'] ) ) : 'all',
 			'page_ids'          => isset( $_POST['page_ids'] ) ? array_map( 'absint', (array) $_POST['page_ids'] ) : array(),
 			'page_paths'        => isset( $_POST['page_paths'] ) ? sanitize_text_field( wp_unslash( $_POST['page_paths'] ) ) : '',
 			'css_selector'      => isset( $_POST['css_selector'] ) ? sanitize_text_field( wp_unslash( $_POST['css_selector'] ) ) : '',
 			'content_name'      => isset( $_POST['content_name'] ) ? sanitize_text_field( wp_unslash( $_POST['content_name'] ) ) : '',
-			'pixel_ids'         => isset( $_POST['pixel_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_ids'] ) ) : '',
+			'pixel_ids'              => isset( $_POST['pixel_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_ids'] ) ) : '',
+			'gads_conversion_label'  => isset( $_POST['gads_conversion_label'] ) ? sanitize_text_field( wp_unslash( $_POST['gads_conversion_label'] ) ) : '',
+			'gads_labels_map'        => isset( $_POST['gads_labels_map'] ) ? wp_unslash( $_POST['gads_labels_map'] ) : '{}', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized in CPT save_conversion_meta.
+			'gads_conversion_value'  => isset( $_POST['gads_conversion_value'] )
+				? (string) min( 1000000, max( 0, floatval( wp_unslash( $_POST['gads_conversion_value'] ) ) ) ) : '',
 		);
+
+		// Derive platforms from selected pixel_ids.
+		$ids_array = array_filter( array_map( 'trim', explode( ',', $data['pixel_ids'] ) ) );
+		$has_meta  = false;
+		$has_google = false;
+		foreach ( $ids_array as $pid ) {
+			if ( preg_match( '/^\d{15,16}$/', $pid ) ) {
+				$has_meta = true;
+			}
+			if ( preg_match( '/^(G-|AW-)/', $pid ) || 'sitekit_gtag' === $pid ) {
+				$has_google = true;
+			}
+		}
+		if ( empty( $ids_array ) ) {
+			$data['platforms'] = 'all';
+		} elseif ( $has_meta && $has_google ) {
+			$data['platforms'] = 'all';
+		} elseif ( $has_meta ) {
+			$data['platforms'] = 'meta_only';
+		} elseif ( $has_google ) {
+			$data['platforms'] = 'google_only';
+		} else {
+			$data['platforms'] = 'all'; // Fallback for unrecognized IDs.
+		}
 
 		if ( empty( $data['name'] ) ) {
 			wp_send_json_error( __( 'Nome da conversao e obrigatorio.', 'alvobot-pro' ) );
@@ -422,6 +793,42 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		wp_delete_post( $conversion_id, true );
 		wp_send_json_success();
+	}
+
+	/**
+	 * AJAX: Bulk delete conversion rules.
+	 */
+	public function ajax_bulk_delete_conversions() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- IDs are cast to int below.
+		$ids = isset( $_POST['ids'] ) ? wp_unslash( $_POST['ids'] ) : '';
+		if ( is_string( $ids ) ) {
+			$ids = array_filter( array_map( 'absint', explode( ',', $ids ) ) );
+		} elseif ( is_array( $ids ) ) {
+			$ids = array_filter( array_map( 'absint', $ids ) );
+		} else {
+			$ids = array();
+		}
+
+		if ( empty( $ids ) ) {
+			wp_send_json_error( __( 'Nenhuma conversao selecionada.', 'alvobot-pro' ) );
+		}
+
+		$deleted = 0;
+		foreach ( $ids as $id ) {
+			$post = get_post( $id );
+			if ( $post && 'alvo_pixel_conv' === $post->post_type ) {
+				wp_delete_post( $id, true );
+				++$deleted;
+			}
+		}
+
+		wp_send_json_success( array( 'deleted' => $deleted ) );
 	}
 
 	/**
@@ -484,6 +891,11 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				'css_selector'      => get_post_meta( $conv->ID, '_css_selector', true ),
 				'content_name'      => get_post_meta( $conv->ID, '_content_name', true ),
 				'pixel_ids'         => get_post_meta( $conv->ID, '_pixel_ids', true ),
+				'platforms'              => get_post_meta( $conv->ID, '_platforms', true ),
+				'gads_conversion_label'  => get_post_meta( $conv->ID, '_gads_conversion_label', true ),
+				'gads_labels_map'        => get_post_meta( $conv->ID, '_gads_labels_map', true ),
+				'gads_conversion_value'  => get_post_meta( $conv->ID, '_gads_conversion_value', true ),
+				'is_system'              => get_post_meta( $conv->ID, '_is_system', true ),
 			);
 		}
 
@@ -552,6 +964,10 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			if ( isset( $posted['pixels_json'] ) ) {
 				$merged['pixels_json'] = $posted['pixels_json'];
 			}
+			// Google Tracking fields (same tab).
+			if ( isset( $posted['google_trackers_json'] ) ) {
+				$merged['google_trackers_json'] = $posted['google_trackers_json'];
+			}
 		} elseif ( 'settings' === $active_tab ) {
 			// Settings tab fields — checkboxes absent = unchecked.
 			$merged['test_mode']       = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
@@ -571,6 +987,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$this->add_admin_notice( __( 'Erro ao salvar configuracoes.', 'alvobot-pro' ), 'error' );
 		}
 	}
+
 
 	/**
 	 * Override base: add REST data for status tab JS.
@@ -603,7 +1020,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 					'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
 					'active_tab'    => $active_tab,
 					'pixel_labels'  => $pixel_labels,
-					'debug_enabled' => class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' ) ? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' ) : false,
+					'debug_enabled'    => class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' ) ? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' ) : false,
+					'google_trackers'  => isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array(),
 				)
 			);
 		}
@@ -679,6 +1097,101 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['retention_days'] = isset( $settings['retention_days'] ) ? max( 1, min( 365, absint( $settings['retention_days'] ) ) ) : 7;
 		$sanitized['max_events']     = isset( $settings['max_events'] ) ? max( 1000, min( 500000, absint( $settings['max_events'] ) ) ) : 50000;
 		$sanitized['max_leads']      = isset( $settings['max_leads'] ) ? max( 1000, min( 100000, absint( $settings['max_leads'] ) ) ) : 10000;
+
+		// Google Trackers (array of objects, migrated from flat fields).
+		$google_trackers = array();
+
+		if ( isset( $settings['google_trackers_json'] ) ) {
+			$decoded = null;
+			if ( is_string( $settings['google_trackers_json'] ) ) {
+				$decoded = json_decode( wp_unslash( $settings['google_trackers_json'] ), true );
+			}
+			if ( is_array( $decoded ) ) {
+				$google_trackers = $decoded;
+			} elseif ( isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ) {
+				$google_trackers = $settings['google_trackers'];
+			}
+		} elseif ( isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ) {
+			$google_trackers = $settings['google_trackers'];
+		} else {
+			// Migration: convert flat fields to array on first save after upgrade.
+			$old_ga  = isset( $old_settings['google_analytics_id'] ) ? $old_settings['google_analytics_id'] : '';
+			$old_ads = isset( $old_settings['google_ads_id'] ) ? $old_settings['google_ads_id'] : '';
+			if ( $old_ga ) {
+				$google_trackers[] = array(
+					'tracker_id'       => $old_ga,
+					'type'             => 'ga4',
+					'label'            => 'Google Analytics',
+					'conversion_label' => '',
+				);
+			}
+			if ( $old_ads ) {
+				$google_trackers[] = array(
+					'tracker_id'       => $old_ads,
+					'type'             => 'google_ads',
+					'label'            => 'Google Ads',
+					'conversion_label' => isset( $old_settings['google_ads_conversion_label'] ) ? $old_settings['google_ads_conversion_label'] : '',
+				);
+			}
+		}
+
+		// Validate each tracker.
+		$sanitized_trackers = array();
+		$has_external       = false;
+		foreach ( $google_trackers as $tracker ) {
+			$tracker_id = isset( $tracker['tracker_id'] ) ? sanitize_text_field( $tracker['tracker_id'] ) : '';
+			$type       = '';
+
+			// External tracker (Site Kit / GTM — no real ID, uses existing gtag on page).
+			if ( 'sitekit_gtag' === $tracker_id && ( ! isset( $tracker['type'] ) || 'external' === $tracker['type'] ) ) {
+				if ( ! $has_external ) { // Only allow one external entry.
+					$sanitized_trackers[] = array(
+						'tracker_id'       => 'sitekit_gtag',
+						'type'             => 'external',
+						'label'            => isset( $tracker['label'] ) ? sanitize_text_field( $tracker['label'] ) : 'Google Tag existente',
+						'conversion_label' => '',
+					);
+					$has_external = true;
+				}
+				continue;
+			}
+
+			if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
+				$type = 'ga4';
+			} elseif ( preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
+				$type = 'google_ads';
+			} else {
+				continue; // Invalid tracker ID, skip.
+			}
+
+			$conv_label = isset( $tracker['conversion_label'] ) ? sanitize_text_field( $tracker['conversion_label'] ) : '';
+			if ( $conv_label && ! preg_match( '/^[A-Za-z0-9_-]{1,32}$/', $conv_label ) ) {
+				$conv_label = '';
+			}
+
+			$sanitized_trackers[] = array(
+				'tracker_id'       => $tracker_id,
+				'type'             => $type,
+				'label'            => isset( $tracker['label'] ) ? sanitize_text_field( $tracker['label'] ) : '',
+				'conversion_label' => $conv_label,
+				'connection_id'    => isset( $tracker['connection_id'] ) ? sanitize_text_field( $tracker['connection_id'] ) : '',
+			);
+		}
+		$sanitized['google_trackers'] = $sanitized_trackers;
+
+		// Derive flat fields for backward compatibility.
+		$sanitized['google_analytics_id']         = '';
+		$sanitized['google_ads_id']               = '';
+		$sanitized['google_ads_conversion_label']  = '';
+		foreach ( $sanitized_trackers as $t ) {
+			if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
+				$sanitized['google_analytics_id'] = $t['tracker_id'];
+			}
+			if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
+				$sanitized['google_ads_id']              = $t['tracker_id'];
+				$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
+			}
+		}
 
 		return $sanitized;
 	}

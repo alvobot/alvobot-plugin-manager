@@ -148,6 +148,19 @@ class AlvoBotPro_Smart_Links_Generator {
 		$num_blocks = min( $num_blocks, $max_by_paras );
 		AlvoBotPro::debug_log( 'smart-internal-links', "Post {$post_id}: {$para_count} parágrafos → máx {$max_by_paras} blocos renderizáveis; usando {$num_blocks}" );
 
+		// Limitar num_blocks pelas posições habilitadas nas configurações.
+		// Respeita a ordem canônica (after_first → middle → before_last) para que a
+		// atribuição sequencial de posições aos blocos permaneça determinística.
+		$natural_order        = array( 'after_first', 'middle', 'before_last' );
+		$configured_positions = isset( $settings['positions'] ) && is_array( $settings['positions'] )
+			? $settings['positions']
+			: $natural_order;
+		$enabled_positions = array_values( array_intersect( $natural_order, $configured_positions ) );
+		if ( empty( $enabled_positions ) ) {
+			$enabled_positions = $natural_order;
+		}
+		$num_blocks = min( $num_blocks, count( $enabled_positions ) );
+
 		// Hint de idioma canônico (ISO) para evitar ambiguidades no parser remoto.
 		$language_hint_slug = $this->detect_post_language_slug( $post_id );
 		$language_hint_name = $this->get_language_name_from_slug( $language_hint_slug );
@@ -193,7 +206,7 @@ class AlvoBotPro_Smart_Links_Generator {
 
 		// Validar e processar blocos da resposta
 		$blocks    = $this->validate_api_blocks( $result['data']['blocks'], $candidates );
-		$positions = array( 'after_first', 'middle', 'before_last' );
+		$positions = $enabled_positions;
 
 		if ( empty( $blocks ) ) {
 			AlvoBotPro::debug_log( 'smart-internal-links', 'Nenhum bloco válido após validação da resposta' );

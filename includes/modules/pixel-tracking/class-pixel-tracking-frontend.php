@@ -160,11 +160,8 @@ class AlvoBotPro_PixelTracking_Frontend {
 			? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' )
 			: false;
 
-		if ( empty( $pixels ) ) {
-			return;
-		}
-
-		$pixel_ids_list   = array_filter( array_column( $pixels, 'pixel_id' ) );
+		$has_meta_pixels = ! empty( $pixels );
+		$pixel_ids_list  = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
 		$pixel_ids        = implode( ',', $pixel_ids_list );
 		$consent_cookie   = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 		$consent_check    = ! empty( $settings['consent_check'] );
@@ -221,6 +218,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 		// <head> before any JS defer logic runs.  fbevents.js loads async in parallel.
 		// PageView is queued here with a server-generated event_id; tracking.js sends
 		// the matching CAPI event for server-side deduplication without double-firing.
+		if ( $has_meta_pixels ) :
 		?>
 <!-- Facebook Pixel Code (AlvoBot) -->
 <script>
@@ -241,6 +239,46 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
  src="https://www.facebook.com/tr?id=<?php echo esc_attr( $pid ); ?>&ev=PageView&noscript=1"/></noscript>
 <?php endforeach; ?>
 <!-- End Facebook Pixel Code -->
+		<?php endif; ?>
+
+		<?php
+		// ── Google Tag (gtag.js) — shared by GA4 and Google Ads ──────────────
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+		$google_trackers = array_values(
+			array_filter(
+				$google_trackers,
+				function ( $gt ) {
+					return ! empty( $gt['tracker_id'] );
+				}
+			)
+		);
+
+		// Separate real trackers (GA4/Ads we inject) from external (Site Kit/GTM already on page).
+		$real_trackers = array_values(
+			array_filter(
+				$google_trackers,
+				function ( $gt ) {
+					return ! isset( $gt['type'] ) || 'external' !== $gt['type'];
+				}
+			)
+		);
+
+		// Only inject gtag.js for real (non-external) trackers.
+		if ( ! empty( $real_trackers ) ) :
+			$primary_id = $real_trackers[0]['tracker_id'];
+		?>
+<!-- Google Tag (AlvoBot) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr( $primary_id ); ?>"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+<?php foreach ( $real_trackers as $gt ) : ?>
+gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
+<?php endforeach; ?>
+</script>
+<!-- End Google Tag -->
+		<?php endif; ?>
 
 		<?php
 		// ── Config object for tracking.js ────────────────────────────────────
@@ -260,7 +298,28 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
 				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>,
-				pageview_event_id: <?php echo wp_json_encode( $pageview_event_id ); ?>
+				pageview_event_id: <?php echo wp_json_encode( $pageview_event_id ); ?>,
+				google_trackers: <?php
+				// Strip 'label' from frontend output — only tracker_id, type, and conversion_label are needed.
+				echo wp_json_encode(
+					array_map(
+						function ( $t ) {
+							return array(
+								'tracker_id'       => $t['tracker_id'],
+								'type'             => $t['type'],
+								'conversion_label' => isset( $t['conversion_label'] ) ? $t['conversion_label'] : '',
+							);
+						},
+						$google_trackers
+					)
+				);
+				?>,
+				google_analytics_id: <?php echo wp_json_encode( isset( $settings['google_analytics_id'] ) ? $settings['google_analytics_id'] : '' ); ?>,
+				google_ads_id: <?php echo wp_json_encode( isset( $settings['google_ads_id'] ) ? $settings['google_ads_id'] : '' ); ?>,
+				google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
+				ad_conversions_active: <?php echo $this->has_active_ad_conversions() ? 'true' : 'false'; ?>,
+				ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
+				geo_api_key: <?php echo wp_json_encode( defined( 'ALVOBOT_GEO_API_KEY' ) ? ALVOBOT_GEO_API_KEY : '' ); ?>
 			};
 		</script>
 		<?php
@@ -300,12 +359,22 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 			$content_name = get_post_meta( $conv->ID, '_content_name', true );
 			$pixel_ids    = get_post_meta( $conv->ID, '_pixel_ids', true );
 
+			$platforms             = get_post_meta( $conv->ID, '_platforms', true );
+			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
+			$gads_labels_map_raw   = get_post_meta( $conv->ID, '_gads_labels_map', true );
+			$gads_labels_map       = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
+			$gads_conversion_value = get_post_meta( $conv->ID, '_gads_conversion_value', true );
+
 			$event_config = wp_json_encode(
 				array(
-					'event_name'   => $event_name,
-					'event_custom' => $is_custom,
-					'content_name' => $content_name,
-					'fb_pixels'    => $pixel_ids,
+					'event_name'            => $event_name,
+					'event_custom'          => $is_custom,
+					'content_name'          => $content_name,
+					'fb_pixels'             => $pixel_ids,
+					'platforms'             => $platforms ? $platforms : 'all',
+					'gads_conversion_label' => $gads_conversion_label ? $gads_conversion_label : '',
+					'gads_labels_map'       => is_array( $gads_labels_map ) ? $gads_labels_map : array(),
+					'gads_conversion_value' => $gads_conversion_value ? $gads_conversion_value : '',
 				)
 			);
 
@@ -411,9 +480,49 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
     observer.observe(el);
   })();";
 
+			case 'ad_impression':
+			case 'ad_click':
+			case 'ad_vignette_open':
+			case 'ad_vignette_click':
+				$trigger_literal = wp_json_encode( $trigger );
+				return "  document.addEventListener('alvobot:ad_event', function(e) {
+    if (e.detail.event_name !== {$trigger_literal}) return;
+    window.alvobot_pixel.send_event({$event_config});
+  });";
+
 			default:
 				return '';
 		}
+	}
+
+	/**
+	 * Get active ad conversion trigger types as a set.
+	 *
+	 * Returns an array of trigger types that have active conversion rules,
+	 * so the ad-tracker can skip direct dispatch only for those specific event types
+	 * (avoiding double-dispatch) while still dispatching other ad events directly.
+	 */
+	private function get_active_ad_conversion_triggers() {
+		static $result = null;
+		if ( null !== $result ) {
+			return $result;
+		}
+		$result      = array();
+		$conversions = $this->module->cpt->get_conversions();
+		foreach ( $conversions as $conv ) {
+			$trigger = get_post_meta( $conv->ID, '_trigger_type', true );
+			if ( $trigger && strpos( $trigger, 'ad_' ) === 0 ) {
+				$result[ $trigger ] = true;
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * Check if ANY ad conversion rules exist (backward compat).
+	 */
+	private function has_active_ad_conversions() {
+		return ! empty( $this->get_active_ad_conversion_triggers() );
 	}
 
 	/**
@@ -454,11 +563,12 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 	 * Check if tracking should be injected for the current request.
 	 */
 	private function should_track() {
-		$settings = $this->module->get_settings();
-		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$settings   = $this->module->get_settings();
+		$pixels     = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$has_google = ! empty( $settings['google_trackers'] );
 
-		// No pixels configured
-		if ( empty( $pixels ) ) {
+		// No tracking configured
+		if ( empty( $pixels ) && ! $has_google ) {
 			return false;
 		}
 

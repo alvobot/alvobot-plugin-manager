@@ -92,8 +92,9 @@
 					}
 				);
 
-				if ( ! this.config.pixel_ids) {
-					this.log_warn( 'start aborted: no pixel_ids configured' );
+				var hasGoogleTrackers = this.config.google_trackers && this.config.google_trackers.length > 0;
+				if ( ! this.config.pixel_ids && ! this.config.google_analytics_id && ! this.config.google_ads_id && ! hasGoogleTrackers) {
+					this.log_warn( 'start aborted: no tracking IDs configured' );
 					return;
 				}
 
@@ -122,11 +123,30 @@
 			this.data.fbc        = this.get_fbc();
 			this.data.utms       = this.get_utms();
 				this.data.user_agent = navigator.userAgent;
+
+				// Capture Google Click ID (gclid) for Enhanced Conversions (Phase 2/3 prep)
+				this.data.gclid = this.get_gclid();
+
+				// Capture GA4 client_id for Measurement Protocol matching (Phase 2 prep)
+				this.data.ga_client_id = '';
+				if (window.gtag && this.config.google_analytics_id) {
+					var self = this;
+					try {
+						gtag( 'get', this.config.google_analytics_id, 'client_id', function (cid) {
+							self.data.ga_client_id = cid || '';
+							self.log_debug( 'GA4 client_id captured', { client_id: cid } );
+						});
+					} catch (e) {
+						this.log_error( 'gtag get client_id failed', e && e.message ? e.message : e );
+					}
+				}
+
 				this.log_debug(
 					'visitor base data captured',
 					{
 						fbp: this.data.fbp,
 						fbc: this.data.fbc,
+						gclid: this.data.gclid,
 						utms: this.data.utms,
 						user_agent: this.data.user_agent,
 					}
@@ -413,7 +433,9 @@
 				// Primary: ip-api.com Pro (HTTPS, higher rate limit)
 				try {
 					this.log_debug( 'get_geolocation(): trying ip-api.com' );
-					var resp = await fetch( 'https://pro.ip-api.com/json/' + ip + '?key=TOLoWxdNIA0zIZm&fields=status,city,regionName,country,countryCode,zip,currency,timezone' );
+					var geoKey = (this.config && this.config.geo_api_key) || '';
+					var geoUrl = geoKey ? 'https://pro.ip-api.com/json/' + ip + '?key=' + geoKey + '&fields=status,city,regionName,country,countryCode,zip,currency,timezone' : 'http://ip-api.com/json/' + ip + '?fields=status,city,regionName,country,countryCode,zip,currency,timezone';
+					var resp = await fetch( geoUrl );
 					if (resp.ok) {
 						var data = await resp.json();
 						if (data && data.status === 'success' && data.city) {
@@ -514,6 +536,50 @@
 
 				this.log_debug( 'get_fbc(): no value resolved' );
 				return '';
+			}
+
+		/**
+		 * Get Google Click ID (gclid) from URL or cookie.
+		 * Stored as first-party cookie for Enhanced Conversions (Phase 2/3).
+		 */
+			get_gclid() {
+				var params = new URLSearchParams( window.location.search );
+				var gclid  = params.get( 'gclid' );
+				if (gclid) {
+					this.set_cookie( '_alvo_gclid', gclid, 7776000 ); // 90 days
+					this.log_debug( 'get_gclid(): captured from URL', { gclid: gclid } );
+					return gclid;
+				}
+
+				var match = document.cookie.match( /(^|;)\s*_alvo_gclid=([^;]+)/ );
+				if (match) {
+					this.log_debug( 'get_gclid(): cookie found', { gclid: match[2] } );
+					return match[2];
+				}
+
+				this.log_debug( 'get_gclid(): no value resolved' );
+				return '';
+			}
+
+		/**
+		 * Map Meta standard event names to GA4 recommended event names.
+		 */
+			map_to_ga4_event(meta_event) {
+				var map = {
+					'PageView': 'page_view',
+					'ViewContent': 'view_item',
+					'Lead': 'generate_lead',
+					'CompleteRegistration': 'sign_up',
+					'AddToCart': 'add_to_cart',
+					'AddPaymentInfo': 'add_payment_info',
+					'Purchase': 'purchase',
+					'InitiateCheckout': 'begin_checkout',
+					'AddToWishlist': 'add_to_wishlist',
+					'Search': 'search',
+					'Contact': 'contact',
+					'Schedule': 'schedule',
+				};
+				return map[meta_event] || meta_event;
 			}
 
 		/**
@@ -718,33 +784,106 @@
 					}
 				);
 
-			// 1. Fire browser-side via fbq (skip when base code already called fbq for this event)
-					if ( ! params.skip_fbq && window.fbq) {
-						var fbq_method = params.event_custom ? 'trackCustom' : 'track';
-						this.log_debug(
-							'send_event(): fbq dispatch',
-							{
-								method: fbq_method,
-								event_name: event_name,
-								event_id: event_id,
-							}
-						);
-						window.fbq(
-						fbq_method,
-						event_name,
-						{
-							content_name: params.content_name || '',
-							content_type: custom_data.content_type || '',
-							content_category: custom_data.content_category || '',
-							currency: custom_data.currency || '',
-						},
-						{
-							eventID: event_id,
-						}
-					);
-					}
+			// Parse per-pixel selection (comma-separated IDs from conversion rules).
+				var selected_ids  = params.fb_pixels ? params.fb_pixels.split( ',' ).map( function (s) { return s.trim(); } ).filter( Boolean ) : [];
+				var filter_active = selected_ids.length > 0;
 
-				// 2. POST to WordPress for server-side dispatch
+				// Derive platforms from selected IDs when not explicitly set.
+				var platforms = params.platforms || 'all';
+				if (filter_active && ! params.platforms) {
+					var hasMeta   = selected_ids.some( function (id) { return /^\d{15,16}$/.test( id ); } );
+					var hasGoogle = selected_ids.some( function (id) { return /^(G-|AW-)/.test( id ) || id === 'sitekit_gtag'; } );
+					if (hasMeta && ! hasGoogle) { platforms = 'meta_only'; }
+					else if (hasGoogle && ! hasMeta) { platforms = 'google_only'; }
+				}
+
+				// 1a. Fire browser-side via fbq
+				if ( ! params.skip_fbq && window.fbq && platforms !== 'google_only') {
+					if (filter_active) {
+						// Per-pixel dispatch: use trackSingle/trackSingleCustom for each selected Meta pixel.
+						var fbq_single_method = params.event_custom ? 'trackSingleCustom' : 'trackSingle';
+						selected_ids.forEach( function (pid) {
+							if ( /^\d{15,16}$/.test( pid ) ) {
+								self.log_debug( 'send_event(): fbq trackSingle', { pixel: pid, event: event_name } );
+								window.fbq(
+									fbq_single_method,
+									pid,
+									event_name,
+									{ content_name: params.content_name || '', currency: custom_data.currency || '' },
+									{ eventID: event_id }
+								);
+							}
+						});
+					} else {
+						// Global dispatch: fire for all initialized pixels.
+						var fbq_method = params.event_custom ? 'trackCustom' : 'track';
+						this.log_debug( 'send_event(): fbq dispatch', { method: fbq_method, event_name: event_name, event_id: event_id } );
+						window.fbq(
+							fbq_method,
+							event_name,
+							{
+								content_name: params.content_name || '',
+								content_type: custom_data.content_type || '',
+								content_category: custom_data.content_category || '',
+								currency: custom_data.currency || '',
+							},
+							{ eventID: event_id }
+						);
+					}
+				}
+
+				// 1b. Fire Google events via gtag (multi-tracker loop)
+				if (window.gtag && platforms !== 'meta_only') {
+					var trackers = self.config.google_trackers || [];
+					trackers.forEach( function (tracker) {
+						// Skip tracker if per-pixel selection is active and this tracker is not selected.
+						if (filter_active && selected_ids.indexOf( tracker.tracker_id ) === -1) {
+							return;
+						}
+
+						// External tracker (Site Kit / GTM): fire without send_to — goes to all configs on the page.
+						if (tracker.type === 'external') {
+							var ext_event_name = params.event_custom ? event_name : self.map_to_ga4_event( event_name );
+							var ext_params     = {};
+							if (params.content_name) {
+								ext_params.content_name = params.content_name;
+							}
+							window.gtag( 'event', ext_event_name, ext_params );
+							self.log_debug( 'send_event(): gtag external dispatch (no send_to)', { event: ext_event_name } );
+							return;
+						}
+
+						if (tracker.type === 'ga4') {
+							var ga_event_name = params.event_custom ? event_name : self.map_to_ga4_event( event_name );
+							var ga_params     = { send_to: tracker.tracker_id };
+							if (params.content_name) {
+								ga_params.content_name = params.content_name;
+							}
+							window.gtag( 'event', ga_event_name, ga_params );
+							self.log_debug( 'send_event(): gtag GA4 dispatch', { tracker: tracker.tracker_id, event: ga_event_name } );
+						}
+
+						if (tracker.type === 'google_ads') {
+							// Per-tracker label: labels_map[tracker_id] > legacy single label > tracker default
+							var labels_map = params.gads_labels_map || {};
+							var gads_label = labels_map[tracker.tracker_id] || params.gads_conversion_label || tracker.conversion_label;
+							if (gads_label) {
+								var gads_params = { send_to: tracker.tracker_id + '/' + gads_label };
+								if (params.gads_conversion_value) {
+									gads_params.value    = parseFloat( params.gads_conversion_value ) || 0;
+									gads_params.currency = (self.data.geolocation && self.data.geolocation.currency) || 'BRL';
+								}
+								window.gtag( 'event', 'conversion', gads_params );
+								self.log_debug( 'send_event(): gtag Ads conversion', { tracker: tracker.tracker_id, label: gads_label } );
+							}
+						}
+					});
+				}
+
+				// 2. POST to WordPress for server-side dispatch (Meta CAPI — skip for google_only events)
+				if (platforms === 'google_only') {
+					return; // No server-side dispatch needed for Google-only events
+				}
 				try {
 					var eventPayload = {
 						event_id: event_id,
@@ -765,6 +904,10 @@
 						user_data_hashed: this.config.user_data_hashed || {},
 						custom_data: custom_data,
 						pixel_ids: params.fb_pixels || this.config.pixel_ids,
+						gclid: this.data.gclid || '',
+						ga_client_id: this.data.ga_client_id || '',
+						gads_conversion_label: params.gads_conversion_label || '',
+						gads_conversion_value: params.gads_conversion_value || '',
 					};
 					this.log_debug( 'send_event(): POST /events/track payload', eventPayload );
 					fetch(
@@ -1007,9 +1150,10 @@
 		/**
 		 * Set a cookie with standard tracking defaults.
 		 */
-			set_cookie(name, value) {
+			set_cookie(name, value, max_age_seconds) {
 			var expires = new Date();
-			expires.setTime( expires.getTime() + (180 * 24 * 60 * 60 * 1000) ); // 180 days
+			var ttl     = (typeof max_age_seconds !== 'undefined' && max_age_seconds !== null) ? max_age_seconds : (180 * 24 * 60 * 60); // Default 180 days
+			expires.setTime( expires.getTime() + (ttl * 1000) );
 			var cookie = name + '=' + encodeURIComponent( value ) +
 			';expires=' + expires.toUTCString() +
 			';path=/;SameSite=Lax';

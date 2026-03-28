@@ -132,6 +132,10 @@ class AlvoBotPro_PixelTracking_CPT {
 				'_pixel_ids'      => isset( $data['pixel_ids'] ) ? sanitize_text_field( $data['pixel_ids'] ) : '',
 				'_custom_data'    => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? array_map( 'sanitize_text_field', $data['custom_data'] ) : array(),
 				'_fb_retry_count' => 0,
+				'_gclid'                => isset( $data['gclid'] ) ? sanitize_text_field( $data['gclid'] ) : '',
+				'_ga_client_id'         => isset( $data['ga_client_id'] ) ? sanitize_text_field( $data['ga_client_id'] ) : '',
+				'_gads_conversion_label' => isset( $data['gads_conversion_label'] ) ? sanitize_text_field( $data['gads_conversion_label'] ) : '',
+				'_gads_conversion_value' => isset( $data['gads_conversion_value'] ) ? sanitize_text_field( $data['gads_conversion_value'] ) : '',
 			);
 
 			// Store pre-hashed WP user data for CAPI matching (em, fn, ln, external_id)
@@ -409,16 +413,21 @@ class AlvoBotPro_PixelTracking_CPT {
 
 	private function save_conversion_meta( $post_id, $data ) {
 			$meta_map = array(
-				'event_type'        => '_event_type',
-				'event_custom_name' => '_event_custom_name',
-				'trigger_type'      => '_trigger_type',
-				'trigger_value'     => '_trigger_value',
-				'display_on'        => '_display_on',
-				'page_ids'          => '_page_ids',
-				'page_paths'        => '_page_paths',
-				'css_selector'      => '_css_selector',
-				'content_name'      => '_content_name',
-				'pixel_ids'         => '_pixel_ids',
+				'event_type'            => '_event_type',
+				'event_custom_name'     => '_event_custom_name',
+				'trigger_type'          => '_trigger_type',
+				'trigger_value'         => '_trigger_value',
+				'display_on'            => '_display_on',
+				'page_ids'              => '_page_ids',
+				'page_paths'            => '_page_paths',
+				'css_selector'          => '_css_selector',
+				'content_name'          => '_content_name',
+				'pixel_ids'             => '_pixel_ids',
+				'platforms'             => '_platforms',
+				'gads_conversion_label' => '_gads_conversion_label',
+				'gads_conversion_value' => '_gads_conversion_value',
+				'ad_position'           => '_ad_position',
+				'is_system'             => '_is_system',
 			);
 			foreach ( $meta_map as $data_key => $meta_key ) {
 				if ( isset( $data[ $data_key ] ) ) {
@@ -429,6 +438,21 @@ class AlvoBotPro_PixelTracking_CPT {
 							$value = sanitize_text_field( $value );
 					}
 						update_post_meta( $post_id, $meta_key, $value );
+				}
+			}
+
+			// Save per-tracker labels map as JSON (e.g. {"AW-123":"label_a","AW-456":"label_b"}).
+			if ( isset( $data['gads_labels_map'] ) ) {
+				$map = $data['gads_labels_map'];
+				if ( is_string( $map ) ) {
+					$map = json_decode( $map, true );
+				}
+				if ( is_array( $map ) ) {
+					$sanitized_map = array();
+					foreach ( $map as $tracker_id => $label ) {
+						$sanitized_map[ sanitize_text_field( $tracker_id ) ] = sanitize_text_field( $label );
+					}
+					update_post_meta( $post_id, '_gads_labels_map', wp_json_encode( $sanitized_map ) );
 				}
 			}
 	}

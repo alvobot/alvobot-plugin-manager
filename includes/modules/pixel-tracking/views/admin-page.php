@@ -24,7 +24,7 @@ $alvobot_pt_page_slug  = 'alvobot-pro-pixel-tracking';
 			</div>
 			<div class="alvobot-header-content">
 				<h1><?php esc_html_e( 'Pixel Tracking', 'alvobot-pro' ); ?></h1>
-				<p><?php esc_html_e( 'Rastreamento de eventos com Meta Pixel e Facebook Conversion API.', 'alvobot-pro' ); ?></p>
+				<p><?php esc_html_e( 'Rastreamento de eventos com Meta Pixel, Google Analytics (GA4) e Google Ads.', 'alvobot-pro' ); ?></p>
 			</div>
 		</div>
 
