@@ -2199,7 +2199,7 @@
 				html += '</td>';
 
 				// Status badge
-					html += '<td class="alvobot-events-col-status">' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</td>';
+					html += '<td class="alvobot-events-col-status">' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel, e.pixel_ids ) + '</td>';
 
 				// Page URL + title
 				html += '<td class="alvobot-events-col-page">';
@@ -2302,12 +2302,17 @@
 			updateBulkActionsState();
 		}
 
-			function getStatusBadge(status, error, retryCount, dispatchChannel) {
+			function getStatusBadge(status, error, retryCount, dispatchChannel, pixelIds) {
 				var map = {
 					pixel_pending: { cls: 'alvobot-badge-warning', label: 'Pendente' },
 					pixel_sent:    { cls: 'alvobot-badge-success', label: 'Enviado' },
 					pixel_error:   { cls: 'alvobot-badge-error', label: 'Erro' },
 				};
+				// Google Ads-only events: show "Via Browser" instead of "Pendente"
+				var pids = String( pixelIds || '' ).trim();
+				if (status === 'pixel_pending' && /^AW-/.test( pids ) && ! /^\d{15,16}/.test( pids )) {
+					map.pixel_pending = { cls: 'alvobot-badge-success', label: 'Via Navegador' };
+				}
 				var info = map[status] || { cls: 'alvobot-badge-neutral', label: status };
 				var html = '<span class="alvobot-badge ' + info.cls + '">' + info.label + '</span>';
 				if (status === 'pixel_sent') {
@@ -2522,7 +2527,7 @@
 				[
 					['Evento', e.event_name],
 					['Event ID', '<code>' + escHtml( e.event_id ) + '</code>'],
-						['Status', getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel )],
+						['Status', getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel, e.pixel_ids )],
 					['Event Time', e.event_time ? formatTimestamp( parseInt( e.event_time, 10 ) ) : '-'],
 					['Criado em', e.created_at || '-'],
 					['Enviado em', e.sent_at ? formatTimestamp( parseInt( e.sent_at, 10 ) ) : '-'],
@@ -2582,10 +2587,22 @@
 				]
 			) );
 
-			// Delivery Info
-			sections.push( buildSection(
-				'Entrega CAPI',
-				[
+			// Delivery Info — context-aware for Google Ads vs Meta
+			var pixelIdStr = String( e.pixel_ids || '' );
+			var isGoogleAdsOnly = /^AW-/.test( pixelIdStr.trim() ) && ! /^\d{15,16}/.test( pixelIdStr.trim() );
+			if (isGoogleAdsOnly) {
+				sections.push( buildSection(
+					'Entrega',
+					[
+						['Plataforma', formatPixelList( e.pixel_ids )],
+						['Canal', '<span class="alvobot-badge alvobot-badge-success">Navegador (gtag.js)</span>'],
+						['Servidor (CAPI)', '<span class="alvobot-events-missing">N/A — Google Ads usa envio pelo navegador</span>'],
+					]
+				) );
+			} else {
+				sections.push( buildSection(
+					'Entrega CAPI',
+					[
 						['Pixels Alvo', formatPixelList( e.pixel_ids )],
 						['Pixels Entregues', formatPixelList( e.fb_pixel_ids )],
 						['Canal de Envio', (e.dispatch_channel === 'realtime' ? 'Tempo real' : (e.dispatch_channel === 'queue' ? 'Fila' : '-'))],
@@ -2593,6 +2610,7 @@
 						['Erro', e.error ? '<span class="alvobot-events-error-text">' + escHtml( e.error ) + '</span>' : '-'],
 					]
 				) );
+			}
 
 			// Custom Data
 			if (e.custom_data && typeof e.custom_data === 'object' && Object.keys( e.custom_data ).length > 0) {
@@ -2614,7 +2632,7 @@
 			html += '<div class="alvobot-modal-section">';
 			html += '<h4>Status da Entrega</h4>';
 			html += '<div class="alvobot-events-detail-grid">';
-				html += '<div class="alvobot-events-detail-row"><span>Status</span><span>' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel ) + '</span></div>';
+				html += '<div class="alvobot-events-detail-row"><span>Status</span><span>' + getStatusBadge( e.status, e.error, e.retry_count, e.dispatch_channel, e.pixel_ids ) + '</span></div>';
 				html += '<div class="alvobot-events-detail-row"><span>Canal de Envio</span><span>' + escHtml( e.dispatch_channel === 'realtime' ? 'Tempo real' : (e.dispatch_channel === 'queue' ? 'Fila' : '-' ) ) + '</span></div>';
 				html += '<div class="alvobot-events-detail-row"><span>Tentativas</span><span>' + e.retry_count + '/3</span></div>';
 			html += '<div class="alvobot-events-detail-row"><span>Pixels Entregues</span><span>' + escHtml( e.fb_pixel_ids || 'Nenhum' ) + '</span></div>';
