@@ -435,7 +435,7 @@
 					this.log_debug( 'get_geolocation(): trying ip-api.com' );
 					var geoKey = (this.config && this.config.geo_api_key) || '';
 					var geoUrl = geoKey ? 'https://pro.ip-api.com/json/' + ip + '?key=' + geoKey + '&fields=status,city,regionName,country,countryCode,zip,currency,timezone' : 'http://ip-api.com/json/' + ip + '?fields=status,city,regionName,country,countryCode,zip,currency,timezone';
-					var resp = await fetch( geoUrl );
+					var resp = await this.fetch_with_timeout( geoUrl, {}, 5000 );
 					if (resp.ok) {
 						var data = await resp.json();
 						if (data && data.status === 'success' && data.city) {
@@ -460,7 +460,7 @@
 				if ( ! geo) {
 					try {
 						this.log_debug( 'get_geolocation(): trying ipwho.is fallback' );
-						var resp2 = await fetch( 'https://ipwho.is/' + ip );
+						var resp2 = await this.fetch_with_timeout( 'https://ipwho.is/' + ip, {}, 5000 );
 						if (resp2.ok) {
 							var data2 = await resp2.json();
 							if (data2 && data2.success && data2.city) {
