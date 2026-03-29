@@ -384,13 +384,42 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			}
 		}
 
-		if ( ! empty( $scripts ) ) {
+		// Separate ad-event listeners (must register immediately) from other triggers.
+		$ad_scripts   = array();
+		$other_scripts = array();
+		foreach ( $scripts as $s ) {
+			if ( strpos( $s, "'alvobot:ad_event'" ) !== false ) {
+				$ad_scripts[] = $s;
+			} else {
+				$other_scripts[] = $s;
+			}
+		}
+
+		// Ad-event listeners: register immediately so they never miss events from ad-tracker.js.
+		// The send_event call inside waits for ready() to ensure tracker is initialized.
+		if ( ! empty( $ad_scripts ) ) {
+			echo "\n<script>\n";
+			echo "(function() {\n";
+			echo "  function alvobotAdSendEvent(cfg) {\n";
+			echo "    if (!window.alvobot_pixel || !window.alvobot_pixel.ready) return;\n";
+			echo "    window.alvobot_pixel.ready().then(function() { window.alvobot_pixel.send_event(cfg); });\n";
+			echo "  }\n";
+			// Rewrite send_event calls to use the queuing wrapper.
+			$patched = str_replace( 'window.alvobot_pixel.send_event(', 'alvobotAdSendEvent(', implode( "\n", $ad_scripts ) );
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $patched contains generated JS snippets for inline execution.
+			echo $patched . "\n";
+			echo "})();\n";
+			echo "</script>\n";
+		}
+
+		// Other triggers (page_load, click, scroll, etc.): keep original DOMContentLoaded + ready() flow.
+		if ( ! empty( $other_scripts ) ) {
 			echo "\n<script>\n";
 			echo "document.addEventListener('DOMContentLoaded', function() {\n";
 			echo "  if (!window.alvobot_pixel || !window.alvobot_pixel.ready) return;\n";
 			echo "  window.alvobot_pixel.ready().then(function() {\n";
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $scripts contains generated JS snippets for inline execution.
-			echo implode( "\n", $scripts );
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $other_scripts contains generated JS snippets for inline execution.
+			echo implode( "\n", $other_scripts );
 			echo "\n  });\n";
 			echo "});\n";
 			echo "</script>\n";
