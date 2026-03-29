@@ -152,20 +152,31 @@
 					}
 				);
 
-				// Async data capture
-				try {
-					this.data.ip = await this.get_ip();
-				} catch (e) {
-					this.data.ip = '';
-					this.log_error( 'get_ip() threw', e && e.message ? e.message : e );
-				}
+				// Async data capture with 8s global timeout to prevent init from hanging.
+				var self = this;
+				var asyncTimeout = new Promise( function (resolve) {
+					setTimeout( function () {
+						self.log_warn( 'async capture timed out after 8s — continuing without IP/geo' );
+						resolve( 'timeout' );
+					}, 8000 );
+				});
+				var asyncCapture = (async function () {
+					try {
+						self.data.ip = await self.get_ip();
+					} catch (e) {
+						self.data.ip = '';
+						self.log_error( 'get_ip() threw', e && e.message ? e.message : e );
+					}
 
-				try {
-					this.data.geolocation = await this.get_geolocation();
-				} catch (e) {
-					this.data.geolocation = {};
-					this.log_error( 'get_geolocation() threw', e && e.message ? e.message : e );
-				}
+					try {
+						self.data.geolocation = await self.get_geolocation();
+					} catch (e) {
+						self.data.geolocation = {};
+						self.log_error( 'get_geolocation() threw', e && e.message ? e.message : e );
+					}
+					return 'done';
+				})();
+				await Promise.race( [asyncCapture, asyncTimeout] );
 				this.log_debug( 'async capture complete', { ip: this.data.ip, geolocation: this.data.geolocation } );
 
 				// Start form monitoring for lead capture

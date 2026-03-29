@@ -579,6 +579,10 @@
 		if (id.indexOf( 'google_ads_iframe' ) !== -1) {
 			return true;
 		}
+		// AdSense auto-ads use aswift_* iframes
+		if (id.indexOf( 'aswift_' ) === 0) {
+			return true;
+		}
 		if (el.getAttribute( 'data-google-container-id' ) !== null) {
 			return true;
 		}
@@ -802,6 +806,69 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// 2.5 ADSENSE IMPRESSION FALLBACK (IntersectionObserver on aswift_* iframes)
+	//
+	// AdSense auto-ads don't fire GPT impressionViewable events.
+	// We use IntersectionObserver to detect when aswift_* iframes become
+	// ≥50% visible (matching the IAB Active View standard).
+	// -------------------------------------------------------------------------
+
+	var adsenseImpressionsFired = {};
+
+	function setupAdsenseImpressionFallback() {
+		if ( ! ('IntersectionObserver' in window)) {
+			log( 'IntersectionObserver indisponível; fallback de impressão AdSense inativo' );
+			return;
+		}
+
+		var observer = new IntersectionObserver(
+			function (entries) {
+				entries.forEach( function (entry) {
+					if ( ! entry.isIntersecting) {
+						return;
+					}
+					var el = entry.target;
+					var elId = el.id || '';
+					if (adsenseImpressionsFired[elId]) {
+						return;
+					}
+					adsenseImpressionsFired[elId] = true;
+					observer.unobserve( el );
+					var position = positionFromAdIdentifier( elId );
+					log( 'AdSense impression (IntersectionObserver):', position, elId );
+					dispatchAdEvent( 'ad_impression', position, elId );
+				});
+			},
+			{ threshold: 0.5 } // ≥50% visible
+		);
+
+		function observeAdsenseFrames() {
+			var iframes = document.querySelectorAll( 'iframe[id^="aswift_"]' );
+			for (var i = 0; i < iframes.length; i++) {
+				var iframe = iframes[i];
+				if ( ! adsenseImpressionsFired[iframe.id] && iframe.offsetParent !== null) {
+					observer.observe( iframe );
+				}
+			}
+		}
+
+		// Observe existing and future iframes
+		observeAdsenseFrames();
+
+		// Re-scan periodically for dynamically inserted ads (lazy-loaded)
+		var scanCount = 0;
+		var scanInterval = setInterval( function () {
+			observeAdsenseFrames();
+			scanCount++;
+			if (scanCount >= 20) { // Stop after ~30s
+				clearInterval( scanInterval );
+			}
+		}, 1500 );
+
+		log( 'AdSense impression fallback configurado (IntersectionObserver)' );
+	}
+
+	// -------------------------------------------------------------------------
 	// Inicialização
 	// -------------------------------------------------------------------------
 
@@ -828,6 +895,10 @@
 
 		// 3. Impressões de banner (GPT impressionViewable — Active View nativo)
 		setupGptListeners();
+
+		// 3.1 Fallback: AdSense auto-ads don't use GPT impressionViewable.
+		//     Use IntersectionObserver on aswift_* iframes instead.
+		setupAdsenseImpressionFallback();
 
 		// 4. Cliques em anúncios e vinheta (blur/focus)
 		setupClickTracking();
