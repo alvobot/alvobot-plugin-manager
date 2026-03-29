@@ -440,57 +440,57 @@
 				/* ignore */ }
 
 			var geo = null;
+			var geoKey = (this.config && this.config.geo_api_key) || '';
 
-				// Primary: ip-api.com Pro (HTTPS, higher rate limit)
+			// Primary: ipwho.is (HTTPS, free, no key required — works on all sites)
 				try {
-					this.log_debug( 'get_geolocation(): trying ip-api.com' );
-					var geoKey = (this.config && this.config.geo_api_key) || '';
-					var geoUrl = geoKey ? 'https://pro.ip-api.com/json/' + ip + '?key=' + geoKey + '&fields=status,city,regionName,country,countryCode,zip,currency,timezone' : 'http://ip-api.com/json/' + ip + '?fields=status,city,regionName,country,countryCode,zip,currency,timezone';
-					var resp = await this.fetch_with_timeout( geoUrl, {}, 5000 );
-					if (resp.ok) {
-						var data = await resp.json();
-						if (data && data.status === 'success' && data.city) {
+					this.log_debug( 'get_geolocation(): trying ipwho.is' );
+					var resp2 = await this.fetch_with_timeout( 'https://ipwho.is/' + ip, {}, 5000 );
+					if (resp2.ok) {
+						var data2 = await resp2.json();
+						if (data2 && data2.success && data2.city) {
 						geo = {
-							city: data.city,
-							state: data.regionName,
-							country: data.country,
-							country_code: data.countryCode,
-							zipcode: data.zip || '',
-							currency: data.currency || '',
-								timezone: data.timezone || '',
+							city: data2.city,
+							state: data2.region,
+							country: data2.country,
+							country_code: data2.country_code,
+							zipcode: data2.postal || '',
+							currency: data2.currency && data2.currency.code ? data2.currency.code : '',
+								timezone: data2.timezone && data2.timezone.id ? data2.timezone.id : '',
 								_ts: Date.now(),
 							};
-							this.log_debug( 'get_geolocation(): resolved via ip-api.com', geo );
+							this.log_debug( 'get_geolocation(): resolved via ipwho.is', geo );
 						}
 					}
 				} catch (e) {
-					this.log_warn( 'get_geolocation(): ip-api.com failed', e && e.message ? e.message : e );
-					/* fallback */ }
+					this.log_warn( 'get_geolocation(): ipwho.is failed', e && e.message ? e.message : e );
+				}
 
-			// Fallback: ipwho.is (HTTPS, free, no key)
-				if ( ! geo) {
+			// Fallback: ip-api.com Pro (only when geo_api_key is configured — free tier is HTTP-only)
+				if ( ! geo && geoKey) {
 					try {
-						this.log_debug( 'get_geolocation(): trying ipwho.is fallback' );
-						var resp2 = await this.fetch_with_timeout( 'https://ipwho.is/' + ip, {}, 5000 );
-						if (resp2.ok) {
-							var data2 = await resp2.json();
-							if (data2 && data2.success && data2.city) {
+						this.log_debug( 'get_geolocation(): trying ip-api.com Pro' );
+						var geoUrl = 'https://pro.ip-api.com/json/' + ip + '?key=' + geoKey + '&fields=status,city,regionName,country,countryCode,zip,currency,timezone';
+						var resp = await this.fetch_with_timeout( geoUrl, {}, 5000 );
+						if (resp.ok) {
+							var data = await resp.json();
+							if (data && data.status === 'success' && data.city) {
 							geo = {
-								city: data2.city,
-								state: data2.region,
-								country: data2.country,
-								country_code: data2.country_code,
-								zipcode: data2.postal || '',
-								currency: data2.currency && data2.currency.code ? data2.currency.code : '',
-									timezone: data2.timezone && data2.timezone.id ? data2.timezone.id : '',
+								city: data.city,
+								state: data.regionName,
+								country: data.country,
+								country_code: data.countryCode,
+								zipcode: data.zip || '',
+								currency: data.currency || '',
+									timezone: data.timezone || '',
 									_ts: Date.now(),
 								};
-								this.log_debug( 'get_geolocation(): resolved via ipwho.is', geo );
+								this.log_debug( 'get_geolocation(): resolved via ip-api.com Pro', geo );
 							}
 						}
 					} catch (e) {
-						this.log_warn( 'get_geolocation(): ipwho.is failed', e && e.message ? e.message : e );
-						/* server-side fallback will handle geo */ }
+						this.log_warn( 'get_geolocation(): ip-api.com Pro failed', e && e.message ? e.message : e );
+					}
 				}
 
 			if (geo) {
