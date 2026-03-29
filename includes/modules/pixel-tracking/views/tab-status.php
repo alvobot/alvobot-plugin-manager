@@ -12,12 +12,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$alvobot_pt_pixels         = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-$alvobot_pt_mode           = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
-$alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
+$alvobot_pt_pixels           = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+$alvobot_pt_google_trackers  = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+$alvobot_pt_total_trackers   = count( $alvobot_pt_pixels ) + count( $alvobot_pt_google_trackers );
+$alvobot_pt_has_meta         = ! empty( $alvobot_pt_pixels );
+$alvobot_pt_has_google_only  = ! $alvobot_pt_has_meta && ! empty( $alvobot_pt_google_trackers );
+$alvobot_pt_mode             = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
+$alvobot_pt_test_mode        = ! empty( $settings['test_mode'] );
 $alvobot_pt_realtime_dispatch = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
-$alvobot_pt_consent_check  = ! empty( $settings['consent_check'] );
-$alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
+$alvobot_pt_consent_check    = ! empty( $settings['consent_check'] );
+$alvobot_pt_retention_days   = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
 ?>
 
 <!-- Stats Grid -->
@@ -26,8 +30,8 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 		<div class="alvobot-stat-card-icon alvobot-stat-icon-primary">
 			<i data-lucide="radio" class="alvobot-icon"></i>
 		</div>
-		<div class="alvobot-stat-card-value"><?php echo esc_html( count( $alvobot_pt_pixels ) ); ?></div>
-		<div class="alvobot-stat-card-label"><?php esc_html_e( 'Pixels Configurados', 'alvobot-pro' ); ?></div>
+		<div class="alvobot-stat-card-value"><?php echo esc_html( $alvobot_pt_total_trackers ); ?></div>
+		<div class="alvobot-stat-card-label"><?php esc_html_e( 'Pixels & Trackers', 'alvobot-pro' ); ?></div>
 	</div>
 
 	<div class="alvobot-stat-card">
@@ -35,7 +39,13 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 			<i data-lucide="clock" class="alvobot-icon"></i>
 		</div>
 		<div class="alvobot-stat-card-value" id="stat-pending"><span class="alvobot-skeleton"></span></div>
-		<div class="alvobot-stat-card-label"><?php esc_html_e( 'Eventos Pendentes', 'alvobot-pro' ); ?></div>
+		<div class="alvobot-stat-card-label">
+			<?php if ( $alvobot_pt_has_google_only ) : ?>
+				<?php esc_html_e( 'Eventos Capturados', 'alvobot-pro' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'Eventos Pendentes', 'alvobot-pro' ); ?>
+			<?php endif; ?>
+		</div>
 	</div>
 
 	<div class="alvobot-stat-card">
@@ -43,7 +53,13 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 			<i data-lucide="check-circle" class="alvobot-icon"></i>
 		</div>
 		<div class="alvobot-stat-card-value" id="stat-sent"><span class="alvobot-skeleton"></span></div>
-		<div class="alvobot-stat-card-label"><?php esc_html_e( 'Eventos Enviados', 'alvobot-pro' ); ?></div>
+		<div class="alvobot-stat-card-label">
+			<?php if ( $alvobot_pt_has_google_only ) : ?>
+				<?php esc_html_e( 'Enviados (CAPI)', 'alvobot-pro' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'Eventos Enviados', 'alvobot-pro' ); ?>
+			<?php endif; ?>
+		</div>
 	</div>
 
 	<div class="alvobot-stat-card">
@@ -54,6 +70,15 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 		<div class="alvobot-stat-card-label"><?php esc_html_e( 'Leads Capturados', 'alvobot-pro' ); ?></div>
 	</div>
 </div>
+
+<?php if ( $alvobot_pt_has_google_only ) : ?>
+<div class="alvobot-notice alvobot-notice-info" style="margin-bottom: 16px;">
+	<p>
+		<strong><?php esc_html_e( 'Google Ads: envio via navegador', 'alvobot-pro' ); ?></strong> &mdash;
+		<?php esc_html_e( 'Conversoes do Google Ads sao enviadas diretamente pelo navegador do visitante via gtag.js. Os eventos capturados abaixo sao registros internos — o status "Pendente" e normal quando nao ha Meta Pixel configurado.', 'alvobot-pro' ); ?>
+	</p>
+</div>
+<?php endif; ?>
 
 <!-- Info + Actions Row -->
 <div class="alvobot-pixel-status-row">
@@ -71,6 +96,30 @@ $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['r
 					<span class="alvobot-info-label"><?php esc_html_e( 'Modo', 'alvobot-pro' ); ?></span>
 					<span class="alvobot-badge <?php echo 'alvobot' === $alvobot_pt_mode ? 'alvobot-badge-info' : 'alvobot-badge-neutral'; ?>">
 						<?php echo 'alvobot' === $alvobot_pt_mode ? 'AlvoBot' : 'Manual'; ?>
+					</span>
+				</li>
+				<li>
+					<span class="alvobot-info-label"><?php esc_html_e( 'Plataformas', 'alvobot-pro' ); ?></span>
+					<span>
+						<?php
+						$platforms_list = array();
+						if ( ! empty( $alvobot_pt_pixels ) ) {
+							$platforms_list[] = 'Meta Pixel (' . count( $alvobot_pt_pixels ) . ')';
+						}
+						foreach ( $alvobot_pt_google_trackers as $gt ) {
+							if ( isset( $gt['type'] ) && 'google_ads' === $gt['type'] ) {
+								$platforms_list[] = 'Google Ads';
+								break;
+							}
+						}
+						foreach ( $alvobot_pt_google_trackers as $gt ) {
+							if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) {
+								$platforms_list[] = 'GA4';
+								break;
+							}
+						}
+						echo esc_html( ! empty( $platforms_list ) ? implode( ', ', $platforms_list ) : __( 'Nenhuma', 'alvobot-pro' ) );
+						?>
 					</span>
 				</li>
 					<li>
