@@ -396,18 +396,14 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		}
 
 		// Ad-event listeners: register immediately so they never miss events from ad-tracker.js.
-		// Uses ready() with a timeout fallback — if the tracker hasn't initialized within 5s,
-		// fires gtag conversion directly so Google Ads events are never lost.
+		// Fire gtag conversion IMMEDIATELY (Google Ads), then also queue send_event for
+		// Meta CAPI / REST API when the tracker finishes initializing.
 		if ( ! empty( $ad_scripts ) ) {
 			echo "\n<script>\n";
 			echo "(function() {\n";
 			echo "  function alvobotAdSendEvent(cfg) {\n";
-			echo "    var tracker = window.alvobot_pixel;\n";
-			echo "    if (tracker && tracker.initialized) { tracker.send_event(cfg); return; }\n";
-			echo "    var sent = false;\n";
-			echo "    function gtagFallback() {\n";
-			echo "      if (sent) return; sent = true;\n";
-			echo "      if (typeof window.gtag !== 'function') return;\n";
+			// Immediate gtag dispatch for Google Ads — no waiting.
+			echo "    if (typeof window.gtag === 'function') {\n";
 			echo "      var trackers = (window.alvobot_pixel_config && window.alvobot_pixel_config.google_trackers) || [];\n";
 			echo "      var labelsMap = cfg.gads_labels_map || {};\n";
 			echo "      trackers.forEach(function(t) {\n";
@@ -419,10 +415,12 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "        window.gtag('event', 'conversion', p);\n";
 			echo "      });\n";
 			echo "    }\n";
-			echo "    if (tracker && typeof tracker.ready === 'function') {\n";
-			echo "      tracker.ready().then(function() { if (!sent) { sent = true; tracker.send_event(cfg); } });\n";
+			// Also queue send_event for Meta CAPI / server-side when tracker is ready.
+			echo "    var tracker = window.alvobot_pixel;\n";
+			echo "    if (tracker && tracker.initialized) { tracker.send_event(cfg); }\n";
+			echo "    else if (tracker && typeof tracker.ready === 'function') {\n";
+			echo "      tracker.ready().then(function() { tracker.send_event(cfg); });\n";
 			echo "    }\n";
-			echo "    setTimeout(gtagFallback, 5000);\n";
 			echo "  }\n";
 			// Rewrite send_event calls to use the queuing wrapper.
 			$patched = str_replace( 'window.alvobot_pixel.send_event(', 'alvobotAdSendEvent(', implode( "\n", $ad_scripts ) );
