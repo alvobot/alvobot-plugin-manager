@@ -54,6 +54,8 @@ class AlvoBotPro_PixelTracking_Frontend {
 		if ( ! is_admin() ) {
 			add_action( 'wp_head', array( $this, 'inject_tracking' ), 10 );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_script' ) );
+			// Fallback: inject scripts directly in footer if wp_enqueue_scripts is blocked by cache plugins.
+			add_action( 'wp_footer', array( $this, 'inject_scripts_fallback' ), 99 );
 		}
 	}
 
@@ -604,6 +606,33 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		}
 
 		return true;
+	}
+
+	/**
+	 * Fallback: inject tracking scripts directly if wp_enqueue_scripts was blocked
+	 * by cache/optimization plugins (e.g. LiteSpeed Cache).
+	 */
+	public function inject_scripts_fallback() {
+		if ( ! $this->should_track() ) {
+			return;
+		}
+
+		// Check if scripts were already enqueued normally
+		if ( wp_script_is( 'alvobot-pixel-tracking', 'done' ) || wp_script_is( 'alvobot-pixel-tracking', 'enqueued' ) ) {
+			return;
+		}
+
+		$module_dir = plugin_dir_path( __FILE__ );
+		$module_url = plugin_dir_url( __FILE__ );
+
+		if ( file_exists( $module_dir . 'assets/js/tracking.js' ) ) {
+			$ver = (string) filemtime( $module_dir . 'assets/js/tracking.js' );
+			echo '<script defer src="' . esc_url( $module_url . 'assets/js/tracking.js?ver=' . $ver ) . '" data-no-optimize="1" data-no-minify="1"></script>' . "\n";
+		}
+		if ( file_exists( $module_dir . 'assets/js/ad-tracker.js' ) ) {
+			$ver = (string) filemtime( $module_dir . 'assets/js/ad-tracker.js' );
+			echo '<script defer src="' . esc_url( $module_url . 'assets/js/ad-tracker.js?ver=' . $ver ) . '" data-no-optimize="1" data-no-minify="1"></script>' . "\n";
+		}
 	}
 
 	/**
