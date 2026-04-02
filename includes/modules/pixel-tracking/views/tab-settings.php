@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
 $alvobot_pt_test_code      = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
 $alvobot_pt_realtime_dispatch = isset( $settings['realtime_dispatch'] ) ? (bool) $settings['realtime_dispatch'] : true;
-$alvobot_pt_consent_check  = isset( $settings['consent_check'] ) ? $settings['consent_check'] : true;
+$alvobot_pt_consent_check  = isset( $settings['consent_check'] ) ? (bool) $settings['consent_check'] : false;
 $alvobot_pt_consent_cookie = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 $alvobot_pt_excluded_roles = isset( $settings['excluded_roles'] ) ? $settings['excluded_roles'] : array();
 $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;

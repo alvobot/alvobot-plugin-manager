@@ -107,6 +107,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<label for="conv_display_on" class="alvobot-form-label"><?php esc_html_e( 'Exibir em', 'alvobot-pro' ); ?></label>
 					<select id="conv_display_on" class="alvobot-input">
 						<option value="all"><?php esc_html_e( 'Todas as paginas', 'alvobot-pro' ); ?></option>
+						<option value="specific"><?php esc_html_e( 'Paginas especificas (IDs legados)', 'alvobot-pro' ); ?></option>
 						<option value="path"><?php esc_html_e( 'Paginas especificas (caminho)', 'alvobot-pro' ); ?></option>
 					</select>
 				</div>
@@ -122,11 +123,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="alvobot-form-field">
 				<label class="alvobot-form-label"><?php esc_html_e( 'Pixels & Trackers', 'alvobot-pro' ); ?></label>
 				<p class="alvobot-description"><?php esc_html_e( 'Selecione onde disparar este evento. Nenhum selecionado = todos.', 'alvobot-pro' ); ?></p>
-				<div id="conv-pixel-selector" class="alvobot-pixel-selector">
-					<!-- Populated via JS from pixel_labels + google_trackers -->
+					<div id="conv-pixel-selector" class="alvobot-pixel-selector">
+						<!-- Populated via JS from pixel_labels + google_trackers -->
+					</div>
+					<input type="hidden" id="conv_pixel_ids" value="">
+					<input type="hidden" id="conv_page_ids" value="">
 				</div>
-				<input type="hidden" id="conv_pixel_ids" value="">
-			</div>
 
 			<!-- Google Ads conversion fields (per-tracker labels) -->
 			<div id="conv-gads-fields" class="alvobot-conditional-field">
@@ -146,11 +148,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</div>
 			</div>
 
-			<div id="conv-page-paths-field" class="alvobot-form-field alvobot-conditional-field">
-				<label for="conv_page_paths" class="alvobot-form-label"><?php esc_html_e( 'Caminhos das Paginas', 'alvobot-pro' ); ?></label>
-				<input type="text" id="conv_page_paths" class="alvobot-input alvobot-input-lg" placeholder="/contato, /obrigado, /checkout">
-				<p class="alvobot-description"><?php esc_html_e( 'Caminhos separados por virgula.', 'alvobot-pro' ); ?></p>
-			</div>
+				<div id="conv-page-paths-field" class="alvobot-form-field alvobot-conditional-field">
+					<label for="conv_page_paths" class="alvobot-form-label"><?php esc_html_e( 'Caminhos das Paginas', 'alvobot-pro' ); ?></label>
+					<input type="text" id="conv_page_paths" class="alvobot-input alvobot-input-lg" placeholder="/contato, /obrigado, /checkout">
+					<p class="alvobot-description"><?php esc_html_e( 'Caminhos separados por virgula.', 'alvobot-pro' ); ?></p>
+				</div>
+
+				<div id="conv-page-ids-legacy-field" class="alvobot-form-field alvobot-conditional-field">
+					<label for="conv_page_ids_legacy" class="alvobot-form-label"><?php esc_html_e( 'IDs de Pagina (legado)', 'alvobot-pro' ); ?></label>
+					<input type="text" id="conv_page_ids_legacy" class="alvobot-input alvobot-input-lg" readonly>
+					<p class="alvobot-description"><?php esc_html_e( 'Este escopo legado sera preservado ao salvar, mas novas selecoes por ID nao sao editadas nesta tela.', 'alvobot-pro' ); ?></p>
+				</div>
 
 			<div class="alvobot-conversion-form-actions">
 				<button type="button" id="alvobot-save-conversion-btn" class="alvobot-btn alvobot-btn-primary">

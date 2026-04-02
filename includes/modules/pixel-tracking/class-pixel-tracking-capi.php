@@ -1261,6 +1261,10 @@ class AlvoBotPro_PixelTracking_CAPI {
 				}
 			}
 
+			if ( empty( $results ) ) {
+				return new WP_Error( 'no_test_pixels', __( 'Nenhum pixel Meta com token valido esta configurado.', 'alvobot-pro' ) );
+			}
+
 			return $results;
 	}
 }

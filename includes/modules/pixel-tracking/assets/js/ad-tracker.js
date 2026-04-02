@@ -164,6 +164,7 @@
 	function dispatchAdEvent(eventName, adPosition, adSlotId) {
 		var eventId  = generateUUID();
 		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
+		var handledByRule = isAdEventHandledByConversionRule( eventName );
 
 		var adParams = {
 			ad_position: adPosition,
@@ -194,13 +195,16 @@
 
 		// Skip direct Meta/GA4 dispatch ONLY for event types that have conversion rules (per-event check).
 		// This way, a rule for ad_impression won't silence ad_click, ad_vignette_open, etc.
-		if ( ! isAdEventHandledByConversionRule( eventName )) {
+		if ( ! handledByRule ) {
 			sendToMeta( eventName, fullParams, eventId );
 			sendToGA4(  eventName, fullParams );
 		}
 
-		// REST API always dispatches (server-side CAPI, independent of conversion rules).
-		sendToRestAPI( eventName, adParams, eventId );
+		// When a conversion rule handles this event, tracker.send_event() will send the
+		// server-side event with the configured event name, shared event_id, and ad metadata.
+		if ( ! handledByRule ) {
+			sendToRestAPI( eventName, adParams, eventId );
+		}
 	}
 
 	// -------------------------------------------------------------------------

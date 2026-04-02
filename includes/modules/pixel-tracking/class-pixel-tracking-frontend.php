@@ -167,6 +167,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$pixel_ids        = implode( ',', $pixel_ids_list );
 		$consent_cookie   = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 		$consent_check    = ! empty( $settings['consent_check'] );
+		$meta_base_injected = $has_meta_pixels && ( ! $consent_check || $this->has_server_side_consent_cookie( $consent_cookie ) );
 		$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
 		$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
 
@@ -217,10 +218,13 @@ class AlvoBotPro_PixelTracking_Frontend {
 		// ── Standard Facebook Pixel base code ────────────────────────────────
 		// Inline script — cannot be deferred or combined by any caching/optimization
 		// plugin (LiteSpeed, WP Rocket, Autoptimize, etc.). Fires synchronously in
-		// <head> before any JS defer logic runs.  fbevents.js loads async in parallel.
+		// <head> before any JS defer logic runs. fbevents.js loads async in parallel.
+		// When consent gating is enabled and there is no consent cookie on the request,
+		// we skip the base code and let tracking.js initialize Meta later only if
+		// consent becomes true in the browser. Server-side dispatch remains independent.
 		// PageView is queued here with a server-generated event_id; tracking.js sends
 		// the matching CAPI event for server-side deduplication without double-firing.
-		if ( $has_meta_pixels ) :
+		if ( $meta_base_injected ) :
 		?>
 <!-- Facebook Pixel Code (AlvoBot) -->
 <script>
@@ -275,9 +279,13 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-<?php foreach ( $real_trackers as $gt ) : ?>
+		<?php foreach ( $real_trackers as $gt ) : ?>
+			<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
+gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
+			<?php else : ?>
 gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
-<?php endforeach; ?>
+			<?php endif; ?>
+		<?php endforeach; ?>
 </script>
 <!-- End Google Tag -->
 		<?php endif; ?>
@@ -300,7 +308,8 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
 				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>,
-				pageview_event_id: <?php echo wp_json_encode( $pageview_event_id ); ?>,
+				meta_pixel_base_injected: <?php echo $meta_base_injected ? 'true' : 'false'; ?>,
+				pageview_event_id: <?php echo wp_json_encode( $meta_base_injected ? $pageview_event_id : '' ); ?>,
 				google_trackers: <?php
 				// Strip 'label' from frontend output — only tracker_id, type, and conversion_label are needed.
 				echo wp_json_encode(
@@ -405,11 +414,14 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "(function() {\n";
 			echo "  function alvobotAdSendEvent(cfg) {\n";
 			// Immediate gtag dispatch for Google Ads — no waiting.
-			echo "    if (typeof window.gtag === 'function') {\n";
+			echo "    var selectedIds = cfg.fb_pixels ? cfg.fb_pixels.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];\n";
+			echo "    var filterActive = selectedIds.length > 0;\n";
+			echo "    if (typeof window.gtag === 'function' && cfg.platforms !== 'meta_only') {\n";
 			echo "      var trackers = (window.alvobot_pixel_config && window.alvobot_pixel_config.google_trackers) || [];\n";
 			echo "      var labelsMap = cfg.gads_labels_map || {};\n";
 			echo "      trackers.forEach(function(t) {\n";
 			echo "        if (t.type !== 'google_ads') return;\n";
+			echo "        if (filterActive && selectedIds.indexOf(t.tracker_id) === -1) return;\n";
 			echo "        var label = labelsMap[t.tracker_id] || cfg.gads_conversion_label || t.conversion_label;\n";
 			echo "        if (!label) return;\n";
 			echo "        var p = { send_to: t.tracker_id + '/' + label };\n";
@@ -418,10 +430,17 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "      });\n";
 			echo "    }\n";
 			// Also queue send_event for Meta CAPI / server-side when tracker is ready.
+			echo "    var trackerPayload = {};\n";
+			echo "    for (var key in cfg) {\n";
+			echo "      if (Object.prototype.hasOwnProperty.call(cfg, key)) {\n";
+			echo "        trackerPayload[key] = cfg[key];\n";
+			echo "      }\n";
+			echo "    }\n";
+			echo "    trackerPayload.skip_google_ads = true;\n";
 			echo "    var tracker = window.alvobot_pixel;\n";
-			echo "    if (tracker && tracker.initialized) { tracker.send_event(cfg); }\n";
+			echo "    if (tracker && tracker.initialized) { tracker.send_event(trackerPayload); }\n";
 			echo "    else if (tracker && typeof tracker.ready === 'function') {\n";
-			echo "      tracker.ready().then(function() { tracker.send_event(cfg); });\n";
+			echo "      tracker.ready().then(function() { tracker.send_event(trackerPayload); });\n";
 			echo "    }\n";
 			echo "  }\n";
 			// Rewrite send_event calls to use the queuing wrapper.
@@ -535,8 +554,14 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			case 'ad_vignette_click':
 				$trigger_literal = wp_json_encode( $trigger );
 				return "  document.addEventListener('alvobot:ad_event', function(e) {
-    if (e.detail.event_name !== {$trigger_literal}) return;
-    window.alvobot_pixel.send_event({$event_config});
+    if (!e.detail || e.detail.event_name !== {$trigger_literal}) return;
+    var payload = {$event_config};
+    payload.event_id_override = e.detail.event_id || '';
+    payload.custom_data_extra = {
+      ad_position: e.detail.ad_position || '',
+      ad_slot_id: e.detail.ad_slot_id || ''
+    };
+    window.alvobot_pixel.send_event(payload);
   });";
 
 			default:
@@ -659,5 +684,26 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		}
 
 		return true;
+	}
+
+	/**
+	 * Check whether the consent cookie was already granted on the HTTP request.
+	 *
+	 * This is only used to decide whether the Meta base pixel can be emitted
+	 * synchronously in HTML. Browser-side consent sources that are not available
+	 * server-side are still handled later by tracking.js.
+	 *
+	 * @param string $cookie_name Consent cookie name.
+	 * @return bool
+	 */
+	private function has_server_side_consent_cookie( $cookie_name ) {
+		if ( '' === $cookie_name || ! isset( $_COOKIE[ $cookie_name ] ) ) {
+			return false;
+		}
+
+		$value = wp_unslash( $_COOKIE[ $cookie_name ] );
+		$value = strtolower( trim( (string) $value, "\"' \t\n\r\0\x0B" ) );
+
+		return in_array( $value, array( '1', 'true', 'yes', 'allow', 'allowed' ), true );
 	}
 }

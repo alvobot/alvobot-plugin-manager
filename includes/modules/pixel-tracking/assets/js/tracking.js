@@ -6,35 +6,49 @@
 (function () {
 	'use strict';
 
-		class AlvoBotPixelTracking {
-			constructor() {
-				this.data        = {};
-				this.config      = {};
-				this.initialized = false;
-				this.initial_pageview_sent = false;
-				this._readyPromise = null;
-				this._resolveReady = null;
-				this.debug_enabled = false;
-				this.debug_prefix  = '[AlvoBot Pixel][FRONT]';
-			}
+			class AlvoBotPixelTracking {
+				constructor() {
+					this.data        = {};
+					this.config      = {};
+					this.initialized = false;
+					this.tracking_enabled = false;
+					this.meta_browser_allowed = false;
+					this.initial_pageview_sent = false;
+					this._readyPromise = null;
+					this._resolveReady = null;
+					this._readyResolved = false;
+					this.debug_enabled = false;
+					this.debug_prefix  = '[AlvoBot Pixel][FRONT]';
+				}
 
 		/**
 		 * Returns a promise that resolves when the tracker has finished initializing.
 		 */
-			ready() {
-				if (this.initialized) {
-					this.log_debug( 'ready(): already initialized' );
-					return Promise.resolve();
-				}
+				ready() {
+					if (this.initialized || this._readyResolved) {
+						this.log_debug( 'ready(): already initialized' );
+						return Promise.resolve();
+					}
 				if ( ! this._readyPromise) {
 					var self = this;
 					this._readyPromise = new Promise( function (resolve) {
 						self._resolveReady = resolve;
 					});
 					this.log_debug( 'ready(): promise created' );
+					}
+					return this._readyPromise;
 				}
-				return this._readyPromise;
-			}
+
+				resolve_ready() {
+					if (this._readyResolved) {
+						return;
+					}
+					this._readyResolved = true;
+					if (this._resolveReady) {
+						this._resolveReady();
+						this._resolveReady = null;
+					}
+				}
 
 			clone_for_debug(value) {
 				try {
@@ -80,9 +94,9 @@
 		/**
 		 * Initialize tracking with config from PHP inline script.
 		 */
-			async start(config) {
-				this.config = config || window.alvobot_pixel_config || {};
-				this.debug_enabled = !! this.config.debug_enabled;
+				async start(config) {
+					this.config = config || window.alvobot_pixel_config || {};
+					this.debug_enabled = !! this.config.debug_enabled;
 				this.log_debug(
 					'start() called',
 					{
@@ -92,31 +106,24 @@
 					}
 				);
 
-				var hasGoogleTrackers = this.config.google_trackers && this.config.google_trackers.length > 0;
-				if ( ! this.config.pixel_ids && ! this.config.google_analytics_id && ! this.config.google_ads_id && ! hasGoogleTrackers) {
-					this.log_warn( 'start aborted: no tracking IDs configured' );
-					return;
-				}
+					var hasGoogleTrackers = this.config.google_trackers && this.config.google_trackers.length > 0;
+					if ( ! this.config.pixel_ids && ! this.config.google_analytics_id && ! this.config.google_ads_id && ! hasGoogleTrackers) {
+						this.log_warn( 'start aborted: no tracking IDs configured' );
+						this.tracking_enabled = false;
+						this.resolve_ready();
+						return;
+					}
 
-				// Check consent if required
-				if (this.config.consent_check && ! this.check_consent()) {
-					this.log_warn(
-						'start aborted: consent not granted',
-						{
-							consent_cookie: this.config.consent_cookie,
-						}
-					);
-					return;
-				}
+					// Check if bot
+					if (this.is_bot()) {
+						this.log_warn( 'start aborted: bot detected', { user_agent: navigator.userAgent } );
+						this.tracking_enabled = false;
+						this.resolve_ready();
+						return;
+					}
 
-				// Check if bot
-				if (this.is_bot()) {
-					this.log_warn( 'start aborted: bot detected', { user_agent: navigator.userAgent } );
-					return;
-				}
-
-				// Initialize Facebook Pixel SDK
-				this.init_fb_sdk( this.config.pixel_ids );
+					this.tracking_enabled = true;
+					this.refresh_meta_pixel_state();
 
 			// Capture visitor data
 			this.data.fbp        = this.get_fbp();
@@ -124,22 +131,12 @@
 			this.data.utms       = this.get_utms();
 				this.data.user_agent = navigator.userAgent;
 
-				// Capture Google Click ID (gclid) for Enhanced Conversions (Phase 2/3 prep)
-				this.data.gclid = this.get_gclid();
+					// Capture Google Click ID (gclid) for Enhanced Conversions (Phase 2/3 prep)
+					this.data.gclid = this.get_gclid();
 
-				// Capture GA4 client_id for Measurement Protocol matching (Phase 2 prep)
-				this.data.ga_client_id = '';
-				if (window.gtag && this.config.google_analytics_id) {
-					var self = this;
-					try {
-						gtag( 'get', this.config.google_analytics_id, 'client_id', function (cid) {
-							self.data.ga_client_id = cid || '';
-							self.log_debug( 'GA4 client_id captured', { client_id: cid } );
-						});
-					} catch (e) {
-						this.log_error( 'gtag get client_id failed', e && e.message ? e.message : e );
-					}
-				}
+					// Capture GA4 client_id for Measurement Protocol matching (Phase 2 prep)
+					this.data.ga_client_id = '';
+					this.capture_ga_client_id();
 
 				this.log_debug(
 					'visitor base data captured',
@@ -152,55 +149,75 @@
 					}
 				);
 
-				// Async data capture with 8s global timeout to prevent init from hanging.
-				var self = this;
-				var asyncTimeout = new Promise( function (resolve) {
-					setTimeout( function () {
-						self.log_warn( 'async capture timed out after 8s — continuing without IP/geo' );
-						resolve( 'timeout' );
-					}, 8000 );
-				});
-				var asyncCapture = (async function () {
-					try {
-						self.data.ip = await self.get_ip();
-					} catch (e) {
-						self.data.ip = '';
-						self.log_error( 'get_ip() threw', e && e.message ? e.message : e );
-					}
+					// Start form monitoring for lead capture
+					this.monitor_forms();
 
-					try {
-						self.data.geolocation = await self.get_geolocation();
-					} catch (e) {
-						self.data.geolocation = {};
-						self.log_error( 'get_geolocation() threw', e && e.message ? e.message : e );
-					}
-					return 'done';
-				})();
-				await Promise.race( [asyncCapture, asyncTimeout] );
-				this.log_debug( 'async capture complete', { ip: this.data.ip, geolocation: this.data.geolocation } );
+					// Always dispatch a default PageView through browser + server with shared event_id.
+					this.dispatch_initial_pageview();
 
-				// Start form monitoring for lead capture
-				this.monitor_forms();
-
-				// Always dispatch a default PageView through browser + server with shared event_id.
-				this.dispatch_initial_pageview();
-
-				this.initialized = true;
-				this.log_debug( 'tracker initialized', { initialized: this.initialized } );
-				if (this._resolveReady) {
-					this._resolveReady();
+					this.initialized = true;
+					this.resolve_ready();
+					this.log_debug( 'tracker initialized', { initialized: this.initialized } );
+					this.capture_async_context();
 				}
-			}
 
-		/**
-		 * Initialize Facebook Pixel SDK.
-		 *
-		 * The PHP base code already injected fbevents.js and called fbq('init') for
-		 * every pixel synchronously in <head>. This method is a safety net for cases
-		 * where the base code was not output (e.g., consent-gated flows where JS
-		 * fires after consent is granted without a page reload).
-		 */
-			init_fb_sdk(pixel_ids_str) {
+				capture_ga_client_id() {
+					if ( ! window.gtag || ! this.config.google_analytics_id) {
+						return;
+					}
+
+					var self = this;
+					try {
+						gtag( 'get', this.config.google_analytics_id, 'client_id', function (cid) {
+							self.data.ga_client_id = cid || '';
+							self.log_debug( 'GA4 client_id captured', { client_id: cid } );
+						});
+					} catch (e) {
+						this.log_error( 'gtag get client_id failed', e && e.message ? e.message : e );
+					}
+				}
+
+				async capture_async_context() {
+					var self = this;
+					var timeoutHandle = null;
+					var asyncTimeout = new Promise( function (resolve) {
+						timeoutHandle = setTimeout( function () {
+							self.log_warn( 'async capture timed out after 8s — continuing without IP/geo' );
+							resolve( 'timeout' );
+						}, 8000 );
+					});
+					var asyncCapture = (async function () {
+						try {
+							self.data.ip = await self.get_ip();
+						} catch (e) {
+							self.data.ip = '';
+							self.log_error( 'get_ip() threw', e && e.message ? e.message : e );
+						}
+
+						try {
+							self.data.geolocation = await self.get_geolocation();
+						} catch (e) {
+							self.data.geolocation = {};
+							self.log_error( 'get_geolocation() threw', e && e.message ? e.message : e );
+						}
+						return 'done';
+					})();
+						await Promise.race( [asyncCapture, asyncTimeout] );
+						if (timeoutHandle) {
+							clearTimeout( timeoutHandle );
+						}
+						this.log_debug( 'async capture complete', { ip: this.data.ip, geolocation: this.data.geolocation } );
+					}
+
+			/**
+			 * Initialize Facebook Pixel SDK.
+			 *
+			 * The PHP base code may have already injected fbevents.js and called fbq('init')
+			 * for every pixel synchronously in <head>. This method is also the runtime
+			 * fallback for cases where Meta browser tracking only becomes allowed after
+			 * consent is granted in the browser.
+			 */
+				init_fb_sdk(pixel_ids_str) {
 				var ids = pixel_ids_str.split( ',' ).map(
 					function (s) {
 						return s.trim(); }
@@ -243,10 +260,32 @@
 						window.fbq( 'init', ids[i] );
 						this.log_debug( 'fbq init (late — base code absent)', { pixel_id: ids[i] } );
 					}
-				} else {
-					this.log_debug( 'fbq already present from base code — skipping stub + SDK load', { ids: ids } );
+					} else {
+						this.log_debug( 'fbq already present from base code — skipping stub + SDK load', { ids: ids } );
+					}
 				}
-			}
+
+				refresh_meta_pixel_state() {
+					if ( ! this.config.pixel_ids) {
+						this.meta_browser_allowed = false;
+						return false;
+					}
+
+					var consentGranted = ! this.config.consent_check || this.check_consent();
+					if (consentGranted && ! this.meta_browser_allowed) {
+						this.log_debug( 'Meta browser tracking enabled' );
+					}
+					if ( ! consentGranted && this.meta_browser_allowed) {
+						this.log_warn( 'Meta browser tracking disabled after consent change' );
+					}
+
+					this.meta_browser_allowed = consentGranted;
+					if (this.meta_browser_allowed) {
+						this.init_fb_sdk( this.config.pixel_ids );
+					}
+
+					return this.meta_browser_allowed;
+				}
 
 		/**
 		 * Send the default PageView once per page load.
@@ -256,8 +295,9 @@
 		 * Here we only POST to the CAPI endpoint using that same event_id so that
 		 * Meta can deduplicate the browser and server events — no double count.
 		 *
-		 * When the base code was NOT output (consent-gated fallback), we call
-		 * send_event() normally which fires both fbq and CAPI.
+			 * When the base code was NOT output, send_event() still sends the server-side
+			 * event immediately and only fires the Meta browser event if consent is
+			 * currently granted.
 		 */
 			dispatch_initial_pageview() {
 				if (this.initial_pageview_sent) {
@@ -267,22 +307,28 @@
 
 				this.initial_pageview_sent = true;
 
-				var pageview_params = {
-					event_name: 'PageView',
-					event_custom: false,
-					content_name: this.config.page_title || document.title || '',
-					fb_pixels: this.config.pixel_ids || '',
-				};
+						var pageview_params = {
+							event_name: 'PageView',
+							event_custom: false,
+							content_name: this.config.page_title || document.title || '',
+							fb_pixels: this.config.pixel_ids || '',
+							is_initial_pageview: true,
+						};
 
-				if (this.config.pageview_event_id) {
+					if ( ! this.config.pixel_ids) {
+						pageview_params.platforms = 'google_only';
+					}
+
+					if (this.config.pageview_event_id) {
 					// Base code already fired fbq() in <head> — only send CAPI.
 					this.log_debug( 'initial PageView: base code present, sending CAPI only', { event_id: this.config.pageview_event_id } );
 					pageview_params.event_id_override = this.config.pageview_event_id;
 					pageview_params.skip_fbq = true;
-				} else {
-					// No base code — fire both fbq and CAPI normally.
-					this.log_debug( 'initial PageView: base code absent, firing fbq + CAPI' );
-				}
+					} else {
+						// No base code — server-side always proceeds; Meta browser dispatch
+						// only fires if consent is currently granted.
+						this.log_debug( 'initial PageView: base code absent, sending with runtime Meta consent check' );
+					}
 
 				this.send_event( pageview_params );
 			}
@@ -765,11 +811,20 @@
 		 * params.event_id_override — use this event_id instead of generating a new one
 		 *   (used when the base code already fired fbq with a server-generated event_id)
 		 * params.skip_fbq — if true, skip the fbq() call (base code already fired it)
-		 */
-			async send_event(params) {
-				var event_id   = params.event_id_override || this.generate_event_id();
-				var event_name = params.event_name || 'PageView';
-				var self       = this;
+		 * params.skip_google_ads — if true, skip managed Google Ads trackers in gtag
+		 *   (used when a wrapper already dispatched the conversion snippet immediately)
+			 */
+				async send_event(params) {
+					params = params || {};
+					if ( ! this.tracking_enabled) {
+						this.log_warn( 'send_event() skipped: tracking disabled', { params: params } );
+						return;
+					}
+
+					var event_id   = params.event_id_override || this.generate_event_id();
+					var event_name = params.event_name || 'PageView';
+					var self       = this;
+					var metaBrowserAllowed = this.refresh_meta_pixel_state();
 
 			// Build enriched custom_data
 			var custom_data = {
@@ -784,12 +839,23 @@
 				if (this.data.geolocation && this.data.geolocation.currency) {
 					custom_data.currency = this.data.geolocation.currency;
 				}
+				if (params.custom_data_extra && typeof params.custom_data_extra === 'object') {
+					for (var extraKey in params.custom_data_extra) {
+						if (Object.prototype.hasOwnProperty.call( params.custom_data_extra, extraKey )) {
+							var extraValue = params.custom_data_extra[extraKey];
+							if (extraValue !== '' && extraValue !== null && typeof extraValue !== 'undefined') {
+								custom_data[extraKey] = extraValue;
+							}
+						}
+					}
+				}
 				this.log_debug(
 					'send_event(): prepared',
 					{
 						event_id: event_id,
 						event_name: event_name,
 						skip_fbq: !! params.skip_fbq,
+						skip_google_ads: !! params.skip_google_ads,
 						params: params,
 						custom_data: custom_data,
 					}
@@ -809,7 +875,7 @@
 				}
 
 				// 1a. Fire browser-side via fbq
-				if ( ! params.skip_fbq && window.fbq && platforms !== 'google_only') {
+					if ( ! params.skip_fbq && metaBrowserAllowed && window.fbq && platforms !== 'google_only') {
 					if (filter_active) {
 						// Per-pixel dispatch: use trackSingle/trackSingleCustom for each selected Meta pixel.
 						var fbq_single_method = params.event_custom ? 'trackSingleCustom' : 'trackSingle';
@@ -820,7 +886,7 @@
 									fbq_single_method,
 									pid,
 									event_name,
-									{ content_name: params.content_name || '', currency: custom_data.currency || '' },
+									custom_data,
 									{ eventID: event_id }
 								);
 							}
@@ -832,30 +898,45 @@
 						window.fbq(
 							fbq_method,
 							event_name,
-							{
-								content_name: params.content_name || '',
-								content_type: custom_data.content_type || '',
-								content_category: custom_data.content_category || '',
-								currency: custom_data.currency || '',
-							},
+							custom_data,
 							{ eventID: event_id }
 						);
 					}
 				}
 
-				// 1b. Fire Google events via gtag (multi-tracker loop)
-				if (window.gtag && platforms !== 'meta_only') {
-					var trackers = self.config.google_trackers || [];
-					trackers.forEach( function (tracker) {
+					// 1b. Fire Google events via gtag (multi-tracker loop)
+					if (window.gtag && platforms !== 'meta_only') {
+						var trackers = self.config.google_trackers || [];
+						var hasManagedGoogleTarget = trackers.some(
+							function (tracker) {
+								if (tracker.type === 'external') {
+									return false;
+								}
+								if (filter_active && selected_ids.indexOf( tracker.tracker_id ) === -1) {
+									return false;
+								}
+								return true;
+							}
+						);
+						trackers.forEach( function (tracker) {
 						// Skip tracker if per-pixel selection is active and this tracker is not selected.
 						if (filter_active && selected_ids.indexOf( tracker.tracker_id ) === -1) {
 							return;
 						}
+						if (params.skip_google_ads && tracker.type === 'google_ads') {
+							return;
+						}
 
-						// External tracker (Site Kit / GTM): fire without send_to — goes to all configs on the page.
-						if (tracker.type === 'external') {
-							var ext_event_name = params.event_custom ? event_name : self.map_to_ga4_event( event_name );
-							var ext_params     = {};
+							// External tracker (Site Kit / GTM): fire without send_to — goes to all configs on the page.
+							if (tracker.type === 'external') {
+								if (hasManagedGoogleTarget) {
+									return;
+								}
+								var ext_event_name = params.event_custom ? event_name : self.map_to_ga4_event( event_name );
+								if (params.is_initial_pageview && ext_event_name === 'page_view') {
+									return;
+								}
+								var ext_params     = {};
 							if (params.content_name) {
 								ext_params.content_name = params.content_name;
 							}

@@ -474,11 +474,6 @@ class AlvoBotPro_PixelTracking_REST {
 		$same_origin = $this->verify_same_origin( $request );
 		$nonce_valid = $this->verify_tracking_nonce( $request );
 
-		// Fallback: when Origin/Referer headers are unavailable, a valid nonce is enough.
-		if ( ! $same_origin && $nonce_valid ) {
-			return true;
-		}
-
 		if ( ! $same_origin ) {
 			AlvoBotPro::debug_log(
 				'pixel-tracking',
@@ -1208,6 +1203,15 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	public function action_test_pixel() {
 		$results = $this->module->capi->send_test_event();
+		if ( is_wp_error( $results ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => $results->get_error_message(),
+				),
+				400
+			);
+		}
 		return rest_ensure_response(
 			array(
 				'success' => true,
@@ -1485,11 +1489,6 @@ class AlvoBotPro_PixelTracking_REST {
 			if ( $this->host_matches_allowed( $referer_host, $allowed_hosts ) ) {
 				return true;
 			}
-		}
-
-		$sec_fetch_site = strtolower( (string) $request->get_header( 'Sec-Fetch-Site' ) );
-		if ( in_array( $sec_fetch_site, array( 'same-origin', 'same-site' ), true ) ) {
-			return true;
 		}
 
 		return false;
