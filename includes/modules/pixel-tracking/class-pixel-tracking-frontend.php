@@ -479,41 +479,44 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				$seconds = max( 1, absint( $trigger_val ) );
 				return "  setTimeout(function() { window.alvobot_pixel.send_event({$event_config}); }, " . ( $seconds * 1000 ) . ');';
 
-			case 'form_submit':
-				$selector = trim( (string) $selector );
-				if ( '' === $selector ) {
-					return '';
-				}
-				$selector_literal = wp_json_encode( $selector );
-				return "  (function() {
+				case 'form_submit':
+					$selector = trim( (string) $selector );
+					if ( '' === $selector ) {
+						return '';
+					}
+					$selector_literal = wp_json_encode( $selector );
+					return "  (function() {
     var tracked_{$safe_id} = false;
-    function bind_{$safe_id}() {
-      var elements = [];
-      try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
-      elements.forEach(function(el) {
-        if (el.classList.contains('alvobot_tracked_{$safe_id}')) return;
-        el.classList.add('alvobot_tracked_{$safe_id}');
-        el.addEventListener('submit', function() {
-          if (!tracked_{$safe_id}) { tracked_{$safe_id} = true; window.alvobot_pixel.send_event({$event_config}); }
-        });
-      });
-    }
-    bind_{$safe_id}();
-    setInterval(bind_{$safe_id}, 5000);
+    try { document.querySelectorAll({$selector_literal}); } catch (e) { return; }
+    document.addEventListener('submit', function(ev) {
+      if (tracked_{$safe_id}) return;
+      var target = ev.target;
+      if (!target || target.nodeType !== 1) return;
+      try {
+        if (!target.matches({$selector_literal}) && !target.closest({$selector_literal})) return;
+      } catch (err) { return; }
+      tracked_{$safe_id} = true;
+      window.alvobot_pixel.send_event({$event_config});
+    }, true);
   })();";
 
-			case 'click':
-				$selector = trim( (string) $selector );
-				if ( '' === $selector ) {
-					return '';
-				}
-				$selector_literal = wp_json_encode( $selector );
-				return "  (function() {
-    var elements = [];
-    try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
-    elements.forEach(function(el) {
-      el.addEventListener('click', function() { window.alvobot_pixel.send_event({$event_config}); });
-    });
+				case 'click':
+					$selector = trim( (string) $selector );
+					if ( '' === $selector ) {
+						return '';
+					}
+					$selector_literal = wp_json_encode( $selector );
+					return "  (function() {
+    try { document.querySelectorAll({$selector_literal}); } catch (e) { return; }
+    document.addEventListener('click', function(ev) {
+      var target = ev.target;
+      if (!target || target.nodeType !== 1) return;
+      try {
+        target = target.closest({$selector_literal});
+      } catch (err) { return; }
+      if (!target) return;
+      window.alvobot_pixel.send_event({$event_config});
+    }, true);
   })();";
 
 			case 'scroll':
@@ -527,25 +530,39 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
     });
   })();";
 
-			case 'view_element':
-				$selector = trim( (string) $selector );
-				if ( '' === $selector ) {
-					return '';
-				}
-				$selector_literal = wp_json_encode( $selector );
-				return "  (function() {
-    var el;
-    try { el = document.querySelector({$selector_literal}); } catch (e) { return; }
-    if (!el) return;
+				case 'view_element':
+					$selector = trim( (string) $selector );
+					if ( '' === $selector ) {
+						return '';
+					}
+					$selector_literal = wp_json_encode( $selector );
+					return "  (function() {
+    function bind_{$safe_id}() {
+      var elements = [];
+      try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
+      elements.forEach(function(el) {
+        if (el.classList.contains('alvobot_observed_{$safe_id}')) return;
+        el.classList.add('alvobot_observed_{$safe_id}');
+        observer.observe(el);
+      });
+    }
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
-        if (entry.isIntersecting && !entry.target.classList.contains('alvobot_tracked')) {
-          entry.target.classList.add('alvobot_tracked');
+        if (entry.isIntersecting && !entry.target.classList.contains('alvobot_tracked_{$safe_id}')) {
+          entry.target.classList.add('alvobot_tracked_{$safe_id}');
           window.alvobot_pixel.send_event({$event_config});
         }
       });
     }, { threshold: 0.5 });
-    observer.observe(el);
+    bind_{$safe_id}();
+    if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+      var mutationObserver = new MutationObserver(function() {
+        bind_{$safe_id}();
+      });
+      mutationObserver.observe(document.documentElement, { childList: true, subtree: true });
+    } else {
+      setInterval(bind_{$safe_id}, 5000);
+    }
   })();";
 
 			case 'ad_impression':
