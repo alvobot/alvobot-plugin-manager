@@ -1303,4 +1303,16 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	protected function render_additional_content( $settings ) {
 		// Content now rendered via tab view files.
 	}
+
+	/**
+	 * Schedule cleanup without blocking the current request.
+	 *
+	 * @param int $delay_seconds Delay before the cleanup run.
+	 * @return void
+	 */
+	public function schedule_cleanup_run( $delay_seconds = 15 ) {
+		if ( $this->cleanup instanceof AlvoBotPro_PixelTracking_Cleanup ) {
+			$this->cleanup->schedule_urgent_cleanup( $delay_seconds );
+		}
+	}
 }

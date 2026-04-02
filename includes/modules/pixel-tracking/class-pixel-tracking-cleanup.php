@@ -23,6 +23,13 @@ class AlvoBotPro_PixelTracking_Cleanup {
 	 */
 	private $module;
 
+	/**
+	 * Coalesces urgent cleanup scheduling.
+	 *
+	 * @var int
+	 */
+	private $urgent_cleanup_lock_ttl = 90;
+
 	public function __construct( $module ) {
 		$this->module = $module;
 		$this->schedule_cleanup();
@@ -50,6 +57,36 @@ class AlvoBotPro_PixelTracking_Cleanup {
 	private $max_deletions_per_run = 5000;
 
 	/**
+	 * Schedule an urgent cleanup run without blocking the current request.
+	 *
+	 * @param int $delay_seconds Delay before execution.
+	 * @return void
+	 */
+	public function schedule_urgent_cleanup( $delay_seconds = 15 ) {
+		$delay_seconds = max( 5, absint( $delay_seconds ) );
+		$lock_key      = 'alvobot_pixel_cleanup_urgent_lock';
+
+		if ( get_transient( $lock_key ) ) {
+			return;
+		}
+
+		set_transient( $lock_key, 1, max( $this->urgent_cleanup_lock_ttl, $delay_seconds + 30 ) );
+
+		if ( function_exists( 'as_schedule_single_action' ) ) {
+			as_schedule_single_action( time() + $delay_seconds, 'alvobot_pixel_cleanup' );
+			return;
+		}
+
+		$next = wp_next_scheduled( 'alvobot_pixel_cleanup' );
+		if ( ! $next || $next > ( time() + $delay_seconds + 15 ) ) {
+			wp_schedule_single_event( time() + $delay_seconds, 'alvobot_pixel_cleanup' );
+		}
+		if ( function_exists( 'spawn_cron' ) ) {
+			spawn_cron( time() );
+		}
+	}
+
+	/**
 	 * Run the cleanup process.
 	 */
 	public function run_cleanup() {
@@ -68,16 +105,20 @@ class AlvoBotPro_PixelTracking_Cleanup {
 		$total_deleted += $deleted_stale;
 
 		// Only delete sent/error events — never pending (except stale above).
-		$deleted_events = $this->cleanup_events_by_age( $retention_days, $total_deleted );
-		$total_deleted += $deleted_events;
+		$deleted_event_age = $this->cleanup_events_by_age( $retention_days, $total_deleted );
+		$total_deleted    += $deleted_event_age;
 
-		$deleted_leads  = $this->cleanup_by_age( 'alvobot_pixel_lead', $retention_days, $total_deleted );
-		$total_deleted += $deleted_leads;
+		$deleted_lead_age = $this->cleanup_by_age( 'alvobot_pixel_lead', $retention_days, $total_deleted );
+		$total_deleted   += $deleted_lead_age;
 
-		$deleted_events += $this->cleanup_events_by_volume( $max_events, $total_deleted );
-		$total_deleted  += $deleted_events;
+		$deleted_event_volume = $this->cleanup_events_by_volume( $max_events, $total_deleted );
+		$total_deleted       += $deleted_event_volume;
 
-		$deleted_leads += $this->cleanup_by_volume( 'alvobot_pixel_lead', $max_leads, $total_deleted );
+		$deleted_lead_volume = $this->cleanup_by_volume( 'alvobot_pixel_lead', $max_leads, $total_deleted );
+		$total_deleted      += $deleted_lead_volume;
+
+		$deleted_events = $deleted_stale + $deleted_event_age + $deleted_event_volume;
+		$deleted_leads  = $deleted_lead_age + $deleted_lead_volume;
 
 		if ( $deleted_events > 0 || $deleted_leads > 0 ) {
 			AlvoBotPro::debug_log( 'pixel-tracking', "Cleanup: deleted {$deleted_events} events, {$deleted_leads} leads" );
