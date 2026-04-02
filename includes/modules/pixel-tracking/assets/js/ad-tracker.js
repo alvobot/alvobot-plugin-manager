@@ -68,6 +68,28 @@
 		return match ? decodeURIComponent( match[1] ) : '';
 	}
 
+	function getTracker() {
+		return window.alvobot_pixel || null;
+	}
+
+	function isMetaBrowserAllowed() {
+		var tracker = getTracker();
+		if (tracker && typeof tracker.refresh_meta_pixel_state === 'function') {
+			return tracker.refresh_meta_pixel_state();
+		}
+
+		return typeof window.fbq === 'function';
+	}
+
+	function isGoogleBrowserAllowed() {
+		var tracker = getTracker();
+		if (tracker && typeof tracker.refresh_google_tag_state === 'function') {
+			return tracker.refresh_google_tag_state();
+		}
+
+		return !window.alvobot_pixel_config || !window.alvobot_pixel_config.consent_check;
+	}
+
 	// -------------------------------------------------------------------------
 	// Dispatch helpers
 	// -------------------------------------------------------------------------
@@ -80,7 +102,7 @@
 	};
 
 	function sendToMeta(ga4EventName, params, eventId) {
-		if (typeof window.fbq !== 'function') {
+		if ( ! isMetaBrowserAllowed() || typeof window.fbq !== 'function') {
 			log( 'fbq indisponível para', ga4EventName );
 			return;
 		}
@@ -90,22 +112,25 @@
 	}
 
 	function sendToGA4(eventName, params) {
-		if (typeof window.gtag !== 'function') {
+		if ( ! isGoogleBrowserAllowed() || typeof window.gtag !== 'function') {
 			log( 'gtag indisponível para', eventName );
 			return;
 		}
-		window.gtag( 'event', eventName, params );
+		var payload = Object.assign( { transport_type: 'beacon' }, params || {} );
+		window.gtag( 'event', eventName, payload );
 		log( 'GA4 enviado:', eventName );
 	}
 
 	function sendToRestAPI(ga4EventName, adParams, eventId) {
 		var config = window.alvobot_pixel_config;
-		if ( ! config || ! config.api_event) {
+		if ( ! config || ! config.api_event || ! config.pixel_ids) {
 			return;
 		}
 
 		var metaName = META_EVENT_NAMES[ga4EventName] || ga4EventName;
 		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
+		var tracker = getTracker();
+		var trackerData = tracker && tracker.data ? tracker.data : {};
 
 		var payload = {
 			event_id:    eventId,
@@ -116,6 +141,11 @@
 			page_id:     config.page_id || '0',
 			fbp:         getCookie( '_fbp' ),
 			fbc:         getCookie( '_fbc' ),
+			gclid:       trackerData.gclid || getCookie( '_alvo_gclid' ),
+			gbraid:      trackerData.gbraid || getCookie( '_alvo_gbraid' ),
+			wbraid:      trackerData.wbraid || getCookie( '_alvo_wbraid' ),
+			dclid:       trackerData.dclid || getCookie( '_alvo_dclid' ),
+			ga_client_id: trackerData.ga_client_id || '',
 			user_agent:  navigator.userAgent || '',
 			pixel_ids:   config.pixel_ids || '',
 			custom_data: {

@@ -547,8 +547,12 @@ class AlvoBotPro_PixelTracking_REST {
 			'browser_ip'             => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
 			'pixel_ids'              => $this->sanitize_target_ids_csv( isset( $data['pixel_ids'] ) ? $data['pixel_ids'] : '' ),
 			'gclid'                  => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
+			'gbraid'                 => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
+			'wbraid'                 => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
+			'dclid'                  => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
 			'ga_client_id'           => $this->sanitize_limited_text( isset( $data['ga_client_id'] ) ? $data['ga_client_id'] : '', 128 ),
 			'gads_conversion_label'  => $this->sanitize_limited_text( isset( $data['gads_conversion_label'] ) ? $data['gads_conversion_label'] : '', 64 ),
+			'gads_labels_map'        => $this->sanitize_limited_map( isset( $data['gads_labels_map'] ) ? $data['gads_labels_map'] : array(), 12, 24, 128 ),
 			'gads_conversion_value'  => $this->sanitize_limited_text( isset( $data['gads_conversion_value'] ) ? $data['gads_conversion_value'] : '', 32 ),
 			'custom_data'            => $this->sanitize_limited_map( isset( $data['custom_data'] ) ? $data['custom_data'] : array(), 20, 48, 255 ),
 			'utms'                   => $this->sanitize_limited_map( isset( $data['utms'] ) ? $data['utms'] : array(), 8, 24, 120 ),
@@ -579,6 +583,11 @@ class AlvoBotPro_PixelTracking_REST {
 			'phone'      => $this->sanitize_limited_text( isset( $data['phone'] ) ? $data['phone'] : '', 32 ),
 			'fbp'        => $this->sanitize_limited_text( isset( $data['fbp'] ) ? $data['fbp'] : '', 128 ),
 			'fbc'        => $this->sanitize_limited_text( isset( $data['fbc'] ) ? $data['fbc'] : '', 128 ),
+			'gclid'      => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
+			'gbraid'     => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
+			'wbraid'     => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
+			'dclid'      => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
+			'ga_client_id' => $this->sanitize_limited_text( isset( $data['ga_client_id'] ) ? $data['ga_client_id'] : '', 128 ),
 			'ip'         => $this->sanitize_limited_text( isset( $data['ip'] ) ? $data['ip'] : '', 128 ),
 			'browser_ip' => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
 			'geo'        => $this->sanitize_geo_payload( isset( $data['geo'] ) ? $data['geo'] : array() ),
@@ -1239,30 +1248,40 @@ class AlvoBotPro_PixelTracking_REST {
 			$server_ip          = get_post_meta( $post->ID, '_ip', true );
 			$browser_ip         = get_post_meta( $post->ID, '_browser_ip', true );
 			$display_ip         = $this->select_preferred_display_ip( $server_ip, $browser_ip );
-			$target_pixel_ids   = get_post_meta( $post->ID, '_pixel_ids', true );
+			$target_pixel_ids    = get_post_meta( $post->ID, '_pixel_ids', true );
 			$delivered_pixel_ids = get_post_meta( $post->ID, '_fb_pixel_ids', true );
+			$labels_map_raw      = get_post_meta( $post->ID, '_gads_labels_map', true );
+			$labels_map          = $labels_map_raw ? json_decode( (string) $labels_map_raw, true ) : array();
 
 			$events[] = array(
-				'id'          => $post->ID,
-				'event_id'    => get_post_meta( $post->ID, '_event_id', true ),
-				'event_name'  => get_post_meta( $post->ID, '_event_name', true ),
-				'status'      => $post->post_status,
-				'event_url'   => get_post_meta( $post->ID, '_event_url', true ),
-				'page_url'    => get_post_meta( $post->ID, '_page_url', true ),
-				'page_title'  => get_post_meta( $post->ID, '_page_title', true ),
-				'ip'          => $display_ip,
-				'browser_ip'  => $browser_ip,
-				'fbp'         => get_post_meta( $post->ID, '_fbp', true ),
-				'fbc'         => get_post_meta( $post->ID, '_fbc', true ),
-					'geo_city'    => get_post_meta( $post->ID, '_geo_city', true ),
-					'geo_country' => get_post_meta( $post->ID, '_geo_country_code', true ),
-					'pixel_ids'   => $target_pixel_ids ? $target_pixel_ids : $delivered_pixel_ids,
-					'fb_pixel_ids' => $delivered_pixel_ids,
-					'dispatch_channel' => get_post_meta( $post->ID, '_dispatch_channel', true ),
-					'retry_count' => (int) get_post_meta( $post->ID, '_fb_retry_count', true ),
-					'created_at'  => $post->post_date,
-					'sent_at'     => get_post_meta( $post->ID, '_fb_sent_at', true ),
-					'error'       => get_post_meta( $post->ID, '_fb_error_message', true ),
+				'id'                    => $post->ID,
+				'event_id'              => get_post_meta( $post->ID, '_event_id', true ),
+				'event_name'            => get_post_meta( $post->ID, '_event_name', true ),
+				'status'                => $post->post_status,
+				'event_url'             => get_post_meta( $post->ID, '_event_url', true ),
+				'page_url'              => get_post_meta( $post->ID, '_page_url', true ),
+				'page_title'            => get_post_meta( $post->ID, '_page_title', true ),
+				'ip'                    => $display_ip,
+				'browser_ip'            => $browser_ip,
+				'fbp'                   => get_post_meta( $post->ID, '_fbp', true ),
+				'fbc'                   => get_post_meta( $post->ID, '_fbc', true ),
+				'gclid'                 => get_post_meta( $post->ID, '_gclid', true ),
+				'gbraid'                => get_post_meta( $post->ID, '_gbraid', true ),
+				'wbraid'                => get_post_meta( $post->ID, '_wbraid', true ),
+				'dclid'                 => get_post_meta( $post->ID, '_dclid', true ),
+				'ga_client_id'          => get_post_meta( $post->ID, '_ga_client_id', true ),
+				'gads_conversion_label' => get_post_meta( $post->ID, '_gads_conversion_label', true ),
+				'gads_conversion_value' => get_post_meta( $post->ID, '_gads_conversion_value', true ),
+				'gads_labels_map'       => is_array( $labels_map ) ? $labels_map : array(),
+				'geo_city'              => get_post_meta( $post->ID, '_geo_city', true ),
+				'geo_country'           => get_post_meta( $post->ID, '_geo_country_code', true ),
+				'pixel_ids'             => $target_pixel_ids ? $target_pixel_ids : $delivered_pixel_ids,
+				'fb_pixel_ids'          => $delivered_pixel_ids,
+				'dispatch_channel'      => get_post_meta( $post->ID, '_dispatch_channel', true ),
+				'retry_count'           => (int) get_post_meta( $post->ID, '_fb_retry_count', true ),
+				'created_at'            => $post->post_date,
+				'sent_at'               => get_post_meta( $post->ID, '_fb_sent_at', true ),
+				'error'                 => get_post_meta( $post->ID, '_fb_error_message', true ),
 			);
 		}
 
@@ -1329,9 +1348,11 @@ class AlvoBotPro_PixelTracking_REST {
 
 		$post = $query->posts[0];
 		$pid  = $post->ID;
-		$server_ip  = get_post_meta( $pid, '_ip', true );
-		$browser_ip = get_post_meta( $pid, '_browser_ip', true );
-		$display_ip = $this->select_preferred_display_ip( $server_ip, $browser_ip );
+		$server_ip      = get_post_meta( $pid, '_ip', true );
+		$browser_ip     = get_post_meta( $pid, '_browser_ip', true );
+		$display_ip     = $this->select_preferred_display_ip( $server_ip, $browser_ip );
+		$labels_map_raw = get_post_meta( $pid, '_gads_labels_map', true );
+		$labels_map     = $labels_map_raw ? json_decode( (string) $labels_map_raw, true ) : array();
 
 		return rest_ensure_response(
 			array(
@@ -1353,8 +1374,16 @@ class AlvoBotPro_PixelTracking_REST {
 					'user_agent'       => get_post_meta( $pid, '_user_agent', true ),
 					'fbp'              => get_post_meta( $pid, '_fbp', true ),
 					'fbc'              => get_post_meta( $pid, '_fbc', true ),
+					'gclid'            => get_post_meta( $pid, '_gclid', true ),
+					'gbraid'           => get_post_meta( $pid, '_gbraid', true ),
+					'wbraid'           => get_post_meta( $pid, '_wbraid', true ),
+					'dclid'            => get_post_meta( $pid, '_dclid', true ),
+					'ga_client_id'     => get_post_meta( $pid, '_ga_client_id', true ),
 					'lead_id'          => get_post_meta( $pid, '_lead_id', true ),
 					'pixel_ids'        => get_post_meta( $pid, '_pixel_ids', true ),
+					'gads_conversion_label' => get_post_meta( $pid, '_gads_conversion_label', true ),
+					'gads_conversion_value' => get_post_meta( $pid, '_gads_conversion_value', true ),
+					'gads_labels_map'       => is_array( $labels_map ) ? $labels_map : array(),
 					'geo_city'         => get_post_meta( $pid, '_geo_city', true ),
 					'geo_state'        => get_post_meta( $pid, '_geo_state', true ),
 					'geo_country'      => get_post_meta( $pid, '_geo_country', true ),
@@ -1440,6 +1469,10 @@ class AlvoBotPro_PixelTracking_REST {
 				'phone'      => get_post_meta( $post->ID, '_phone', true ),
 				'first_seen' => get_post_meta( $post->ID, '_first_seen', true ),
 				'last_seen'  => get_post_meta( $post->ID, '_last_seen', true ),
+				'gclid'      => get_post_meta( $post->ID, '_gclid', true ),
+				'gbraid'     => get_post_meta( $post->ID, '_gbraid', true ),
+				'wbraid'     => get_post_meta( $post->ID, '_wbraid', true ),
+				'dclid'      => get_post_meta( $post->ID, '_dclid', true ),
 				'created_at' => $post->post_date,
 			);
 		}
@@ -1517,6 +1550,11 @@ class AlvoBotPro_PixelTracking_REST {
 					'last_seen'          => get_post_meta( $post->ID, '_last_seen', true ),
 					'fbp'                => get_post_meta( $post->ID, '_fbp', true ),
 					'fbc'                => get_post_meta( $post->ID, '_fbc', true ),
+					'gclid'              => get_post_meta( $post->ID, '_gclid', true ),
+					'gbraid'             => get_post_meta( $post->ID, '_gbraid', true ),
+					'wbraid'             => get_post_meta( $post->ID, '_wbraid', true ),
+					'dclid'              => get_post_meta( $post->ID, '_dclid', true ),
+					'ga_client_id'       => get_post_meta( $post->ID, '_ga_client_id', true ),
 					'first_utm_source'   => get_post_meta( $post->ID, '_first_utm_source', true ),
 					'first_utm_medium'   => get_post_meta( $post->ID, '_first_utm_medium', true ),
 					'first_utm_campaign' => get_post_meta( $post->ID, '_first_utm_campaign', true ),

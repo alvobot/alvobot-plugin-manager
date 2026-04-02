@@ -156,6 +156,9 @@ class AlvoBotPro_PixelTracking_CPT {
 				'_custom_data'            => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? array_map( 'sanitize_text_field', $data['custom_data'] ) : array(),
 				'_fb_retry_count'         => $preserve_existing ? $current_retry_count : 0,
 				'_gclid'                  => isset( $data['gclid'] ) ? sanitize_text_field( $data['gclid'] ) : '',
+				'_gbraid'                 => isset( $data['gbraid'] ) ? sanitize_text_field( $data['gbraid'] ) : '',
+				'_wbraid'                 => isset( $data['wbraid'] ) ? sanitize_text_field( $data['wbraid'] ) : '',
+				'_dclid'                  => isset( $data['dclid'] ) ? sanitize_text_field( $data['dclid'] ) : '',
 				'_ga_client_id'           => isset( $data['ga_client_id'] ) ? sanitize_text_field( $data['ga_client_id'] ) : '',
 				'_gads_conversion_label'  => isset( $data['gads_conversion_label'] ) ? sanitize_text_field( $data['gads_conversion_label'] ) : '',
 				'_gads_conversion_value'  => isset( $data['gads_conversion_value'] ) ? sanitize_text_field( $data['gads_conversion_value'] ) : '',
@@ -190,6 +193,27 @@ class AlvoBotPro_PixelTracking_CPT {
 
 			foreach ( $meta_fields as $key => $value ) {
 					update_post_meta( $post_id, $key, $value );
+			}
+
+			if ( array_key_exists( 'gads_labels_map', $data ) ) {
+				$map = $data['gads_labels_map'];
+				if ( is_string( $map ) ) {
+					$map = json_decode( $map, true );
+				}
+
+				$sanitized_map = array();
+				if ( is_array( $map ) ) {
+					foreach ( $map as $tracker_id => $label ) {
+						$sanitized_tracker = sanitize_text_field( $tracker_id );
+						$sanitized_label   = sanitize_text_field( $label );
+						if ( '' === $sanitized_tracker || '' === $sanitized_label ) {
+							continue;
+						}
+						$sanitized_map[ $sanitized_tracker ] = $sanitized_label;
+					}
+				}
+
+				update_post_meta( $post_id, '_gads_labels_map', wp_json_encode( $sanitized_map ) );
 			}
 	}
 
@@ -344,6 +368,21 @@ class AlvoBotPro_PixelTracking_CPT {
 		}
 		if ( isset( $data['fbc'] ) ) {
 				update_post_meta( $post_id, '_fbc', sanitize_text_field( $data['fbc'] ) );
+		}
+		if ( isset( $data['gclid'] ) ) {
+				update_post_meta( $post_id, '_gclid', sanitize_text_field( $data['gclid'] ) );
+		}
+		if ( isset( $data['gbraid'] ) ) {
+				update_post_meta( $post_id, '_gbraid', sanitize_text_field( $data['gbraid'] ) );
+		}
+		if ( isset( $data['wbraid'] ) ) {
+				update_post_meta( $post_id, '_wbraid', sanitize_text_field( $data['wbraid'] ) );
+		}
+		if ( isset( $data['dclid'] ) ) {
+				update_post_meta( $post_id, '_dclid', sanitize_text_field( $data['dclid'] ) );
+		}
+		if ( isset( $data['ga_client_id'] ) ) {
+				update_post_meta( $post_id, '_ga_client_id', sanitize_text_field( $data['ga_client_id'] ) );
 		}
 		if ( isset( $data['ip'] ) ) {
 				update_post_meta( $post_id, '_ip', sanitize_text_field( $data['ip'] ) );

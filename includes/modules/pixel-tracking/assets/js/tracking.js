@@ -7,14 +7,16 @@
 	'use strict';
 
 			class AlvoBotPixelTracking {
-				constructor() {
-					this.data        = {};
-					this.config      = {};
-					this.initialized = false;
-					this.tracking_enabled = false;
-					this.meta_browser_allowed = false;
-					this.initial_pageview_sent = false;
-					this._readyPromise = null;
+					constructor() {
+						this.data        = {};
+						this.config      = {};
+						this.initialized = false;
+						this.tracking_enabled = false;
+						this.meta_browser_allowed = false;
+						this.google_browser_allowed = false;
+						this.google_consent_state = '';
+						this.initial_pageview_sent = false;
+						this._readyPromise = null;
 					this._resolveReady = null;
 					this._readyResolved = false;
 					this.debug_enabled = false;
@@ -122,31 +124,38 @@
 						return;
 					}
 
-					this.tracking_enabled = true;
-					this.refresh_meta_pixel_state();
+						this.tracking_enabled = true;
+						this.refresh_meta_pixel_state();
+						this.refresh_google_tag_state();
 
-			// Capture visitor data
-			this.data.fbp        = this.get_fbp();
-			this.data.fbc        = this.get_fbc();
-			this.data.utms       = this.get_utms();
-				this.data.user_agent = navigator.userAgent;
+				// Capture visitor data
+				this.data.fbp        = this.get_fbp();
+				this.data.fbc        = this.get_fbc();
+				this.data.utms       = this.get_utms();
+					this.data.user_agent = navigator.userAgent;
 
-					// Capture Google Click ID (gclid) for Enhanced Conversions (Phase 2/3 prep)
-					this.data.gclid = this.get_gclid();
+						// Capture Google click identifiers for browser dispatch, diagnostics, and future server uploads.
+						this.data.gclid = this.get_click_id( 'gclid', '_alvo_gclid' );
+						this.data.gbraid = this.get_click_id( 'gbraid', '_alvo_gbraid' );
+						this.data.wbraid = this.get_click_id( 'wbraid', '_alvo_wbraid' );
+						this.data.dclid = this.get_click_id( 'dclid', '_alvo_dclid' );
 
-					// Capture GA4 client_id for Measurement Protocol matching (Phase 2 prep)
-					this.data.ga_client_id = '';
+						// Capture GA4 client_id for Measurement Protocol matching (Phase 2 prep)
+						this.data.ga_client_id = '';
 					this.capture_ga_client_id();
 
 				this.log_debug(
 					'visitor base data captured',
 					{
-						fbp: this.data.fbp,
-						fbc: this.data.fbc,
-						gclid: this.data.gclid,
-						utms: this.data.utms,
-						user_agent: this.data.user_agent,
-					}
+							fbp: this.data.fbp,
+							fbc: this.data.fbc,
+							gclid: this.data.gclid,
+							gbraid: this.data.gbraid,
+							wbraid: this.data.wbraid,
+							dclid: this.data.dclid,
+							utms: this.data.utms,
+							user_agent: this.data.user_agent,
+						}
 				);
 
 					// Start form monitoring for lead capture
@@ -161,19 +170,20 @@
 					this.capture_async_context();
 				}
 
-				capture_ga_client_id() {
-					if ( ! window.gtag || ! this.config.google_analytics_id) {
-						return;
-					}
+					capture_ga_client_id() {
+						var ga4TrackerId = this.get_primary_ga4_tracker_id();
+						if ( ! window.gtag || ! ga4TrackerId) {
+							return;
+						}
 
-					var self = this;
-					try {
-						gtag( 'get', this.config.google_analytics_id, 'client_id', function (cid) {
-							self.data.ga_client_id = cid || '';
-							self.log_debug( 'GA4 client_id captured', { client_id: cid } );
-						});
-					} catch (e) {
-						this.log_error( 'gtag get client_id failed', e && e.message ? e.message : e );
+						var self = this;
+						try {
+							gtag( 'get', ga4TrackerId, 'client_id', function (cid) {
+								self.data.ga_client_id = cid || '';
+								self.log_debug( 'GA4 client_id captured', { tracker_id: ga4TrackerId, client_id: cid } );
+							});
+						} catch (e) {
+							this.log_error( 'gtag get client_id failed', e && e.message ? e.message : e );
 					}
 				}
 
@@ -265,7 +275,7 @@
 					}
 				}
 
-				refresh_meta_pixel_state() {
+					refresh_meta_pixel_state() {
 					if ( ! this.config.pixel_ids) {
 						this.meta_browser_allowed = false;
 						return false;
@@ -284,8 +294,104 @@
 						this.init_fb_sdk( this.config.pixel_ids );
 					}
 
-					return this.meta_browser_allowed;
-				}
+						return this.meta_browser_allowed;
+					}
+
+					get_google_trackers() {
+						var trackers = Array.isArray( this.config.google_trackers ) ? this.config.google_trackers.slice() : [];
+						if ( ! trackers.length) {
+							if (this.config.google_analytics_id) {
+								trackers.push(
+									{
+										tracker_id: this.config.google_analytics_id,
+										type: 'ga4',
+										conversion_label: '',
+									}
+								);
+							}
+							if (this.config.google_ads_id) {
+								trackers.push(
+									{
+										tracker_id: this.config.google_ads_id,
+										type: 'google_ads',
+										conversion_label: this.config.google_ads_conversion_label || '',
+									}
+								);
+							}
+						}
+
+						return trackers.filter(
+							function (tracker) {
+								if ( ! tracker || ! tracker.tracker_id) {
+									return false;
+								}
+
+								if (tracker.type === 'external' && tracker.tracker_id === 'sitekit_gtag') {
+									return true;
+								}
+
+								return /^(G-|AW-)/.test( tracker.tracker_id );
+							}
+						);
+					}
+
+					has_google_trackers() {
+						return this.get_google_trackers().length > 0;
+					}
+
+					get_primary_ga4_tracker_id() {
+						var trackers = this.get_google_trackers();
+						for (var i = 0; i < trackers.length; i++) {
+							if (trackers[i] && trackers[i].type === 'ga4' && trackers[i].tracker_id) {
+								return trackers[i].tracker_id;
+							}
+						}
+
+						return this.config.google_analytics_id || '';
+					}
+
+					update_google_consent_mode(consentGranted) {
+						if ( ! window.gtag) {
+							return;
+						}
+
+						var state = consentGranted ? 'granted' : 'denied';
+						if (this.google_consent_state === state) {
+							return;
+						}
+
+						window.gtag(
+							'consent',
+							'update',
+							{
+								ad_storage: state,
+								analytics_storage: state,
+								ad_user_data: state,
+								ad_personalization: state,
+							}
+						);
+						this.google_consent_state = state;
+						this.log_debug( 'Google consent mode updated', { state: state } );
+					}
+
+					refresh_google_tag_state() {
+						if ( ! this.has_google_trackers()) {
+							this.google_browser_allowed = false;
+							return false;
+						}
+
+						var consentGranted = ! this.config.consent_check || this.check_consent();
+						if (consentGranted && ! this.google_browser_allowed) {
+							this.log_debug( 'Google browser tracking enabled' );
+						}
+						if ( ! consentGranted && this.google_browser_allowed) {
+							this.log_warn( 'Google browser tracking disabled after consent change' );
+						}
+
+						this.google_browser_allowed = consentGranted;
+						this.update_google_consent_mode( consentGranted );
+						return this.google_browser_allowed;
+					}
 
 		/**
 		 * Send the default PageView once per page load.
@@ -596,26 +702,157 @@
 			}
 
 		/**
-		 * Get Google Click ID (gclid) from URL or cookie.
-		 * Stored as first-party cookie for Enhanced Conversions (Phase 2/3).
+		 * Read a cookie value safely.
 		 */
-			get_gclid() {
-				var params = new URLSearchParams( window.location.search );
-				var gclid  = params.get( 'gclid' );
-				if (gclid) {
-					this.set_cookie( '_alvo_gclid', gclid, 7776000 ); // 90 days
-					this.log_debug( 'get_gclid(): captured from URL', { gclid: gclid } );
-					return gclid;
+			get_cookie_value(name) {
+				var escaped = String( name ).replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+				var match = document.cookie.match( new RegExp( '(^|;)\\s*' + escaped + '=([^;]+)' ) );
+				if ( ! match) {
+					return '';
 				}
 
-				var match = document.cookie.match( /(^|;)\s*_alvo_gclid=([^;]+)/ );
-				if (match) {
-					this.log_debug( 'get_gclid(): cookie found', { gclid: match[2] } );
+				try {
+					return decodeURIComponent( match[2] );
+				} catch (e) {
 					return match[2];
 				}
+			}
 
-				this.log_debug( 'get_gclid(): no value resolved' );
+		/**
+		 * Capture and persist Google click identifiers from URL or first-party cookie.
+		 */
+			get_click_id(paramName, cookieName) {
+				var params = new URLSearchParams( window.location.search );
+				var value  = params.get( paramName );
+				if (value) {
+					this.set_cookie( cookieName, value, 7776000 ); // 90 days
+					this.log_debug( 'get_click_id(): captured from URL', { key: paramName, value: value } );
+					return value;
+				}
+
+				value = this.get_cookie_value( cookieName );
+				if (value) {
+					this.log_debug( 'get_click_id(): cookie found', { key: paramName, value: value } );
+					return value;
+				}
+
+				this.log_debug( 'get_click_id(): no value resolved', { key: paramName } );
 				return '';
+			}
+
+		/**
+		 * Backward-compatible wrapper for existing gclid call sites.
+		 */
+			get_gclid() {
+				return this.get_click_id( 'gclid', '_alvo_gclid' );
+			}
+
+		/**
+		 * Normalize currency codes to ISO-4217-ish three-letter uppercase format.
+		 */
+			normalize_currency_code(currency) {
+				if ( ! currency) {
+					return '';
+				}
+
+				var normalized = String( currency ).trim().toUpperCase();
+				return /^[A-Z]{3}$/.test( normalized ) ? normalized : '';
+			}
+
+		/**
+		 * Resolve the currency to use for browser-side Google events.
+		 */
+			resolve_google_currency(params, custom_data) {
+				var candidates = [
+					params && params.currency ? params.currency : '',
+					custom_data && custom_data.currency ? custom_data.currency : '',
+					this.config && this.config.site_currency ? this.config.site_currency : '',
+					this.data && this.data.geolocation && this.data.geolocation.currency ? this.data.geolocation.currency : '',
+					'BRL',
+				];
+
+				for (var i = 0; i < candidates.length; i++) {
+					var normalized = this.normalize_currency_code( candidates[i] );
+					if (normalized) {
+						return normalized;
+					}
+				}
+
+				return 'BRL';
+			}
+
+		/**
+		 * Resolve numeric conversion value when available.
+		 */
+			resolve_google_value(params, custom_data) {
+				var candidates = [
+					params && typeof params.gads_conversion_value !== 'undefined' ? params.gads_conversion_value : '',
+					params && typeof params.value !== 'undefined' ? params.value : '',
+					custom_data && typeof custom_data.value !== 'undefined' ? custom_data.value : '',
+				];
+
+				for (var i = 0; i < candidates.length; i++) {
+					if (candidates[i] === '' || candidates[i] === null || typeof candidates[i] === 'undefined') {
+						continue;
+					}
+
+					var parsed = parseFloat( candidates[i] );
+					if ( ! isNaN( parsed ) && isFinite( parsed )) {
+						return parsed;
+					}
+				}
+
+				return null;
+			}
+
+		/**
+		 * Build shared browser-side Google event params.
+		 */
+			build_google_event_params(params, tracker, event_name, custom_data, is_ads_conversion) {
+				var googleParams = {};
+				if (tracker && tracker.tracker_id && tracker.type !== 'external') {
+					googleParams.send_to = tracker.tracker_id;
+				}
+
+				googleParams.page_location = window.location.href;
+				googleParams.page_title = this.config.page_title || document.title || '';
+
+				if (params.content_name || custom_data.content_name) {
+					googleParams.content_name = params.content_name || custom_data.content_name;
+				}
+				if (custom_data.content_type) {
+					googleParams.content_type = custom_data.content_type;
+				}
+				if (custom_data.content_category) {
+					googleParams.content_category = custom_data.content_category;
+				}
+				if (custom_data.ad_position) {
+					googleParams.ad_position = custom_data.ad_position;
+				}
+				if (custom_data.ad_slot_id) {
+					googleParams.ad_slot_id = custom_data.ad_slot_id;
+				}
+				if (this.data.lead_id) {
+					googleParams.lead_id = this.data.lead_id;
+				}
+
+				var numericValue = this.resolve_google_value( params, custom_data );
+				if (null !== numericValue) {
+					googleParams.value = numericValue;
+					googleParams.currency = this.resolve_google_currency( params, custom_data );
+				}
+
+				if (is_ads_conversion) {
+					googleParams.transport_type = 'beacon';
+					googleParams.event_timeout = 2000;
+					googleParams.event_callback = function () {};
+				}
+
+				if (event_name === 'purchase' && ! googleParams.transaction_id) {
+					googleParams.transaction_id = params.event_id_override || '';
+				}
+
+				return googleParams;
 			}
 
 		/**
@@ -825,6 +1062,7 @@
 					var event_name = params.event_name || 'PageView';
 					var self       = this;
 					var metaBrowserAllowed = this.refresh_meta_pixel_state();
+					var googleBrowserAllowed = this.refresh_google_tag_state();
 
 			// Build enriched custom_data
 			var custom_data = {
@@ -836,8 +1074,9 @@
 			if (this.config.content_category) {
 				custom_data.content_category = this.config.content_category;
 			}
-				if (this.data.geolocation && this.data.geolocation.currency) {
-					custom_data.currency = this.data.geolocation.currency;
+				var defaultCurrency = this.resolve_google_currency( params, custom_data );
+				if (defaultCurrency) {
+					custom_data.currency = defaultCurrency;
 				}
 				if (params.custom_data_extra && typeof params.custom_data_extra === 'object') {
 					for (var extraKey in params.custom_data_extra) {
@@ -856,6 +1095,8 @@
 						event_name: event_name,
 						skip_fbq: !! params.skip_fbq,
 						skip_google_ads: !! params.skip_google_ads,
+						meta_browser_allowed: metaBrowserAllowed,
+						google_browser_allowed: googleBrowserAllowed,
 						params: params,
 						custom_data: custom_data,
 					}
@@ -905,8 +1146,8 @@
 				}
 
 					// 1b. Fire Google events via gtag (multi-tracker loop)
-					if (window.gtag && platforms !== 'meta_only') {
-						var trackers = self.config.google_trackers || [];
+					if (window.gtag && googleBrowserAllowed && platforms !== 'meta_only') {
+						var trackers = self.get_google_trackers();
 						var hasManagedGoogleTarget = trackers.some(
 							function (tracker) {
 								if (tracker.type === 'external') {
@@ -936,10 +1177,7 @@
 								if (params.is_initial_pageview && ext_event_name === 'page_view') {
 									return;
 								}
-								var ext_params     = {};
-							if (params.content_name) {
-								ext_params.content_name = params.content_name;
-							}
+								var ext_params = self.build_google_event_params( params, null, ext_event_name, custom_data, false );
 							window.gtag( 'event', ext_event_name, ext_params );
 							self.log_debug( 'send_event(): gtag external dispatch (no send_to)', { event: ext_event_name } );
 							return;
@@ -947,10 +1185,7 @@
 
 						if (tracker.type === 'ga4') {
 							var ga_event_name = params.event_custom ? event_name : self.map_to_ga4_event( event_name );
-							var ga_params     = { send_to: tracker.tracker_id };
-							if (params.content_name) {
-								ga_params.content_name = params.content_name;
-							}
+							var ga_params = self.build_google_event_params( params, tracker, ga_event_name, custom_data, false );
 							window.gtag( 'event', ga_event_name, ga_params );
 							self.log_debug( 'send_event(): gtag GA4 dispatch', { tracker: tracker.tracker_id, event: ga_event_name } );
 						}
@@ -960,16 +1195,15 @@
 							var labels_map = params.gads_labels_map || {};
 							var gads_label = labels_map[tracker.tracker_id] || params.gads_conversion_label || tracker.conversion_label;
 							if (gads_label) {
-								var gads_params = { send_to: tracker.tracker_id + '/' + gads_label };
-								if (params.gads_conversion_value) {
-									gads_params.value    = parseFloat( params.gads_conversion_value ) || 0;
-									gads_params.currency = (self.data.geolocation && self.data.geolocation.currency) || 'BRL';
-								}
+								var gads_params = self.build_google_event_params( params, tracker, 'conversion', custom_data, true );
+								gads_params.send_to = tracker.tracker_id + '/' + gads_label;
 								window.gtag( 'event', 'conversion', gads_params );
 								self.log_debug( 'send_event(): gtag Ads conversion', { tracker: tracker.tracker_id, label: gads_label } );
 							}
 						}
 					});
+				} else if (window.gtag && platforms !== 'meta_only' && this.has_google_trackers()) {
+					this.log_warn( 'send_event(): Google browser dispatch skipped because consent is not granted', { event_name: event_name } );
 				}
 
 				// 2. POST to WordPress for server-side dispatch (Meta CAPI — skip for google_only events)
@@ -997,8 +1231,12 @@
 						custom_data: custom_data,
 						pixel_ids: params.fb_pixels || this.config.pixel_ids,
 						gclid: this.data.gclid || '',
+						gbraid: this.data.gbraid || '',
+						wbraid: this.data.wbraid || '',
+						dclid: this.data.dclid || '',
 						ga_client_id: this.data.ga_client_id || '',
 						gads_conversion_label: params.gads_conversion_label || '',
+						gads_labels_map: params.gads_labels_map || {},
 						gads_conversion_value: params.gads_conversion_value || '',
 					};
 					this.log_debug( 'send_event(): POST /events/track payload', eventPayload );
@@ -1186,6 +1424,11 @@
 				geo: this.data.geolocation,
 				utms: this.data.utms,
 				src: this.data.utms ? this.data.utms.src : '',
+				gclid: this.data.gclid || '',
+				gbraid: this.data.gbraid || '',
+				wbraid: this.data.wbraid || '',
+				dclid: this.data.dclid || '',
+				ga_client_id: this.data.ga_client_id || '',
 					sck: this.data.utms ? this.data.utms.sck : '',
 				};
 				this.log_debug( 'send_lead_data(): POST /leads/track payload', payload );

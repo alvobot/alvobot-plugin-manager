@@ -165,11 +165,13 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$has_meta_pixels = ! empty( $pixels );
 		$pixel_ids_list  = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
 		$pixel_ids        = implode( ',', $pixel_ids_list );
-		$consent_cookie   = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
-		$consent_check    = ! empty( $settings['consent_check'] );
-		$meta_base_injected = $has_meta_pixels && ( ! $consent_check || $this->has_server_side_consent_cookie( $consent_cookie ) );
-		$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
-		$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
+			$consent_cookie      = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
+			$consent_check       = ! empty( $settings['consent_check'] );
+			$server_consent_seen = ! $consent_check || $this->has_server_side_consent_cookie( $consent_cookie );
+			$meta_base_injected  = $has_meta_pixels && $server_consent_seen;
+			$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
+			$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
+			$site_currency    = $this->get_site_currency_code();
 
 		$page_id    = get_queried_object_id();
 		$page_title = wp_get_document_title();
@@ -249,15 +251,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 
 		<?php
 		// ── Google Tag (gtag.js) — shared by GA4 and Google Ads ──────────────
-		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
-		$google_trackers = array_values(
-			array_filter(
-				$google_trackers,
-				function ( $gt ) {
-					return ! empty( $gt['tracker_id'] );
-				}
-			)
-		);
+		$google_trackers = $this->get_google_trackers_from_settings( $settings );
 
 		// Separate real trackers (GA4/Ads we inject) from external (Site Kit/GTM already on page).
 		$real_trackers = array_values(
@@ -276,10 +270,19 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 <!-- Google Tag (AlvoBot) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr( $primary_id ); ?>"></script>
 <script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-		<?php foreach ( $real_trackers as $gt ) : ?>
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+			<?php if ( $consent_check ) : ?>
+	gtag('consent', 'default', {
+		ad_storage: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
+		analytics_storage: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
+		ad_user_data: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
+		ad_personalization: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
+		wait_for_update: 500
+	});
+			<?php endif; ?>
+			<?php foreach ( $real_trackers as $gt ) : ?>
 			<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
 gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
 			<?php else : ?>
@@ -327,10 +330,11 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				?>,
 				google_analytics_id: <?php echo wp_json_encode( isset( $settings['google_analytics_id'] ) ? $settings['google_analytics_id'] : '' ); ?>,
 				google_ads_id: <?php echo wp_json_encode( isset( $settings['google_ads_id'] ) ? $settings['google_ads_id'] : '' ); ?>,
-				google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
-				ad_conversions_active: <?php echo $this->has_active_ad_conversions() ? 'true' : 'false'; ?>,
-				ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
-				geo_api_key: <?php echo wp_json_encode( defined( 'ALVOBOT_GEO_API_KEY' ) ? ALVOBOT_GEO_API_KEY : '' ); ?>
+					google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
+					site_currency: <?php echo wp_json_encode( $site_currency ); ?>,
+					ad_conversions_active: <?php echo $this->has_active_ad_conversions() ? 'true' : 'false'; ?>,
+					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
+					geo_api_key: <?php echo wp_json_encode( defined( 'ALVOBOT_GEO_API_KEY' ) ? ALVOBOT_GEO_API_KEY : '' ); ?>
 			};
 		</script>
 		<?php
@@ -426,8 +430,12 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			// Immediate gtag dispatch for Google Ads — no waiting.
 			echo "    var selectedIds = cfg.fb_pixels ? cfg.fb_pixels.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];\n";
 			echo "    var filterActive = selectedIds.length > 0;\n";
-			echo "    if (typeof window.gtag === 'function' && cfg.platforms !== 'meta_only') {\n";
+			echo "    var tracker = window.alvobot_pixel;\n";
+			echo "    var googleBrowserAllowed = !window.alvobot_pixel_config || !window.alvobot_pixel_config.consent_check;\n";
+			echo "    if (tracker && typeof tracker.refresh_google_tag_state === 'function') { googleBrowserAllowed = tracker.refresh_google_tag_state(); }\n";
+			echo "    if (typeof window.gtag === 'function' && cfg.platforms !== 'meta_only' && googleBrowserAllowed) {\n";
 			echo "      var trackers = (window.alvobot_pixel_config && window.alvobot_pixel_config.google_trackers) || [];\n";
+			echo "      var siteCurrency = (window.alvobot_pixel_config && window.alvobot_pixel_config.site_currency) || 'BRL';\n";
 			echo "      var labelsMap = cfg.gads_labels_map || {};\n";
 			echo "      trackers.forEach(function(t) {\n";
 			echo "        if (t.type !== 'google_ads') return;\n";
@@ -435,7 +443,10 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "        var label = labelsMap[t.tracker_id] || cfg.gads_conversion_label || t.conversion_label;\n";
 			echo "        if (!label) return;\n";
 			echo "        var p = { send_to: t.tracker_id + '/' + label };\n";
-			echo "        if (cfg.gads_conversion_value) { p.value = parseFloat(cfg.gads_conversion_value) || 0; p.currency = 'BRL'; }\n";
+			echo "        p.transport_type = 'beacon';\n";
+			echo "        p.event_timeout = 2000;\n";
+			echo "        p.event_callback = function(){};\n";
+			echo "        if (cfg.gads_conversion_value) { p.value = parseFloat(cfg.gads_conversion_value) || 0; p.currency = siteCurrency; }\n";
 			echo "        window.gtag('event', 'conversion', p);\n";
 			echo "      });\n";
 			echo "    }\n";
@@ -447,7 +458,6 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "      }\n";
 			echo "    }\n";
 			echo "    trackerPayload.skip_google_ads = true;\n";
-			echo "    var tracker = window.alvobot_pixel;\n";
 			echo "    if (tracker && tracker.initialized) { tracker.send_event(trackerPayload); }\n";
 			echo "    else if (tracker && typeof tracker.ready === 'function') {\n";
 			echo "      tracker.ready().then(function() { tracker.send_event(trackerPayload); });\n";
@@ -693,7 +703,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 	private function should_track() {
 		$settings   = $this->module->get_settings();
 		$pixels     = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-		$has_google = ! empty( $settings['google_trackers'] );
+		$has_google = ! empty( $this->get_google_trackers_from_settings( $settings ) );
 
 		// No tracking configured
 		if ( empty( $pixels ) && ! $has_google ) {
@@ -751,7 +761,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			}
 		}
 
-		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+		$google_trackers = $this->get_google_trackers_from_settings( $settings );
 		foreach ( $google_trackers as $tracker ) {
 			if ( ! empty( $tracker['tracker_id'] ) ) {
 				$active_ids[] = (string) $tracker['tracker_id'];
@@ -821,5 +831,63 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		}
 
 		return $filtered;
+	}
+
+	/**
+	 * Build the frontend Google tracker list, including legacy flat settings.
+	 *
+	 * @param array $settings Module settings.
+	 * @return array<int,array<string,string>>
+	 */
+	private function get_google_trackers_from_settings( $settings ) {
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+
+		if ( empty( $google_trackers ) ) {
+			$legacy_ga  = isset( $settings['google_analytics_id'] ) ? sanitize_text_field( (string) $settings['google_analytics_id'] ) : '';
+			$legacy_ads = isset( $settings['google_ads_id'] ) ? sanitize_text_field( (string) $settings['google_ads_id'] ) : '';
+
+			if ( $legacy_ga && preg_match( '/^G-[A-Z0-9]{7,12}$/', $legacy_ga ) ) {
+				$google_trackers[] = array(
+					'tracker_id'       => $legacy_ga,
+					'type'             => 'ga4',
+					'label'            => 'Google Analytics',
+					'conversion_label' => '',
+				);
+			}
+
+			if ( $legacy_ads && preg_match( '/^AW-\d{7,12}$/', $legacy_ads ) ) {
+				$google_trackers[] = array(
+					'tracker_id'       => $legacy_ads,
+					'type'             => 'google_ads',
+					'label'            => 'Google Ads',
+					'conversion_label' => isset( $settings['google_ads_conversion_label'] ) ? sanitize_text_field( (string) $settings['google_ads_conversion_label'] ) : '',
+				);
+			}
+		}
+
+		return array_values(
+			array_filter(
+				$google_trackers,
+				function ( $gt ) {
+					return ! empty( $gt['tracker_id'] );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Resolve the best-available site currency code for browser-side Google events.
+	 *
+	 * @return string
+	 */
+	private function get_site_currency_code() {
+		if ( function_exists( 'get_woocommerce_currency' ) ) {
+			$currency = strtoupper( trim( (string) get_woocommerce_currency() ) );
+			if ( preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+				return $currency;
+			}
+		}
+
+		return 'BRL';
 	}
 }
