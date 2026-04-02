@@ -369,12 +369,22 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			$selector     = get_post_meta( $conv->ID, '_css_selector', true );
 			$content_name = get_post_meta( $conv->ID, '_content_name', true );
 			$pixel_ids    = get_post_meta( $conv->ID, '_pixel_ids', true );
+			$target_ids   = $this->filter_active_conversion_target_ids( $pixel_ids );
 
 			$platforms             = get_post_meta( $conv->ID, '_platforms', true );
 			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
 			$gads_labels_map_raw   = get_post_meta( $conv->ID, '_gads_labels_map', true );
 			$gads_labels_map       = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
 			$gads_conversion_value = get_post_meta( $conv->ID, '_gads_conversion_value', true );
+
+			if ( '' !== trim( (string) $pixel_ids ) && empty( $target_ids ) ) {
+				continue;
+			}
+			if ( ! empty( $target_ids ) ) {
+				$pixel_ids      = implode( ',', $target_ids );
+				$platforms      = $this->derive_platforms_from_target_ids( $target_ids );
+				$gads_labels_map = $this->filter_gads_labels_map_for_targets( $gads_labels_map, $target_ids );
+			}
 
 			$event_config = wp_json_encode(
 				array(
@@ -722,5 +732,94 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		$value = strtolower( trim( (string) $value, "\"' \t\n\r\0\x0B" ) );
 
 		return in_array( $value, array( '1', 'true', 'yes', 'allow', 'allowed' ), true );
+	}
+
+	/**
+	 * Keep only active conversion target IDs for runtime rendering.
+	 *
+	 * @param string $raw_targets Raw CSV target IDs.
+	 * @return string[]
+	 */
+	private function filter_active_conversion_target_ids( $raw_targets ) {
+		$settings = $this->module->get_settings();
+		$active_ids = array();
+
+		$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+		foreach ( $pixels as $pixel ) {
+			if ( ! empty( $pixel['pixel_id'] ) ) {
+				$active_ids[] = (string) $pixel['pixel_id'];
+			}
+		}
+
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+		foreach ( $google_trackers as $tracker ) {
+			if ( ! empty( $tracker['tracker_id'] ) ) {
+				$active_ids[] = (string) $tracker['tracker_id'];
+			}
+		}
+
+		$active_lookup = array_fill_keys( array_unique( $active_ids ), true );
+		$target_ids    = array_values( array_filter( array_map( 'trim', explode( ',', (string) $raw_targets ) ) ) );
+
+		return array_values(
+			array_filter(
+				$target_ids,
+				function ( $target_id ) use ( $active_lookup ) {
+					return isset( $active_lookup[ $target_id ] );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Derive runtime platforms from the filtered target IDs.
+	 *
+	 * @param string[] $target_ids Target IDs.
+	 * @return string
+	 */
+	private function derive_platforms_from_target_ids( $target_ids ) {
+		$has_meta   = false;
+		$has_google = false;
+
+		foreach ( $target_ids as $target_id ) {
+			if ( preg_match( '/^\d{15,16}$/', $target_id ) ) {
+				$has_meta = true;
+			}
+			if ( preg_match( '/^(G-|AW-)/', $target_id ) || 'sitekit_gtag' === $target_id ) {
+				$has_google = true;
+			}
+		}
+
+		if ( $has_meta && ! $has_google ) {
+			return 'meta_only';
+		}
+		if ( $has_google && ! $has_meta ) {
+			return 'google_only';
+		}
+
+		return 'all';
+	}
+
+	/**
+	 * Remove Google Ads labels for inactive trackers before rendering.
+	 *
+	 * @param mixed    $labels_map Raw labels map.
+	 * @param string[] $target_ids Filtered target IDs.
+	 * @return array
+	 */
+	private function filter_gads_labels_map_for_targets( $labels_map, $target_ids ) {
+		if ( ! is_array( $labels_map ) ) {
+			return array();
+		}
+
+		$target_lookup = array_fill_keys( $target_ids, true );
+		$filtered      = array();
+		foreach ( $labels_map as $tracker_id => $label ) {
+			if ( isset( $target_lookup[ $tracker_id ] ) ) {
+				$filtered[ $tracker_id ] = $label;
+			}
+		}
+
+		return $filtered;
 	}
 }
