@@ -895,21 +895,31 @@
 
 		/**
 		 * Check if tracking consent is given.
+		 *
+		 * Site policy is "allowed by default": only explicit denial blocks browser tags.
 		 */
 			check_consent() {
 				var cookieName = this.config.consent_cookie || 'alvobot_tracking_consent';
+				var cookieValue = this.get_cookie_value( cookieName );
+				var normalizedCookie = cookieValue ? String( cookieValue ).trim().toLowerCase() : '';
 
-			// Check cookie
-				if (document.cookie.indexOf( cookieName + '=true' ) !== -1) {
-					this.log_debug( 'check_consent(): true via cookie=true', { cookie: cookieName } );
-					return true;
-				}
-				if (document.cookie.indexOf( cookieName + '=1' ) !== -1) {
-					this.log_debug( 'check_consent(): true via cookie=1', { cookie: cookieName } );
-					return true;
+			// Check explicit cookie state first.
+				if (normalizedCookie) {
+					if (['0', 'false', 'no', 'deny', 'denied', 'disallow', 'rejected', 'reject'].indexOf( normalizedCookie ) !== -1) {
+						this.log_warn( 'check_consent(): false via explicit deny cookie', { cookie: cookieName, value: normalizedCookie } );
+						return false;
+					}
+					if (['1', 'true', 'yes', 'allow', 'allowed'].indexOf( normalizedCookie ) !== -1) {
+						this.log_debug( 'check_consent(): true via explicit allow cookie', { cookie: cookieName, value: normalizedCookie } );
+						return true;
+					}
 				}
 
 			// Check JS variable
+				if (window.alvobot_tracking_consent === false) {
+					this.log_warn( 'check_consent(): false via window.alvobot_tracking_consent' );
+					return false;
+				}
 				if (window.alvobot_tracking_consent === true) {
 					this.log_debug( 'check_consent(): true via window.alvobot_tracking_consent' );
 					return true;
@@ -917,7 +927,12 @@
 
 			// CookieYes integration
 			if (window.CookieYes && typeof window.CookieYes.getConsent === 'function') {
-					if (window.CookieYes.getConsent( 'analytics' ) === 'yes') {
+					var cookieYesAnalytics = window.CookieYes.getConsent( 'analytics' );
+					if (cookieYesAnalytics === 'no') {
+						this.log_warn( 'check_consent(): false via CookieYes analytics=no' );
+						return false;
+					}
+					if (cookieYesAnalytics === 'yes') {
 						this.log_debug( 'check_consent(): true via CookieYes analytics=yes' );
 						return true;
 					}
@@ -925,14 +940,19 @@
 
 			// Complianz integration
 			if (typeof window.cmplz_get_consent === 'function') {
-					if (window.cmplz_get_consent( 'statistics' ) === 'allow') {
+					var complianzStatistics = window.cmplz_get_consent( 'statistics' );
+					if (complianzStatistics === 'deny') {
+						this.log_warn( 'check_consent(): false via Complianz statistics=deny' );
+						return false;
+					}
+					if (complianzStatistics === 'allow') {
 						this.log_debug( 'check_consent(): true via Complianz statistics=allow' );
 						return true;
 					}
 				}
 
-				this.log_warn( 'check_consent(): consent not granted' );
-				return false;
+				this.log_debug( 'check_consent(): default allow (no explicit deny found)' );
+				return true;
 			}
 
 		/**

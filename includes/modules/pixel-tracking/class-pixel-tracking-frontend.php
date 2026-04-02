@@ -431,7 +431,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "    var selectedIds = cfg.fb_pixels ? cfg.fb_pixels.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];\n";
 			echo "    var filterActive = selectedIds.length > 0;\n";
 			echo "    var tracker = window.alvobot_pixel;\n";
-			echo "    var googleBrowserAllowed = !window.alvobot_pixel_config || !window.alvobot_pixel_config.consent_check;\n";
+			echo "    var googleBrowserAllowed = true;\n";
 			echo "    if (tracker && typeof tracker.refresh_google_tag_state === 'function') { googleBrowserAllowed = tracker.refresh_google_tag_state(); }\n";
 			echo "    if (typeof window.gtag === 'function' && cfg.platforms !== 'meta_only' && googleBrowserAllowed) {\n";
 			echo "      var trackers = (window.alvobot_pixel_config && window.alvobot_pixel_config.google_trackers) || [];\n";
@@ -735,13 +735,21 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 	 */
 	private function has_server_side_consent_cookie( $cookie_name ) {
 		if ( '' === $cookie_name || ! isset( $_COOKIE[ $cookie_name ] ) ) {
-			return false;
+			return true;
 		}
 
 		$value = wp_unslash( $_COOKIE[ $cookie_name ] );
 		$value = strtolower( trim( (string) $value, "\"' \t\n\r\0\x0B" ) );
 
-		return in_array( $value, array( '1', 'true', 'yes', 'allow', 'allowed' ), true );
+		if ( in_array( $value, array( '0', 'false', 'no', 'deny', 'denied', 'disallow', 'rejected', 'reject' ), true ) ) {
+			return false;
+		}
+
+		if ( in_array( $value, array( '1', 'true', 'yes', 'allow', 'allowed' ), true ) ) {
+			return true;
+		}
+
+		return true;
 	}
 
 	/**

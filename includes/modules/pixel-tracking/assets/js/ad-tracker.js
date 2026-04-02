@@ -87,7 +87,7 @@
 			return tracker.refresh_google_tag_state();
 		}
 
-		return !window.alvobot_pixel_config || !window.alvobot_pixel_config.consent_check;
+		return true;
 	}
 
 	// -------------------------------------------------------------------------
