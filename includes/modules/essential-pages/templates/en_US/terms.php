@@ -29,7 +29,7 @@
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph -->
-	<p><strong>1.1</strong> <?php esc_html_e( 'By accessing our website, you acknowledge that you have read, understood and agree to comply with our Terms and Conditions of Use and our', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'Privacy Policy', 'alvobot-pro' ); ?></a>.</p>
+	<p><strong>1.1</strong> <?php esc_html_e( 'By accessing our website, you acknowledge that you have read, understood and agree to comply with our Terms and Conditions of Use and our', 'alvobot-pro' ); ?> <?php $alvobot_privacy_url = get_privacy_policy_url(); if ( $alvobot_privacy_url ) : ?><a href="<?php echo esc_url( $alvobot_privacy_url ); ?>"><?php esc_html_e( 'Privacy Policy', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'Privacy Policy', 'alvobot-pro' ); ?><?php endif; ?>.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
@@ -53,7 +53,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph -->
-	<p><strong>2.2</strong> <?php esc_html_e( 'Protecting user privacy is a top priority. Our Privacy Policy, available at', 'alvobot-pro' ); ?> <a href="<?php echo esc_url( get_privacy_policy_url() ); ?>"><?php esc_html_e( 'our Privacy Policy', 'alvobot-pro' ); ?></a>, <?php esc_html_e( 'describes how we collect, store and process user data in compliance with applicable data protection regulations, including applicable data protection laws (GDPR, CCPA etc.).', 'alvobot-pro' ); ?></p>
+	<p><strong>2.2</strong> <?php esc_html_e( 'Protecting user privacy is a top priority. Our Privacy Policy, available at', 'alvobot-pro' ); ?> <?php $alvobot_privacy_url_22 = get_privacy_policy_url(); if ( $alvobot_privacy_url_22 ) : ?><a href="<?php echo esc_url( $alvobot_privacy_url_22 ); ?>"><?php esc_html_e( 'our Privacy Policy', 'alvobot-pro' ); ?></a><?php else : ?><?php esc_html_e( 'our Privacy Policy', 'alvobot-pro' ); ?><?php endif; ?>, <?php esc_html_e( 'describes how we collect, store and process user data in compliance with applicable data protection regulations, including applicable data protection laws (GDPR, CCPA etc.).', 'alvobot-pro' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"level":2} -->

@@ -162,9 +162,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			// Send to each active pixel using split-batch logic on failure.
-			foreach ( $active_pixels as $pixel_config ) {
-				$this->process_pixel_batch( $events, $pixel_config, $settings );
-			}
+				foreach ( $active_pixels as $pixel_config ) {
+					$this->process_pixel_batch( $events, $pixel_config, $settings, $all_capi_pixels );
+				}
 
 			$sent   = 0;
 			$failed = 0;
@@ -178,12 +178,18 @@ class AlvoBotPro_PixelTracking_CAPI {
 					continue;
 				}
 
-				// Check delivery against ALL CAPI pixels (including expired).
-				// Events missing delivery to an expired pixel stay pending for backlog.
-				if ( ! $this->all_pixels_delivered( $event_post_id, $all_capi_pixels ) ) {
-					++$failed;
-					continue;
-				}
+					$expected_pixel_ids = $this->get_expected_pixel_ids_for_event( $event_post_id, $all_capi_pixels );
+					if ( empty( $expected_pixel_ids ) ) {
+						update_post_meta( $event_post_id, '_dispatch_channel', 'none' );
+						$this->module->cpt->mark_events_sent( array( $event_post_id ) );
+						++$sent;
+						continue;
+					}
+
+					if ( ! $this->all_pixels_delivered( $event_post_id, $expected_pixel_ids ) ) {
+						++$failed;
+						continue;
+					}
 
 				update_post_meta( $event_post_id, '_dispatch_channel', 'track_event' === $dispatch_source ? 'realtime' : 'queue' );
 				$this->module->cpt->mark_events_sent( array( $event_post_id ) );
@@ -306,7 +312,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 	/**
 	 * Process batch for a specific pixel with split logic.
 	 */
-	private function process_pixel_batch( $events, $pixel_config, $settings ) {
+	private function process_pixel_batch( $events, $pixel_config, $settings, $all_capi_pixels ) {
 		$pixel_id   = $pixel_config['pixel_id'];
 		$api_token  = $pixel_config['api_token'];
 		$sent_ids   = array();
@@ -315,6 +321,11 @@ class AlvoBotPro_PixelTracking_CAPI {
 		// Skip events already delivered to this pixel (prevents duplicates during backlog).
 		$events_to_send = array();
 		foreach ( $events as $event ) {
+			$expected_pixel_ids = $this->get_expected_pixel_ids_for_event( $event->ID, $all_capi_pixels );
+			if ( ! in_array( $pixel_id, $expected_pixel_ids, true ) ) {
+				continue;
+			}
+
 			$delivered      = get_post_meta( $event->ID, '_fb_pixel_ids', true );
 			$delivered_list = $delivered ? array_map( 'trim', explode( ',', $delivered ) ) : array();
 			if ( ! in_array( $pixel_id, $delivered_list, true ) ) {
@@ -348,6 +359,24 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 			$sent_ids = $ids;
 		} else {
+			if ( isset( $result['code'] ) && 429 === (int) $result['code'] ) {
+				$delay = ! empty( $result['retry_after'] ) ? absint( $result['retry_after'] ) : 60;
+				$delay = max( 5, min( 300, $delay ) );
+				foreach ( $events as $event ) {
+					update_post_meta( $event->ID, '_fb_error_message', 'rate_limited' );
+				}
+				$this->schedule_dispatch_retry(
+					array(
+						'source' => 'meta_rate_limit',
+					),
+					$delay
+				);
+				return array(
+					'sent_ids'   => array(),
+					'failed_ids' => array(),
+				);
+			}
+
 			// Handle auth errors (401/403) — try auto-refresh before marking expired.
 			if ( isset( $result['code'] ) && in_array( $result['code'], array( 401, 403 ), true ) ) {
 				$new_token = $this->try_refresh_token( $pixel_id );
@@ -410,23 +439,69 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * @param array $active_pixels Active pixel settings.
 	 * @return bool
 	 */
-	private function all_pixels_delivered( $event_post_id, $active_pixels ) {
+	private function all_pixels_delivered( $event_post_id, $expected_pixel_ids ) {
 		$delivered      = get_post_meta( $event_post_id, '_fb_pixel_ids', true );
 		$delivered      = is_string( $delivered ) ? $delivered : '';
 		$delivered_list = array_filter( array_map( 'trim', explode( ',', $delivered ) ) );
 
-		foreach ( $active_pixels as $pixel_config ) {
-			$pixel_id = isset( $pixel_config['pixel_id'] ) ? (string) $pixel_config['pixel_id'] : '';
-			if ( '' === $pixel_id ) {
-				continue;
-			}
-
+		foreach ( $expected_pixel_ids as $pixel_id ) {
 			if ( ! in_array( $pixel_id, $delivered_list, true ) ) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	/**
+	 * Resolve which Meta pixels an event is expected to reach.
+	 *
+	 * @param int   $event_post_id Event post ID.
+	 * @param array $available_pixels Pixels configured for CAPI.
+	 * @return string[]
+	 */
+	private function get_expected_pixel_ids_for_event( $event_post_id, $available_pixels ) {
+		$available_pixel_ids = array();
+		foreach ( $available_pixels as $pixel_config ) {
+			if ( empty( $pixel_config['pixel_id'] ) ) {
+				continue;
+			}
+			$available_pixel_ids[] = (string) $pixel_config['pixel_id'];
+		}
+		$available_pixel_ids = array_values( array_unique( $available_pixel_ids ) );
+
+		if ( empty( $available_pixel_ids ) ) {
+			return array();
+		}
+
+		$raw_targets       = (string) get_post_meta( $event_post_id, '_pixel_ids', true );
+		$requested_targets = array_values( array_filter( array_map( 'trim', explode( ',', $raw_targets ) ) ) );
+		$meta_targets      = array_values(
+			array_filter(
+				$requested_targets,
+				function ( $target_id ) {
+					return (bool) preg_match( '/^\d{15,16}$/', $target_id );
+				}
+			)
+		);
+
+		if ( ! empty( $requested_targets ) && empty( $meta_targets ) ) {
+			return array();
+		}
+
+		if ( empty( $meta_targets ) ) {
+			return $available_pixel_ids;
+		}
+
+		$available_lookup = array_fill_keys( $available_pixel_ids, true );
+		return array_values(
+			array_filter(
+				array_unique( $meta_targets ),
+				function ( $pixel_id ) use ( $available_lookup ) {
+					return isset( $available_lookup[ $pixel_id ] );
+				}
+			)
+		);
 	}
 
 		/**
@@ -968,13 +1043,14 @@ class AlvoBotPro_PixelTracking_CAPI {
 			);
 
 		if ( 429 === $code ) {
-				return array(
-					'success'          => false,
-					'error'            => 'rate_limited',
-					'code'             => 429,
-					'request_payload'  => $debug_request,
-					'response_payload' => $response_payload,
-				);
+			return array(
+				'success'          => false,
+				'error'            => 'rate_limited',
+				'code'             => 429,
+				'retry_after'      => $this->parse_retry_after_seconds( wp_remote_retrieve_header( $response, 'retry-after' ) ),
+				'request_payload'  => $debug_request,
+				'response_payload' => $response_payload,
+			);
 		}
 
 		if ( $code >= 400 ) {
@@ -1017,7 +1093,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * @param string $pixel_id      Target pixel ID.
 	 */
 	private function store_debug_payloads( $events, $payload_batch, $result, $pixel_id ) {
-		$response_payload = isset( $result['response_payload'] ) ? $result['response_payload'] : array();
+		$response_payload = $this->sanitize_debug_response_payload( isset( $result['response_payload'] ) ? $result['response_payload'] : array() );
 		$test_event_code = '';
 		$batch_size      = count( $payload_batch );
 		if ( isset( $result['request_payload']['test_event_code'] ) ) {
@@ -1026,6 +1102,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 		foreach ( $events as $index => $event ) {
 			$event_payload = isset( $payload_batch[ $index ] ) ? $payload_batch[ $index ] : array();
+			$event_payload = $this->sanitize_debug_event_payload( $event_payload );
 
 			// Build per-event request payload.
 			$per_event_request = array(
@@ -1048,9 +1125,80 @@ class AlvoBotPro_PixelTracking_CAPI {
 				'response' => $response_payload,
 				'success'  => ! empty( $result['success'] ),
 			);
+			if ( count( $log_entries ) > 5 ) {
+				$log_entries = array_slice( $log_entries, -5 );
+			}
 			update_post_meta( $event->ID, '_fb_request_payload', $log_entries );
 			update_post_meta( $event->ID, '_fb_response_payload', $response_payload );
 		}
+	}
+
+	/**
+	 * Strip sensitive and heavy fields from per-event debug request logs.
+	 *
+	 * @param array $event_payload Event payload.
+	 * @return array
+	 */
+	private function sanitize_debug_event_payload( $event_payload ) {
+		if ( ! is_array( $event_payload ) ) {
+			return array();
+		}
+
+		$sanitized = $event_payload;
+		if ( isset( $sanitized['user_data'] ) && is_array( $sanitized['user_data'] ) ) {
+			$sanitized['user_data_keys'] = array_values( array_keys( array_filter( $sanitized['user_data'] ) ) );
+			unset( $sanitized['user_data'] );
+		}
+		if ( isset( $sanitized['custom_data'] ) && is_array( $sanitized['custom_data'] ) && count( $sanitized['custom_data'] ) > 15 ) {
+			$sanitized['custom_data'] = array_slice( $sanitized['custom_data'], 0, 15, true );
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Keep only compact response details in debug logs.
+	 *
+	 * @param array $response_payload Raw response payload.
+	 * @return array
+	 */
+	private function sanitize_debug_response_payload( $response_payload ) {
+		if ( ! is_array( $response_payload ) ) {
+			return array();
+		}
+
+		$body = isset( $response_payload['body'] ) && is_array( $response_payload['body'] ) ? $response_payload['body'] : array();
+
+		return array(
+			'http_code'       => isset( $response_payload['http_code'] ) ? absint( $response_payload['http_code'] ) : 0,
+			'events_received' => isset( $body['events_received'] ) ? absint( $body['events_received'] ) : 0,
+			'messages'        => isset( $body['messages'] ) && is_array( $body['messages'] ) ? array_slice( $body['messages'], 0, 5 ) : array(),
+			'error'           => isset( $body['error']['message'] ) ? sanitize_text_field( (string) $body['error']['message'] ) : '',
+		);
+	}
+
+	/**
+	 * Parse Meta's Retry-After header into seconds.
+	 *
+	 * @param string $retry_after Raw header value.
+	 * @return int
+	 */
+	private function parse_retry_after_seconds( $retry_after ) {
+		$retry_after = trim( (string) $retry_after );
+		if ( '' === $retry_after ) {
+			return 60;
+		}
+
+		if ( ctype_digit( $retry_after ) ) {
+			return absint( $retry_after );
+		}
+
+		$timestamp = strtotime( $retry_after );
+		if ( false === $timestamp ) {
+			return 60;
+		}
+
+		return max( 1, $timestamp - time() );
 	}
 
 		/**
@@ -1259,6 +1407,10 @@ class AlvoBotPro_PixelTracking_CAPI {
 							);
 					}
 				}
+			}
+
+			if ( empty( $results ) ) {
+				return new WP_Error( 'no_test_pixels', __( 'Nenhum pixel Meta com token válido está configurado.', 'alvobot-pro' ) );
 			}
 
 			return $results;

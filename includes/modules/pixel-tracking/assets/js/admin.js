@@ -605,17 +605,17 @@
 				} else {
 					$googleAlvobotFetch.show();
 				}
-			} else {
-				$manualFields.show();
-				if (currentPlatform === 'meta_pixel') {
-					$( '#add-field-meta-id, #add-field-meta-token, #add-field-label' ).show();
-				} else if (currentPlatform === 'ga4') {
-					$( '#add-field-ga4-id, #add-field-label' ).show();
-				} else if (currentPlatform === 'google_ads') {
-					$( '#add-field-gads-id, #add-field-label' ).show();
+				} else {
+					$manualFields.show();
+					if (currentPlatform === 'meta_pixel') {
+						$( '#add-field-meta-id, #add-field-meta-token, #add-field-label' ).show();
+					} else if (currentPlatform === 'ga4') {
+						$( '#add-field-ga4-id, #add-field-label' ).show();
+					} else if (currentPlatform === 'google_ads') {
+						$( '#add-field-gads-id, #add-field-gads-label, #add-field-label' ).show();
+					}
+					$addBtn.show();
 				}
-				$addBtn.show();
-			}
 		});
 
 		// Step 3: Add button — validate and add pixel/tracker
@@ -652,27 +652,28 @@
 				}
 				googleTrackersData.push( { tracker_id: gaId, type: 'ga4', label: label, conversion_label: '' } );
 				updateGoogleTrackersHiddenField();
-			} else if (currentPlatform === 'google_ads') {
-				var adsId = $( '#manual_gads_id' ).val().trim();
-				if ( ! /^AW-\d{7,12}$/.test( adsId )) {
-					alert( 'Formato invalido. Use AW-XXXXXXXXX (numeros).' );
-					return;
+				} else if (currentPlatform === 'google_ads') {
+					var adsId = $( '#manual_gads_id' ).val().trim();
+					var adsLabel = $( '#manual_gads_conv_label' ).val().trim();
+					if ( ! /^AW-\d{7,12}$/.test( adsId )) {
+						alert( 'Formato invalido. Use AW-XXXXXXXXX (numeros).' );
+						return;
 				}
 				for (var k = 0; k < googleTrackersData.length; k++) {
-					if (googleTrackersData[k].tracker_id === adsId) {
-						alert( 'Este Tracker ID ja esta configurado.' );
-						return;
+						if (googleTrackersData[k].tracker_id === adsId) {
+							alert( 'Este Tracker ID ja esta configurado.' );
+							return;
+						}
 					}
+					googleTrackersData.push( { tracker_id: adsId, type: 'google_ads', label: label, conversion_label: adsLabel } );
+					updateGoogleTrackersHiddenField();
 				}
-				googleTrackersData.push( { tracker_id: adsId, type: 'google_ads', label: label, conversion_label: '' } );
-				updateGoogleTrackersHiddenField();
-			}
 
-			// Reset form
-			$( '#manual_pixel_id, #manual_api_token, #manual_ga4_id, #manual_gads_id, #manual_pixel_label' ).val( '' );
-			$( '#add_pixel_platform' ).val( '' ).trigger( 'change' );
-			renderUnifiedTable();
-		});
+				// Reset form
+				$( '#manual_pixel_id, #manual_api_token, #manual_ga4_id, #manual_gads_id, #manual_gads_conv_label, #manual_pixel_label' ).val( '' );
+				$( '#add_pixel_platform' ).val( '' ).trigger( 'change' );
+				renderUnifiedTable();
+			});
 
 		// ── Remove handlers ──────────────────────────────────────────
 		$( document ).on( 'click', '.alvobot-remove-meta-pixel', function () {
@@ -1419,17 +1420,22 @@
 		);
 
 		// Fill form with conversion data
-		function fillConversionForm(c) {
+			function fillConversionForm(c) {
 			$( '#conv_id' ).val( c.id );
 			$( '#conv_name' ).val( c.name );
 			$( '#conv_event_type' ).val( c.event_type ).trigger( 'change' );
 			$( '#conv_event_custom_name' ).val( c.event_custom_name );
-			$( '#conv_trigger_type' ).val( c.trigger_type ).trigger( 'change' );
-			$( '#conv_trigger_value' ).val( c.trigger_value );
-			$( '#conv_display_on' ).val( c.display_on ).trigger( 'change' );
-			$( '#conv_page_paths' ).val( c.page_paths );
-			$( '#conv_css_selector' ).val( c.css_selector );
-			$( '#conv_content_name' ).val( c.content_name );
+				$( '#conv_trigger_type' ).val( c.trigger_type ).trigger( 'change' );
+				$( '#conv_trigger_value' ).val( c.trigger_value );
+				$( '#conv_display_on' ).val( c.display_on ).trigger( 'change' );
+					var pageIds = Array.isArray( c.page_ids )
+						? c.page_ids
+						: (typeof c.page_ids === 'string' && c.page_ids ? c.page_ids.split( ',' ) : []);
+				$( '#conv_page_ids' ).val( pageIds.join( ',' ) );
+				$( '#conv_page_ids_legacy' ).val( pageIds.join( ', ' ) );
+				$( '#conv_page_paths' ).val( c.page_paths );
+				$( '#conv_css_selector' ).val( c.css_selector );
+				$( '#conv_content_name' ).val( c.content_name );
 			$( '#conv_gads_conversion_value' ).val( c.gads_conversion_value || '' );
 
 			// Load per-tracker labels map (new format) or migrate from legacy single label
@@ -1459,17 +1465,19 @@
 		}
 
 		// Reset conversion form
-		function resetConversionForm() {
+			function resetConversionForm() {
 			$( '#conv_id' ).val( '0' );
 			$( '#conv_name' ).val( '' );
 			$( '#conv_event_type' ).val( 'PageView' ).trigger( 'change' );
 			$( '#conv_event_custom_name' ).val( '' );
-			$( '#conv_trigger_type' ).val( 'page_load' ).trigger( 'change' );
-			$( '#conv_trigger_value' ).val( '' );
-			$( '#conv_display_on' ).val( 'all' ).trigger( 'change' );
-			$( '#conv_page_paths' ).val( '' );
-			$( '#conv_css_selector' ).val( '' );
-			$( '#conv_content_name' ).val( '' );
+				$( '#conv_trigger_type' ).val( 'page_load' ).trigger( 'change' );
+				$( '#conv_trigger_value' ).val( '' );
+				$( '#conv_display_on' ).val( 'all' ).trigger( 'change' );
+				$( '#conv_page_ids' ).val( '' );
+				$( '#conv_page_ids_legacy' ).val( '' );
+				$( '#conv_page_paths' ).val( '' );
+				$( '#conv_css_selector' ).val( '' );
+				$( '#conv_content_name' ).val( '' );
 			$( '#conv_gads_conversion_label' ).val( '' );
 			$( '#conv_gads_labels_map' ).val( '{}' );
 			$( '#conv_gads_conversion_value' ).val( '' );
@@ -1511,17 +1519,22 @@
 			}
 		);
 
-		$( document ).on(
-			'change',
-			'#conv_display_on',
-			function () {
-				if ($( this ).val() === 'path') {
-					$( '#conv-page-paths-field' ).addClass( 'visible' );
-				} else {
-					$( '#conv-page-paths-field' ).removeClass( 'visible' );
+			$( document ).on(
+				'change',
+				'#conv_display_on',
+				function () {
+					if ($( this ).val() === 'path') {
+						$( '#conv-page-paths-field' ).addClass( 'visible' );
+					} else {
+						$( '#conv-page-paths-field' ).removeClass( 'visible' );
+					}
+					if ($( this ).val() === 'specific') {
+						$( '#conv-page-ids-legacy-field' ).addClass( 'visible' );
+					} else {
+						$( '#conv-page-ids-legacy-field' ).removeClass( 'visible' );
+					}
 				}
-			}
-		);
+			);
 
 		// ── Bulk Selection & Delete ──────────────────────────────────
 
@@ -1802,27 +1815,32 @@
 		$( document ).on(
 			'click',
 			'#alvobot-save-conversion-btn',
-			function () {
-				var $btn = $( this );
-				if ($btn.prop( 'disabled' )) { return; } // Guard against race condition with auto-save
-				$btn.prop( 'disabled', true );
+				function () {
+					var $btn = $( this );
+					if ($btn.prop( 'disabled' )) { return; } // Guard against race condition with auto-save
+					$btn.prop( 'disabled', true );
+					var pageIdsRaw = $( '#conv_page_ids' ).val();
+					var pageIds = pageIdsRaw
+						? pageIdsRaw.split( ',' ).map( function (value) { return parseInt( value, 10 ); } ).filter( function (value) { return ! isNaN( value ) && value > 0; } )
+						: [];
 
-				$.ajax(
-					{
-						url: config.ajaxurl,
-						method: 'POST',
-						data: {
+						$.ajax(
+							{
+								url: config.ajaxurl,
+							method: 'POST',
+							data: {
 							action: 'alvobot_pixel_tracking_save_conversion',
 							nonce: config.nonce,
 							conversion_id: $( '#conv_id' ).val(),
 							name: $( '#conv_name' ).val(),
 							event_type: $( '#conv_event_type' ).val(),
-							event_custom_name: $( '#conv_event_custom_name' ).val(),
-							trigger_type: $( '#conv_trigger_type' ).val(),
-							trigger_value: $( '#conv_trigger_value' ).val(),
-							display_on: $( '#conv_display_on' ).val(),
-							page_paths: $( '#conv_page_paths' ).val(),
-							css_selector: $( '#conv_css_selector' ).val(),
+								event_custom_name: $( '#conv_event_custom_name' ).val(),
+								trigger_type: $( '#conv_trigger_type' ).val(),
+								trigger_value: $( '#conv_trigger_value' ).val(),
+								display_on: $( '#conv_display_on' ).val(),
+								page_ids: pageIds,
+								page_paths: $( '#conv_page_paths' ).val(),
+								css_selector: $( '#conv_css_selector' ).val(),
 							content_name: $( '#conv_content_name' ).val(),
 							pixel_ids: $( '#conv_pixel_ids' ).val(),
 							gads_conversion_label: $( '#conv_gads_conversion_label' ).val(),

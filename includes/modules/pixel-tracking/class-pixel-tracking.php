@@ -930,6 +930,103 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 	}
 
+	private function derive_platforms_from_target_ids( $ids_array ) {
+		$ids_array  = array_filter( array_map( 'trim', (array) $ids_array ) );
+		$has_meta   = false;
+		$has_google = false;
+
+		foreach ( $ids_array as $target_id ) {
+			if ( preg_match( '/^\d{15,16}$/', $target_id ) ) {
+				$has_meta = true;
+			}
+			if ( preg_match( '/^(G-|AW-)/', $target_id ) || 'sitekit_gtag' === $target_id ) {
+				$has_google = true;
+			}
+		}
+
+		if ( empty( $ids_array ) || ( $has_meta && $has_google ) ) {
+			return 'all';
+		}
+		if ( $has_meta ) {
+			return 'meta_only';
+		}
+		if ( $has_google ) {
+			return 'google_only';
+		}
+
+		return 'all';
+	}
+
+	private function sync_conversion_targets_to_active_trackers( $active_target_ids ) {
+		$active_target_ids = array_values( array_filter( array_map( 'strval', (array) $active_target_ids ) ) );
+		$valid_lookup      = array_fill_keys( $active_target_ids, true );
+		$conversions       = $this->cpt->get_conversions( true );
+
+		foreach ( $conversions as $conv ) {
+			$raw_pixel_ids = (string) get_post_meta( $conv->ID, '_pixel_ids', true );
+			$selected_ids  = array_values( array_filter( array_map( 'trim', explode( ',', $raw_pixel_ids ) ) ) );
+			$valid_ids     = array_values(
+				array_filter(
+					$selected_ids,
+					function ( $target_id ) use ( $valid_lookup ) {
+						return isset( $valid_lookup[ $target_id ] );
+					}
+				)
+			);
+
+			$labels_map_raw = get_post_meta( $conv->ID, '_gads_labels_map', true );
+			$labels_map     = array();
+			if ( is_string( $labels_map_raw ) && '' !== $labels_map_raw ) {
+				$decoded_labels_map = json_decode( $labels_map_raw, true );
+				if ( is_array( $decoded_labels_map ) ) {
+					$labels_map = $decoded_labels_map;
+				}
+			}
+
+			$filtered_labels_map = array();
+			foreach ( $labels_map as $tracker_id => $label ) {
+				if ( in_array( $tracker_id, $valid_ids, true ) ) {
+					$filtered_labels_map[ $tracker_id ] = $label;
+				}
+			}
+
+			$pixel_ids_changed   = implode( ',', $selected_ids ) !== implode( ',', $valid_ids );
+			$labels_map_changed  = wp_json_encode( $labels_map ) !== wp_json_encode( $filtered_labels_map );
+			$had_explicit_target = ! empty( $selected_ids );
+
+			if ( ! $pixel_ids_changed && ! $labels_map_changed ) {
+				continue;
+			}
+
+			if ( $had_explicit_target && empty( $valid_ids ) ) {
+				update_post_meta( $conv->ID, '_orphaned_pixel_ids', $raw_pixel_ids );
+				update_post_meta( $conv->ID, '_pixel_ids', '' );
+				update_post_meta( $conv->ID, '_platforms', 'all' );
+				update_post_meta( $conv->ID, '_gads_labels_map', wp_json_encode( array() ) );
+				update_post_meta( $conv->ID, '_gads_conversion_label', '' );
+				if ( 'publish' === $conv->post_status ) {
+					wp_update_post(
+						array(
+							'ID'          => $conv->ID,
+							'post_status' => 'draft',
+						)
+					);
+				}
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Conversion ' . $conv->ID . ' foi desativada porque todos os trackers selecionados ficaram orfaos.' );
+				continue;
+			}
+
+			delete_post_meta( $conv->ID, '_orphaned_pixel_ids' );
+			update_post_meta( $conv->ID, '_pixel_ids', implode( ',', $valid_ids ) );
+			update_post_meta( $conv->ID, '_platforms', $this->derive_platforms_from_target_ids( $valid_ids ) );
+			update_post_meta( $conv->ID, '_gads_labels_map', wp_json_encode( $filtered_labels_map ) );
+			if ( empty( $filtered_labels_map ) ) {
+				update_post_meta( $conv->ID, '_gads_conversion_label', '' );
+			}
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Conversion ' . $conv->ID . ' teve trackers sincronizados com a configuracao ativa.' );
+		}
+	}
+
 	/**
 	 * Override base: use tab-based admin page template.
 	 */
@@ -1086,7 +1183,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['test_event_code'] = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
 		$sanitized['realtime_dispatch'] = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
 
-		$sanitized['consent_check']  = ! isset( $settings['consent_check'] ) || ! empty( $settings['consent_check'] );
+		// Consent gate must stay opt-in; other tabs can submit without this field.
+		$sanitized['consent_check']  = ! empty( $settings['consent_check'] );
 		$sanitized['consent_cookie'] = isset( $settings['consent_cookie'] ) ? sanitize_text_field( $settings['consent_cookie'] ) : 'alvobot_tracking_consent';
 
 		$sanitized['excluded_roles'] = array();
@@ -1183,20 +1281,38 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['google_analytics_id']         = '';
 		$sanitized['google_ads_id']               = '';
 		$sanitized['google_ads_conversion_label']  = '';
-		foreach ( $sanitized_trackers as $t ) {
+			foreach ( $sanitized_trackers as $t ) {
 			if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
 				$sanitized['google_analytics_id'] = $t['tracker_id'];
 			}
 			if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
-				$sanitized['google_ads_id']              = $t['tracker_id'];
+				$sanitized['google_ads_id']               = $t['tracker_id'];
 				$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
 			}
 		}
 
-		return $sanitized;
-	}
+			$active_target_ids = array_merge(
+				array_column( $sanitized_pixels, 'pixel_id' ),
+				array_column( $sanitized_trackers, 'tracker_id' )
+			);
+			$this->sync_conversion_targets_to_active_trackers( $active_target_ids );
+
+			return $sanitized;
+		}
 
 	protected function render_additional_content( $settings ) {
 		// Content now rendered via tab view files.
+	}
+
+	/**
+	 * Schedule cleanup without blocking the current request.
+	 *
+	 * @param int $delay_seconds Delay before the cleanup run.
+	 * @return void
+	 */
+	public function schedule_cleanup_run( $delay_seconds = 15 ) {
+		if ( $this->cleanup instanceof AlvoBotPro_PixelTracking_Cleanup ) {
+			$this->cleanup->schedule_urgent_cleanup( $delay_seconds );
+		}
 	}
 }

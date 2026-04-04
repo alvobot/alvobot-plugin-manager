@@ -65,6 +65,30 @@ jQuery(document).ready(function ($) {
 		}, 3000);
 	}
 
+	var reloadTimer = null;
+	var $reloadNotice = null;
+
+	function scheduleReload() {
+		clearTimeout(reloadTimer);
+
+		if ($reloadNotice) {
+			$reloadNotice.remove();
+			$reloadNotice = null;
+		}
+
+		$reloadNotice = $('<div>')
+			.addClass('alvobot-notice alvobot-notice-info')
+			.text('Recarregando a página em 3 segundos para aplicar as alterações...')
+			.hide();
+		$('.alvobot-pro-notices').prepend($reloadNotice);
+		$reloadNotice.fadeIn();
+		updateNoticesVisibility();
+
+		reloadTimer = setTimeout(function () {
+			window.location.href = window.location.href.split('#')[0];
+		}, 3000);
+	}
+
 	// Manipulador para toggles de módulos (apenas checkboxes com data-module, não debug toggles)
 	$('.alvobot-toggle input[type="checkbox"][data-module]').on('change', function (e) {
 		// Previne o comportamento padrão para controlar manualmente
@@ -114,13 +138,8 @@ jQuery(document).ready(function ($) {
 						$card.removeClass('module-enabled');
 					}
 
-					// Mostra a mensagem de sucesso
 					showNotice(response.data.message);
-
-					// Recarrega a página após 1 segundo para atualizar todos os estados
-					setTimeout(function () {
-						window.location.href = window.location.href.split('#')[0];
-					}, 1000);
+					scheduleReload();
 				} else {
 					// Reverte o toggle em caso de erro
 					$toggle.prop('checked', !isEnabled);
