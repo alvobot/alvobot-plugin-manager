@@ -201,6 +201,15 @@ class AlvoBotPro_PixelTracking_Frontend {
 			$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( (string) $wp_user->ID );
 		}
 
+		// For all visitors (including anonymous): use _fbp cookie as external_id fallback.
+		// _fbp is set by the Meta Pixel JS on first visit; available in $_COOKIE on return visits.
+		if ( empty( $user_data_hashed['external_id'] ) ) {
+			$fbp_raw = isset( $_COOKIE['_fbp'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['_fbp'] ) ) : '';
+			if ( $fbp_raw ) {
+				$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( $fbp_raw );
+			}
+		}
+
 		// Generate a server-side event_id for the initial PageView.
 		// Shared with tracking.js so browser fbq() and CAPI use the same ID for deduplication.
 		$pageview_event_id = function_exists( 'wp_generate_uuid4' )
@@ -294,7 +303,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				content_category: <?php echo wp_json_encode( $content_category ); ?>,
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
-				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>,
+				user_data_hashed: <?php echo wp_json_encode( empty( $user_data_hashed ) ? new stdClass() : $user_data_hashed ); ?>,
 				meta_pixel_base_injected: <?php echo $meta_base_injected ? 'true' : 'false'; ?>,
 				pageview_event_id: <?php echo wp_json_encode( $meta_base_injected ? $pageview_event_id : '' ); ?>,
 				google_trackers: <?php

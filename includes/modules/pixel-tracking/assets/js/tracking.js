@@ -124,12 +124,15 @@
 					}
 
 						this.tracking_enabled = true;
+
+				// Capture fbp/fbc first so init_fb_sdk can use them for Advanced Matching.
+				this.data.fbp        = this.get_fbp();
+				this.data.fbc        = this.get_fbc();
+
 						this.refresh_meta_pixel_state();
 						this.refresh_google_tag_state();
 
-				// Capture visitor data
-				this.data.fbp        = this.get_fbp();
-				this.data.fbc        = this.get_fbc();
+				// Capture remaining visitor data
 				this.data.utms       = this.get_utms();
 					this.data.user_agent = navigator.userAgent;
 
@@ -226,7 +229,19 @@
 			 * fallback for cases where Meta browser tracking only becomes allowed after
 			 * consent is granted in the browser.
 			 */
-				init_fb_sdk(pixel_ids_str) {
+				async sha256(str) {
+				try {
+					var data = new TextEncoder().encode( str );
+					var buf  = await crypto.subtle.digest( 'SHA-256', data );
+					return Array.from( new Uint8Array( buf ) )
+						.map( function (b) { return b.toString( 16 ).padStart( 2, '0' ); } )
+						.join( '' );
+				} catch (e) {
+					return '';
+				}
+			}
+
+			async init_fb_sdk(pixel_ids_str) {
 				var ids = pixel_ids_str.split( ',' ).map(
 					function (s) {
 						return s.trim(); }
@@ -240,6 +255,23 @@
 					return;
 				}
 				this.log_debug( 'init_fb_sdk', { requested: pixel_ids_str, deduped_ids: ids } );
+
+				// Build Advanced Matching data from server-side hashed fields.
+				// Ensure it is always a plain object (never an array).
+				var serverData = (this.config && this.config.user_data_hashed && ! Array.isArray( this.config.user_data_hashed ))
+					? this.config.user_data_hashed
+					: {};
+				var advancedMatchData = Object.assign( {}, serverData );
+
+				// If external_id is still missing (anonymous visitor — first visit before PHP
+				// could read the _fbp cookie), hash the fbp value client-side and inject it.
+				if ( ! advancedMatchData.external_id && this.data.fbp) {
+					var hashed = await this.sha256( this.data.fbp );
+					if (hashed) {
+						advancedMatchData.external_id = hashed;
+						this.log_debug( 'init_fb_sdk: external_id hashed client-side from fbp' );
+					}
+				}
 
 				// If fbq stub already exists (base code ran in <head>), skip stub creation
 				// and SDK script injection — fbevents.js is already loading.
@@ -264,20 +296,24 @@
 					s.parentNode.insertBefore( t, s );
 				}
 
-					// fbq('init') not yet called — do it now for each pixel.
-					// Pass user_data_hashed (pre-hashed server-side) for Advanced Matching
-					// when available (logged-in users: em, fn, ln, external_id).
-					var advancedMatchData = (this.config && this.config.user_data_hashed)
-						? this.config.user_data_hashed
-						: {};
 					for (var i = 0; i < ids.length; i++) {
 						window.fbq( 'init', ids[i], advancedMatchData );
 						this.log_debug( 'fbq init (late — base code absent)', { pixel_id: ids[i], advanced_match_keys: Object.keys( advancedMatchData ) } );
 					}
+				} else {
+					// Base code already ran — re-call fbq('init') to update Advanced Matching
+					// with external_id (and any other hashed fields) that may not have been
+					// available synchronously in <head> when the base code executed.
+					if (Object.keys( advancedMatchData ).length > 0) {
+						for (var j = 0; j < ids.length; j++) {
+							window.fbq( 'init', ids[j], advancedMatchData );
+							this.log_debug( 'fbq init (update Advanced Matching on existing pixel)', { pixel_id: ids[j], advanced_match_keys: Object.keys( advancedMatchData ) } );
+						}
 					} else {
-						this.log_debug( 'fbq already present from base code — skipping stub + SDK load', { ids: ids } );
+						this.log_debug( 'fbq already present from base code — no Advanced Matching data to update', { ids: ids } );
 					}
 				}
+			}
 
 					refresh_meta_pixel_state() {
 					if ( ! this.config.pixel_ids) {
@@ -1112,7 +1148,7 @@
 						geo: this.data.geolocation,
 						utms: this.data.utms,
 						lead_id: this.data.lead_id || '',
-						user_data_hashed: this.config.user_data_hashed || {},
+						user_data_hashed: (this.config.user_data_hashed && ! Array.isArray( this.config.user_data_hashed )) ? this.config.user_data_hashed : {},
 						custom_data: custom_data,
 						pixel_ids: params.fb_pixels || this.config.pixel_ids,
 						gclid: this.data.gclid || '',
