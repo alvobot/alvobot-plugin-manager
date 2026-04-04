@@ -557,6 +557,7 @@
 						geo = {
 							city: data2.city,
 							state: data2.region,
+							state_code: data2.region_code || '',
 							country: data2.country,
 							country_code: data2.country_code,
 							zipcode: data2.postal || '',

@@ -550,7 +550,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 			// --- user_data: hashed geo fields (Meta requires normalization before SHA256) ---
 			$country_code = get_post_meta( $post_id, '_geo_country_code', true );
 			$city         = get_post_meta( $post_id, '_geo_city', true );
-			$state        = get_post_meta( $post_id, '_geo_state', true );
+			$state_code   = get_post_meta( $post_id, '_geo_state_code', true ); // 2-letter region code (e.g., "SP", "CA")
+			$state        = get_post_meta( $post_id, '_geo_state', true );      // Full name fallback
 			$zipcode      = get_post_meta( $post_id, '_geo_zipcode', true );
 
 			if ( $country_code ) {
@@ -558,13 +559,15 @@ class AlvoBotPro_PixelTracking_CAPI {
 					$user_data['country'] = array( AlvoBotPro_PixelTracking_CPT::hash_pii( strtolower( $country_code ) ) );
 			}
 			if ( $city ) {
-					// Meta: lowercase, no punctuation/spaces. hash_pii already strips whitespace.
+					// Meta: lowercase, no punctuation/spaces.
 					$normalized_city = preg_replace( '/[^a-z\p{L}]/u', '', strtolower( $city ) );
 					$user_data['ct'] = array( hash( 'sha256', $normalized_city ) );
 			}
-			if ( $state ) {
-					// Meta: lowercase 2-char ANSI abbreviation (US) or lowercase text.
-					$user_data['st'] = array( AlvoBotPro_PixelTracking_CPT::hash_pii( strtolower( $state ) ) );
+			// Meta: lowercase 2-char ANSI abbreviation (US) or equivalent 2-letter code.
+			// Prefer state_code (from ipwho.is region_code: "SP", "CA") over full state name.
+			$state_for_hash = $state_code ? $state_code : $state;
+			if ( $state_for_hash ) {
+					$user_data['st'] = array( AlvoBotPro_PixelTracking_CPT::hash_pii( strtolower( $state_for_hash ) ) );
 			}
 			if ( $zipcode ) {
 					// Meta: lowercase, no spaces or dashes.

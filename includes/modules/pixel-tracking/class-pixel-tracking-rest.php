@@ -886,6 +886,7 @@ class AlvoBotPro_PixelTracking_REST {
 		$keys  = array(
 			'city'         => 120,
 			'state'        => 120,
+			'state_code'   => 8,   // 2-letter region code from ipwho.is (e.g., "SP", "CA")
 			'country'      => 120,
 			'country_code' => 8,
 			'zipcode'      => 24,
@@ -2342,23 +2343,28 @@ class AlvoBotPro_PixelTracking_REST {
 		$geo = false;
 
 		// Primary: ip-api.com Pro (HTTPS, higher rate limit).
-		$response = wp_remote_get(
-			'https://pro.ip-api.com/json/' . rawurlencode( $ip ) . '?key=TOLoWxdNIA0zIZm&fields=status,city,regionName,country,countryCode,zip,currency,timezone',
-			array( 'timeout' => 5 )
-		);
+		$geo_api_key = defined( 'ALVOBOT_GEO_API_KEY' ) ? ALVOBOT_GEO_API_KEY : '';
+		if ( $geo_api_key ) {
+			// ip-api.com Pro: 'region' = 2-letter state code (US), 'regionName' = full name.
+			$response = wp_remote_get(
+				'https://pro.ip-api.com/json/' . rawurlencode( $ip ) . '?key=' . rawurlencode( $geo_api_key ) . '&fields=status,city,region,regionName,country,countryCode,zip,currency,timezone',
+				array( 'timeout' => 5 )
+			);
 
-		if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( ! empty( $body['city'] ) && ( ! isset( $body['status'] ) || 'success' === $body['status'] ) ) {
-				$geo = array(
-					'city'         => $body['city'],
-					'state'        => isset( $body['regionName'] ) ? $body['regionName'] : '',
-					'country'      => isset( $body['country'] ) ? $body['country'] : '',
-					'country_code' => isset( $body['countryCode'] ) ? $body['countryCode'] : '',
-					'zipcode'      => isset( $body['zip'] ) ? $body['zip'] : '',
-					'currency'     => isset( $body['currency'] ) ? $body['currency'] : '',
-					'timezone'     => isset( $body['timezone'] ) ? $body['timezone'] : '',
-				);
+			if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
+				$body = json_decode( wp_remote_retrieve_body( $response ), true );
+				if ( ! empty( $body['city'] ) && ( ! isset( $body['status'] ) || 'success' === $body['status'] ) ) {
+					$geo = array(
+						'city'         => $body['city'],
+						'state'        => isset( $body['regionName'] ) ? $body['regionName'] : '',
+						'state_code'   => isset( $body['region'] ) ? $body['region'] : '',
+						'country'      => isset( $body['country'] ) ? $body['country'] : '',
+						'country_code' => isset( $body['countryCode'] ) ? $body['countryCode'] : '',
+						'zipcode'      => isset( $body['zip'] ) ? $body['zip'] : '',
+						'currency'     => isset( $body['currency'] ) ? $body['currency'] : '',
+						'timezone'     => isset( $body['timezone'] ) ? $body['timezone'] : '',
+					);
+				}
 			}
 		}
 
@@ -2375,6 +2381,7 @@ class AlvoBotPro_PixelTracking_REST {
 					$geo = array(
 						'city'         => $body['city'],
 						'state'        => isset( $body['region'] ) ? $body['region'] : '',
+						'state_code'   => isset( $body['region_code'] ) ? $body['region_code'] : '',
 						'country'      => isset( $body['country'] ) ? $body['country'] : '',
 						'country_code' => isset( $body['country_code'] ) ? $body['country_code'] : '',
 						'zipcode'      => isset( $body['postal'] ) ? $body['postal'] : '',

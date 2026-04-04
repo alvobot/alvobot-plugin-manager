@@ -178,6 +178,7 @@ class AlvoBotPro_PixelTracking_CPT {
 					$geo                              = $data['geo'];
 					$meta_fields['_geo_city']         = isset( $geo['city'] ) ? sanitize_text_field( $geo['city'] ) : '';
 					$meta_fields['_geo_state']        = isset( $geo['state'] ) ? sanitize_text_field( $geo['state'] ) : '';
+					$meta_fields['_geo_state_code']   = isset( $geo['state_code'] ) ? sanitize_text_field( $geo['state_code'] ) : '';
 					$meta_fields['_geo_country']      = isset( $geo['country'] ) ? sanitize_text_field( $geo['country'] ) : '';
 					$meta_fields['_geo_country_code'] = isset( $geo['country_code'] ) ? sanitize_text_field( $geo['country_code'] ) : '';
 					$meta_fields['_geo_zipcode']      = isset( $geo['zipcode'] ) ? sanitize_text_field( $geo['zipcode'] ) : '';
@@ -403,6 +404,7 @@ class AlvoBotPro_PixelTracking_CPT {
 			$geo_fields = array(
 				'city'         => '_geo_city',
 				'state'        => '_geo_state',
+				'state_code'   => '_geo_state_code',
 				'country'      => '_geo_country',
 				'country_code' => '_geo_country_code',
 				'zipcode'      => '_geo_zipcode',
