@@ -6,6 +6,16 @@
 (function () {
 	'use strict';
 
+	// ── Event Timeline ──────────────────────────────────────────────────
+	// Ring buffer that captures events BEFORE debug activation so nothing is lost.
+	var __timeline = [];
+	function __tl(type, name, detail) {
+		__timeline.push({ ts: Date.now(), iso: new Date().toISOString(), type: type, name: name, detail: detail || {} });
+		if (__timeline.length > 300) { __timeline.shift(); }
+	}
+	window.__alvobot_event_timeline = __timeline;
+	window.__alvobot_timeline_push  = __tl;
+
 			class AlvoBotPixelTracking {
 					constructor() {
 						this.data        = {};
@@ -98,6 +108,17 @@
 				async start(config) {
 					this.config = config || window.alvobot_pixel_config || {};
 					this.debug_enabled = !! this.config.debug_enabled;
+				// URL param and cookie debug override
+				if ( /[?&]alvobot_debug=1/.test( window.location.search ) ) {
+					this.debug_enabled = true;
+					// Persist via cookie so it survives navigations
+					document.cookie = 'alvobot_debug=1;path=/;max-age=3600;SameSite=Lax' +
+						(window.location.protocol === 'https:' ? ';Secure' : '');
+				}
+				if ( document.cookie.indexOf( 'alvobot_debug=1' ) !== -1 ) {
+					this.debug_enabled = true;
+				}
+				__tl( 'system', 'tracker.start', { debug: this.debug_enabled, href: window.location.href } );
 				this.log_debug(
 					'start() called',
 					{
@@ -169,6 +190,10 @@
 					this.initialized = true;
 					this.resolve_ready();
 					this.log_debug( 'tracker initialized', { initialized: this.initialized } );
+				// Auto-activate debug interceptors if debug was detected early
+				if ( this.debug_enabled && typeof window.alvobot_debug === 'function' && ! window.__alvobot_debug_installed ) {
+					window.alvobot_debug();
+				}
 					this.capture_async_context();
 				}
 
@@ -404,6 +429,7 @@
 				}
 
 				this.initial_pageview_sent = true;
+				__tl( 'system', 'PageView (initial)', { pageview_event_id: this.config.pageview_event_id } );
 
 						var pageview_params = {
 							event_name: 'PageView',
@@ -434,6 +460,7 @@
 		 */
 			async get_ip() {
 				var cachedIp = '';
+				var _ipStart = Date.now();
 				this.log_debug( 'get_ip(): start' );
 				try {
 					cachedIp = sessionStorage.getItem( 'alvobot_ip' ) || '';
@@ -444,6 +471,7 @@
 				if (cachedIp) {
 					if ( ! this.is_private_ip( cachedIp )) {
 						this.log_debug( 'get_ip(): using cached public IP', { ip: cachedIp } );
+						__tl( 'geo', 'ip_resolved', { source: 'cache', ip: cachedIp, ms: Date.now() - _ipStart } );
 						return cachedIp;
 					}
 					this.log_warn( 'get_ip(): cached IP is private/reserved; removing', { ip: cachedIp } );
@@ -462,6 +490,7 @@
 							var cfMatch = cfText.match( /ip=([^\n]+)/ );
 							if (cfMatch && cfMatch[1] && ! this.is_private_ip( cfMatch[1] )) {
 								this.log_debug( 'get_ip(): resolved by Cloudflare trace', { ip: cfMatch[1] } );
+								__tl( 'geo', 'ip_resolved', { source: 'cloudflare', ip: cfMatch[1], ms: Date.now() - _ipStart } );
 								try {
 									sessionStorage.setItem( 'alvobot_ip', cfMatch[1] );
 								} catch (e) {
@@ -482,6 +511,7 @@
 						var ipifyData = await ipifyResp.json();
 						if (ipifyData && ipifyData.ip && ! this.is_private_ip( ipifyData.ip )) {
 							this.log_debug( 'get_ip(): resolved by ipify', { ip: ipifyData.ip } );
+							__tl( 'geo', 'ip_resolved', { source: 'ipify', ip: ipifyData.ip, ms: Date.now() - _ipStart } );
 							try {
 								sessionStorage.setItem( 'alvobot_ip', ipifyData.ip );
 							} catch (e) {
@@ -500,6 +530,7 @@
 						var ipwhoData = await ipwhoResp.json();
 						if (ipwhoData && ipwhoData.ip && ! this.is_private_ip( ipwhoData.ip )) {
 							this.log_debug( 'get_ip(): resolved by ipwho.is', { ip: ipwhoData.ip } );
+							__tl( 'geo', 'ip_resolved', { source: 'ipwho.is', ip: ipwhoData.ip, ms: Date.now() - _ipStart } );
 							try {
 								sessionStorage.setItem( 'alvobot_ip', ipwhoData.ip );
 							} catch (e) {
@@ -512,6 +543,7 @@
 					/* ignore */ }
 
 				this.log_warn( 'get_ip(): failed to resolve a public IP' );
+				__tl( 'geo', 'ip_failed', { ms: Date.now() - _ipStart } );
 				return '';
 			}
 
@@ -976,6 +1008,7 @@
 			 */
 				async send_event(params) {
 					params = params || {};
+					var _sendStart = Date.now();
 					if ( ! this.tracking_enabled) {
 						this.log_warn( 'send_event() skipped: tracking disabled', { params: params } );
 						return;
@@ -1127,10 +1160,13 @@
 					});
 				}
 
+				__tl( platforms === 'meta_only' ? 'meta' : (platforms === 'google_only' ? 'google' : 'meta'), event_name, { event_id: event_id, platforms: platforms } );
+
 				// 2. POST to WordPress for server-side dispatch (Meta CAPI — skip for google_only events)
 				if (platforms === 'google_only') {
 					return; // No server-side dispatch needed for Google-only events
 				}
+				var _fetchStart = Date.now();
 				try {
 					var eventPayload = {
 						event_id: event_id,
@@ -1197,6 +1233,7 @@
 								return;
 							}
 							self.log_debug( 'send_event(): /events/track response body', result );
+							__tl( 'server', 'response: ' + event_name, { ms: Date.now() - _fetchStart, resolved_ip: result.resolved_ip, resolved_geo: result.resolved_geo, capi_response: result.capi_response } );
 
 						if (result.resolved_ip) {
 							var currentIsPublic  = self.data.ip && ! self.is_private_ip( self.data.ip );
@@ -1439,106 +1476,74 @@
 		}
 	}
 
+	// ── Debug CSS constants ─────────────────────────────────────────────
+	var _P  = '%c[AlvoBot Debug]';
+	var _I  = 'background:#fbbf24;color:#0E100D;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _M  = 'background:#1877F2;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _G  = 'background:#4285F4;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _S  = 'background:#12B76A;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _A  = 'background:#F63D68;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _GE = 'background:#EAB308;color:#000;padding:2px 6px;border-radius:4px;font-weight:bold';
+	var _SY = 'background:#6B7280;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+
 	/**
-	 * Global debug activator.
-	 *
-	 * Type in the browser console:
-	 *   alvobot_debug()
-	 *
-	 * This will:
-	 *   1. Enable all AlvoBot console logs
-	 *   2. Intercept and log every fbq() call (Meta Pixel browser-side)
-	 *   3. Intercept and log every gtag() call (Google Ads / GA4)
-	 *   4. Intercept and log every fetch() to AlvoBot REST API (server-side payloads)
-	 *   5. Listen for alvobot:ad_event custom events (ad-tracker.js)
-	 *   6. Dump the current tracker state
+	 * Install debug interceptors (fbq, gtag, fetch, ad_event).
+	 * Safe to call multiple times — skips if already installed.
 	 */
-	window.alvobot_debug = function () {
-		var PREFIX = '%c[AlvoBot Debug]';
-		var CSS_INFO   = 'background:#fbbf24;color:#0E100D;padding:2px 6px;border-radius:4px;font-weight:bold';
-		var CSS_META   = 'background:#1877F2;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
-		var CSS_GOOGLE = 'background:#4285F4;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
-		var CSS_API    = 'background:#12B76A;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
-		var CSS_AD     = 'background:#F63D68;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+	function _installInterceptors() {
+		if ( window.__alvobot_debug_installed ) { return; }
+		window.__alvobot_debug_installed = true;
 
-		// 1. Enable tracker debug
-		var t = window.alvobot_pixel;
-		if (t) {
-			t.debug_enabled = true;
-			t.debug_prefix  = PREFIX.replace( '%c', '' );
-		}
-
-		// 2. Dump current state
-		var config = window.alvobot_pixel_config || {};
-		console.group( PREFIX + ' State Dump', CSS_INFO );
-		console.log( 'Config:', JSON.parse( JSON.stringify( config ) ) );
-		if (t) {
-			console.log( 'Tracker data:', JSON.parse( JSON.stringify( t.data ) ) );
-			console.log( 'Initialized:', t.initialized, '| Tracking:', t.tracking_enabled );
-			console.log( 'Meta allowed:', t.meta_browser_allowed, '| Google allowed:', t.google_browser_allowed );
-		}
-		if (typeof fbq !== 'undefined' && typeof fbq.getState === 'function') {
-			console.log( 'fbq pixels:', fbq.getState().pixels.map( function (p) {
-				return { id: p.id, userData: p.userData, eventCount: p.eventCount };
-			}));
-		}
-		console.log( '_fbp:', document.cookie.match( /(^|;)\s*_fbp=([^;]+)/ ) ? RegExp.$2 : 'not set' );
-		console.log( '_fbc:', document.cookie.match( /(^|;)\s*_fbc=([^;]+)/ ) ? RegExp.$2 : 'not set' );
-		console.log( 'Google trackers:', config.google_trackers || [] );
-		console.log( 'user_data_hashed:', config.user_data_hashed );
-		console.groupEnd();
-
-		// 3. Intercept fbq()
+		// fbq interceptor
 		if (typeof window.fbq === 'function' && ! window.fbq.__alvobot_debug) {
 			var origFbq = window.fbq;
 			window.fbq  = function () {
 				var args = Array.prototype.slice.call( arguments );
 				var action = args[0];
 				if (action === 'track' || action === 'trackCustom' || action === 'trackSingle' || action === 'trackSingleCustom') {
-					console.group( PREFIX + ' %c META fbq("' + action + '", "' + args[1] + '")', CSS_INFO, CSS_META );
+					console.group( _P + ' %c META fbq("' + action + '", "' + args[1] + '")', _I, _M );
 					console.log( 'Event:', args[1] );
 					if (args[2]) { console.log( 'Params:', args[2] ); }
-					if (args[3]) { console.log( 'Options:', args[3] ); }
+					if (args[3]) { console.log( 'Options (eventID):', args[3] ); }
 					console.groupEnd();
+					__tl( 'meta', 'fbq.' + action + ':' + args[1], { params: args[2], options: args[3] } );
 				} else if (action === 'init') {
-					console.log( PREFIX + ' %c META fbq("init", "' + args[1] + '", userData:', CSS_INFO, CSS_META, args[2] || {} );
+					console.log( _P + ' %c META fbq("init", "' + args[1] + '")', _I, _M, 'userData:', args[2] || {} );
+					__tl( 'meta', 'fbq.init:' + args[1], { userData_keys: args[2] ? Object.keys( args[2] ) : [] } );
 				}
 				return origFbq.apply( this, arguments );
 			};
 			window.fbq.__alvobot_debug = true;
-			// Copy over all properties from the original
 			for (var key in origFbq) {
-				if (origFbq.hasOwnProperty( key )) {
-					window.fbq[key] = origFbq[key];
-				}
+				if (origFbq.hasOwnProperty( key )) { window.fbq[key] = origFbq[key]; }
 			}
 		}
 
-		// 4. Intercept gtag()
+		// gtag interceptor
 		if (typeof window.gtag === 'function' && ! window.gtag.__alvobot_debug) {
 			var origGtag = window.gtag;
 			window.gtag  = function () {
 				var args = Array.prototype.slice.call( arguments );
 				if (args[0] === 'event') {
-					var isConversion = args[1] === 'conversion';
-					var css = isConversion ? CSS_AD : CSS_GOOGLE;
-					var label = isConversion ? ' CONVERSION' : '';
-					console.group( PREFIX + ' %c GOOGLE gtag("event", "' + args[1] + '")' + label, CSS_INFO, css );
+					var isConv = args[1] === 'conversion';
+					console.group( _P + ' %c GOOGLE gtag("event", "' + args[1] + '")' + (isConv ? ' CONVERSION' : ''), _I, isConv ? _A : _G );
 					if (args[2]) {
 						console.log( 'Params:', args[2] );
 						if (args[2].send_to) { console.log( 'send_to:', args[2].send_to ); }
-						if (args[2].value)   { console.log( 'value:', args[2].value, args[2].currency || '' ); }
+						if (args[2].value !== undefined) { console.log( 'value:', args[2].value, args[2].currency || '' ); }
 					}
 					console.groupEnd();
+					__tl( 'google', 'gtag.' + args[1], { send_to: args[2] ? args[2].send_to : undefined, conversion: isConv } );
 				} else if (args[0] === 'config') {
-					console.log( PREFIX + ' %c GOOGLE gtag("config", "' + args[1] + '")', CSS_INFO, CSS_GOOGLE, args[2] || '' );
+					console.log( _P + ' %c GOOGLE gtag("config", "' + args[1] + '")', _I, _G, args[2] || '' );
+					__tl( 'google', 'gtag.config:' + args[1], {} );
 				}
 				return origGtag.apply( this, arguments );
 			};
 			window.gtag.__alvobot_debug = true;
 		}
 
-		// 5. Intercept fetch() for AlvoBot REST API
+		// fetch interceptor for AlvoBot REST API
 		if ( ! window.fetch.__alvobot_debug) {
 			var origFetch = window.fetch;
 			window.fetch  = function (url, opts) {
@@ -1546,20 +1551,17 @@
 				if (urlStr.indexOf( 'alvobot-pro/v1/pixel-tracking' ) !== -1) {
 					var endpoint = urlStr.indexOf( '/leads/' ) !== -1 ? 'LEAD' : 'EVENT';
 					var payload  = null;
+					var _t0 = Date.now();
 					try { payload = opts && opts.body ? JSON.parse( opts.body ) : null; } catch (e) { /* ignore */ }
-					console.group( PREFIX + ' %c SERVER ' + endpoint + ' → ' + urlStr.split( '?' )[0], CSS_INFO, CSS_API );
+					console.group( _P + ' %c SERVER ' + endpoint + ' → ' + urlStr.split( '?' )[0], _I, _S );
 					if (payload) {
-						console.log( 'event_name:', payload.event_name );
-						console.log( 'event_id:', payload.event_id );
-						console.log( 'fbp:', payload.fbp );
-						console.log( 'fbc:', payload.fbc );
-						console.log( 'ip:', payload.ip );
-						console.log( 'geo:', payload.geo );
+						console.log( 'event_name:', payload.event_name, '| event_id:', payload.event_id );
+						console.log( 'fbp:', payload.fbp, '| fbc:', payload.fbc );
+						console.log( 'ip:', payload.ip, '| geo:', payload.geo );
 						console.log( 'user_data_hashed:', payload.user_data_hashed );
 						console.log( 'pixel_ids:', payload.pixel_ids );
-						console.log( 'gclid:', payload.gclid );
-						console.log( 'gads_conversion_label:', payload.gads_conversion_label );
-						console.log( 'gads_labels_map:', payload.gads_labels_map );
+						console.log( 'gclid:', payload.gclid, '| ga_client_id:', payload.ga_client_id );
+						console.log( 'gads_conversion_label:', payload.gads_conversion_label, '| gads_labels_map:', payload.gads_labels_map );
 						console.log( 'Full payload:', payload );
 					}
 					console.groupEnd();
@@ -1567,11 +1569,11 @@
 					return origFetch.apply( this, arguments ).then( function (resp) {
 						var cloned = resp.clone();
 						cloned.json().then( function (body) {
-							console.group( PREFIX + ' %c SERVER RESPONSE ← ' + endpoint, CSS_INFO, CSS_API );
-							console.log( 'Status:', resp.status );
-							console.log( 'Body:', body );
-							if (body.resolved_ip)  { console.log( 'Resolved IP:', body.resolved_ip ); }
-							if (body.resolved_geo) { console.log( 'Resolved Geo:', body.resolved_geo ); }
+							var ms = Date.now() - _t0;
+							console.group( _P + ' %c SERVER RESPONSE ← ' + endpoint + ' (' + ms + 'ms)', _I, _S );
+							console.log( 'HTTP:', resp.status, '| Body:', body );
+							if (body.resolved_ip)   { console.log( 'Resolved IP:', body.resolved_ip ); }
+							if (body.resolved_geo)  { console.log( 'Resolved Geo:', body.resolved_geo ); }
 							if (body.capi_response) { console.log( 'CAPI Response:', body.capi_response ); }
 							console.groupEnd();
 						}).catch( function () {} );
@@ -1583,22 +1585,163 @@
 			window.fetch.__alvobot_debug = true;
 		}
 
-		// 6. Listen for ad events
+		// ad event listener
 		document.addEventListener( 'alvobot:ad_event', function (e) {
-			console.group( PREFIX + ' %c AD EVENT: ' + (e.detail ? e.detail.event_name : '?'), CSS_INFO, CSS_AD );
+			console.group( _P + ' %c AD EVENT: ' + (e.detail ? e.detail.event_name : '?'), _I, _A );
 			console.log( 'Detail:', e.detail );
 			console.groupEnd();
 		});
 
+		// Activate ad-tracker debug if available
+		if ( typeof window.__alvobot_ad_tracker_debug !== 'undefined' || true ) {
+			window.__alvobot_ad_tracker_debug = true;
+		}
+	}
+
+	/**
+	 * alvobot_debug() — Full debug activator.
+	 *
+	 * Activation methods:
+	 *   1. Console:    alvobot_debug()
+	 *   2. URL param:  ?alvobot_debug=1
+	 *   3. Cookie:     alvobot_debug=1 (auto-set, persists 1 hour)
+	 *   4. PHP admin:  debug_enabled in pixel-tracking settings
+	 */
+	window.alvobot_debug = function () {
+		// Set persistent cookie (1 hour)
+		document.cookie = 'alvobot_debug=1;path=/;max-age=3600;SameSite=Lax' +
+			(window.location.protocol === 'https:' ? ';Secure' : '');
+
+		// Enable tracker debug
+		var t = window.alvobot_pixel;
+		if (t) {
+			t.debug_enabled = true;
+			t.debug_prefix  = '[AlvoBot Debug]';
+		}
+
+		// Install interceptors
+		_installInterceptors();
+
+		var config = window.alvobot_pixel_config || {};
+
+		// ── State Dump ──────────────────────────────────────────────────
+		console.group( _P + ' State Dump', _I );
+
+		console.log( '%cPlugin v' + (config.plugin_version || '?') +
+			(config.test_mode ? ' | TEST MODE (' + config.test_event_code + ')' : ' | Live'),
+			'font-weight:bold;font-size:13px' );
+
+		if (t) {
+			console.log( 'Initialized:', t.initialized, '| Tracking:', t.tracking_enabled );
+			console.log( 'Meta allowed:', t.meta_browser_allowed, '| Google allowed:', t.google_browser_allowed );
+			console.log( 'Tracker data:', JSON.parse( JSON.stringify( t.data ) ) );
+		}
+
+		console.groupCollapsed( 'Config (full)' );
+		console.log( JSON.parse( JSON.stringify( config ) ) );
+		console.groupEnd();
+
+		// Cookies
+		var fbpMatch = document.cookie.match( /(^|;)\s*_fbp=([^;]+)/ );
+		var fbcMatch = document.cookie.match( /(^|;)\s*_fbc=([^;]+)/ );
+		console.log( '_fbp:', fbpMatch ? fbpMatch[2] : 'not set', '| _fbc:', fbcMatch ? fbcMatch[2] : 'not set' );
+
+		// Meta Pixel state
+		if (typeof fbq !== 'undefined' && typeof fbq.getState === 'function') {
+			var pxState = fbq.getState();
+			console.log( 'fbq pixels:', pxState.pixels.map( function (p) {
+				return { id: p.id, userData: p.userData, eventCount: p.eventCount };
+			}));
+		}
+		console.log( 'user_data_hashed:', config.user_data_hashed );
+		console.log( 'pageview_event_id:', config.pageview_event_id );
+
+		// Google
+		console.log( 'Google trackers:', config.google_trackers || [] );
+		console.log( 'site_currency:', config.site_currency );
+		console.log( 'ad_conversion_triggers:', config.ad_conversion_triggers );
+
+		// Cloudflare (only in debug mode)
+		if (config.cf_headers && Object.keys( config.cf_headers ).length > 0) {
+			console.log( '%cCloudflare headers:', 'color:#f38020;font-weight:bold', config.cf_headers );
+		}
+
+		// Conversion rules (only when PHP debug enrichment is present)
+		if (config.debug_conversion_rules && config.debug_conversion_rules.length > 0) {
+			console.groupCollapsed( 'Conversion Rules (' + config.debug_conversion_rules.length + ' active on this page)' );
+			console.table( config.debug_conversion_rules.map( function (r) {
+				return {
+					title: r.title,
+					event: r.event_name,
+					trigger: r.trigger + (r.trigger_value ? ':' + r.trigger_value : ''),
+					platforms: r.platforms || 'all',
+					gads_label: r.gads_conversion_label || '-',
+					gads_labels_map: r.gads_labels_map ? JSON.stringify( r.gads_labels_map ) : '-',
+					value: r.gads_conversion_value || '-',
+				};
+			}));
+			console.groupEnd();
+		}
+
+		console.groupEnd(); // State Dump
+
+		// ── Event Timeline ──────────────────────────────────────────────
+		if (__timeline.length > 0) {
+			console.group( _P + ' Event Timeline (' + __timeline.length + ' events captured)', _I );
+			var t0 = __timeline[0].ts;
+			console.table( __timeline.map( function (e) {
+				return {
+					'+ms': e.ts - t0,
+					time: e.iso.split( 'T' )[1],
+					type: e.type,
+					event: e.name,
+					detail: JSON.stringify( e.detail ).substring( 0, 100 ),
+				};
+			}));
+			console.groupEnd();
+		}
+
 		console.log(
-			'\n' + PREFIX + ' Debug mode ACTIVE. All events will be logged.\n' +
-			'  - Meta Pixel (fbq) calls → blue\n' +
-			'  - Google (gtag) calls → blue/red for conversions\n' +
-			'  - Server API (fetch) calls → green\n' +
-			'  - Ad events → red\n',
-			CSS_INFO
+			'\n' + _P + ' Debug mode ACTIVE (cookie set for 1 hour).\n' +
+			'  Meta Pixel (fbq) → blue | Google (gtag) → blue/red\n' +
+			'  Server API (fetch) → green | Ad events → red\n' +
+			'  Geo/IP → yellow | System → gray\n' +
+			'\n  alvobot_debug_off()      — disable debug\n' +
+			'  alvobot_debug_timeline() — show event timeline\n',
+			_I
 		);
 
 		return 'AlvoBot Debug ON';
+	};
+
+	/**
+	 * alvobot_debug_off() — Disable debug and clear cookie.
+	 */
+	window.alvobot_debug_off = function () {
+		document.cookie = 'alvobot_debug=1;path=/;max-age=0;SameSite=Lax' +
+			(window.location.protocol === 'https:' ? ';Secure' : '');
+		var t = window.alvobot_pixel;
+		if (t) { t.debug_enabled = false; }
+		console.log( _P + ' Debug mode OFF. Reload to fully deactivate interceptors.', _I );
+		return 'AlvoBot Debug OFF';
+	};
+
+	/**
+	 * alvobot_debug_timeline() — Render event timeline to console.
+	 */
+	window.alvobot_debug_timeline = function () {
+		if ( ! __timeline.length) {
+			console.log( _P + ' No events in timeline.', _I );
+			return;
+		}
+		var t0 = __timeline[0].ts;
+		var cssMap = { meta: _M, google: _G, server: _S, ad: _A, geo: _GE, system: _SY };
+		console.group( _P + ' Event Timeline (' + __timeline.length + ' events)', _I );
+		__timeline.forEach( function (e) {
+			var css = cssMap[e.type] || _SY;
+			console.log( _P + ' %c +' + (e.ts - t0) + 'ms [' + e.type + '] ' + e.name, _I, css,
+				Object.keys( e.detail ).length > 0 ? e.detail : '' );
+		});
+		console.groupEnd();
 	};
 })();

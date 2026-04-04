@@ -161,6 +161,14 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$debug_enabled = class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' )
 			? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' )
 			: false;
+		// URL param ?alvobot_debug=1 or cookie override.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! $debug_enabled && isset( $_GET['alvobot_debug'] ) && '1' === $_GET['alvobot_debug'] ) {
+			$debug_enabled = true;
+		}
+		if ( ! $debug_enabled && isset( $_COOKIE['alvobot_debug'] ) && '1' === $_COOKIE['alvobot_debug'] ) {
+			$debug_enabled = true;
+		}
 
 		$has_meta_pixels = ! empty( $pixels );
 		$pixel_ids_list  = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
@@ -326,7 +334,27 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 					google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
 					site_currency: <?php echo wp_json_encode( $site_currency ); ?>,
 					ad_conversions_active: <?php echo $this->has_active_ad_conversions() ? 'true' : 'false'; ?>,
-					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>
+					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
+					plugin_version: <?php echo wp_json_encode( defined( 'ALVOBOT_PRO_VERSION' ) ? ALVOBOT_PRO_VERSION : '' ); ?>,
+					test_mode: <?php echo ! empty( $settings['test_mode'] ) ? 'true' : 'false'; ?>,
+					test_event_code: <?php echo wp_json_encode( ! empty( $settings['test_event_code'] ) ? $settings['test_event_code'] : '' ); ?><?php if ( $debug_enabled ) : ?>,
+					debug_conversion_rules: <?php echo wp_json_encode( $this->get_debug_conversion_rules( $current_page_id ) ); ?>,
+					cf_headers: <?php
+						$cf_headers = array();
+						if ( isset( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
+							$cf_headers['cf_ipcountry'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_IPCOUNTRY'] ) );
+						}
+						if ( isset( $_SERVER['HTTP_CF_RAY'] ) ) {
+							$cf_headers['cf_ray'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_RAY'] ) );
+						}
+						if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+							$cf_headers['cf_connecting_ip'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+						}
+						if ( isset( $_SERVER['HTTP_CDN_LOOP'] ) ) {
+							$cf_headers['cdn_loop'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CDN_LOOP'] ) );
+						}
+						echo wp_json_encode( empty( $cf_headers ) ? new stdClass() : $cf_headers );
+					?><?php endif; ?>
 			};
 		</script>
 		<?php
@@ -418,7 +446,12 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		if ( ! empty( $ad_scripts ) ) {
 			echo "\n<script>\n";
 			echo "(function() {\n";
+			echo "  var __dbg = !!(window.alvobot_pixel_config && window.alvobot_pixel_config.debug_enabled);\n";
 			echo "  function alvobotAdSendEvent(cfg) {\n";
+			echo "    if (__dbg && window.console) {\n";
+			echo "      console.group('%c[AlvoBot Debug]%c CONVERSION RULE DISPATCH: ' + cfg.event_name, 'background:#fbbf24;color:#0E100D;padding:2px 6px;border-radius:4px;font-weight:bold', 'background:#F63D68;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold');\n";
+			echo "      console.log('Rule config:', JSON.parse(JSON.stringify(cfg)));\n";
+			echo "    }\n";
 			// Immediate gtag dispatch for Google Ads — no waiting.
 			echo "    var selectedIds = cfg.fb_pixels ? cfg.fb_pixels.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];\n";
 			echo "    var filterActive = selectedIds.length > 0;\n";
@@ -433,6 +466,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "        if (t.type !== 'google_ads') return;\n";
 			echo "        if (filterActive && selectedIds.indexOf(t.tracker_id) === -1) return;\n";
 			echo "        var label = labelsMap[t.tracker_id] || cfg.gads_conversion_label || t.conversion_label;\n";
+			echo "        if (__dbg && window.console) { console.log('Label resolution [' + t.tracker_id + ']:', { labelsMap: labelsMap[t.tracker_id] || null, fallback: cfg.gads_conversion_label || null, tracker_default: t.conversion_label || null, resolved: label || '(none)' }); }\n";
 			echo "        if (!label) return;\n";
 			echo "        var p = { send_to: t.tracker_id + '/' + label };\n";
 			echo "        p.transport_type = 'beacon';\n";
@@ -440,8 +474,11 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "        p.event_callback = function(){};\n";
 			echo "        if (cfg.gads_conversion_value) { p.value = parseFloat(cfg.gads_conversion_value) || 0; p.currency = siteCurrency; }\n";
 			echo "        window.gtag('event', 'conversion', p);\n";
+			echo "        if (__dbg && window.console) { console.log('→ gtag conversion fired:', p); }\n";
 			echo "      });\n";
 			echo "    }\n";
+			echo "    if (__dbg && window.console) { console.groupEnd(); }\n";
+			echo "    if (window.__alvobot_timeline_push) { window.__alvobot_timeline_push('ad', 'conversion_rule: ' + cfg.event_name, { platforms: cfg.platforms, label: cfg.gads_conversion_label, labels_map: cfg.gads_labels_map, value: cfg.gads_conversion_value }); }\n";
 			// Also queue send_event for Meta CAPI / server-side when tracker is ready.
 			echo "    var trackerPayload = {};\n";
 			echo "    for (var key in cfg) {\n";
@@ -687,6 +724,54 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			$ver = (string) filemtime( $module_dir . 'assets/js/ad-tracker.js' );
 			echo '<script defer src="' . esc_url( $module_url . 'assets/js/ad-tracker.js?ver=' . $ver ) . '" data-no-optimize="1" data-no-minify="1"></script>' . "\n";
 		}
+	}
+
+	/**
+	 * Build a debug-only summary of conversion rules active for the given page.
+	 */
+	private function get_debug_conversion_rules( $current_page_id ) {
+		$conversions = $this->module->cpt->get_conversions();
+		if ( empty( $conversions ) ) {
+			return array();
+		}
+
+		$current_path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+		$current_path = strtok( $current_path, '?' );
+		$rules        = array();
+
+		foreach ( $conversions as $conv ) {
+			if ( ! $this->conversion_matches_current_page( $conv, $current_page_id, $current_path ) ) {
+				continue;
+			}
+			$trigger              = get_post_meta( $conv->ID, '_trigger_type', true );
+			$trigger_val          = get_post_meta( $conv->ID, '_trigger_value', true );
+			$event_type           = get_post_meta( $conv->ID, '_event_type', true );
+			$event_name           = get_post_meta( $conv->ID, '_event_name', true );
+			$content_name         = get_post_meta( $conv->ID, '_content_name', true );
+			$platforms            = get_post_meta( $conv->ID, '_platforms', true );
+			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
+			$gads_labels_map_raw  = get_post_meta( $conv->ID, '_gads_labels_map', true );
+			$gads_labels_map      = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
+			$gads_conversion_value = get_post_meta( $conv->ID, '_gads_conversion_value', true );
+			$pixel_ids            = get_post_meta( $conv->ID, '_pixel_ids', true );
+
+			$rules[] = array(
+				'id'                     => $conv->ID,
+				'title'                  => $conv->post_title,
+				'event_type'             => $event_type,
+				'event_name'             => $event_name,
+				'trigger'                => $trigger,
+				'trigger_value'          => $trigger_val,
+				'content_name'           => $content_name,
+				'platforms'              => $platforms,
+				'pixel_ids'              => $pixel_ids,
+				'gads_conversion_label'  => $gads_conversion_label,
+				'gads_labels_map'        => $gads_labels_map,
+				'gads_conversion_value'  => $gads_conversion_value,
+			);
+		}
+
+		return $rules;
 	}
 
 	/**

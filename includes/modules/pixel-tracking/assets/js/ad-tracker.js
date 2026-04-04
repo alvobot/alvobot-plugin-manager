@@ -29,8 +29,17 @@
 	// Debug
 	// -------------------------------------------------------------------------
 
-	var debug = !! (window.alvobot_pixel_config && window.alvobot_pixel_config.debug_enabled);
+	var debug = !! (window.alvobot_pixel_config && window.alvobot_pixel_config.debug_enabled) ||
+		/[?&]alvobot_debug=1/.test( window.location.search ) ||
+		document.cookie.indexOf( 'alvobot_debug=1' ) !== -1;
 	var LOG_PREFIX = '[AlvoBot AdTracker]';
+
+	// Allow late activation via alvobot_debug()
+	Object.defineProperty( window, '__alvobot_ad_tracker_debug', {
+		get: function () { return debug; },
+		set: function (v) { debug = !! v; },
+		configurable: true,
+	});
 
 	function log() {
 		if ( ! debug || ! window.console || ! window.console.log) {
@@ -39,6 +48,12 @@
 		var args = Array.prototype.slice.call( arguments );
 		args.unshift( LOG_PREFIX );
 		window.console.log.apply( window.console, args );
+	}
+
+	function tl(name, detail) {
+		if ( typeof window.__alvobot_timeline_push === 'function' ) {
+			window.__alvobot_timeline_push( 'ad', name, detail || {} );
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -212,6 +227,7 @@
 		};
 
 		log( 'dispatchAdEvent:', eventName, adPosition, '(eventId:', eventId, ')' );
+		tl( eventName, { ad_position: adPosition, ad_slot_id: adSlotId || '', event_id: eventId, ad_iframe_id: adIframeId || '' } );
 
 		// Emit custom DOM event for conversion rule triggers.
 		try {
@@ -296,7 +312,16 @@
 		vignetteOpened        = true;
 		vignetteOpenTimestamp = Date.now();
 		var slotPath = vignetteSlotId || '';
-		log( 'Vinheta aberta (' + source + ') slot:', slotPath );
+		var signals = {
+			source: source,
+			url_hash: hasGoogleVignetteMarker( window.location.href ),
+			dom_iframe: hasInterstitialIframeInDom(),
+			body_aria_hidden: !! (document.body && document.body.getAttribute( 'aria-hidden' ) === 'true'),
+			recent_fill: hasRecentInterstitialFillSignal(),
+			vignetteSlotId: slotPath,
+		};
+		log( 'Vinheta aberta (' + source + ') signals:', signals );
+		tl( 'vignette_open', signals );
 		dispatchAdEvent( 'ad_vignette_open', 'interstitial', slotPath );
 	}
 
@@ -563,11 +588,18 @@
 				window.googletag.pubads().addEventListener(
 					'slotRenderEnded',
 					function (event) {
-						log(
-							'slotRenderEnded:',
-							event.slot.getSlotElementId(),
-							event.isEmpty ? 'vazio (no-fill)' : 'preenchido'
-						);
+						var slotInfo = {
+							elementId: event.slot.getSlotElementId(),
+							adUnitPath: event.slot.getAdUnitPath(),
+							isEmpty: event.isEmpty,
+							size: event.size,
+							advertiserId: event.advertiserId,
+							campaignId: event.campaignId,
+							creativeId: event.creativeId,
+							lineItemId: event.lineItemId,
+						};
+						log( 'slotRenderEnded:', slotInfo );
+						tl( 'gpt_slotRenderEnded', slotInfo );
 						// Marca que o interstitial carregou — o MutationObserver usa
 						// esse flag para confirmar que body aria-hidden=true é da vinheta.
 						// Salva o slot path para uso em ad_vignette_open e ad_vignette_click.
@@ -678,6 +710,7 @@
 			clicksFired[iframeId] = true;
 
 			log( 'Vignette click CONFIRMADO:', source );
+			tl( 'vignette_click_confirmed', { source: source, position: position, slotId: slotId, iframeId: iframeId } );
 			dispatchAdEvent( 'ad_vignette_click', position, slotId );
 
 			setTimeout(
@@ -695,6 +728,7 @@
 			resolved = true;
 			cleanup();
 			log( 'Vignette click DESCARTADO:', source );
+			tl( 'vignette_click_cancelled', { source: source, position: position, iframeId: iframeId } );
 
 			// Restaura foco para detectar próximos eventos
 			setTimeout(
@@ -802,6 +836,7 @@
 						if (isVignetteContext) {
 							var vigPosition = position === 'interstitial' ? position : 'interstitial';
 							var vigSlot     = slotId || vignetteSlotId || '';
+							tl( 'blur_vignette_context', { iframeId: iframeId, position: position, vignetteOpened: vignetteOpened } );
 
 							checkVignetteSignals( 'blur pre-check' );
 
@@ -817,6 +852,7 @@
 									'Blur ignorado: auto-foco da abertura (' + elapsed + 'ms < grace period) —',
 									'restaurando foco em 1s'
 								);
+								tl( 'blur_grace_period_suppressed', { elapsed: elapsed, threshold: VIGNETTE_CLICK_GRACE_MS, iframeId: iframeId } );
 								setTimeout(
 									function () {
 										if (typeof window.focus === 'function') {
@@ -829,6 +865,7 @@
 							}
 
 							// Proteção 3: validação deferred — só confirma se houver navegação
+							tl( 'blur_deferred_click', { elapsed: elapsed, iframeId: iframeId, vigPosition: vigPosition } );
 							deferVignetteClick( vigPosition, vigSlot, iframeId );
 							return;
 						}
