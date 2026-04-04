@@ -2,7 +2,7 @@
 /**
  * Pixel Tracking - Configuracoes Tab
  *
- * General settings: test mode, role exclusion, consent, data retention.
+ * General settings: test mode, role exclusion, data retention.
  *
  * @package AlvoBotPro
  * @subpackage Modules/PixelTracking
@@ -15,8 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 $alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
 $alvobot_pt_test_code      = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
 $alvobot_pt_realtime_dispatch = isset( $settings['realtime_dispatch'] ) ? (bool) $settings['realtime_dispatch'] : true;
-$alvobot_pt_consent_check  = isset( $settings['consent_check'] ) ? (bool) $settings['consent_check'] : false;
-$alvobot_pt_consent_cookie = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
 $alvobot_pt_excluded_roles = isset( $settings['excluded_roles'] ) ? $settings['excluded_roles'] : array();
 $alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
 $alvobot_pt_max_events     = isset( $settings['max_events'] ) ? $settings['max_events'] : 50000;
@@ -69,34 +67,16 @@ $alvobot_pt_max_leads      = isset( $settings['max_leads'] ) ? $settings['max_le
 			</div>
 		</div>
 
-	<!-- Privacy & Consent -->
+	<!-- Privacy -->
 	<div class="alvobot-card">
 		<div class="alvobot-card-header">
 			<h2 class="alvobot-card-title">
 				<i data-lucide="shield-check" class="alvobot-icon"></i>
-				<?php esc_html_e( 'Privacidade e Consentimento', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Privacidade', 'alvobot-pro' ); ?>
 			</h2>
-			<p class="alvobot-card-subtitle"><?php esc_html_e( 'Configure o controle de consentimento e a exclusao de usuarios.', 'alvobot-pro' ); ?></p>
+			<p class="alvobot-card-subtitle"><?php esc_html_e( 'Configure a exclusao de usuarios do rastreamento.', 'alvobot-pro' ); ?></p>
 		</div>
 		<div class="alvobot-card-content">
-			<div class="alvobot-form-field">
-				<div class="alvobot-toggle-row">
-					<label class="alvobot-toggle">
-						<input type="checkbox" name="consent_check" value="1" <?php checked( $alvobot_pt_consent_check ); ?>>
-						<span class="alvobot-toggle-slider"></span>
-					</label>
-					<span class="alvobot-toggle-label"><?php esc_html_e( 'Verificar consentimento antes de rastrear', 'alvobot-pro' ); ?></span>
-				</div>
-				<p class="alvobot-description"><?php esc_html_e( 'Compativel com CookieYes e Complianz automaticamente.', 'alvobot-pro' ); ?></p>
-			</div>
-
-			<div class="alvobot-form-field">
-				<label for="consent_cookie" class="alvobot-form-label"><?php esc_html_e( 'Nome do Cookie de Consentimento', 'alvobot-pro' ); ?></label>
-				<input type="text" id="consent_cookie" name="consent_cookie" class="alvobot-input" value="<?php echo esc_attr( $alvobot_pt_consent_cookie ); ?>">
-			</div>
-
-			<hr class="alvobot-divider">
-
 			<div class="alvobot-form-field">
 				<label class="alvobot-form-label">
 					<i data-lucide="user-x" class="alvobot-icon"></i>

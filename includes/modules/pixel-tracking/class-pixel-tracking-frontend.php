@@ -165,10 +165,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$has_meta_pixels = ! empty( $pixels );
 		$pixel_ids_list  = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
 		$pixel_ids        = implode( ',', $pixel_ids_list );
-			$consent_cookie      = isset( $settings['consent_cookie'] ) ? $settings['consent_cookie'] : 'alvobot_tracking_consent';
-			$consent_check       = ! empty( $settings['consent_check'] );
-			$server_consent_seen = ! $consent_check || $this->has_server_side_consent_cookie( $consent_cookie );
-			$meta_base_injected  = $has_meta_pixels && $server_consent_seen;
+			$meta_base_injected = $has_meta_pixels;
 			$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
 			$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
 			$site_currency    = $this->get_site_currency_code();
@@ -221,9 +218,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 		// Inline script — cannot be deferred or combined by any caching/optimization
 		// plugin (LiteSpeed, WP Rocket, Autoptimize, etc.). Fires synchronously in
 		// <head> before any JS defer logic runs. fbevents.js loads async in parallel.
-		// When consent gating is enabled and there is no consent cookie on the request,
-		// we skip the base code and let tracking.js initialize Meta later only if
-		// consent becomes true in the browser. Server-side dispatch remains independent.
+		// Base code always injected — consent check removed per site policy.
 		// PageView is queued here with a server-generated event_id; tracking.js sends
 		// the matching CAPI event for server-side deduplication without double-firing.
 		if ( $meta_base_injected ) :
@@ -273,15 +268,6 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 	window.dataLayer = window.dataLayer || [];
 	function gtag(){dataLayer.push(arguments);}
 	gtag('js', new Date());
-			<?php if ( $consent_check ) : ?>
-	gtag('consent', 'default', {
-		ad_storage: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
-		analytics_storage: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
-		ad_user_data: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
-		ad_personalization: <?php echo $server_consent_seen ? "'granted'" : "'denied'"; ?>,
-		wait_for_update: 500
-	});
-			<?php endif; ?>
 			<?php foreach ( $real_trackers as $gt ) : ?>
 			<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
 gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
@@ -306,8 +292,6 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				page_title: <?php echo wp_json_encode( $page_title ); ?>,
 				content_type: <?php echo wp_json_encode( $content_type ); ?>,
 				content_category: <?php echo wp_json_encode( $content_category ); ?>,
-				consent_cookie: <?php echo wp_json_encode( $consent_cookie ); ?>,
-				consent_check: <?php echo $consent_check ? 'true' : 'false'; ?>,
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
 				user_data_hashed: <?php echo wp_json_encode( $user_data_hashed ); ?>,
@@ -718,35 +702,6 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		// Role exclusion
 		if ( $this->is_user_excluded() ) {
 			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Check whether the consent cookie was already granted on the HTTP request.
-	 *
-	 * This is only used to decide whether the Meta base pixel can be emitted
-	 * synchronously in HTML. Browser-side consent sources that are not available
-	 * server-side are still handled later by tracking.js.
-	 *
-	 * @param string $cookie_name Consent cookie name.
-	 * @return bool
-	 */
-	private function has_server_side_consent_cookie( $cookie_name ) {
-		if ( '' === $cookie_name || ! isset( $_COOKIE[ $cookie_name ] ) ) {
-			return true;
-		}
-
-		$value = sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) );
-		$value = strtolower( trim( (string) $value, "\"' \t\n\r\0\x0B" ) );
-
-		if ( in_array( $value, array( '0', 'false', 'no', 'deny', 'denied', 'disallow', 'rejected', 'reject' ), true ) ) {
-			return false;
-		}
-
-		if ( in_array( $value, array( '1', 'true', 'yes', 'allow', 'allowed' ), true ) ) {
-			return true;
 		}
 
 		return true;

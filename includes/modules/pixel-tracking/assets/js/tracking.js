@@ -14,7 +14,6 @@
 						this.tracking_enabled = false;
 						this.meta_browser_allowed = false;
 						this.google_browser_allowed = false;
-						this.google_consent_state = '';
 						this.initial_pageview_sent = false;
 						this._readyPromise = null;
 					this._resolveReady = null;
@@ -281,20 +280,9 @@
 						return false;
 					}
 
-					var consentGranted = ! this.config.consent_check || this.check_consent();
-					if (consentGranted && ! this.meta_browser_allowed) {
-						this.log_debug( 'Meta browser tracking enabled' );
-					}
-					if ( ! consentGranted && this.meta_browser_allowed) {
-						this.log_warn( 'Meta browser tracking disabled after consent change' );
-					}
-
-					this.meta_browser_allowed = consentGranted;
-					if (this.meta_browser_allowed) {
-						this.init_fb_sdk( this.config.pixel_ids );
-					}
-
-						return this.meta_browser_allowed;
+					this.meta_browser_allowed = true;
+					this.init_fb_sdk( this.config.pixel_ids );
+					return true;
 					}
 
 					get_google_trackers() {
@@ -350,47 +338,14 @@
 						return this.config.google_analytics_id || '';
 					}
 
-					update_google_consent_mode(consentGranted) {
-						if ( ! window.gtag) {
-							return;
-						}
-
-						var state = consentGranted ? 'granted' : 'denied';
-						if (this.google_consent_state === state) {
-							return;
-						}
-
-						window.gtag(
-							'consent',
-							'update',
-							{
-								ad_storage: state,
-								analytics_storage: state,
-								ad_user_data: state,
-								ad_personalization: state,
-							}
-						);
-						this.google_consent_state = state;
-						this.log_debug( 'Google consent mode updated', { state: state } );
-					}
-
 					refresh_google_tag_state() {
 						if ( ! this.has_google_trackers()) {
 							this.google_browser_allowed = false;
 							return false;
 						}
 
-						var consentGranted = ! this.config.consent_check || this.check_consent();
-						if (consentGranted && ! this.google_browser_allowed) {
-							this.log_debug( 'Google browser tracking enabled' );
-						}
-						if ( ! consentGranted && this.google_browser_allowed) {
-							this.log_warn( 'Google browser tracking disabled after consent change' );
-						}
-
-						this.google_browser_allowed = consentGranted;
-						this.update_google_consent_mode( consentGranted );
-						return this.google_browser_allowed;
+						this.google_browser_allowed = true;
+						return true;
 					}
 
 		/**
@@ -400,10 +355,6 @@
 		 * called synchronously in <head> with a server-generated event_id.
 		 * Here we only POST to the CAPI endpoint using that same event_id so that
 		 * Meta can deduplicate the browser and server events — no double count.
-		 *
-			 * When the base code was NOT output, send_event() still sends the server-side
-			 * event immediately and only fires the Meta browser event if consent is
-			 * currently granted.
 		 */
 			dispatch_initial_pageview() {
 				if (this.initial_pageview_sent) {
@@ -431,9 +382,7 @@
 					pageview_params.event_id_override = this.config.pageview_event_id;
 					pageview_params.skip_fbq = true;
 					} else {
-						// No base code — server-side always proceeds; Meta browser dispatch
-						// only fires if consent is currently granted.
-						this.log_debug( 'initial PageView: base code absent, sending with runtime Meta consent check' );
+						this.log_debug( 'initial PageView: base code absent, sending via runtime dispatch' );
 					}
 
 				this.send_event( pageview_params );
@@ -894,68 +843,6 @@
 			}
 
 		/**
-		 * Check if tracking consent is given.
-		 *
-		 * Site policy is "allowed by default": only explicit denial blocks browser tags.
-		 */
-			check_consent() {
-				var cookieName = this.config.consent_cookie || 'alvobot_tracking_consent';
-				var cookieValue = this.get_cookie_value( cookieName );
-				var normalizedCookie = cookieValue ? String( cookieValue ).trim().toLowerCase() : '';
-
-			// Check explicit cookie state first.
-				if (normalizedCookie) {
-					if (['0', 'false', 'no', 'deny', 'denied', 'disallow', 'rejected', 'reject'].indexOf( normalizedCookie ) !== -1) {
-						this.log_warn( 'check_consent(): false via explicit deny cookie', { cookie: cookieName, value: normalizedCookie } );
-						return false;
-					}
-					if (['1', 'true', 'yes', 'allow', 'allowed'].indexOf( normalizedCookie ) !== -1) {
-						this.log_debug( 'check_consent(): true via explicit allow cookie', { cookie: cookieName, value: normalizedCookie } );
-						return true;
-					}
-				}
-
-			// Check JS variable
-				if (window.alvobot_tracking_consent === false) {
-					this.log_warn( 'check_consent(): false via window.alvobot_tracking_consent' );
-					return false;
-				}
-				if (window.alvobot_tracking_consent === true) {
-					this.log_debug( 'check_consent(): true via window.alvobot_tracking_consent' );
-					return true;
-				}
-
-			// CookieYes integration
-			if (window.CookieYes && typeof window.CookieYes.getConsent === 'function') {
-					var cookieYesAnalytics = window.CookieYes.getConsent( 'analytics' );
-					if (cookieYesAnalytics === 'no') {
-						this.log_warn( 'check_consent(): false via CookieYes analytics=no' );
-						return false;
-					}
-					if (cookieYesAnalytics === 'yes') {
-						this.log_debug( 'check_consent(): true via CookieYes analytics=yes' );
-						return true;
-					}
-				}
-
-			// Complianz integration
-			if (typeof window.cmplz_get_consent === 'function') {
-					var complianzStatistics = window.cmplz_get_consent( 'statistics' );
-					if (complianzStatistics === 'deny') {
-						this.log_warn( 'check_consent(): false via Complianz statistics=deny' );
-						return false;
-					}
-					if (complianzStatistics === 'allow') {
-						this.log_debug( 'check_consent(): true via Complianz statistics=allow' );
-						return true;
-					}
-				}
-
-				this.log_debug( 'check_consent(): default allow (no explicit deny found)' );
-				return true;
-			}
-
-		/**
 		 * Check if current visitor is a bot.
 		 */
 			is_bot() {
@@ -1222,8 +1109,6 @@
 							}
 						}
 					});
-				} else if (window.gtag && platforms !== 'meta_only' && this.has_google_trackers()) {
-					this.log_warn( 'send_event(): Google browser dispatch skipped because consent is not granted', { event_name: event_name } );
 				}
 
 				// 2. POST to WordPress for server-side dispatch (Meta CAPI — skip for google_only events)

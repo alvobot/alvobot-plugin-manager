@@ -1070,8 +1070,6 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$merged['test_mode']       = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
 			$merged['test_event_code'] = isset( $posted['test_event_code'] ) ? $posted['test_event_code'] : '';
 			$merged['realtime_dispatch'] = isset( $posted['realtime_dispatch'] ) ? $posted['realtime_dispatch'] : '';
-			$merged['consent_check']   = isset( $posted['consent_check'] ) ? $posted['consent_check'] : '';
-			$merged['consent_cookie']  = isset( $posted['consent_cookie'] ) ? $posted['consent_cookie'] : '';
 			$merged['excluded_roles']  = isset( $posted['excluded_roles'] ) ? $posted['excluded_roles'] : array();
 			$merged['retention_days']  = isset( $posted['retention_days'] ) ? $posted['retention_days'] : '';
 			$merged['max_events']      = isset( $posted['max_events'] ) ? $posted['max_events'] : '';
@@ -1182,10 +1180,6 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['test_mode']       = ! empty( $settings['test_mode'] );
 		$sanitized['test_event_code'] = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
 		$sanitized['realtime_dispatch'] = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
-
-		// Consent gate must stay opt-in; other tabs can submit without this field.
-		$sanitized['consent_check']  = ! empty( $settings['consent_check'] );
-		$sanitized['consent_cookie'] = isset( $settings['consent_cookie'] ) ? sanitize_text_field( $settings['consent_cookie'] ) : 'alvobot_tracking_consent';
 
 		$sanitized['excluded_roles'] = array();
 		if ( isset( $settings['excluded_roles'] ) && is_array( $settings['excluded_roles'] ) ) {
