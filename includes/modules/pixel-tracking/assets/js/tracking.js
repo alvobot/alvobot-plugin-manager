@@ -1438,4 +1438,167 @@
 			tracker.start( window.alvobot_pixel_config );
 		}
 	}
+
+	/**
+	 * Global debug activator.
+	 *
+	 * Type in the browser console:
+	 *   alvobot_debug()
+	 *
+	 * This will:
+	 *   1. Enable all AlvoBot console logs
+	 *   2. Intercept and log every fbq() call (Meta Pixel browser-side)
+	 *   3. Intercept and log every gtag() call (Google Ads / GA4)
+	 *   4. Intercept and log every fetch() to AlvoBot REST API (server-side payloads)
+	 *   5. Listen for alvobot:ad_event custom events (ad-tracker.js)
+	 *   6. Dump the current tracker state
+	 */
+	window.alvobot_debug = function () {
+		var PREFIX = '%c[AlvoBot Debug]';
+		var CSS_INFO   = 'background:#fbbf24;color:#0E100D;padding:2px 6px;border-radius:4px;font-weight:bold';
+		var CSS_META   = 'background:#1877F2;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+		var CSS_GOOGLE = 'background:#4285F4;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+		var CSS_API    = 'background:#12B76A;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+		var CSS_AD     = 'background:#F63D68;color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold';
+
+		// 1. Enable tracker debug
+		var t = window.alvobot_pixel;
+		if (t) {
+			t.debug_enabled = true;
+			t.debug_prefix  = PREFIX.replace( '%c', '' );
+		}
+
+		// 2. Dump current state
+		var config = window.alvobot_pixel_config || {};
+		console.group( PREFIX + ' State Dump', CSS_INFO );
+		console.log( 'Config:', JSON.parse( JSON.stringify( config ) ) );
+		if (t) {
+			console.log( 'Tracker data:', JSON.parse( JSON.stringify( t.data ) ) );
+			console.log( 'Initialized:', t.initialized, '| Tracking:', t.tracking_enabled );
+			console.log( 'Meta allowed:', t.meta_browser_allowed, '| Google allowed:', t.google_browser_allowed );
+		}
+		if (typeof fbq !== 'undefined' && typeof fbq.getState === 'function') {
+			console.log( 'fbq pixels:', fbq.getState().pixels.map( function (p) {
+				return { id: p.id, userData: p.userData, eventCount: p.eventCount };
+			}));
+		}
+		console.log( '_fbp:', document.cookie.match( /(^|;)\s*_fbp=([^;]+)/ ) ? RegExp.$2 : 'not set' );
+		console.log( '_fbc:', document.cookie.match( /(^|;)\s*_fbc=([^;]+)/ ) ? RegExp.$2 : 'not set' );
+		console.log( 'Google trackers:', config.google_trackers || [] );
+		console.log( 'user_data_hashed:', config.user_data_hashed );
+		console.groupEnd();
+
+		// 3. Intercept fbq()
+		if (typeof window.fbq === 'function' && ! window.fbq.__alvobot_debug) {
+			var origFbq = window.fbq;
+			window.fbq  = function () {
+				var args = Array.prototype.slice.call( arguments );
+				var action = args[0];
+				if (action === 'track' || action === 'trackCustom' || action === 'trackSingle' || action === 'trackSingleCustom') {
+					console.group( PREFIX + ' %c META fbq("' + action + '", "' + args[1] + '")', CSS_INFO, CSS_META );
+					console.log( 'Event:', args[1] );
+					if (args[2]) { console.log( 'Params:', args[2] ); }
+					if (args[3]) { console.log( 'Options:', args[3] ); }
+					console.groupEnd();
+				} else if (action === 'init') {
+					console.log( PREFIX + ' %c META fbq("init", "' + args[1] + '", userData:', CSS_INFO, CSS_META, args[2] || {} );
+				}
+				return origFbq.apply( this, arguments );
+			};
+			window.fbq.__alvobot_debug = true;
+			// Copy over all properties from the original
+			for (var key in origFbq) {
+				if (origFbq.hasOwnProperty( key )) {
+					window.fbq[key] = origFbq[key];
+				}
+			}
+		}
+
+		// 4. Intercept gtag()
+		if (typeof window.gtag === 'function' && ! window.gtag.__alvobot_debug) {
+			var origGtag = window.gtag;
+			window.gtag  = function () {
+				var args = Array.prototype.slice.call( arguments );
+				if (args[0] === 'event') {
+					var isConversion = args[1] === 'conversion';
+					var css = isConversion ? CSS_AD : CSS_GOOGLE;
+					var label = isConversion ? ' CONVERSION' : '';
+					console.group( PREFIX + ' %c GOOGLE gtag("event", "' + args[1] + '")' + label, CSS_INFO, css );
+					if (args[2]) {
+						console.log( 'Params:', args[2] );
+						if (args[2].send_to) { console.log( 'send_to:', args[2].send_to ); }
+						if (args[2].value)   { console.log( 'value:', args[2].value, args[2].currency || '' ); }
+					}
+					console.groupEnd();
+				} else if (args[0] === 'config') {
+					console.log( PREFIX + ' %c GOOGLE gtag("config", "' + args[1] + '")', CSS_INFO, CSS_GOOGLE, args[2] || '' );
+				}
+				return origGtag.apply( this, arguments );
+			};
+			window.gtag.__alvobot_debug = true;
+		}
+
+		// 5. Intercept fetch() for AlvoBot REST API
+		if ( ! window.fetch.__alvobot_debug) {
+			var origFetch = window.fetch;
+			window.fetch  = function (url, opts) {
+				var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+				if (urlStr.indexOf( 'alvobot-pro/v1/pixel-tracking' ) !== -1) {
+					var endpoint = urlStr.indexOf( '/leads/' ) !== -1 ? 'LEAD' : 'EVENT';
+					var payload  = null;
+					try { payload = opts && opts.body ? JSON.parse( opts.body ) : null; } catch (e) { /* ignore */ }
+					console.group( PREFIX + ' %c SERVER ' + endpoint + ' → ' + urlStr.split( '?' )[0], CSS_INFO, CSS_API );
+					if (payload) {
+						console.log( 'event_name:', payload.event_name );
+						console.log( 'event_id:', payload.event_id );
+						console.log( 'fbp:', payload.fbp );
+						console.log( 'fbc:', payload.fbc );
+						console.log( 'ip:', payload.ip );
+						console.log( 'geo:', payload.geo );
+						console.log( 'user_data_hashed:', payload.user_data_hashed );
+						console.log( 'pixel_ids:', payload.pixel_ids );
+						console.log( 'gclid:', payload.gclid );
+						console.log( 'gads_conversion_label:', payload.gads_conversion_label );
+						console.log( 'gads_labels_map:', payload.gads_labels_map );
+						console.log( 'Full payload:', payload );
+					}
+					console.groupEnd();
+
+					return origFetch.apply( this, arguments ).then( function (resp) {
+						var cloned = resp.clone();
+						cloned.json().then( function (body) {
+							console.group( PREFIX + ' %c SERVER RESPONSE ← ' + endpoint, CSS_INFO, CSS_API );
+							console.log( 'Status:', resp.status );
+							console.log( 'Body:', body );
+							if (body.resolved_ip)  { console.log( 'Resolved IP:', body.resolved_ip ); }
+							if (body.resolved_geo) { console.log( 'Resolved Geo:', body.resolved_geo ); }
+							if (body.capi_response) { console.log( 'CAPI Response:', body.capi_response ); }
+							console.groupEnd();
+						}).catch( function () {} );
+						return resp;
+					});
+				}
+				return origFetch.apply( this, arguments );
+			};
+			window.fetch.__alvobot_debug = true;
+		}
+
+		// 6. Listen for ad events
+		document.addEventListener( 'alvobot:ad_event', function (e) {
+			console.group( PREFIX + ' %c AD EVENT: ' + (e.detail ? e.detail.event_name : '?'), CSS_INFO, CSS_AD );
+			console.log( 'Detail:', e.detail );
+			console.groupEnd();
+		});
+
+		console.log(
+			'\n' + PREFIX + ' Debug mode ACTIVE. All events will be logged.\n' +
+			'  - Meta Pixel (fbq) calls → blue\n' +
+			'  - Google (gtag) calls → blue/red for conversions\n' +
+			'  - Server API (fetch) calls → green\n' +
+			'  - Ad events → red\n',
+			CSS_INFO
+		);
+
+		return 'AlvoBot Debug ON';
+	};
 })();
