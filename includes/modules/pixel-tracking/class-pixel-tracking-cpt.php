@@ -153,7 +153,7 @@ class AlvoBotPro_PixelTracking_CPT {
 				'_browser_ip'             => isset( $data['browser_ip'] ) ? sanitize_text_field( $data['browser_ip'] ) : '',
 				'_user_agent'             => isset( $data['user_agent'] ) ? sanitize_text_field( $data['user_agent'] ) : '',
 				'_pixel_ids'              => isset( $data['pixel_ids'] ) ? sanitize_text_field( $data['pixel_ids'] ) : '',
-				'_custom_data'            => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? array_map( 'sanitize_text_field', $data['custom_data'] ) : array(),
+				'_custom_data'            => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? $this->sanitize_custom_data( $data['custom_data'] ) : array(),
 				'_fb_retry_count'         => $preserve_existing ? $current_retry_count : 0,
 				'_gclid'                  => isset( $data['gclid'] ) ? sanitize_text_field( $data['gclid'] ) : '',
 				'_gbraid'                 => isset( $data['gbraid'] ) ? sanitize_text_field( $data['gbraid'] ) : '',
@@ -529,7 +529,12 @@ class AlvoBotPro_PixelTracking_CPT {
 				if ( is_array( $map ) ) {
 					$sanitized_map = array();
 					foreach ( $map as $tracker_id => $label ) {
-						$sanitized_map[ sanitize_text_field( $tracker_id ) ] = sanitize_text_field( $label );
+						$sanitized_tracker = sanitize_text_field( $tracker_id );
+						$sanitized_label   = sanitize_text_field( $label );
+						if ( '' === $sanitized_tracker || '' === $sanitized_label ) {
+							continue;
+						}
+						$sanitized_map[ $sanitized_tracker ] = $sanitized_label;
 					}
 					update_post_meta( $post_id, '_gads_labels_map', wp_json_encode( $sanitized_map ) );
 				}
@@ -617,5 +622,18 @@ class AlvoBotPro_PixelTracking_CPT {
 				$normalized = '55' . $normalized;
 		}
 			return hash( 'sha256', $normalized );
+	}
+
+	private function sanitize_custom_data( array $data ) {
+		$result = array();
+		foreach ( $data as $key => $value ) {
+			$sanitized_key = sanitize_text_field( $key );
+			if ( is_array( $value ) ) {
+				$result[ $sanitized_key ] = $this->sanitize_custom_data( $value );
+			} else {
+				$result[ $sanitized_key ] = sanitize_text_field( $value );
+			}
+		}
+		return $result;
 	}
 }

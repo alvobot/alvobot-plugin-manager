@@ -738,7 +738,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			return true;
 		}
 
-		$value = wp_unslash( $_COOKIE[ $cookie_name ] );
+		$value = sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) );
 		$value = strtolower( trim( (string) $value, "\"' \t\n\r\0\x0B" ) );
 
 		if ( in_array( $value, array( '0', 'false', 'no', 'deny', 'denied', 'disallow', 'rejected', 'reject' ), true ) ) {
@@ -896,6 +896,11 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			}
 		}
 
-		return 'BRL';
+		$settings = $this->module->get_settings();
+		if ( ! empty( $settings['default_currency'] ) && preg_match( '/^[A-Z]{3}$/', $settings['default_currency'] ) ) {
+			return $settings['default_currency'];
+		}
+
+		return 'USD';
 	}
 }

@@ -1282,14 +1282,14 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$sanitized['google_ads_id']               = '';
 		$sanitized['google_ads_conversion_label']  = '';
 			foreach ( $sanitized_trackers as $t ) {
-				if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
-					$sanitized['google_analytics_id'] = $t['tracker_id'];
+			if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
+				$sanitized['google_analytics_id'] = $t['tracker_id'];
 			}
 			if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
-				$sanitized['google_ads_id']              = $t['tracker_id'];
+				$sanitized['google_ads_id']               = $t['tracker_id'];
 				$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
-				}
 			}
+		}
 
 			$active_target_ids = array_merge(
 				array_column( $sanitized_pixels, 'pixel_id' ),
