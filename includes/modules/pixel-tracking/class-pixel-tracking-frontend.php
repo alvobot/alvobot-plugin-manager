@@ -740,7 +740,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 		$rules        = array();
 
 		foreach ( $conversions as $conv ) {
-			if ( ! $this->conversion_matches_current_page( $conv, $current_page_id, $current_path ) ) {
+			if ( ! $this->conversion_applies_to_page( $conv, $current_page_id, $current_path ) ) {
 				continue;
 			}
 			$trigger              = get_post_meta( $conv->ID, '_trigger_type', true );
