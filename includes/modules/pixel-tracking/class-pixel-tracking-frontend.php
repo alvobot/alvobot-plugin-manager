@@ -233,7 +233,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 <?php foreach ( $pixel_ids_list as $pid ) : ?>
-fbq('init',<?php echo wp_json_encode( (string) $pid ); ?>);
+fbq('init',<?php echo wp_json_encode( (string) $pid ); ?><?php if ( ! empty( $user_data_hashed ) ) : ?>,<?php echo wp_json_encode( $user_data_hashed ); ?><?php endif; ?>);
 <?php endforeach; ?>
 fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id ); ?>});
 </script>
@@ -317,8 +317,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 					google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
 					site_currency: <?php echo wp_json_encode( $site_currency ); ?>,
 					ad_conversions_active: <?php echo $this->has_active_ad_conversions() ? 'true' : 'false'; ?>,
-					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
-					geo_api_key: <?php echo wp_json_encode( defined( 'ALVOBOT_GEO_API_KEY' ) ? ALVOBOT_GEO_API_KEY : '' ); ?>
+					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>
 			};
 		</script>
 		<?php

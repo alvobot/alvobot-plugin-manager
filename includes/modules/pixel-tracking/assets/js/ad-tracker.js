@@ -133,21 +133,25 @@
 		var trackerData = tracker && tracker.data ? tracker.data : {};
 
 		var payload = {
-			event_id:    eventId,
-			event_name:  metaName,
-			event_url:   cleanUrl,
-			page_url:    cleanUrl,
-			page_title:  document.title || '',
-			page_id:     config.page_id || '0',
-			fbp:         getCookie( '_fbp' ),
-			fbc:         getCookie( '_fbc' ),
-			gclid:       trackerData.gclid || getCookie( '_alvo_gclid' ),
-			gbraid:      trackerData.gbraid || getCookie( '_alvo_gbraid' ),
-			wbraid:      trackerData.wbraid || getCookie( '_alvo_wbraid' ),
-			dclid:       trackerData.dclid || getCookie( '_alvo_dclid' ),
-			ga_client_id: trackerData.ga_client_id || '',
-			user_agent:  navigator.userAgent || '',
-			pixel_ids:   config.pixel_ids || '',
+			event_id:         eventId,
+			event_name:       metaName,
+			event_url:        cleanUrl,
+			page_url:         cleanUrl,
+			page_title:       document.title || '',
+			page_id:          config.page_id || '0',
+			fbp:              getCookie( '_fbp' ),
+			fbc:              getCookie( '_fbc' ),
+			gclid:            trackerData.gclid || getCookie( '_alvo_gclid' ),
+			gbraid:           trackerData.gbraid || getCookie( '_alvo_gbraid' ),
+			wbraid:           trackerData.wbraid || getCookie( '_alvo_wbraid' ),
+			dclid:            trackerData.dclid || getCookie( '_alvo_dclid' ),
+			ga_client_id:     trackerData.ga_client_id || '',
+			ip:               trackerData.ip || '',
+			browser_ip:       trackerData.ip || '',
+			geo:              trackerData.geolocation || {},
+			user_agent:       navigator.userAgent || '',
+			user_data_hashed: config.user_data_hashed || {},
+			pixel_ids:        config.pixel_ids || '',
 			custom_data: {
 				ad_position: adParams.ad_position || '',
 				ad_slot_id:  adParams.ad_slot_id  || '',
@@ -274,6 +278,7 @@
 
 	var vignetteOpened        = false;
 	var vignetteOpenTimestamp = 0; // timestamp da abertura — usado no grace period anti-auto-foco
+	var vignetteSlotId        = ''; // slot path da vinheta, capturado dinamicamente do GPT slotRenderEnded
 	var interstitialFilled    = false; // set true quando slotRenderEnded reporta interstitial preenchido
 	var interstitialFilledAt  = 0; // timestamp do último slotRenderEnded preenchido do interstitial
 	var INTERSTITIAL_SIGNAL_TTL_MS = 45000; // janela para considerar sinal de interstitial "recente"
@@ -282,6 +287,7 @@
 	 * Marca a vinheta como aberta e dispara ad_vignette_open (uma vez por página).
 	 * Registra vignetteOpenTimestamp para filtrar o blur de auto-foco que vem logo
 	 * após a abertura (ver setupClickTracking).
+	 * Usa vignetteSlotId capturado do GPT slotRenderEnded quando disponível.
 	 */
 	function markVignetteAsOpen(source) {
 		if (vignetteOpened) {
@@ -289,8 +295,9 @@
 		}
 		vignetteOpened        = true;
 		vignetteOpenTimestamp = Date.now();
-		log( 'Vinheta aberta (' + source + ')' );
-		dispatchAdEvent( 'ad_vignette_open', 'interstitial', '/22976784714/exp_desktop_interstitial' );
+		var slotPath = vignetteSlotId || '';
+		log( 'Vinheta aberta (' + source + ') slot:', slotPath );
+		dispatchAdEvent( 'ad_vignette_open', 'interstitial', slotPath );
 	}
 
 	function hasGoogleVignetteMarker(url) {
@@ -495,7 +502,7 @@
 				childList:       true,
 				subtree:         true,
 				attributes:      true,
-				attributeFilter: ['aria-hidden', 'style', 'class', 'hidden'],
+				attributeFilter: ['aria-hidden'],
 			}
 		);
 
@@ -562,11 +569,13 @@
 							event.isEmpty ? 'vazio (no-fill)' : 'preenchido'
 						);
 						// Marca que o interstitial carregou — o MutationObserver usa
-						// esse flag para confirmar que body aria-hidden=true é da vinheta
+						// esse flag para confirmar que body aria-hidden=true é da vinheta.
+						// Salva o slot path para uso em ad_vignette_open e ad_vignette_click.
 						if ( ! event.isEmpty && event.slot.getAdUnitPath().indexOf( 'interstitial' ) !== -1) {
-							interstitialFilled = true;
+							interstitialFilled   = true;
 							interstitialFilledAt = Date.now();
-							log( 'Interstitial preenchido — aguardando abertura visual' );
+							vignetteSlotId       = event.slot.getAdUnitPath();
+							log( 'Interstitial preenchido — slot:', vignetteSlotId, '— aguardando abertura visual' );
 							checkVignetteSignals( 'slotRenderEnded interstitial' );
 						}
 					}
@@ -780,7 +789,20 @@
 						var slotId    = slotIdFromIframeId( iframeId );
 						var eventName = 'ad_click';
 
-						if (position === 'interstitial') {
+						// AdSense vignette iframes (aswift_*) não contêm 'interstitial' no ID,
+						// mas devem sempre ser tratadas como interstitial — independente de
+						// vignetteOpened, pois o blur de auto-foco chega antes da detecção.
+						// O grace period e o deferred dispatch (confirmação por navegação)
+						// protegem contra falsos positivos em banners AdSense normais.
+						// Isso corrige: (1) falso positivo de AdClick no auto-foco do Google, e
+						// (2) clique real sendo classificado como AdClick em vez de AdVignetteClick.
+						var isVignetteContext = position === 'interstitial' ||
+							iframeId.indexOf( 'aswift_' ) === 0;
+
+						if (isVignetteContext) {
+							var vigPosition = position === 'interstitial' ? position : 'interstitial';
+							var vigSlot     = slotId || vignetteSlotId || '';
+
 							checkVignetteSignals( 'blur pre-check' );
 
 							// Proteção 1: vinheta ainda não detectada
@@ -807,7 +829,7 @@
 							}
 
 							// Proteção 3: validação deferred — só confirma se houver navegação
-							deferVignetteClick( position, slotId, iframeId );
+							deferVignetteClick( vigPosition, vigSlot, iframeId );
 							return;
 						}
 

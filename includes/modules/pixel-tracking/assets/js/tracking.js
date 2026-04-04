@@ -265,9 +265,14 @@
 				}
 
 					// fbq('init') not yet called — do it now for each pixel.
+					// Pass user_data_hashed (pre-hashed server-side) for Advanced Matching
+					// when available (logged-in users: em, fn, ln, external_id).
+					var advancedMatchData = (this.config && this.config.user_data_hashed)
+						? this.config.user_data_hashed
+						: {};
 					for (var i = 0; i < ids.length; i++) {
-						window.fbq( 'init', ids[i] );
-						this.log_debug( 'fbq init (late — base code absent)', { pixel_id: ids[i] } );
+						window.fbq( 'init', ids[i], advancedMatchData );
+						this.log_debug( 'fbq init (late — base code absent)', { pixel_id: ids[i], advanced_match_keys: Object.keys( advancedMatchData ) } );
 					}
 					} else {
 						this.log_debug( 'fbq already present from base code — skipping stub + SDK load', { ids: ids } );
@@ -541,7 +546,6 @@
 				/* ignore */ }
 
 			var geo = null;
-			var geoKey = (this.config && this.config.geo_api_key) || '';
 
 			// Primary: ipwho.is (HTTPS, free, no key required — works on all sites)
 				try {
@@ -567,32 +571,7 @@
 					this.log_warn( 'get_geolocation(): ipwho.is failed', e && e.message ? e.message : e );
 				}
 
-			// Fallback: ip-api.com Pro (only when geo_api_key is configured — free tier is HTTP-only)
-				if ( ! geo && geoKey) {
-					try {
-						this.log_debug( 'get_geolocation(): trying ip-api.com Pro' );
-						var geoUrl = 'https://pro.ip-api.com/json/' + ip + '?key=' + geoKey + '&fields=status,city,regionName,country,countryCode,zip,currency,timezone';
-						var resp = await this.fetch_with_timeout( geoUrl, {}, 5000 );
-						if (resp.ok) {
-							var data = await resp.json();
-							if (data && data.status === 'success' && data.city) {
-							geo = {
-								city: data.city,
-								state: data.regionName,
-								country: data.country,
-								country_code: data.countryCode,
-								zipcode: data.zip || '',
-								currency: data.currency || '',
-									timezone: data.timezone || '',
-									_ts: Date.now(),
-								};
-								this.log_debug( 'get_geolocation(): resolved via ip-api.com Pro', geo );
-							}
-						}
-					} catch (e) {
-						this.log_warn( 'get_geolocation(): ip-api.com Pro failed', e && e.message ? e.message : e );
-					}
-				}
+
 
 			if (geo) {
 					try {
