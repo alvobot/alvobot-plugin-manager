@@ -108,16 +108,8 @@
 				async start(config) {
 					this.config = config || window.alvobot_pixel_config || {};
 					this.debug_enabled = !! this.config.debug_enabled;
-				// URL param and cookie debug override
-				if ( /[?&]alvobot_debug=1/.test( window.location.search ) ) {
-					this.debug_enabled = true;
-					// Persist via cookie so it survives navigations
-					document.cookie = 'alvobot_debug=1;path=/;max-age=3600;SameSite=Lax' +
-						(window.location.protocol === 'https:' ? ';Secure' : '');
-				}
-				if ( document.cookie.indexOf( 'alvobot_debug=1' ) !== -1 ) {
-					this.debug_enabled = true;
-				}
+				// Debug activation is admin-gated via PHP (config.debug_enabled).
+				// alvobot_debug() from console still available for logged-in admins.
 				__tl( 'system', 'tracker.start', { debug: this.debug_enabled, href: window.location.href } );
 				this.log_debug(
 					'start() called',

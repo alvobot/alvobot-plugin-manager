@@ -965,6 +965,12 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		foreach ( $conversions as $conv ) {
 			$raw_pixel_ids = (string) get_post_meta( $conv->ID, '_pixel_ids', true );
 			$selected_ids  = array_values( array_filter( array_map( 'trim', explode( ',', $raw_pixel_ids ) ) ) );
+
+			// Empty pixel_ids means "all active" — skip filtering entirely.
+			if ( empty( $selected_ids ) ) {
+				continue;
+			}
+
 			$valid_ids     = array_values(
 				array_filter(
 					$selected_ids,
@@ -985,7 +991,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 			$filtered_labels_map = array();
 			foreach ( $labels_map as $tracker_id => $label ) {
-				if ( in_array( $tracker_id, $valid_ids, true ) ) {
+				if ( in_array( $tracker_id, $valid_ids, true ) || in_array( $tracker_id, $active_target_ids, true ) ) {
 					$filtered_labels_map[ $tracker_id ] = $label;
 				}
 			}

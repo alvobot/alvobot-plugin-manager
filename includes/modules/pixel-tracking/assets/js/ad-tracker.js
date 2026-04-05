@@ -29,9 +29,7 @@
 	// Debug
 	// -------------------------------------------------------------------------
 
-	var debug = !! (window.alvobot_pixel_config && window.alvobot_pixel_config.debug_enabled) ||
-		/[?&]alvobot_debug=1/.test( window.location.search ) ||
-		document.cookie.indexOf( 'alvobot_debug=1' ) !== -1;
+	var debug = !! (window.alvobot_pixel_config && window.alvobot_pixel_config.debug_enabled);
 	var LOG_PREFIX = '[AlvoBot AdTracker]';
 
 	// Allow late activation via alvobot_debug()
@@ -481,7 +479,7 @@
 					if (m.type === 'childList') {
 						for (var j = 0; j < m.addedNodes.length; j++) {
 							var n   = m.addedNodes[j];
-							var nid = (n.nodeType === 1 && n.id) ? n.id : '';
+							var nid = (n.nodeType === 1 && n.id) ? String( n.id ) : '';
 
 							if (
 								n.nodeType === 1 &&
