@@ -255,8 +255,10 @@
 			 * consent is granted in the browser.
 			 */
 				async sha256(str) {
+				if ( ! str ) { return ''; }
 				try {
-					var data = new TextEncoder().encode( str );
+					var normalized = String( str ).trim().toLowerCase();
+					var data = new TextEncoder().encode( normalized );
 					var buf  = await crypto.subtle.digest( 'SHA-256', data );
 					return Array.from( new Uint8Array( buf ) )
 						.map( function (b) { return b.toString( 16 ).padStart( 2, '0' ); } )
@@ -523,26 +525,10 @@
 					this.log_warn( 'get_ip(): ipify request failed', e && e.message ? e.message : e );
 					/* continue fallback */ }
 
-				try {
-					this.log_debug( 'get_ip(): trying ipwho.is' );
-					var ipwhoResp = await this.fetch_with_timeout( 'https://ipwho.is/', {}, 3000 );
-					if (ipwhoResp && ipwhoResp.ok) {
-						var ipwhoData = await ipwhoResp.json();
-						if (ipwhoData && ipwhoData.ip && ! this.is_private_ip( ipwhoData.ip )) {
-							this.log_debug( 'get_ip(): resolved by ipwho.is', { ip: ipwhoData.ip } );
-							__tl( 'geo', 'ip_resolved', { source: 'ipwho.is', ip: ipwhoData.ip, ms: Date.now() - _ipStart } );
-							try {
-								sessionStorage.setItem( 'alvobot_ip', ipwhoData.ip );
-							} catch (e) {
-								/* ignore */ }
-							return ipwhoData.ip;
-						}
-					}
-				} catch (e) {
-					this.log_warn( 'get_ip(): ipwho.is request failed', e && e.message ? e.message : e );
-					/* ignore */ }
+				// ipwho.is removed — blocks cross-origin browser requests (403).
+				// Server-side resolves IP if client fails.
 
-				this.log_warn( 'get_ip(): failed to resolve a public IP' );
+				this.log_warn( 'get_ip(): failed to resolve a public IP (CF trace + ipify both failed)' );
 				__tl( 'geo', 'ip_failed', { ms: Date.now() - _ipStart } );
 				return '';
 			}
@@ -1105,7 +1091,7 @@
 					});
 				}
 
-				__tl( platforms === 'meta_only' ? 'meta' : (platforms === 'google_only' ? 'google' : 'meta'), event_name, { event_id: event_id, platforms: platforms } );
+				__tl( platforms === 'meta_only' ? 'meta' : (platforms === 'google_only' ? 'google' : 'event'), event_name, { event_id: event_id, platforms: platforms } );
 
 				// 2. POST to WordPress for server-side dispatch (Meta CAPI — skip for google_only events)
 				if (platforms === 'google_only') {

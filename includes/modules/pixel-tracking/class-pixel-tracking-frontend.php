@@ -161,13 +161,15 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$debug_enabled = class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' )
 			? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' )
 			: false;
-		// URL param ?alvobot_debug=1 or cookie override.
+		// URL param ?alvobot_debug=1 or cookie override — admin only.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! $debug_enabled && isset( $_GET['alvobot_debug'] ) && '1' === $_GET['alvobot_debug'] ) {
-			$debug_enabled = true;
-		}
-		if ( ! $debug_enabled && isset( $_COOKIE['alvobot_debug'] ) && '1' === $_COOKIE['alvobot_debug'] ) {
-			$debug_enabled = true;
+		if ( ! $debug_enabled && current_user_can( 'manage_options' ) ) {
+			if ( isset( $_GET['alvobot_debug'] ) && '1' === $_GET['alvobot_debug'] ) {
+				$debug_enabled = true;
+			}
+			if ( isset( $_COOKIE['alvobot_debug'] ) && '1' === $_COOKIE['alvobot_debug'] ) {
+				$debug_enabled = true;
+			}
 		}
 
 		$has_meta_pixels = ! empty( $pixels );
