@@ -120,7 +120,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 
 			<!-- Pixel/Tracker Selector -->
-			<div class="alvobot-form-field">
+			<div class="alvobot-form-field" id="conv-pixel-field">
 				<label class="alvobot-form-label"><?php esc_html_e( 'Pixels & Trackers', 'alvobot-pro' ); ?></label>
 				<p class="alvobot-description"><?php esc_html_e( 'Selecione onde disparar este evento. Nenhum selecionado = todos.', 'alvobot-pro' ); ?></p>
 					<div id="conv-pixel-selector" class="alvobot-pixel-selector">
@@ -129,6 +129,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<input type="hidden" id="conv_pixel_ids" value="">
 					<input type="hidden" id="conv_page_ids" value="">
 				</div>
+			<!-- Ad-event notice: always fires on all platforms -->
+			<div class="alvobot-form-field" id="conv-ad-all-notice" style="display:none;">
+				<label class="alvobot-form-label"><?php esc_html_e( 'Pixels & Trackers', 'alvobot-pro' ); ?></label>
+				<div style="padding:12px 16px;background:var(--alvobot-primary-light,#FFFBEC);border:1px solid var(--alvobot-primary,#fbbf24);border-radius:var(--alvobot-radius-md,8px);font-size:var(--alvobot-font-size-base,14px);color:var(--alvobot-gray-800,#344054);">
+					<?php esc_html_e( 'Eventos de anuncio sao disparados automaticamente para todos os pixels e trackers conectados (Meta Pixel, Google Ads e GA4).', 'alvobot-pro' ); ?>
+				</div>
+			</div>
 
 			<!-- Google Ads conversion fields (per-tracker labels) -->
 			<div id="conv-gads-fields" class="alvobot-conditional-field">

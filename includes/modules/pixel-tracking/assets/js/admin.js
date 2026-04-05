@@ -1516,6 +1516,11 @@
 					$( '#conv-selector-field' ).removeClass( 'visible' );
 				}
 
+				// Ad-event triggers always fire on all platforms — hide pixel selector, show notice.
+				var isAdTrigger = ['ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click'].indexOf( val ) !== -1;
+				$( '#conv-pixel-field' ).toggle( ! isAdTrigger );
+				$( '#conv-gads-fields' ).toggle( ! isAdTrigger );
+				$( '#conv-ad-all-notice' ).toggle( isAdTrigger );
 			}
 		);
 
