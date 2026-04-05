@@ -227,7 +227,7 @@
 		};
 
 		log( 'dispatchAdEvent:', eventName, adPosition, '(eventId:', eventId, ')' );
-		tl( eventName, { ad_position: adPosition, ad_slot_id: adSlotId || '', event_id: eventId, ad_iframe_id: adIframeId || '' } );
+		tl( eventName, { ad_position: adPosition, ad_slot_id: adSlotId || '', event_id: eventId } );
 
 		// Emit custom DOM event for conversion rule triggers.
 		try {
