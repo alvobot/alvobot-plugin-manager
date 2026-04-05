@@ -943,28 +943,6 @@
 			}
 
 		/**
-		 * Hash a value with SHA-256 using Web Crypto API.
-		 */
-		async hash_sha256(value) {
-			if ( ! value) {
-				return '';
-			}
-			var normalized = value.trim().toLowerCase();
-			try {
-				var encoder   = new TextEncoder();
-				var data      = encoder.encode( normalized );
-				var hash      = await crypto.subtle.digest( 'SHA-256', data );
-				var hashArray = Array.from( new Uint8Array( hash ) );
-				return hashArray.map(
-					function (b) {
-						return b.toString( 16 ).padStart( 2, '0' ); }
-				).join( '' );
-			} catch (e) {
-				return '';
-			}
-		}
-
-		/**
 		 * Send a tracking event (browser + server).
 		 *
 		 * params.event_id_override — use this event_id instead of generating a new one
@@ -1517,7 +1495,7 @@
 		}
 
 		// fetch interceptor for AlvoBot REST API
-		if ( ! window.fetch.__alvobot_debug) {
+		if (typeof window.fetch === 'function' && ! window.fetch.__alvobot_debug) {
 			var origFetch = window.fetch;
 			window.fetch  = function (url, opts) {
 				var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : '');
@@ -1565,10 +1543,8 @@
 			console.groupEnd();
 		});
 
-		// Activate ad-tracker debug if available
-		if ( typeof window.__alvobot_ad_tracker_debug !== 'undefined' || true ) {
-			window.__alvobot_ad_tracker_debug = true;
-		}
+		// Activate ad-tracker debug
+		window.__alvobot_ad_tracker_debug = true;
 	}
 
 	/**
@@ -1620,8 +1596,8 @@
 		console.log( '_fbp:', fbpMatch ? fbpMatch[2] : 'not set', '| _fbc:', fbcMatch ? fbcMatch[2] : 'not set' );
 
 		// Meta Pixel state
-		if (typeof fbq !== 'undefined' && typeof fbq.getState === 'function') {
-			var pxState = fbq.getState();
+		if (typeof window.fbq !== 'undefined' && typeof window.fbq.getState === 'function') {
+			var pxState = window.fbq.getState();
 			console.log( 'fbq pixels:', pxState.pixels.map( function (p) {
 				return { id: p.id, userData: p.userData, eventCount: p.eventCount };
 			}));

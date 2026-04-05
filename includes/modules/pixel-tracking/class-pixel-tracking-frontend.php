@@ -338,7 +338,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 					plugin_version: <?php echo wp_json_encode( defined( 'ALVOBOT_PRO_VERSION' ) ? ALVOBOT_PRO_VERSION : '' ); ?>,
 					test_mode: <?php echo ! empty( $settings['test_mode'] ) ? 'true' : 'false'; ?>,
 					test_event_code: <?php echo wp_json_encode( ! empty( $settings['test_event_code'] ) ? $settings['test_event_code'] : '' ); ?><?php if ( $debug_enabled ) : ?>,
-					debug_conversion_rules: <?php echo wp_json_encode( $this->get_debug_conversion_rules( $current_page_id ) ); ?>,
+					debug_conversion_rules: <?php echo wp_json_encode( $this->get_debug_conversion_rules( $page_id ) ); ?>,
 					cf_headers: <?php
 						$cf_headers = array();
 						if ( isset( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
@@ -746,7 +746,9 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			$trigger              = get_post_meta( $conv->ID, '_trigger_type', true );
 			$trigger_val          = get_post_meta( $conv->ID, '_trigger_value', true );
 			$event_type           = get_post_meta( $conv->ID, '_event_type', true );
-			$event_name           = get_post_meta( $conv->ID, '_event_name', true );
+			$event_name           = 'CustomEvent' === $event_type
+				? get_post_meta( $conv->ID, '_event_custom_name', true )
+				: $event_type;
 			$content_name         = get_post_meta( $conv->ID, '_content_name', true );
 			$platforms            = get_post_meta( $conv->ID, '_platforms', true );
 			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
