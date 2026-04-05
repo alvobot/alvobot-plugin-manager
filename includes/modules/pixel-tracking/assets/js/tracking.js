@@ -1094,8 +1094,8 @@
 					var eventPayload = {
 						event_id: event_id,
 						event_name: event_name,
-						event_url: window.location.href,
-						page_url: window.location.href,
+						event_url: window.location.href.replace( /#google_vignette$/, '' ),
+						page_url: window.location.href.replace( /#google_vignette$/, '' ),
 						page_title: document.title,
 						page_id: this.config.page_id,
 						referrer: document.referrer || '',

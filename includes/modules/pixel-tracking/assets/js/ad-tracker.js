@@ -355,11 +355,12 @@
 	 */
 	function checkVignetteClosure() {
 		if ( ! vignetteOpened ) { return; }
-		var urlCleared  = ! hasGoogleVignetteMarker( window.location.href );
 		var bodyCleared = ! document.body || document.body.getAttribute( 'aria-hidden' ) !== 'true';
 		var domCleared  = ! hasInterstitialIframeInDom();
 
-		if ( urlCleared && ( bodyCleared || domCleared ) ) {
+		// body aria-hidden off OR interstitial iframe removed = vignette closed.
+		// Google doesn't always clean #google_vignette from the URL, so we do it.
+		if ( bodyCleared && domCleared ) {
 			vignetteOpened        = false;
 			vignetteOpenTimestamp = 0;
 			interstitialFilled    = false;
@@ -369,8 +370,51 @@
 				clearInterval( _vignetteCloseCheckInterval );
 				_vignetteCloseCheckInterval = null;
 			}
-			log( 'Vinheta fechada — estado resetado, impressões reativadas' );
-			tl( 'vignette_closed', { url_cleared: urlCleared, body_cleared: bodyCleared, dom_cleared: domCleared } );
+
+			// Clean stale #google_vignette and ?google_vignette from URL.
+			cleanVignetteUrlMarker();
+
+			log( 'Vinheta fechada — estado resetado, URL limpa, impressões reativadas' );
+			tl( 'vignette_closed', { body_cleared: bodyCleared, dom_cleared: domCleared } );
+		}
+	}
+
+	/**
+	 * Remove #google_vignette hash and ?google_vignette query param from URL
+	 * without triggering a page reload or navigation event.
+	 */
+	function cleanVignetteUrlMarker() {
+		var href = window.location.href;
+		if ( href.indexOf( 'google_vignette' ) === -1 ) {
+			return;
+		}
+		try {
+			var url = new URL( href );
+			var changed = false;
+
+			// Remove hash #google_vignette
+			if ( url.hash === '#google_vignette' ) {
+				url.hash = '';
+				changed = true;
+			}
+
+			// Remove query param ?google_vignette=...
+			if ( url.searchParams.has( 'google_vignette' ) ) {
+				url.searchParams.delete( 'google_vignette' );
+				changed = true;
+			}
+
+			if ( changed && window.history && window.history.replaceState ) {
+				var cleanUrl = url.toString().replace( /[?#]$/, '' );
+				window.history.replaceState( window.history.state, '', cleanUrl );
+				log( 'URL limpa de google_vignette:', cleanUrl );
+			}
+		} catch (e) {
+			// Fallback for browsers without URL constructor
+			if ( window.location.hash === '#google_vignette' && window.history && window.history.replaceState ) {
+				var clean = href.replace( /#google_vignette$/, '' );
+				window.history.replaceState( window.history.state, '', clean );
+			}
 		}
 	}
 
