@@ -55,6 +55,37 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Rate Limiting — prevents duplicate/spam events
+	// -------------------------------------------------------------------------
+
+	var _eventCooldowns = {};
+
+	/**
+	 * Check if an event should be rate-limited.
+	 * Returns true if the event should be BLOCKED (too soon since last fire).
+	 */
+	function isRateLimited(eventName, key, cooldownMs) {
+		var id = eventName + ':' + (key || 'global');
+		var now = Date.now();
+		var lastFired = _eventCooldowns[id] || 0;
+		if (now - lastFired < cooldownMs) {
+			log( 'Rate limited:', id, '(' + (now - lastFired) + 'ms < ' + cooldownMs + 'ms cooldown)' );
+			tl( 'rate_limited', { event: eventName, key: key, elapsed: now - lastFired, cooldown: cooldownMs } );
+			return true;
+		}
+		_eventCooldowns[id] = now;
+		return false;
+	}
+
+	// Cooldown configuration (ms)
+	var COOLDOWN = {
+		ad_impression:     30000,  // 30s per slot — same ad can't re-impress that fast
+		ad_click:          5000,   // 5s per iframe — prevents double-click spam
+		ad_vignette_open:  60000,  // 60s global — Google limits vignettes to 1 per minute
+		ad_vignette_click: 60000,  // 60s global — can't click vignette twice in 1 minute
+	};
+
+	// -------------------------------------------------------------------------
 	// Utilitários
 	// -------------------------------------------------------------------------
 
@@ -209,6 +240,26 @@
 	}
 
 	function dispatchAdEvent(eventName, adPosition, adSlotId) {
+		// Rate limiting — use slot/iframe as key for per-element cooldowns,
+		// 'global' for vignette events (only 1 vignette at a time).
+		var cooldownMs = COOLDOWN[eventName] || 0;
+		if (cooldownMs > 0) {
+			var cooldownKey = (eventName === 'ad_vignette_open' || eventName === 'ad_vignette_click')
+				? 'global'
+				: (adSlotId || adPosition || 'unknown');
+			if ( isRateLimited( eventName, cooldownKey, cooldownMs ) ) {
+				return;
+			}
+		}
+
+		// Suppress ad_impression while vignette is open — the "impression" is the
+		// vignette overlay itself, not a real banner view.
+		if (eventName === 'ad_impression' && vignetteOpened) {
+			log( 'ad_impression suppressed: vignette is open (overlay ad, not banner)' );
+			tl( 'impression_suppressed_vignette', { ad_slot_id: adSlotId, ad_position: adPosition } );
+			return;
+		}
+
 		var eventId  = generateUUID();
 		var cleanUrl = window.location.href.replace( /#google_vignette$/, '' );
 		var handledByRule = isAdEventHandledByConversionRule( eventName );
