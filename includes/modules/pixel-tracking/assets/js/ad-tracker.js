@@ -347,12 +347,36 @@
 	var interstitialFilled    = false; // set true quando slotRenderEnded reporta interstitial preenchido
 	var interstitialFilledAt  = 0; // timestamp do último slotRenderEnded preenchido do interstitial
 	var INTERSTITIAL_SIGNAL_TTL_MS = 45000; // janela para considerar sinal de interstitial "recente"
+	var _vignetteCloseCheckInterval = null;
 
 	/**
-	 * Marca a vinheta como aberta e dispara ad_vignette_open (uma vez por página).
-	 * Registra vignetteOpenTimestamp para filtrar o blur de auto-foco que vem logo
-	 * após a abertura (ver setupClickTracking).
-	 * Usa vignetteSlotId capturado do GPT slotRenderEnded quando disponível.
+	 * Detect vignette closure and reset state so impressions resume.
+	 * Called periodically (500ms) while vignette is open.
+	 */
+	function checkVignetteClosure() {
+		if ( ! vignetteOpened ) { return; }
+		var urlCleared  = ! hasGoogleVignetteMarker( window.location.href );
+		var bodyCleared = ! document.body || document.body.getAttribute( 'aria-hidden' ) !== 'true';
+		var domCleared  = ! hasInterstitialIframeInDom();
+
+		if ( urlCleared && ( bodyCleared || domCleared ) ) {
+			vignetteOpened        = false;
+			vignetteOpenTimestamp = 0;
+			interstitialFilled    = false;
+			interstitialFilledAt  = 0;
+			vignetteSlotId        = '';
+			if ( _vignetteCloseCheckInterval ) {
+				clearInterval( _vignetteCloseCheckInterval );
+				_vignetteCloseCheckInterval = null;
+			}
+			log( 'Vinheta fechada — estado resetado, impressões reativadas' );
+			tl( 'vignette_closed', { url_cleared: urlCleared, body_cleared: bodyCleared, dom_cleared: domCleared } );
+		}
+	}
+
+	/**
+	 * Marca a vinheta como aberta e dispara ad_vignette_open.
+	 * Starts a periodic check for closure to reset state.
 	 */
 	function markVignetteAsOpen(source) {
 		if (vignetteOpened) {
@@ -360,6 +384,11 @@
 		}
 		vignetteOpened        = true;
 		vignetteOpenTimestamp = Date.now();
+
+		// Start periodic closure detection (every 500ms)
+		if ( ! _vignetteCloseCheckInterval ) {
+			_vignetteCloseCheckInterval = setInterval( checkVignetteClosure, 500 );
+		}
 		var slotPath = vignetteSlotId || '';
 		var signals = {
 			source: source,
@@ -799,6 +828,7 @@
 			window.removeEventListener( 'beforeunload', onBeforeUnload );
 			window.removeEventListener( 'hashchange', onHashPopstate );
 			window.removeEventListener( 'popstate', onHashPopstate );
+			window.removeEventListener( 'pageshow', onPageshow );
 			if (dismissObs) {
 				dismissObs.disconnect();
 			}
@@ -840,10 +870,17 @@
 			);
 		}
 
+		function onPageshow(e) {
+			if (e.persisted) {
+				confirm( 'pageshow (back/forward navigation via bfcache)' );
+			}
+		}
+
 		document.addEventListener( 'visibilitychange', onVisibilityChange );
 		window.addEventListener( 'beforeunload', onBeforeUnload );
 		window.addEventListener( 'hashchange', onHashPopstate );
 		window.addEventListener( 'popstate', onHashPopstate );
+		window.addEventListener( 'pageshow', onPageshow );
 
 		pendingVignetteClick = {confirm: confirm, cancel: cancel};
 
@@ -1020,7 +1057,15 @@
 		// 1. Vinheta via mudança dinâmica da URL (hashchange / popstate + history API)
 		installHistoryHooks();
 		window.addEventListener( 'hashchange', checkVignetteHash );
-		window.addEventListener( 'popstate',   checkVignetteHash );
+		window.addEventListener( 'popstate', function () {
+			checkVignetteHash();
+			// Clear per-slot cooldowns on SPA navigation (vignette cooldowns stay).
+			for ( var key in _eventCooldowns ) {
+				if ( key.indexOf( ':global' ) === -1 ) {
+					delete _eventCooldowns[key];
+				}
+			}
+		});
 		window.addEventListener(
 			'pageshow',
 			function () {
