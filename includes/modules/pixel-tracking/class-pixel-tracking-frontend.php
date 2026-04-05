@@ -391,6 +391,20 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				: $event_type;
 			$is_custom    = 'CustomEvent' === $event_type;
 			$trigger      = get_post_meta( $conv->ID, '_trigger_type', true );
+
+			// Ad-event triggers always use custom event names for Meta Pixel.
+			// This ensures they appear as AdImpression, AdClick, etc. in Events Manager
+			// instead of standard events like ViewContent or Lead.
+			$ad_event_name_map = array(
+				'ad_impression'     => 'AdImpression',
+				'ad_click'          => 'AdClick',
+				'ad_vignette_open'  => 'AdVignetteOpen',
+				'ad_vignette_click' => 'AdVignetteClick',
+			);
+			if ( isset( $ad_event_name_map[ $trigger ] ) ) {
+				$event_name = $ad_event_name_map[ $trigger ];
+				$is_custom  = true;
+			}
 			$trigger_val  = get_post_meta( $conv->ID, '_trigger_value', true );
 			$selector     = get_post_meta( $conv->ID, '_css_selector', true );
 			$content_name = get_post_meta( $conv->ID, '_content_name', true );
