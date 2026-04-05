@@ -584,21 +584,22 @@
 		}
 
 		/**
-		 * Get geolocation via ip-api.com Pro with ipwho.is fallback.
-		 * Results are cached in localStorage per IP with 24h TTL.
-		 * If browser geo fails, the server-side fallback handles it.
+		 * Get geolocation from localStorage cache only.
+		 *
+		 * Client-side ipwho.is calls were removed because the API blocks
+		 * cross-origin browser requests (403 on many networks/IPv6).
+		 * The server-side REST endpoint (/events/track, /leads/track) always
+		 * resolves geo via server-to-server calls and returns it in the response.
+		 * The resolved geo is then cached here for subsequent events.
 		 */
-			async get_geolocation() {
+			get_geolocation() {
 				var ip = this.data.ip;
 				if ( ! ip) {
-					this.log_warn( 'get_geolocation(): skipped because IP is empty' );
+					this.log_debug( 'get_geolocation(): skipped (no IP)' );
 					return {};
 				}
-				this.log_debug( 'get_geolocation(): start', { ip: ip } );
 
-			var GEO_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
-			// Check localStorage cache with TTL
+			var GEO_CACHE_TTL = 24 * 60 * 60 * 1000;
 			var cacheKey = 'alvobot_geo_' + ip;
 			try {
 				var cached = localStorage.getItem( cacheKey );
@@ -606,6 +607,7 @@
 						var parsed = JSON.parse( cached );
 						if (parsed && parsed.city && parsed._ts && (Date.now() - parsed._ts) < GEO_CACHE_TTL) {
 							this.log_debug( 'get_geolocation(): cache hit', parsed );
+							__tl( 'geo', 'geo_cache_hit', { ip: ip, city: parsed.city } );
 							return parsed;
 						}
 						localStorage.removeItem( cacheKey );
@@ -613,46 +615,11 @@
 			} catch (e) {
 				/* ignore */ }
 
-			var geo = null;
-
-			// Primary: ipwho.is (HTTPS, free, no key required — works on all sites)
-				try {
-					this.log_debug( 'get_geolocation(): trying ipwho.is' );
-					var resp2 = await this.fetch_with_timeout( 'https://ipwho.is/' + ip, {}, 5000 );
-					if (resp2.ok) {
-						var data2 = await resp2.json();
-						if (data2 && data2.success && data2.city) {
-						geo = {
-							city: data2.city,
-							state: data2.region,
-							state_code: data2.region_code || '',
-							country: data2.country,
-							country_code: data2.country_code,
-							zipcode: data2.postal || '',
-							currency: data2.currency && data2.currency.code ? data2.currency.code : '',
-								timezone: data2.timezone && data2.timezone.id ? data2.timezone.id : '',
-								_ts: Date.now(),
-							};
-							this.log_debug( 'get_geolocation(): resolved via ipwho.is', geo );
-						}
-					}
-				} catch (e) {
-					this.log_warn( 'get_geolocation(): ipwho.is failed', e && e.message ? e.message : e );
-				}
-
-
-
-			if (geo) {
-					try {
-						localStorage.setItem( cacheKey, JSON.stringify( geo ) );
-					} catch (e) {
-						/* ignore */ }
-					this.log_debug( 'get_geolocation(): final geo', geo );
-					return geo;
-				}
-
-				this.log_warn( 'get_geolocation(): no geo available' );
-				return {};
+			// No cached geo — server-side will resolve and return it in the response.
+			// The capture_async_context() handler caches the resolved_geo for next time.
+			this.log_debug( 'get_geolocation(): no cache — will be resolved server-side' );
+			__tl( 'geo', 'geo_deferred_to_server', { ip: ip } );
+			return {};
 			}
 
 		/**
@@ -1251,6 +1218,9 @@
 							if (result.resolved_geo && result.resolved_geo.city && ( ! self.data.geolocation || ! self.data.geolocation.city )) {
 								self.data.geolocation = result.resolved_geo;
 								self.log_debug( 'send_event(): updated in-memory geo from server', result.resolved_geo );
+								if (self.data.ip) {
+									try { localStorage.setItem( 'alvobot_geo_' + self.data.ip, JSON.stringify( Object.assign( {}, result.resolved_geo, { _ts: Date.now() } ) ) ); } catch (e) { /* ignore */ }
+								}
 							}
 						}
 					).catch(
@@ -1433,6 +1403,9 @@
 					if (result && result.resolved_geo && result.resolved_geo.city && ( ! this.data.geolocation || ! this.data.geolocation.city )) {
 						this.data.geolocation = result.resolved_geo;
 						this.log_debug( 'send_lead_data(): updated in-memory geo from server', result.resolved_geo );
+						if (this.data.ip) {
+							try { localStorage.setItem( 'alvobot_geo_' + this.data.ip, JSON.stringify( Object.assign( {}, result.resolved_geo, { _ts: Date.now() } ) ) ); } catch (e2) { /* ignore */ }
+						}
 					}
 				} catch (e) {
 					this.log_error( 'send_lead_data(): request failed', e && e.message ? e.message : e );
