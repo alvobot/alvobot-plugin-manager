@@ -1517,10 +1517,13 @@
 				}
 
 				// Ad-event triggers always fire on all platforms — hide pixel selector, show notice.
+				// Google Ads labels remain visible and editable for all active trackers.
 				var isAdTrigger = ['ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click'].indexOf( val ) !== -1;
 				$( '#conv-pixel-field' ).toggle( ! isAdTrigger );
-				$( '#conv-gads-fields' ).toggle( ! isAdTrigger );
 				$( '#conv-ad-all-notice' ).toggle( isAdTrigger );
+				if (isAdTrigger) {
+					updateGadsLabelsUI( [] ); // Empty = show ALL Google Ads trackers
+				}
 			}
 		);
 
