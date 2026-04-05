@@ -397,7 +397,6 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			$pixel_ids    = get_post_meta( $conv->ID, '_pixel_ids', true );
 			$target_ids   = $this->filter_active_conversion_target_ids( $pixel_ids );
 
-			$platforms             = get_post_meta( $conv->ID, '_platforms', true );
 			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
 			$gads_labels_map_raw   = get_post_meta( $conv->ID, '_gads_labels_map', true );
 			$gads_labels_map       = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
@@ -407,10 +406,14 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				continue;
 			}
 			if ( ! empty( $target_ids ) ) {
-				$pixel_ids      = implode( ',', $target_ids );
-				$platforms      = $this->derive_platforms_from_target_ids( $target_ids );
+				$pixel_ids       = implode( ',', $target_ids );
 				$gads_labels_map = $this->filter_gads_labels_map_for_targets( $gads_labels_map, $target_ids );
 			}
+
+			// Always derive platforms at runtime from actual active trackers — never trust cached meta.
+			// Empty pixel_ids means "all active" → derive from all; explicit → derive from selection.
+			$runtime_target_ids = ! empty( $target_ids ) ? $target_ids : $this->get_all_active_target_ids();
+			$platforms          = $this->derive_platforms_from_target_ids( $runtime_target_ids );
 
 			$event_config = wp_json_encode(
 				array(
@@ -418,7 +421,7 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 					'event_custom'          => $is_custom,
 					'content_name'          => $content_name,
 					'fb_pixels'             => $pixel_ids,
-					'platforms'             => $platforms ? $platforms : 'all',
+					'platforms'             => $platforms,
 					'gads_conversion_label' => $gads_conversion_label ? $gads_conversion_label : '',
 					'gads_labels_map'       => is_array( $gads_labels_map ) ? $gads_labels_map : array(),
 					'gads_conversion_value' => $gads_conversion_value ? $gads_conversion_value : '',
@@ -839,6 +842,30 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				}
 			)
 		);
+	}
+
+	/**
+	 * Get all active target IDs (Meta pixels + Google trackers).
+	 */
+	private function get_all_active_target_ids() {
+		$settings   = $this->module->get_settings();
+		$active_ids = array();
+
+		$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+		foreach ( $pixels as $pixel ) {
+			if ( ! empty( $pixel['pixel_id'] ) ) {
+				$active_ids[] = (string) $pixel['pixel_id'];
+			}
+		}
+
+		$google_trackers = $this->get_google_trackers_from_settings( $settings );
+		foreach ( $google_trackers as $tracker ) {
+			if ( ! empty( $tracker['tracker_id'] ) ) {
+				$active_ids[] = (string) $tracker['tracker_id'];
+			}
+		}
+
+		return array_values( array_unique( $active_ids ) );
 	}
 
 	/**
