@@ -728,37 +728,28 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				? (string) min( 1000000, max( 0, floatval( wp_unslash( $_POST['gads_conversion_value'] ) ) ) ) : '',
 		);
 
-		// Ad-event conversions always fire on ALL platforms (Meta Pixel + CAPI + Google Ads + GA4).
-		$ad_triggers = array( 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' );
-		if ( in_array( $data['trigger_type'], $ad_triggers, true ) ) {
-			$data['pixel_ids'] = '';
-			$data['platforms'] = 'all';
+		// Derive platforms from selected pixel_ids.
+		$ids_array = array_filter( array_map( 'trim', explode( ',', $data['pixel_ids'] ) ) );
+		$has_meta  = false;
+		$has_google = false;
+		foreach ( $ids_array as $pid ) {
+			if ( preg_match( '/^\d{15,16}$/', $pid ) ) {
+				$has_meta = true;
+			}
+			if ( preg_match( '/^(G-|AW-)/', $pid ) || 'sitekit_gtag' === $pid ) {
+				$has_google = true;
+			}
 		}
-
-		// Derive platforms from selected pixel_ids (non-ad-event conversions).
-		if ( ! in_array( $data['trigger_type'], $ad_triggers, true ) ) {
-			$ids_array  = array_filter( array_map( 'trim', explode( ',', $data['pixel_ids'] ) ) );
-			$has_meta   = false;
-			$has_google = false;
-			foreach ( $ids_array as $pid ) {
-				if ( preg_match( '/^\d{15,16}$/', $pid ) ) {
-					$has_meta = true;
-				}
-				if ( preg_match( '/^(G-|AW-)/', $pid ) || 'sitekit_gtag' === $pid ) {
-					$has_google = true;
-				}
-			}
-			if ( empty( $ids_array ) ) {
-				$data['platforms'] = 'all';
-			} elseif ( $has_meta && $has_google ) {
-				$data['platforms'] = 'all';
-			} elseif ( $has_meta ) {
-				$data['platforms'] = 'meta_only';
-			} elseif ( $has_google ) {
-				$data['platforms'] = 'google_only';
-			} else {
-				$data['platforms'] = 'all';
-			}
+		if ( empty( $ids_array ) ) {
+			$data['platforms'] = 'all';
+		} elseif ( $has_meta && $has_google ) {
+			$data['platforms'] = 'all';
+		} elseif ( $has_meta ) {
+			$data['platforms'] = 'meta_only';
+		} elseif ( $has_google ) {
+			$data['platforms'] = 'google_only';
+		} else {
+			$data['platforms'] = 'all';
 		}
 
 		if ( empty( $data['name'] ) ) {
@@ -970,20 +961,6 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$active_target_ids = array_values( array_filter( array_map( 'strval', (array) $active_target_ids ) ) );
 		$valid_lookup      = array_fill_keys( $active_target_ids, true );
 		$conversions       = $this->cpt->get_conversions( true );
-		$ad_triggers       = array( 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' );
-
-		// Ad-event conversions always target ALL active trackers (Meta + Google + GA4).
-		foreach ( $conversions as $conv ) {
-			$trigger = get_post_meta( $conv->ID, '_trigger_type', true );
-			if ( in_array( $trigger, $ad_triggers, true ) ) {
-				$current_pixel_ids = get_post_meta( $conv->ID, '_pixel_ids', true );
-				$current_platforms = get_post_meta( $conv->ID, '_platforms', true );
-				if ( '' !== $current_pixel_ids || 'all' !== $current_platforms ) {
-					update_post_meta( $conv->ID, '_pixel_ids', '' );
-					update_post_meta( $conv->ID, '_platforms', 'all' );
-				}
-			}
-		}
 
 		foreach ( $conversions as $conv ) {
 			$raw_pixel_ids = (string) get_post_meta( $conv->ID, '_pixel_ids', true );
