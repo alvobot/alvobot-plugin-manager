@@ -1,8 +1,5 @@
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
-	<!-- wp:heading {"level":1} -->
-	<h1><?php esc_html_e( '利用規約', 'alvobot-pro' ); ?></h1>
-	<!-- /wp:heading -->
 
 	<!-- wp:paragraph {"className":"last-updated"} -->
 	<!-- 公開日は自動的に表示されます -->

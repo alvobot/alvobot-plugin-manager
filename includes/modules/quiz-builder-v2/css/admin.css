@@ -1,0 +1,221 @@
+/* Quiz Builder V2 — Admin (module-specific styles only)
+   Base styling comes from alvobot-pro-admin.css design system */
+
+/* ── List toolbar (filter + new button) ────────────── */
+.qbv2-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.qbv2-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--alvobot-gray-600, #6B7280);
+}
+.qbv2-filter-row .alvobot-input {
+  min-width: 280px;
+  height: 40px;
+  font-size: 13px;
+}
+
+/* ── Redirect URL display in cards ─────────────────── */
+.qbv2-redirect-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--alvobot-gray-600, #6B7280);
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: var(--alvobot-gray-50, #FCFCFD);
+  border: 1px solid var(--alvobot-gray-200, #F2F4F7);
+  border-radius: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.qbv2-redirect-display svg {
+  flex-shrink: 0;
+}
+
+/* ── AI Card highlight ─────────────────────────────── */
+.qbv2-ai-card {
+  border: 1px solid #fbbf24;
+  background: linear-gradient(to bottom, #fffbeb, #fff);
+}
+.qbv2-ai-card .alvobot-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Spinner for AI loading */
+@keyframes qbv2-spin {
+  to { transform: rotate(360deg); }
+}
+.qbv2-spin {
+  animation: qbv2-spin 1s linear infinite;
+}
+
+/* ── Editor layout (sidebar + main) ───────────────── */
+.qbv2-editor {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .qbv2-editor {
+    grid-template-columns: 1fr;
+  }
+}
+.qbv2-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 40px;
+}
+
+/* ── Color picker row ──────────────────────────────── */
+.qbv2-color-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.qbv2-color-row input[type="color"] {
+  width: 42px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid var(--alvobot-gray-300, #E4E4E7);
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.qbv2-color-row .alvobot-input {
+  flex: 1;
+}
+
+/* ── Tags (list view cards) ────────────────────────── */
+.qbv2-tag {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-weight: 500;
+  background: var(--alvobot-info-bg, #eff6ff);
+  color: var(--alvobot-info, #269AFF);
+}
+.qbv2-tag--lead {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* ── URL rows (shortcode/full-page in cards) ───────── */
+.qbv2-urls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qbv2-url-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.qbv2-url-row label {
+  font-weight: 600;
+  min-width: 76px;
+  color: var(--alvobot-gray-700, #52525B);
+}
+.qbv2-url-row code {
+  flex: 1;
+  background: var(--alvobot-gray-100, #F9FAFB);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--alvobot-gray-200, #F2F4F7);
+}
+.qbv2-copy {
+  background: none;
+  border: 1px solid var(--alvobot-gray-300, #E4E4E7);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--alvobot-gray-600, #6B7280);
+  transition: all 0.15s;
+}
+.qbv2-copy:hover {
+  background: var(--alvobot-gray-100, #F9FAFB);
+  border-color: var(--alvobot-gray-400, #D4D4D8);
+}
+
+/* ── Question blocks (editor) ──────────────────────── */
+.qbv2-q-block {
+  background: var(--alvobot-gray-50, #FCFCFD);
+  border: 1px solid var(--alvobot-gray-200, #F2F4F7);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.qbv2-q-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.qbv2-q-num {
+  background: var(--alvobot-secondary, #0E100D);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.qbv2-q-head .alvobot-input {
+  flex: 1;
+}
+
+/* ── Answer rows ───────────────────────────────────── */
+.qbv2-answers-list {
+  padding-left: 38px;
+}
+.qbv2-ans-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.qbv2-ans-row .alvobot-input:first-child {
+  flex: 2;
+}
+.qbv2-ans-row .alvobot-input:nth-child(2) {
+  flex: 3;
+}
+
+/* ── Footer link rows (editor sidebar) ─────────────── */
+.qbv2-footer-link-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.qbv2-footer-link-row .alvobot-input {
+  flex: 1;
+}
+
+/* ── Lead fields toggle area ───────────────────────── */
+.qbv2-lead-fields {
+  margin-top: 12px;
+}
