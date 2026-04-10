@@ -139,10 +139,18 @@
         questions[current].classList.remove('qbv2__question--active');
         questions[current].setAttribute('aria-hidden', 'true');
 
-        // Update progress to full
-        if (barDone) barDone.style.width = '100%';
-        if (barCurrent) barCurrent.style.width = '0%';
-        if (stepLabel) stepLabel.style.display = 'none';
+        // Update stepper to all done
+        steps.forEach(function (step) {
+          step.classList.remove('qbv2__step--active');
+          step.classList.add('qbv2__step--done');
+        });
+        lines.forEach(function (line) {
+          line.classList.add('qbv2__step-line--done');
+        });
+
+        // Hide step label
+        var labelEl = el.querySelector('.qbv2__step-label');
+        if (labelEl) labelEl.style.display = 'none';
 
         // Store final URL for after form submit
         el.dataset.finalUrl = finalUrl;
