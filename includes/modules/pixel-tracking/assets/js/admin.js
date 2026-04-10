@@ -860,6 +860,7 @@
 				{ name: 'Ad Click', category: 'DEFAULT', trigger: 'ad_click', event: 'Lead' },
 				{ name: 'Vignette View', category: 'PAGE_VIEW', trigger: 'ad_vignette_open', event: 'ViewContent' },
 				{ name: 'Vignette Click', category: 'DEFAULT', trigger: 'ad_vignette_click', event: 'Lead' },
+				{ name: 'Quiz Lead', category: 'LEAD', trigger: 'form_submit', event: 'Lead', css_selector: '.qbv2__lead-form' },
 			];
 
 			$btn.prop( 'disabled', true ).html( '<span class="spinner is-active" style="float:none;margin:0;"></span> Verificando existentes...' );
@@ -1004,6 +1005,7 @@
 											display_on: 'all',
 											content_name: sg.name,
 											pixel_ids: trackerId,
+											css_selector: sg.css_selector || '',
 											gads_conversion_label: label,
 											gads_labels_map: JSON.stringify( labelsMap ),
 											gads_conversion_value: '',
@@ -1671,6 +1673,7 @@
 							{ name: 'Ad Click', category: 'DEFAULT', desc: 'Visitante clicou num anuncio', trigger: 'ad_click', event: 'Lead' },
 							{ name: 'Vignette View', category: 'PAGE_VIEW', desc: 'Visitante viu a vinheta', trigger: 'ad_vignette_open', event: 'ViewContent' },
 							{ name: 'Vignette Click', category: 'DEFAULT', desc: 'Visitante clicou na vinheta', trigger: 'ad_vignette_click', event: 'Lead' },
+							{ name: 'Quiz Lead', category: 'LEAD', desc: 'Visitante preencheu lead no quiz', trigger: 'form_submit', event: 'Lead' },
 						];
 						var missingSuggestions = suggestions.filter( function (s) { return existingNames.indexOf( normalizeConvName( s.name ) ) === -1; } );
 

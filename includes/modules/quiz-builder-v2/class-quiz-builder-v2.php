@@ -399,10 +399,15 @@ class AlvoBotPro_QuizBuilderV2 {
 <meta name="robots" content="noindex,nofollow">
 <title><?php echo esc_html( $quiz['title'] ); ?></title>
 <style><?php echo $css; ?></style>
+<?php
+// Inject pixel tracking scripts (Meta Pixel, GA4, Google Ads, tracking.js)
+do_action( 'wp_head' );
+?>
 </head>
 <body>
 <?php echo $html; ?>
 <script><?php echo $js; ?></script>
+<?php do_action( 'wp_footer' ); ?>
 </body>
 </html><?php
 	}

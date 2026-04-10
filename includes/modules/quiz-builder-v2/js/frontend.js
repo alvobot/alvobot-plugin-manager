@@ -83,17 +83,66 @@
           var submitBtn = form.querySelector('.qbv2__lead-btn');
           if (submitBtn) submitBtn.disabled = true;
 
+          var leadName  = form.querySelector('[name="lead_name"]').value;
+          var leadEmail = form.querySelector('[name="lead_email"]').value;
+
+          // 1. Save lead to quiz module
           var fd = new FormData();
           fd.append('action', 'alvobot_qbv2_lead');
           fd.append('nonce', nonce);
           fd.append('quiz_id', quizId);
-          fd.append('lead_name', form.querySelector('[name="lead_name"]').value);
-          fd.append('lead_email', form.querySelector('[name="lead_email"]').value);
+          fd.append('lead_name', leadName);
+          fd.append('lead_email', leadEmail);
 
           fetch(ajaxUrl, { method: 'POST', body: fd })
-            .then(function () { doRedirect(); })
-            .catch(function () { doRedirect(); }); // redirect even if save fails
+            .then(function () {
+              // 2. Fire Lead pixel event + send lead data
+              fireLeadEvent(leadName, leadEmail);
+              // 3. Small delay to let pixel events dispatch before redirect
+              setTimeout(doRedirect, 500);
+            })
+            .catch(function () {
+              fireLeadEvent(leadName, leadEmail);
+              setTimeout(doRedirect, 500);
+            });
         });
+      }
+    }
+
+    // ── Pixel tracking integration ────────────────────
+    function fireLeadEvent(name, email) {
+      // A. Fire Lead event via alvobot_pixel (if tracking.js is loaded — shortcode mode)
+      if (window.alvobot_pixel && typeof window.alvobot_pixel.send_event === 'function') {
+        window.alvobot_pixel.send_event({
+          event_name: 'Lead',
+          event_custom: false,
+        });
+      } else {
+        // Fallback: fire directly via fbq/gtag if available (full-page mode)
+        if (window.fbq) {
+          try { window.fbq('track', 'Lead'); } catch (e) { /* silent */ }
+        }
+        if (window.gtag) {
+          try { window.gtag('event', 'generate_lead'); } catch (e) { /* silent */ }
+        }
+      }
+
+      // B. Send lead data to pixel tracking REST endpoint (if available)
+      if (window.alvobot_pixel && typeof window.alvobot_pixel.send_lead_data === 'function') {
+        window.alvobot_pixel.send_lead_data({
+          name: name,
+          email: email,
+        });
+      } else if (window.alvobot_pixel_config && window.alvobot_pixel_config.api_lead) {
+        // Direct REST call fallback
+        var payload = { email: email, name: name };
+        try {
+          fetch(window.alvobot_pixel_config.api_lead, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) { /* silent */ }
       }
     }
 
