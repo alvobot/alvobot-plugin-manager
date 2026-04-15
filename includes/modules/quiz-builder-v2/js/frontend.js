@@ -208,13 +208,21 @@
         leadEl.removeAttribute('aria-hidden');
       } else {
         // No lead capture — redirect immediately
-        if (finalUrl) window.location.href = finalUrl;
+        if (finalUrl) navigateTo(finalUrl);
       }
     }
 
     function doRedirect() {
       var url = el.dataset.finalUrl || redirectUrl;
-      if (url) window.location.href = url;
+      if (url) navigateTo(url);
+    }
+
+    function navigateTo(url) {
+      var a = document.createElement('a');
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }
 })();
