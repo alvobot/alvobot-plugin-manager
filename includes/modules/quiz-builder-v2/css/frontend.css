@@ -154,6 +154,7 @@
   border: 2px solid var(--qbv2-primary);
   border-radius: 8px;
   background: #fff;
+  color: #1a1a1a;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
