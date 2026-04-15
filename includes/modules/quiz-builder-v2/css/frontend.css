@@ -150,6 +150,7 @@
   margin: 0 auto;
 }
 .qbv2__ans {
+  display: block;
   padding: 16px 20px;
   border: 2px solid var(--qbv2-primary);
   border-radius: 8px;
@@ -160,6 +161,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  text-decoration: none;
 }
 .qbv2__ans:hover {
   background: var(--qbv2-primary);

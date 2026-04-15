@@ -44,9 +44,23 @@
       var qBlock = btn.closest('.qbv2__question');
       if (!qBlock || !qBlock.classList.contains('qbv2__question--active')) return;
 
+      var isLastQuestion = qBlock.dataset.last === '1';
+
+      // On the last question with no lead capture, let the <a href> navigate
+      // naturally so Google vignette fires (requires a genuine user-click on anchor).
+      if (isLastQuestion && !enableLead) {
+        btn.classList.add('qbv2__ans--picked');
+        qBlock.querySelectorAll('.qbv2__ans').forEach(function (b) { b.style.pointerEvents = 'none'; });
+        // Don't preventDefault — anchor navigates and triggers vignette
+        return;
+      }
+
+      e.preventDefault();
+
       // Disable all answers in this question
       qBlock.querySelectorAll('.qbv2__ans').forEach(function (b) {
-        b.disabled = true;
+        b.setAttribute('aria-disabled', 'true');
+        b.style.pointerEvents = 'none';
       });
       btn.classList.add('qbv2__ans--picked');
 
@@ -54,12 +68,10 @@
       answered[current] = answerUrl;
 
       setTimeout(function () {
-        // If answer has a specific URL and this is NOT the last question,
-        // just advance. If last question, go to lead or redirect.
         if (current < total - 1) {
           goTo(current + 1);
         } else {
-          // Last question answered
+          // Last question with lead capture
           finishQuiz(answerUrl);
         }
       }, 400);

@@ -499,17 +499,25 @@ do_action( 'wp_head' );
 
 			<!-- QUESTIONS -->
 			<div class="qbv2__body">
-				<?php foreach ( $questions as $qi => $q ) : ?>
+				<?php
+				$last_qi = count( $questions ) - 1;
+				foreach ( $questions as $qi => $q ) :
+					$is_last = ( $qi === $last_qi );
+				?>
 					<div class="qbv2__question <?php echo 0 === $qi ? 'qbv2__question--active' : ''; ?>"
 						 data-qi="<?php echo (int) $qi; ?>"
+						 <?php echo $is_last ? 'data-last="1"' : ''; ?>
 						 <?php echo 0 !== $qi ? 'aria-hidden="true"' : ''; ?>>
 						<h2 class="qbv2__q-text"><?php echo esc_html( $q['text'] ); ?></h2>
 						<div class="qbv2__answers">
-							<?php foreach ( ( $q['answers'] ?? array() ) as $a ) : ?>
-								<button class="qbv2__ans"
-										data-url="<?php echo esc_url( $a['url'] ?? '' ); ?>">
+							<?php foreach ( ( $q['answers'] ?? array() ) as $a ) :
+								$href = esc_url( ! empty( $a['url'] ) ? $a['url'] : ( $redirect_url ?: '#' ) );
+							?>
+								<a class="qbv2__ans"
+								   href="<?php echo $href; ?>"
+								   data-url="<?php echo $href; ?>">
 									<?php echo esc_html( $a['text'] ); ?>
-								</button>
+								</a>
 							<?php endforeach; ?>
 						</div>
 					</div>
