@@ -357,15 +357,16 @@
 									}
 								);
 							}
-							if (this.config.google_ads_id) {
-								trackers.push(
-									{
-										tracker_id: this.config.google_ads_id,
-										type: 'google_ads',
-										conversion_label: this.config.google_ads_conversion_label || '',
-									}
-								);
-							}
+						if (this.config.google_ads_id) {
+							trackers.push(
+								{
+									tracker_id: this.config.google_ads_id,
+									type: 'google_ads',
+									conversion_label: this.config.google_ads_conversion_label || '',
+									tag_id: this.config.google_ads_id,
+								}
+							);
+						}
 						}
 
 						return trackers.filter(
@@ -378,9 +379,21 @@
 									return true;
 								}
 
+								if (tracker.type === 'google_ads') {
+									return /^AW-/.test( tracker.tag_id || ( ! tracker.connection_id ? tracker.tracker_id : '' ) );
+								}
 								return /^(G-|AW-)/.test( tracker.tracker_id );
 							}
 						);
+					}
+
+					get_google_ads_send_id(tracker) {
+						if ( ! tracker) {
+							return '';
+						}
+						return tracker.type === 'google_ads'
+							? (tracker.tag_id || ( ! tracker.connection_id ? tracker.tracker_id : '' ) || '')
+							: (tracker.tracker_id || '');
 					}
 
 					has_google_trackers() {
@@ -750,11 +763,12 @@
 		/**
 		 * Build shared browser-side Google event params.
 		 */
-			build_google_event_params(params, tracker, event_name, custom_data, is_ads_conversion) {
-				var googleParams = {};
-				if (tracker && tracker.tracker_id && tracker.type !== 'external') {
-					googleParams.send_to = tracker.tracker_id;
-				}
+				build_google_event_params(params, tracker, event_name, custom_data, is_ads_conversion) {
+					var googleParams = {};
+					var sendId = this.get_google_ads_send_id( tracker );
+					if (sendId && tracker && tracker.type !== 'external') {
+						googleParams.send_to = sendId;
+					}
 
 				googleParams.page_location = window.location.href;
 				googleParams.page_title = this.config.page_title || document.title || '';
@@ -1072,14 +1086,19 @@
 						if (tracker.type === 'google_ads') {
 							// Per-tracker label: labels_map[tracker_id] > legacy single label > tracker default
 							var labels_map = params.gads_labels_map || {};
-							var gads_label = labels_map[tracker.tracker_id] || params.gads_conversion_label || tracker.conversion_label;
-							if (gads_label) {
-								var gads_params = self.build_google_event_params( params, tracker, 'conversion', custom_data, true );
-								gads_params.send_to = tracker.tracker_id + '/' + gads_label;
-								window.gtag( 'event', 'conversion', gads_params );
-								self.log_debug( 'send_event(): gtag Ads conversion', { tracker: tracker.tracker_id, label: gads_label } );
+								var gads_label = labels_map[tracker.tracker_id] || params.gads_conversion_label || tracker.conversion_label;
+								if (gads_label) {
+									var gads_params = self.build_google_event_params( params, tracker, 'conversion', custom_data, true );
+									var adsSendId = self.get_google_ads_send_id( tracker );
+									if ( ! adsSendId) {
+										self.log_debug( 'send_event(): Google Ads tag_id missing', { tracker: tracker.tracker_id } );
+										return;
+									}
+									gads_params.send_to = adsSendId + '/' + gads_label;
+									window.gtag( 'event', 'conversion', gads_params );
+									self.log_debug( 'send_event(): gtag Ads conversion', { tracker: tracker.tracker_id, tag_id: adsSendId, label: gads_label } );
+								}
 							}
-						}
 					});
 				}
 

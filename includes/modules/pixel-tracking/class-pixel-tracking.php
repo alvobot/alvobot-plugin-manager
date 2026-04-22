@@ -1229,6 +1229,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 					'type'             => 'google_ads',
 					'label'            => 'Google Ads',
 					'conversion_label' => isset( $old_settings['google_ads_conversion_label'] ) ? $old_settings['google_ads_conversion_label'] : '',
+					'tag_id'           => $old_ads,
+					'customer_id'      => '',
 				);
 			}
 		}
@@ -1254,27 +1256,41 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				continue;
 			}
 
-			if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
-				$type = 'ga4';
-			} elseif ( preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
-				$type = 'google_ads';
-			} else {
-				continue; // Invalid tracker ID, skip.
-			}
+				if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
+					$type = 'ga4';
+				} elseif ( preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
+					$type = 'google_ads';
+				} else {
+					continue; // Invalid tracker ID, skip.
+				}
 
-			$conv_label = isset( $tracker['conversion_label'] ) ? sanitize_text_field( $tracker['conversion_label'] ) : '';
-			if ( $conv_label && ! preg_match( '/^[A-Za-z0-9_-]{1,32}$/', $conv_label ) ) {
-				$conv_label = '';
-			}
+				$conv_label = isset( $tracker['conversion_label'] ) ? sanitize_text_field( $tracker['conversion_label'] ) : '';
+				if ( $conv_label && ! preg_match( '/^[A-Za-z0-9_-]{1,32}$/', $conv_label ) ) {
+					$conv_label = '';
+				}
+				$tag_id = isset( $tracker['tag_id'] ) ? sanitize_text_field( $tracker['tag_id'] ) : '';
+				if ( $tag_id && preg_match( '/^\d{7,12}$/', $tag_id ) ) {
+					$tag_id = 'AW-' . $tag_id;
+				}
+				if ( $tag_id && ! preg_match( '/^AW-\d{7,12}$/', $tag_id ) ) {
+					$tag_id = '';
+				}
+				if ( 'google_ads' === $type && empty( $tag_id ) && empty( $tracker['connection_id'] ) ) {
+					$tag_id = $tracker_id;
+				}
 
-			$sanitized_trackers[] = array(
-				'tracker_id'       => $tracker_id,
-				'type'             => $type,
-				'label'            => isset( $tracker['label'] ) ? sanitize_text_field( $tracker['label'] ) : '',
-				'conversion_label' => $conv_label,
-				'connection_id'    => isset( $tracker['connection_id'] ) ? sanitize_text_field( $tracker['connection_id'] ) : '',
-			);
-		}
+				$customer_id = isset( $tracker['customer_id'] ) ? preg_replace( '/\D+/', '', (string) $tracker['customer_id'] ) : '';
+
+				$sanitized_trackers[] = array(
+					'tracker_id'       => $tracker_id,
+					'type'             => $type,
+					'label'            => isset( $tracker['label'] ) ? sanitize_text_field( $tracker['label'] ) : '',
+					'conversion_label' => $conv_label,
+					'connection_id'    => isset( $tracker['connection_id'] ) ? sanitize_text_field( $tracker['connection_id'] ) : '',
+					'tag_id'           => $tag_id,
+					'customer_id'      => $customer_id,
+				);
+			}
 		$sanitized['google_trackers'] = $sanitized_trackers;
 
 		// Derive flat fields for backward compatibility.
@@ -1285,10 +1301,10 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
 				$sanitized['google_analytics_id'] = $t['tracker_id'];
 			}
-			if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
-				$sanitized['google_ads_id']               = $t['tracker_id'];
-				$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
-			}
+				if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
+					$sanitized['google_ads_id']               = ! empty( $t['tag_id'] ) ? $t['tag_id'] : $t['tracker_id'];
+					$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
+				}
 		}
 
 			$active_target_ids = array_merge(
