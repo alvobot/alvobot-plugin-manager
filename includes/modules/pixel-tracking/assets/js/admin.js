@@ -11,6 +11,173 @@
 	var activeTab = extra.active_tab || 'pixels';
 	var debugEnabled = !! (extra.debug_enabled || config.debug_enabled);
 	var debugPrefix  = '[AlvoBot Pixel][ADMIN]';
+	var ARBITRAGE_CONVERSION_PRESETS = [
+		{
+			name: 'Page Impression',
+			category: 'PAGE_VIEW',
+			desc: 'Visitante carregou a pagina',
+			trigger: 'page_load',
+			event_type: 'PageView',
+			event_custom_name: '',
+			default_value: '0.01',
+			aliases: ['Pageview', 'Page View', 'Impressao de Pagina'],
+		},
+		{
+			name: 'Ad Impression',
+			category: 'PAGE_VIEW',
+			desc: 'Visitante viu um anuncio',
+			trigger: 'ad_impression',
+			event_type: 'CustomEvent',
+			event_custom_name: 'AdImpression',
+			default_value: '0.01',
+		},
+		{
+			name: 'Ad Click',
+			category: 'DEFAULT',
+			desc: 'Visitante clicou num anuncio',
+			trigger: 'ad_click',
+			event_type: 'CustomEvent',
+			event_custom_name: 'AdClick',
+			default_value: '0.20',
+		},
+		{
+			name: 'Vignette View',
+			category: 'PAGE_VIEW',
+			desc: 'Visitante viu a vinheta',
+			trigger: 'ad_vignette_open',
+			event_type: 'CustomEvent',
+			event_custom_name: 'AdVignetteOpen',
+			default_value: '0.03',
+		},
+		{
+			name: 'Vignette Click',
+			category: 'DEFAULT',
+			desc: 'Visitante clicou na vinheta',
+			trigger: 'ad_vignette_click',
+			event_type: 'CustomEvent',
+			event_custom_name: 'AdVignetteClick',
+			default_value: '0.30',
+		},
+	];
+
+	function getArbitrageConversionPresets(includeQuizLead) {
+		var presets = ARBITRAGE_CONVERSION_PRESETS.map(
+			function (preset) {
+				return $.extend( {}, preset );
+			}
+		);
+		if (includeQuizLead) {
+			presets.push(
+				{
+					name: 'Quiz Lead',
+					category: 'LEAD',
+					desc: 'Visitante preencheu lead no quiz',
+					trigger: 'form_submit',
+					event_type: 'Lead',
+					event_custom_name: '',
+					css_selector: '.qbv2__lead-form',
+					default_value: '',
+				}
+			);
+		}
+		return presets;
+	}
+
+	function getAdRuntimeEventName(trigger) {
+		var map = {
+			ad_impression: 'AdImpression',
+			ad_click: 'AdClick',
+			ad_vignette_open: 'AdVignetteOpen',
+			ad_vignette_click: 'AdVignetteClick',
+		};
+		return map[trigger] || '';
+	}
+
+	function getArbitragePresetByTrigger(trigger) {
+		for (var i = 0; i < ARBITRAGE_CONVERSION_PRESETS.length; i++) {
+			if (ARBITRAGE_CONVERSION_PRESETS[i].trigger === trigger) {
+				return ARBITRAGE_CONVERSION_PRESETS[i];
+			}
+		}
+		return null;
+	}
+
+	function applyArbitrageTriggerDefaults(trigger, forceEventName) {
+		var runtimeName = getAdRuntimeEventName( trigger );
+		if ( ! runtimeName) {
+			return false;
+		}
+
+		var preset = getArbitragePresetByTrigger( trigger );
+		var currentEventType = $( '#conv_event_type' ).val();
+		var currentCustomName = $( '#conv_event_custom_name' ).val();
+		var shouldSetEventName = forceEventName ||
+			! currentCustomName ||
+			currentEventType === 'Lead' ||
+			currentEventType === 'ViewContent' ||
+			currentEventType === 'PageView';
+
+		if (shouldSetEventName) {
+			$( '#conv_event_type' ).val( 'CustomEvent' ).trigger( 'change' );
+			$( '#conv_event_custom_name' ).val( runtimeName );
+		}
+
+		if (preset) {
+			if ( ! $( '#conv_content_name' ).val()) {
+				$( '#conv_content_name' ).val( preset.name );
+			}
+			if (preset.default_value && ! $( '#conv_gads_conversion_value' ).val()) {
+				$( '#conv_gads_conversion_value' ).val( preset.default_value );
+			}
+		}
+
+		return true;
+	}
+
+	function getConversionActionId(action) {
+		if ( ! action || typeof action !== 'object') {
+			return '';
+		}
+		var id = action.conversion_action_id || action.id || action.conversionActionId || '';
+		if (id) {
+			return String( id );
+		}
+		var resourceName = action.resource_name || action.resourceName || '';
+		var match = String( resourceName ).match( /conversionActions\/([^/]+)$/ );
+		return match ? match[1] : '';
+	}
+
+	function normalizeConversionName(name) {
+		return String( name || '' ).toLowerCase().replace( /[\s_-]+/g, '' );
+	}
+
+	function getPresetNameVariants(preset) {
+		var names = [preset.name];
+		if ($.isArray( preset.aliases )) {
+			names = names.concat( preset.aliases );
+		}
+		return names.map( normalizeConversionName );
+	}
+
+	function hasPresetName(nameList, preset) {
+		var variants = getPresetNameVariants( preset );
+		for (var i = 0; i < variants.length; i++) {
+			if (nameList.indexOf( variants[i] ) !== -1) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function getExistingLabelForPreset(labelMap, preset) {
+		var variants = getPresetNameVariants( preset );
+		for (var i = 0; i < variants.length; i++) {
+			if (labelMap[variants[i]]) {
+				return labelMap[variants[i]];
+			}
+		}
+		return '';
+	}
 
 	function cloneForDebug(value) {
 		try {
@@ -790,28 +957,22 @@
 			// Remove any existing banner
 			$( '#alvobot-conv-suggestion-banner' ).remove();
 
-			var allSuggestions = [
-				{ name: 'Ad Impression', desc: 'Viu anuncio' },
-				{ name: 'Ad Click', desc: 'Clicou anuncio' },
-				{ name: 'Vignette View', desc: 'Viu vinheta' },
-				{ name: 'Vignette Click', desc: 'Clicou vinheta' },
-			];
+				var allSuggestions = getArbitrageConversionPresets( false );
 
 			// Check which conversion rules already exist in the plugin
 			$.ajax({
 				url: config.ajaxurl,
 				method: 'POST',
 				data: { action: 'alvobot_pixel_tracking_get_conversions', nonce: config.nonce },
-				success: function (response) {
-					var existingRules = (response.success && response.data && response.data.conversions) ? response.data.conversions : [];
-					var normalizeConvName = function (n) { return n.toLowerCase().replace(/[\s_-]+/g, ''); };
-					var existingRuleNames = existingRules.map( function (r) { return normalizeConvName( r.name ); } );
+					success: function (response) {
+						var existingRules = (response.success && response.data && response.data.conversions) ? response.data.conversions : [];
+					var existingRuleNames = existingRules.map( function (r) { return normalizeConversionName( r.name ); } );
 
 					// Check which are missing
 					var missing = [];
 					var configured = [];
 					for (var i = 0; i < allSuggestions.length; i++) {
-						if (existingRuleNames.indexOf( normalizeConvName( allSuggestions[i].name ) ) !== -1) {
+						if (hasPresetName( existingRuleNames, allSuggestions[i] )) {
 							configured.push( allSuggestions[i] );
 						} else {
 							missing.push( allSuggestions[i] );
@@ -855,18 +1016,11 @@
 			var trackerId  = tracker.tracker_id;
 			var $banner    = $( '#alvobot-conv-suggestion-banner' );
 
-			var suggestions = [
-				{ name: 'Ad Impression', category: 'PAGE_VIEW', trigger: 'ad_impression', event: 'ViewContent' },
-				{ name: 'Ad Click', category: 'DEFAULT', trigger: 'ad_click', event: 'Lead' },
-				{ name: 'Vignette View', category: 'PAGE_VIEW', trigger: 'ad_vignette_open', event: 'ViewContent' },
-				{ name: 'Vignette Click', category: 'DEFAULT', trigger: 'ad_vignette_click', event: 'Lead' },
-				{ name: 'Quiz Lead', category: 'LEAD', trigger: 'form_submit', event: 'Lead', css_selector: '.qbv2__lead-form' },
-			];
+				var suggestions = getArbitrageConversionPresets( false );
 
 			$btn.prop( 'disabled', true ).html( '<span class="spinner is-active" style="float:none;margin:0;"></span> Verificando existentes...' );
 
 			// Step 1: Fetch BOTH existing Google Ads conversion actions AND existing plugin rules
-			var normalizeConvName = function (n) { return n.toLowerCase().replace(/[\s_-]+/g, ''); };
 
 			$.when(
 				$.ajax({ url: config.ajaxurl, method: 'POST', data: {
@@ -885,31 +1039,30 @@
 
 					// Google Ads existing conversion actions
 					var existingActions = (gadsData.success && gadsData.data && gadsData.data.conversion_actions) ? gadsData.data.conversion_actions : [];
-					var existingGadsNames = existingActions.map( function (a) { return normalizeConvName( a.name ); } );
+					var existingGadsNames = existingActions.map( function (a) { return normalizeConversionName( a.name ); } );
 					var existingLabels = {};
 					for (var e = 0; e < existingActions.length; e++) {
 						if (existingActions[e].conversion_label) {
-							existingLabels[normalizeConvName( existingActions[e].name )] = existingActions[e].conversion_label;
+							existingLabels[normalizeConversionName( existingActions[e].name )] = existingActions[e].conversion_label;
 						}
 					}
 
 					// Plugin existing conversion rules
 					var existingRules = (rulesData.success && rulesData.data && rulesData.data.conversions) ? rulesData.data.conversions : [];
-					var existingRuleNames = existingRules.map( function (r) { return normalizeConvName( r.name ); } );
+					var existingRuleNames = existingRules.map( function (r) { return normalizeConversionName( r.name ); } );
 
 					// Categorize each suggestion
 					var toCreate = [];       // Not in Google Ads AND not in plugin rules
 					var toSaveRule = [];     // In Google Ads but NOT in plugin rules
 					var alreadyDone = [];    // In both — skip entirely
 					for (var s = 0; s < suggestions.length; s++) {
-						var normalized = normalizeConvName( suggestions[s].name );
-						var inGads  = existingGadsNames.indexOf( normalized ) !== -1;
-						var inRules = existingRuleNames.indexOf( normalized ) !== -1;
+						var inGads  = hasPresetName( existingGadsNames, suggestions[s] );
+						var inRules = hasPresetName( existingRuleNames, suggestions[s] );
 
 						if (inRules) {
 							alreadyDone.push( suggestions[s] ); // Skip — already fully configured
 						} else if (inGads) {
-							suggestions[s].existingLabel = existingLabels[normalized] || '';
+							suggestions[s].existingLabel = getExistingLabelForPreset( existingLabels, suggestions[s] );
 							toSaveRule.push( suggestions[s] ); // Only save the rule
 						} else {
 							toCreate.push( suggestions[s] ); // Create in Google Ads + save rule
@@ -946,16 +1099,17 @@
 								action: 'alvobot_pixel_tracking_save_conversion',
 								nonce: config.nonce,
 								conversion_id: 0,
-								name: sg.name,
-								event_type: sg.event,
-								trigger_type: sg.trigger,
-								display_on: 'all',
-								content_name: sg.name,
-								pixel_ids: trackerId,
-								gads_conversion_label: label,
-								gads_labels_map: JSON.stringify( labelsMap ),
-								gads_conversion_value: '',
-							},
+									name: sg.name,
+									event_type: sg.event_type,
+									event_custom_name: sg.event_custom_name || '',
+									trigger_type: sg.trigger,
+									display_on: 'all',
+									content_name: sg.name,
+									pixel_ids: trackerId,
+									gads_conversion_label: label,
+									gads_labels_map: JSON.stringify( labelsMap ),
+									gads_conversion_value: sg.default_value || '',
+								},
 							complete: function () { created++; saveExistingRules( idx + 1 ); },
 						});
 					}
@@ -982,10 +1136,12 @@
 								action: 'alvobot_pixel_tracking_create_conversion_action',
 								nonce: config.nonce,
 								connection_id: tracker.connection_id,
-								customer_id: trackerId.replace( 'AW-', '' ),
-								name: sg.name,
-								category: sg.category,
-							},
+									customer_id: trackerId.replace( 'AW-', '' ),
+									name: sg.name,
+									category: sg.category,
+									default_value: sg.default_value || 0,
+									currency: 'BRL',
+								},
 							success: function (response) {
 								if (response.success && response.data) {
 									var label = response.data.conversion_label || '';
@@ -998,18 +1154,19 @@
 										data: {
 											action: 'alvobot_pixel_tracking_save_conversion',
 											nonce: config.nonce,
-											conversion_id: 0,
-											name: sg.name,
-											event_type: sg.event,
-											trigger_type: sg.trigger,
-											display_on: 'all',
-											content_name: sg.name,
-											pixel_ids: trackerId,
-											css_selector: sg.css_selector || '',
-											gads_conversion_label: label,
-											gads_labels_map: JSON.stringify( labelsMap ),
-											gads_conversion_value: '',
-										},
+												conversion_id: 0,
+												name: sg.name,
+												event_type: sg.event_type,
+												event_custom_name: sg.event_custom_name || '',
+												trigger_type: sg.trigger,
+												display_on: 'all',
+												content_name: sg.name,
+												pixel_ids: trackerId,
+												css_selector: sg.css_selector || '',
+												gads_conversion_label: label,
+												gads_labels_map: JSON.stringify( labelsMap ),
+												gads_conversion_value: sg.default_value || '',
+											},
 										complete: function () { created++; createMissing( idx + 1 ); },
 									});
 									return;
@@ -1333,19 +1490,19 @@
 				return;
 			}
 
-			for (var i = 0; i < conversions.length; i++) {
-				var c            = conversions[i];
-				var isActive     = c.status === 'publish';
-				var eventLabel   =
-				c.event_type === 'CustomEvent' ? c.event_custom_name : c.event_type;
-				var triggerLabel = getTriggerLabel( c.trigger_type );
-				var platformLabel = getPlatformLabel( c.platforms );
+				for (var i = 0; i < conversions.length; i++) {
+					var c            = conversions[i];
+					var isActive     = c.status === 'publish';
+					var eventLabel   = getDisplayedConversionEventName( c );
+					var triggerLabel = getTriggerLabel( c.trigger_type );
+					var platformLabel = getPlatformLabel( c.platforms );
+					var syncSummary = getConversionSyncSummary( c );
 
-				var html = '<tr data-id="' + c.id + '">';
-				html    += '<td><input type="checkbox" class="alvobot-conv-select" data-id="' + c.id + '"></td>';
-				html    += '<td>' + escHtml( c.name ) + '</td>';
-				html    += '<td>' + escHtml( eventLabel ) + '</td>';
-				html    += '<td>' + escHtml( triggerLabel ) + '</td>';
+					var html = '<tr data-id="' + c.id + '">';
+					html    += '<td><input type="checkbox" class="alvobot-conv-select" data-id="' + c.id + '"></td>';
+					html    += '<td><div style="font-weight:500;">' + escHtml( c.name ) + '</div>' + syncSummary + '</td>';
+					html    += '<td>' + escHtml( eventLabel ) + '</td>';
+					html    += '<td>' + escHtml( triggerLabel ) + '</td>';
 				html    += '<td>' + platformLabel + '</td>';
 				html    +=
 				'<td><label class="alvobot-toggle"><input type="checkbox" class="alvobot-toggle-conversion" data-id="' +
@@ -1394,8 +1551,61 @@
 				ad_vignette_open: 'Abertura de Vinheta',
 				ad_vignette_click: 'Clique em Vinheta',
 			};
-			return labels[type] || type;
-		}
+				return labels[type] || type;
+			}
+
+			function getDisplayedConversionEventName(c) {
+				var runtimeName = getAdRuntimeEventName( c.trigger_type );
+				if (runtimeName) {
+					return runtimeName;
+				}
+				return c.event_type === 'CustomEvent' ? c.event_custom_name : c.event_type;
+			}
+
+			function getConversionSyncSummary(c) {
+				var pixelIds = (c.pixel_ids || '').split( ',' ).map(
+					function (id) {
+						return id.trim();
+					}
+				);
+				var hasGoogleTracker = pixelIds.some(
+					function (id) {
+						return /^AW-/.test( id );
+					}
+				);
+				var isGoogleTarget = c.platforms === 'google_only' || c.platforms === 'all' || hasGoogleTracker;
+				if ( ! isGoogleTarget) {
+					return '';
+				}
+
+				var labelsMap = {};
+				if (c.gads_labels_map) {
+					try {
+						labelsMap = JSON.parse( c.gads_labels_map );
+					} catch (e) {
+						labelsMap = {};
+					}
+				}
+				var labels = Object.keys( labelsMap ).filter(
+					function (trackerId) {
+						return !! labelsMap[trackerId];
+					}
+				);
+				var value = c.gads_conversion_value ? String( c.gads_conversion_value ) : '';
+
+				if ( ! labels.length && c.gads_conversion_label) {
+					labels.push( 'legacy' );
+				}
+
+				if ( ! labels.length) {
+					return '<div style="font-size:11px;margin-top:3px;color:#b45309;">Google Ads: sem label configurado</div>';
+				}
+
+				return '<div style="font-size:11px;margin-top:3px;color:#047857;">Google Ads: ' +
+					labels.length + ' label(s)' +
+					(value ? ' · valor ' + escHtml( value ) : ' · sem valor') +
+					'</div>';
+			}
 
 		// Show new conversion form
 		$( document ).on(
@@ -1439,6 +1649,7 @@
 				$( '#conv_css_selector' ).val( c.css_selector );
 				$( '#conv_content_name' ).val( c.content_name );
 			$( '#conv_gads_conversion_value' ).val( c.gads_conversion_value || '' );
+			applyArbitrageTriggerDefaults( c.trigger_type, true );
 
 			// Load per-tracker labels map (new format) or migrate from legacy single label
 			var labelsMap = {};
@@ -1521,6 +1732,7 @@
 				// For ad-event triggers, show reminder that empty selection = all platforms.
 				var isAdTrigger = ['ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click'].indexOf( val ) !== -1;
 				$( '#conv-ad-all-notice' ).toggle( isAdTrigger );
+				applyArbitrageTriggerDefaults( val, false );
 			}
 		);
 
@@ -1650,32 +1862,31 @@
 					if (response.success && response.data.conversion_actions) {
 						var actions = response.data.conversion_actions;
 						var html    = '';
-						for (var k = 0; k < actions.length; k++) {
-							var ca = actions[k];
-							if ( ! ca.conversion_label) { continue; }
-							html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:3px;cursor:pointer;" class="alvobot-ca-pick-item" data-label="' + escAttr( ca.conversion_label ) + '" data-tracker-id="' + escAttr( trackerId ) + '">';
-							html += '<i data-lucide="target" class="alvobot-icon" style="width:12px;height:12px;"></i> ';
-							html += '<span style="font-size:13px;">' + escHtml( ca.name ) + '</span>';
-							if (ca.status && ca.status !== 'ENABLED') {
-								html += '<span style="font-size:10px;padding:1px 4px;border-radius:3px;background:#fef3c7;color:#92400e;">' + escHtml( ca.status ) + '</span>';
+							for (var k = 0; k < actions.length; k++) {
+								var ca = actions[k];
+								if ( ! ca.conversion_label) { continue; }
+								var actionId = getConversionActionId( ca );
+								html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:3px;cursor:pointer;" class="alvobot-ca-pick-item" data-label="' + escAttr( ca.conversion_label ) + '" data-tracker-id="' + escAttr( trackerId ) + '">';
+								html += '<i data-lucide="target" class="alvobot-icon" style="width:12px;height:12px;"></i> ';
+								html += '<span style="font-size:13px;">' + escHtml( ca.name ) + '</span>';
+								if (ca.status && ca.status !== 'ENABLED') {
+									html += '<span style="font-size:10px;padding:1px 4px;border-radius:3px;background:#fef3c7;color:#92400e;">' + escHtml( ca.status ) + '</span>';
+								}
+								html += '<code style="margin-left:auto;font-size:11px;">' + escHtml( ca.conversion_label ) + '</code>';
+								if (actionId && ca.status !== 'REMOVED') {
+									html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-gads-remove-action-btn" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-action-id="' + escAttr( actionId ) + '" data-action-name="' + escAttr( ca.name || ca.conversion_label ) + '" title="Arquivar no Google Ads">';
+									html += '<i data-lucide="archive" class="alvobot-icon"></i> Arquivar';
+									html += '</button>';
+								}
+								html += '</div>';
 							}
-							html += '<code style="margin-left:auto;font-size:11px;">' + escHtml( ca.conversion_label ) + '</code>';
-							html += '</div>';
-						}
 						if ( ! html) {
 							html = '<p class="alvobot-description" style="margin-bottom:8px;">Nenhuma conversao encontrada nesta conta.</p>';
 						}
 						// Suggested conversions (only show ones that don't already exist)
-						var normalizeConvName = function (n) { return n.toLowerCase().replace(/[\s_-]+/g, ''); };
-						var existingNames = actions.map( function (a) { return normalizeConvName( a.name ); } );
-						var suggestions = [
-							{ name: 'Ad Impression', category: 'PAGE_VIEW', desc: 'Visitante viu um anuncio', trigger: 'ad_impression', event: 'ViewContent' },
-							{ name: 'Ad Click', category: 'DEFAULT', desc: 'Visitante clicou num anuncio', trigger: 'ad_click', event: 'Lead' },
-							{ name: 'Vignette View', category: 'PAGE_VIEW', desc: 'Visitante viu a vinheta', trigger: 'ad_vignette_open', event: 'ViewContent' },
-							{ name: 'Vignette Click', category: 'DEFAULT', desc: 'Visitante clicou na vinheta', trigger: 'ad_vignette_click', event: 'Lead' },
-							{ name: 'Quiz Lead', category: 'LEAD', desc: 'Visitante preencheu lead no quiz', trigger: 'form_submit', event: 'Lead' },
-						];
-						var missingSuggestions = suggestions.filter( function (s) { return existingNames.indexOf( normalizeConvName( s.name ) ) === -1; } );
+						var existingNames = actions.map( function (a) { return normalizeConversionName( a.name ); } );
+							var suggestions = getArbitrageConversionPresets( true );
+							var missingSuggestions = suggestions.filter( function (s) { return ! hasPresetName( existingNames, s ); } );
 
 						if (missingSuggestions.length) {
 							html += '<div style="margin-top:10px;padding:8px 10px;border:1px dashed #f59e0b;border-radius:6px;background:#fffbeb;">';
@@ -1685,8 +1896,8 @@
 								html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;background:#fff;">';
 								html += '<span style="font-size:13px;font-weight:500;">' + escHtml( sg.name ) + '</span>';
 								html += '<span style="font-size:11px;color:#666;">' + escHtml( sg.desc ) + '</span>';
-								html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary alvobot-ca-create-btn" style="margin-left:auto;" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-tracker-id="' + escAttr( trackerId ) + '" data-prefill-name="' + escAttr( sg.name ) + '" data-prefill-category="' + escAttr( sg.category ) + '" data-prefill-trigger="' + escAttr( sg.trigger ) + '" data-prefill-event="' + escAttr( sg.event ) + '">';
-								html += '<i data-lucide="plus" class="alvobot-icon"></i> Criar</button>';
+									html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary alvobot-ca-create-btn" style="margin-left:auto;" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-tracker-id="' + escAttr( trackerId ) + '" data-prefill-name="' + escAttr( sg.name ) + '" data-prefill-category="' + escAttr( sg.category ) + '" data-prefill-trigger="' + escAttr( sg.trigger ) + '" data-prefill-event-type="' + escAttr( sg.event_type ) + '" data-prefill-event-custom-name="' + escAttr( sg.event_custom_name || '' ) + '" data-prefill-value="' + escAttr( sg.default_value || '' ) + '">';
+									html += '<i data-lucide="plus" class="alvobot-icon"></i> Criar</button>';
 								html += '</div>';
 							}
 							html += '</div>';
@@ -1718,20 +1929,68 @@
 		});
 
 		// Click on a ConversionAction to fill the label field for the specific tracker
-		$( document ).on( 'click', '.alvobot-ca-pick-item', function () {
-			var label     = $( this ).attr( 'data-label' );
-			var trackerId = $( this ).attr( 'data-tracker-id' );
+			$( document ).on( 'click', '.alvobot-ca-pick-item', function () {
+				var label     = $( this ).attr( 'data-label' );
+				var trackerId = $( this ).attr( 'data-tracker-id' );
 
 			// Fill the specific tracker's input
 			$( '.alvobot-gads-label-input[data-tracker-id="' + trackerId + '"]' ).val( label );
 			// Hide picker
 			$( this ).closest( '.alvobot-gads-row-picker' ).hide();
 			// Sync hidden map
-			syncGadsLabelsMap();
-		});
+				syncGadsLabelsMap();
+			});
 
-		// Create a new ConversionAction in Google Ads (works for both suggested and custom)
-		$( document ).on( 'click', '.alvobot-ca-create-btn', function () {
+			// Archive an existing Google Ads ConversionAction to clean up confusing extras.
+			$( document ).on( 'click', '.alvobot-gads-remove-action-btn', function (ev) {
+				ev.preventDefault();
+				ev.stopPropagation();
+
+				var $btn       = $( this );
+				var adsTracker = JSON.parse( $btn.attr( 'data-tracker' ) );
+				var actionId   = $btn.attr( 'data-action-id' );
+				var actionName = $btn.attr( 'data-action-name' ) || actionId;
+
+				if ( ! actionId) {
+					alert( 'Nao foi possivel identificar esta conversao no Google Ads.' );
+					return;
+				}
+
+				if ( ! confirm( 'Arquivar "' + actionName + '" no Google Ads? A regra local do AlvoBot nao sera apagada automaticamente.' ) ) {
+					return;
+				}
+
+				$btn.prop( 'disabled', true ).text( 'Arquivando...' );
+				$.ajax({
+					url: config.ajaxurl,
+					method: 'POST',
+					data: {
+						action: 'alvobot_pixel_tracking_update_conversion_action',
+						nonce: config.nonce,
+						connection_id: adsTracker.connection_id,
+						customer_id: adsTracker.tracker_id.replace( 'AW-', '' ),
+						conversion_action_id: actionId,
+						status: 'REMOVED',
+					},
+					success: function (response) {
+						if (response.success) {
+							$btn.closest( '.alvobot-ca-pick-item' ).fadeOut( 150, function () { $( this ).remove(); } );
+							return;
+						}
+						$btn.prop( 'disabled', false ).html( '<i data-lucide="archive" class="alvobot-icon"></i> Arquivar' );
+						alert( response.data || 'Erro ao arquivar no Google Ads.' );
+						if (window.lucide) { window.lucide.createIcons(); }
+					},
+					error: function () {
+						$btn.prop( 'disabled', false ).html( '<i data-lucide="archive" class="alvobot-icon"></i> Arquivar' );
+						alert( 'Erro de conexao ao arquivar no Google Ads.' );
+						if (window.lucide) { window.lucide.createIcons(); }
+					},
+				});
+			});
+
+			// Create a new ConversionAction in Google Ads (works for both suggested and custom)
+			$( document ).on( 'click', '.alvobot-ca-create-btn', function () {
 			var $btn       = $( this );
 			var adsTracker = JSON.parse( $btn.attr( 'data-tracker' ) );
 			var trackerId  = $btn.attr( 'data-tracker-id' );
@@ -1750,11 +2009,13 @@
 				return;
 			}
 
-			// Capture prefill data for auto-save after creation
-			var prefillData = {
-				trigger: $btn.attr( 'data-prefill-trigger' ) || '',
-				event:   $btn.attr( 'data-prefill-event' ) || '',
-			};
+				// Capture prefill data for auto-save after creation
+				var prefillData = {
+					trigger: $btn.attr( 'data-prefill-trigger' ) || '',
+					event_type: $btn.attr( 'data-prefill-event-type' ) || '',
+					event_custom_name: $btn.attr( 'data-prefill-event-custom-name' ) || '',
+					value: $btn.attr( 'data-prefill-value' ) || '',
+				};
 
 			$btn.prop( 'disabled', true ).text( 'Criando...' );
 
@@ -1765,10 +2026,12 @@
 					action: 'alvobot_pixel_tracking_create_conversion_action',
 					nonce: config.nonce,
 					connection_id: adsTracker.connection_id,
-					customer_id: adsTracker.tracker_id.replace( 'AW-', '' ),
-					name: name,
-					category: category,
-				},
+						customer_id: adsTracker.tracker_id.replace( 'AW-', '' ),
+						name: name,
+						category: category,
+						default_value: prefillData.value || 0,
+						currency: 'BRL',
+					},
 				success: function (response) {
 					$btn.prop( 'disabled', false ).html( '<i data-lucide="check" class="alvobot-icon"></i> Criar' );
 					if (response.success && response.data) {
@@ -1779,20 +2042,22 @@
 						}
 
 						// If suggestion with prefill data, auto-fill the conversion form and save
-						if (prefillData.trigger && prefillData.event) {
-							// Disable all other create buttons to prevent race condition
-							$( '.alvobot-ca-create-btn' ).prop( 'disabled', true );
+							if (prefillData.trigger && prefillData.event_type) {
+								// Disable all other create buttons to prevent race condition
+								$( '.alvobot-ca-create-btn' ).prop( 'disabled', true );
 							// Set pixel_ids to the specific tracker
 							$( '#conv_pixel_ids' ).val( trackerId );
 							$( '#conv-pixel-selector .conv-pixel-checkbox' ).each( function () {
 								$( this ).prop( 'checked', $( this ).val() === trackerId );
-							});
-							$( '#conv_name' ).val( name );
-							$( '#conv_event_type' ).val( prefillData.event ).trigger( 'change' );
-							$( '#conv_trigger_type' ).val( prefillData.trigger ).trigger( 'change' );
-							$( '#conv_display_on' ).val( 'all' ).trigger( 'change' );
-							$( '#conv_content_name' ).val( name );
-							$( '#conv_id' ).val( '0' ); // New conversion
+								});
+								$( '#conv_name' ).val( name );
+								$( '#conv_event_type' ).val( prefillData.event_type ).trigger( 'change' );
+								$( '#conv_event_custom_name' ).val( prefillData.event_custom_name || '' );
+								$( '#conv_trigger_type' ).val( prefillData.trigger ).trigger( 'change' );
+								$( '#conv_display_on' ).val( 'all' ).trigger( 'change' );
+								$( '#conv_content_name' ).val( name );
+								$( '#conv_gads_conversion_value' ).val( prefillData.value || '' );
+								$( '#conv_id' ).val( '0' ); // New conversion
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
 								'<p class="alvobot-description" style="color:#16a34a;">' + escHtml( name ) + ' criada e configurada!' + (label ? ' Label: <code>' + escHtml( label ) + '</code>' : '') + '</p>'
 							);

@@ -415,7 +415,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 				AlvoBotPro::debug_log( 'pixel-tracking', "Batch failure for {$pixel_id}, splitting " . count( $events ) . ' events into smaller groups...' );
 				$chunks = array_chunk( $events, ceil( count( $events ) / 2 ) );
 				foreach ( $chunks as $chunk ) {
-					$res        = $this->process_pixel_batch( $chunk, $pixel_config, $settings );
+					$res        = $this->process_pixel_batch( $chunk, $pixel_config, $settings, $all_capi_pixels );
 					$sent_ids   = array_merge( $sent_ids, $res['sent_ids'] );
 					$failed_ids = array_merge( $failed_ids, $res['failed_ids'] );
 				}

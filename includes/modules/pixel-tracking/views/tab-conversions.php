@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<i data-lucide="target" class="alvobot-icon"></i>
 				<?php esc_html_e( 'Regras de Conversao', 'alvobot-pro' ); ?>
 			</h2>
-			<p class="alvobot-card-subtitle"><?php esc_html_e( 'Configure eventos personalizados baseados em acoes dos visitantes.', 'alvobot-pro' ); ?></p>
+			<p class="alvobot-card-subtitle"><?php esc_html_e( 'Configure eventos de arbitragem e confira se cada regra tem label do Google Ads.', 'alvobot-pro' ); ?></p>
 		</div>
 		<button type="button" id="alvobot-new-conversion-btn" class="alvobot-btn alvobot-btn-primary">
 			<i data-lucide="plus" class="alvobot-icon"></i>
@@ -131,14 +131,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</div>
 			<!-- Ad-event notice -->
 			<div id="conv-ad-all-notice" style="display:none;padding:10px 16px;margin-bottom:12px;background:var(--alvobot-primary-light,#FFFBEC);border:1px solid var(--alvobot-primary,#fbbf24);border-radius:var(--alvobot-radius-md,8px);font-size:var(--alvobot-font-size-sm,13px);color:var(--alvobot-gray-800,#344054);">
-				<?php esc_html_e( 'Dica: se nenhum pixel ou tracker estiver selecionado, o evento sera disparado para todos os conectados (Meta Pixel, Google Ads e GA4).', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Dica: gatilhos de anuncio e vinheta usam eventos internos fixos (AdImpression, AdClick, AdVignetteOpen e AdVignetteClick). Se nenhum pixel ou tracker estiver selecionado, o evento sera disparado para todos os conectados.', 'alvobot-pro' ); ?>
 			</div>
 
 			<!-- Google Ads conversion fields (per-tracker labels) -->
 			<div id="conv-gads-fields" class="alvobot-conditional-field">
 				<div class="alvobot-form-field">
 					<label class="alvobot-form-label"><?php esc_html_e( 'Google Ads Conversion Labels', 'alvobot-pro' ); ?></label>
-					<p class="alvobot-description"><?php esc_html_e( 'Cada conta Google Ads tem seus proprios labels de conversao. Configure o label para cada conta selecionada.', 'alvobot-pro' ); ?></p>
+					<p class="alvobot-description"><?php esc_html_e( 'Cada conta Google Ads tem seus proprios labels. Use Buscar para selecionar, criar ou arquivar conversoes da conta.', 'alvobot-pro' ); ?></p>
 					<!-- Per-tracker label fields (populated dynamically by JS) -->
 					<div id="conv-gads-labels-container"></div>
 					<input type="hidden" id="conv_gads_labels_map" value="{}">
@@ -149,6 +149,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div class="alvobot-form-field" style="max-width:250px;">
 					<label for="conv_gads_conversion_value" class="alvobot-form-label"><?php esc_html_e( 'Valor da Conversao (R$)', 'alvobot-pro' ); ?></label>
 					<input type="number" id="conv_gads_conversion_value" class="alvobot-input" placeholder="0.00" step="0.01" min="0">
+					<p class="alvobot-description"><?php esc_html_e( 'Use um valor estimado por evento para o Google Ads otimizar por qualidade relativa.', 'alvobot-pro' ); ?></p>
 				</div>
 			</div>
 
