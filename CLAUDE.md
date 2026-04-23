@@ -1,5 +1,61 @@
 # Diretrizes de Desenvolvimento - AlvoBot Plugin Manager
 
+## Multi-Agent Review (OBRIGATÓRIO — segunda opinião)
+
+Antes de declarar qualquer entrega não-trivial como concluída (novo módulo, refactor, fix de segurança, alteração de release), **rode uma revisão com `codex`** como code review/segunda opinião. Em mudanças de maior risco, acione **múltiplos agentes em paralelo** (`codex` + `gemini` + `agent`) e compare.
+
+- Se dois modelos discordarem em comportamento arriscado → **fail-fast + validação explícita** e **reporte a divergência** ao usuário.
+- Complementar (não substitui) PHPUnit + checagens de versão do plugin.
+
+```bash
+codex exec --json -c 'mcp_servers.meta-ads-konclui.enabled=false' \
+  "Revise esta entrega do plugin WordPress: <resumo + diff>. Aponte bugs, riscos de segurança (nonces, sanitização, capabilities), e regressões." \
+  2>/dev/null | jq -r 'select(.type=="item.completed") | .item.text' | tail -n1
+```
+
+Ver `/Users/erickheslan/Documents/Alvobot/alvobot-app/CLAUDE.md` > "Multi-AI CLI Orchestration" para comandos completos dos demais CLIs.
+
+## Agent Engineering — práticas obrigatórias
+
+### 1. Anti-racionalização (não pule etapas)
+Rejeite explicitamente estes pensamentos antes de implementar:
+- "É pequeno demais para exigir plano/teste" → mudanças em >1 arquivo exigem plano.
+- "Adiciono teste depois" → escreva o teste PHPUnit antes ou junto; depois nunca chega.
+- "Já entendi o código, não preciso ler" → leia o call-site antes de editar.
+- "Só um fallback silencioso rapidinho" → proibido; use `AlvoBotPro::debug_log()`.
+- "Testou localmente, deve estar ok" → rode PHPUnit + verifique em staging antes do release.
+
+### 2. Verification gate — evidência, não "parece certo"
+Nunca declare tarefa concluída sem EVIDÊNCIA concreta:
+- Output de `composer test` (PHPUnit) com contagem pass/fail.
+- Checagem de segurança: nonces, `current_user_can()`, `sanitize_*`, `esc_*` nos pontos alterados.
+- Bump de versão no header do plugin **e** na constante `ALVOBOT_PRO_VERSION` (mesmo valor).
+- Release no GitHub criado para o commit de entrega.
+- UI admin: screenshot ou descrição do fluxo testado.
+
+"Seems right" nunca basta — sem evidência, a tarefa não terminou.
+
+### 3. Investigar antes de codar (ordem obrigatória)
+1. `git status` + `git diff` — detecte trabalho in-progress; **não sobrescreva**.
+2. Grep/Glob do hook/filter/classe afetada para mapear call-sites.
+3. Leia o estado atual do módulo e do `class-alvobot-pro.php` (registro do módulo). **Não** confie apenas em memória.
+4. Em conflito memória/CLAUDE.md vs código atual → **código vence**; atualize a doc depois.
+5. Só então proponha o plano e comece a editar.
+
+### 4. Context budget — carregue sob demanda
+- Prefira Grep/Glob a Read inteiro quando buscando algo específico.
+- Em arquivos grandes (`class-*-main.php`, templates), leia faixas (offset/limit).
+- Para APIs do WordPress/Polylang/OpenAI, use Context7 MCP em vez de colar docs.
+- CLAUDE.md enxuto: detalhe vai em arquivos referenciados, não inline.
+
+### 5. Incremental — fatias verticais finas
+Para qualquer feature que toque >1 arquivo:
+1. Menor fatia end-to-end possível (registro no loader → módulo → admin UI → teste).
+2. Verifique (PHPUnit + smoke test no admin) **antes** de iniciar a próxima fatia.
+3. Commit por fatia (~100 linhas diff, teto ~300) com conventional commits.
+4. Se passar de ~300 linhas, pare e quebre mais.
+5. Lembrete: cada entrega final exige novo release + bump de versão.
+
 ## Informações do Ambiente de Desenvolvimento
 
 ### WordPress Local
