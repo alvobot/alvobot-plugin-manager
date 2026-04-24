@@ -149,17 +149,17 @@
 
 	function normalizeGoogleAdsId(value) {
 		var raw = String( value || '' ).trim();
-		if (/^AW-\d{7,12}$/.test( raw )) {
+		if (/^AW-\d{6,15}$/.test( raw )) {
 			return raw;
 		}
-		if (/^\d{7,12}$/.test( raw )) {
+		if (/^\d{6,15}$/.test( raw )) {
 			return 'AW-' + raw;
 		}
 		return '';
 	}
 
 	function extractGoogleAdsIdFromText(text) {
-		var match = String( text || '' ).match( /AW-\d{7,12}/ );
+		var match = String( text || '' ).match( /AW-\d{6,15}/ );
 		return match ? match[0] : '';
 	}
 
@@ -184,7 +184,7 @@
 				return value;
 			}
 		}
-		if (tracker.tracker_id && /^AW-\d{7,12}$/.test( tracker.tracker_id )) {
+		if (tracker.tracker_id && /^AW-\d{6,15}$/.test( tracker.tracker_id )) {
 			return tracker.tracker_id.replace( 'AW-', '' );
 		}
 		return '';
@@ -1183,9 +1183,20 @@
 			var trackerId  = tracker.tracker_id;
 			var customerId = getGoogleAdsCustomerId( tracker );
 			var $banner    = $( '#alvobot-conv-suggestion-banner' );
+			// Block the main Salvar Configuracoes submit while the async bulk-create chain
+			// runs. A mid-chain form POST reloads the page and aborts remaining requests,
+			// silently discarding conversion rules that weren't persisted yet.
+			var $formSaveBtn = $( '.alvobot-module-form button[type="submit"]' );
+			var originalSaveTitle = $formSaveBtn.attr( 'title' ) || '';
+			$formSaveBtn.prop( 'disabled', true ).attr( 'title', 'Aguarde: criando conversoes em lote...' );
+
+			function releaseFormSave() {
+				$formSaveBtn.prop( 'disabled', false ).attr( 'title', originalSaveTitle );
+			}
 
 			if ( ! customerId) {
 				alert( 'Nao foi possivel identificar o Customer ID da conta Google Ads.' );
+				releaseFormSave();
 				return;
 			}
 
@@ -1253,6 +1264,7 @@
 
 					if ( ! toCreate.length && ! toSaveRule.length) {
 						$banner.html( '<p class="alvobot-description" style="color:#16a34a;padding:12px;">Todas as conversoes ja estao configuradas!</p>' );
+						releaseFormSave();
 						return;
 					}
 
@@ -1304,6 +1316,7 @@
 							if (errors.length) { msg += ' (' + errors.length + ' erros: ' + errors.join( ', ' ) + ')'; }
 							$banner.html( '<p class="alvobot-description" style="color:#16a34a;padding:12px;"><i data-lucide="check-circle" class="alvobot-icon" style="width:16px;height:16px;"></i> ' + escHtml( msg ) + ' Va para a aba <strong>Conversoes</strong> para ver.</p>' );
 							if (window.lucide) { window.lucide.createIcons(); }
+							releaseFormSave();
 
 							return;
 						}
@@ -1378,6 +1391,7 @@
 			).fail( function () {
 				$btn.prop( 'disabled', false ).html( '<i data-lucide="zap" class="alvobot-icon"></i> Criar faltantes' );
 				alert( 'Erro ao verificar conversoes existentes.' );
+				releaseFormSave();
 			});
 		});
 

@@ -8,6 +8,14 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.9] - 2026-04-23
+
+### 🐛 Corrigido
+- **Pixel Tracking / Regex consistency**: propaga a faixa `AW-\d{6,15}` (antes `7,12`) para todos os pontos de uso — `class-pixel-tracking-frontend.php` (4 locais), `class-pixel-tracking-rest.php` (validação CSV de targets) e `admin.js` (normalização, extração e lookup). Trackers com IDs fora do range antigo eram salvos mas o rastreamento no browser e o endpoint REST os ignoravam silenciosamente
+- **Pixel Tracking / "Criar faltantes" race**: desabilita o botão "Salvar Configurações" enquanto a cadeia AJAX do assistente de setup está criando conversões em massa. Antes, um clique mid-chain recarregava a página e abortava as requisições pendentes, silenciosamente descartando as conversões ainda não persistidas
+
+---
+
 ## [2.17.8] - 2026-04-23
 
 ### 🐛 Corrigido

@@ -808,7 +808,7 @@ class AlvoBotPro_PixelTracking_REST {
 			array_filter(
 				$parts,
 				function ( $part ) {
-					return (bool) preg_match( '/^\d{15,16}$/', $part ) || (bool) preg_match( '/^(AW-\d{7,12}|G-[A-Z0-9]{7,12}|sitekit_gtag)$/', $part );
+					return (bool) preg_match( '/^\d{15,16}$/', $part ) || (bool) preg_match( '/^(AW-\d{6,15}|G-[A-Z0-9]{7,12}|sitekit_gtag)$/', $part );
 				}
 			)
 		);

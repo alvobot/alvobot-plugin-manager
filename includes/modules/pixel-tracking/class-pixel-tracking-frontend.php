@@ -969,7 +969,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 				);
 			}
 
-				if ( $legacy_ads && preg_match( '/^AW-\d{7,12}$/', $legacy_ads ) ) {
+				if ( $legacy_ads && preg_match( '/^AW-\d{6,15}$/', $legacy_ads ) ) {
 					$google_trackers[] = array(
 						'tracker_id'       => $legacy_ads,
 						'type'             => 'google_ads',
@@ -1011,16 +1011,16 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 
 		foreach ( $candidates as $candidate ) {
 			$candidate = sanitize_text_field( (string) $candidate );
-			if ( preg_match( '/^\d{7,12}$/', $candidate ) ) {
+			if ( preg_match( '/^\d{6,15}$/', $candidate ) ) {
 				$candidate = 'AW-' . $candidate;
 			}
-			if ( preg_match( '/^AW-\d{7,12}$/', $candidate ) ) {
+			if ( preg_match( '/^AW-\d{6,15}$/', $candidate ) ) {
 				return $candidate;
 			}
 		}
 
 		$tracker_id = isset( $tracker['tracker_id'] ) ? sanitize_text_field( (string) $tracker['tracker_id'] ) : '';
-		if ( empty( $tracker['connection_id'] ) && preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
+		if ( empty( $tracker['connection_id'] ) && preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
 			return $tracker_id;
 		}
 
