@@ -170,9 +170,9 @@ $alvobot_pt_google_trackers = isset( $settings['google_trackers'] ) && is_array(
 
 						<!-- Google Ads fields -->
 						<div id="add-field-gads-id" class="alvobot-form-field" style="display:none;">
-							<label for="manual_gads_id" class="alvobot-form-label"><?php esc_html_e( 'Conversion ID', 'alvobot-pro' ); ?></label>
-							<input type="text" id="manual_gads_id" class="alvobot-input" placeholder="AW-XXXXXXXXX">
-							<p class="alvobot-description"><?php esc_html_e( 'Encontre em Google Ads > Tools > Conversions.', 'alvobot-pro' ); ?></p>
+								<label for="manual_gads_id" class="alvobot-form-label"><?php esc_html_e( 'Google Tag / Conversion ID', 'alvobot-pro' ); ?></label>
+								<input type="text" id="manual_gads_id" class="alvobot-input" placeholder="AW-XXXXXXXXX">
+								<p class="alvobot-description"><?php esc_html_e( 'Use o AW- do snippet da tag do Google, nao o numero da conta.', 'alvobot-pro' ); ?></p>
 						</div>
 						<div id="add-field-gads-label" class="alvobot-form-field" style="display:none;">
 							<label for="manual_gads_conv_label" class="alvobot-form-label"><?php esc_html_e( 'Conversion Label', 'alvobot-pro' ); ?></label>

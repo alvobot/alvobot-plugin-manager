@@ -1,8 +1,5 @@
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
-	<!-- wp:heading {"level":1} -->
-	<h1><?php esc_html_e( 'Über Uns', 'alvobot-pro' ); ?></h1>
-	<!-- /wp:heading -->
 
 	<!-- wp:paragraph {"className":"intro-welcome"} -->
 	<p class="intro-welcome"><?php esc_html_e( 'Willkommen auf unserer Website, Ihrer vertrauenswürdigen Anlaufstelle für Informationen und qualitativ hochwertige Inhalte. Wir bieten die Informationen, die Sie benötigen, um informiert zu bleiben und fundierte Entscheidungen zu treffen.', 'alvobot-pro' ); ?></p>

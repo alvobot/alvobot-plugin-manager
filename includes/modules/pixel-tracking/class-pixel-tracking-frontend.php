@@ -268,32 +268,40 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 		$google_trackers = $this->get_google_trackers_from_settings( $settings );
 
 		// Separate real trackers (GA4/Ads we inject) from external (Site Kit/GTM already on page).
-		$real_trackers = array_values(
-			array_filter(
-				$google_trackers,
-				function ( $gt ) {
-					return ! isset( $gt['type'] ) || 'external' !== $gt['type'];
-				}
-			)
-		);
+			$real_trackers = array_values(
+				array_filter(
+					$google_trackers,
+					function ( $gt ) {
+						if ( isset( $gt['type'] ) && 'external' === $gt['type'] ) {
+							return false;
+						}
+						if ( isset( $gt['type'] ) && 'google_ads' === $gt['type'] ) {
+							return '' !== $this->get_google_tracker_tag_id( $gt );
+						}
+						return ! empty( $gt['tracker_id'] );
+					}
+				)
+			);
 
-		// Only inject gtag.js for real (non-external) trackers.
-		if ( ! empty( $real_trackers ) ) :
-			$primary_id = $real_trackers[0]['tracker_id'];
-		?>
+			// Only inject gtag.js for real (non-external) trackers.
+			if ( ! empty( $real_trackers ) ) :
+				$primary_id = isset( $real_trackers[0]['type'] ) && 'google_ads' === $real_trackers[0]['type']
+					? $this->get_google_tracker_tag_id( $real_trackers[0] )
+					: $real_trackers[0]['tracker_id'];
+			?>
 <!-- Google Tag (AlvoBot) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr( $primary_id ); ?>"></script>
 <script>
 	window.dataLayer = window.dataLayer || [];
 	function gtag(){dataLayer.push(arguments);}
 	gtag('js', new Date());
-			<?php foreach ( $real_trackers as $gt ) : ?>
-			<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
-gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
-			<?php else : ?>
-gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
-			<?php endif; ?>
-		<?php endforeach; ?>
+				<?php foreach ( $real_trackers as $gt ) : ?>
+				<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
+	gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
+				<?php else : ?>
+	gtag('config', <?php echo wp_json_encode( $this->get_google_tracker_tag_id( $gt ) ); ?>);
+				<?php endif; ?>
+			<?php endforeach; ?>
 </script>
 <!-- End Google Tag -->
 		<?php endif; ?>
@@ -321,12 +329,15 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				echo wp_json_encode(
 					array_map(
 						function ( $t ) {
-							return array(
-								'tracker_id'       => $t['tracker_id'],
-								'type'             => $t['type'],
-								'conversion_label' => isset( $t['conversion_label'] ) ? $t['conversion_label'] : '',
-							);
-						},
+								return array(
+									'tracker_id'       => $t['tracker_id'],
+									'type'             => $t['type'],
+									'conversion_label' => isset( $t['conversion_label'] ) ? $t['conversion_label'] : '',
+									'tag_id'           => $this->get_google_tracker_tag_id( $t ),
+									'customer_id'      => isset( $t['customer_id'] ) ? sanitize_text_field( (string) $t['customer_id'] ) : '',
+									'connection_id'    => isset( $t['connection_id'] ) ? sanitize_text_field( (string) $t['connection_id'] ) : '',
+								);
+							},
 						$google_trackers
 					)
 				);
@@ -484,11 +495,13 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 			echo "      trackers.forEach(function(t) {\n";
 			echo "        if (t.type !== 'google_ads') return;\n";
 			echo "        if (filterActive && selectedIds.indexOf(t.tracker_id) === -1) return;\n";
-			echo "        var label = labelsMap[t.tracker_id] || cfg.gads_conversion_label || t.conversion_label;\n";
-			echo "        if (__dbg && window.console) { console.log('Label resolution [' + t.tracker_id + ']:', { labelsMap: labelsMap[t.tracker_id] || null, fallback: cfg.gads_conversion_label || null, tracker_default: t.conversion_label || null, resolved: label || '(none)' }); }\n";
-			echo "        if (!label) return;\n";
-			echo "        var p = { send_to: t.tracker_id + '/' + label };\n";
-			echo "        p.transport_type = 'beacon';\n";
+				echo "        var label = labelsMap[t.tracker_id] || cfg.gads_conversion_label || t.conversion_label;\n";
+				echo "        if (__dbg && window.console) { console.log('Label resolution [' + t.tracker_id + ']:', { labelsMap: labelsMap[t.tracker_id] || null, fallback: cfg.gads_conversion_label || null, tracker_default: t.conversion_label || null, resolved: label || '(none)' }); }\n";
+				echo "        if (!label) return;\n";
+				echo "        var tagId = t.tag_id || (!t.connection_id ? t.tracker_id : '');\n";
+				echo "        if (!tagId) { if (__dbg && window.console) { console.warn('Google Ads tag_id missing for tracker:', t.tracker_id); } return; }\n";
+				echo "        var p = { send_to: tagId + '/' + label };\n";
+				echo "        p.transport_type = 'beacon';\n";
 			echo "        p.event_timeout = 2000;\n";
 			echo "        p.event_callback = function(){};\n";
 			echo "        if (cfg.gads_conversion_value) { p.value = parseFloat(cfg.gads_conversion_value) || 0; p.currency = siteCurrency; }\n";
@@ -956,15 +969,17 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 				);
 			}
 
-			if ( $legacy_ads && preg_match( '/^AW-\d{7,12}$/', $legacy_ads ) ) {
-				$google_trackers[] = array(
-					'tracker_id'       => $legacy_ads,
-					'type'             => 'google_ads',
-					'label'            => 'Google Ads',
-					'conversion_label' => isset( $settings['google_ads_conversion_label'] ) ? sanitize_text_field( (string) $settings['google_ads_conversion_label'] ) : '',
-				);
+				if ( $legacy_ads && preg_match( '/^AW-\d{7,12}$/', $legacy_ads ) ) {
+					$google_trackers[] = array(
+						'tracker_id'       => $legacy_ads,
+						'type'             => 'google_ads',
+						'label'            => 'Google Ads',
+						'conversion_label' => isset( $settings['google_ads_conversion_label'] ) ? sanitize_text_field( (string) $settings['google_ads_conversion_label'] ) : '',
+						'tag_id'           => $legacy_ads,
+						'customer_id'      => '',
+					);
+				}
 			}
-		}
 
 		return array_values(
 			array_filter(
@@ -973,11 +988,47 @@ gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>);
 					return ! empty( $gt['tracker_id'] );
 				}
 			)
-		);
-	}
+			);
+		}
 
 	/**
-	 * Resolve the best-available site currency code for browser-side Google events.
+	 * Resolve the Google tag ID used by gtag.js for a Google Ads tracker.
+	 *
+	 * AlvoBot-connected trackers may use tracker_id as the Google Ads customer
+	 * account ID (for API calls), while browser dispatch must use the conversion
+	 * tag ID shown in Google Ads snippets.
+	 *
+	 * @param array<string,mixed> $tracker Tracker config.
+	 * @return string AW-... tag ID or empty when unknown.
+	 */
+	private function get_google_tracker_tag_id( $tracker ) {
+		$candidates = array(
+			isset( $tracker['tag_id'] ) ? $tracker['tag_id'] : '',
+			isset( $tracker['google_tag_id'] ) ? $tracker['google_tag_id'] : '',
+			isset( $tracker['conversion_id'] ) ? $tracker['conversion_id'] : '',
+			isset( $tracker['google_ads_id'] ) ? $tracker['google_ads_id'] : '',
+		);
+
+		foreach ( $candidates as $candidate ) {
+			$candidate = sanitize_text_field( (string) $candidate );
+			if ( preg_match( '/^\d{7,12}$/', $candidate ) ) {
+				$candidate = 'AW-' . $candidate;
+			}
+			if ( preg_match( '/^AW-\d{7,12}$/', $candidate ) ) {
+				return $candidate;
+			}
+		}
+
+		$tracker_id = isset( $tracker['tracker_id'] ) ? sanitize_text_field( (string) $tracker['tracker_id'] ) : '';
+		if ( empty( $tracker['connection_id'] ) && preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
+			return $tracker_id;
+		}
+
+		return '';
+	}
+
+		/**
+		 * Resolve the best-available site currency code for browser-side Google events.
 	 *
 	 * @return string
 	 */

@@ -192,52 +192,68 @@ class AlvoBotPro_EssentialPages {
 	 */
 	private static array $locale_pages_config = [
 		'pt_BR' => [
-			'terms'   => [ 'title' => 'Termos de Uso',                'slug' => 'termos-de-uso' ],
-			'privacy' => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
-			'contact' => [ 'title' => 'Contato',                       'slug' => 'contato' ],
-			'about'   => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
+			'terms'    => [ 'title' => 'Termos de Uso',                'slug' => 'termos-de-uso' ],
+			'privacy'  => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
+			'cookies'  => [ 'title' => 'Política de Cookies',          'slug' => 'politica-de-cookies' ],
+			'comments' => [ 'title' => 'Política de Comentários',      'slug' => 'politica-de-comentarios' ],
+			'contact'  => [ 'title' => 'Contato',                       'slug' => 'contato' ],
+			'about'    => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
 		],
 		'pt_PT' => [
-			'terms'   => [ 'title' => 'Termos de Utilização',         'slug' => 'termos-de-utilizacao' ],
-			'privacy' => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
-			'contact' => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
-			'about'   => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
+			'terms'    => [ 'title' => 'Termos de Utilização',         'slug' => 'termos-de-utilizacao' ],
+			'privacy'  => [ 'title' => 'Política de Privacidade',      'slug' => 'politica-de-privacidade' ],
+			'cookies'  => [ 'title' => 'Política de Cookies',          'slug' => 'politica-de-cookies' ],
+			'comments' => [ 'title' => 'Política de Comentários',      'slug' => 'politica-de-comentarios' ],
+			'contact'  => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
+			'about'    => [ 'title' => 'Sobre Nós',                    'slug' => 'sobre-nos' ],
 		],
 		'en_US' => [
-			'terms'   => [ 'title' => 'Terms of Use',                 'slug' => 'terms-of-use' ],
-			'privacy' => [ 'title' => 'Privacy Policy',               'slug' => 'privacy-policy' ],
-			'contact' => [ 'title' => 'Contact',                       'slug' => 'contact' ],
-			'about'   => [ 'title' => 'About Us',                     'slug' => 'about-us' ],
+			'terms'    => [ 'title' => 'Terms of Use',                 'slug' => 'terms-of-use' ],
+			'privacy'  => [ 'title' => 'Privacy Policy',               'slug' => 'privacy-policy' ],
+			'cookies'  => [ 'title' => 'Cookie Policy',                'slug' => 'cookie-policy' ],
+			'comments' => [ 'title' => 'Comments Policy',              'slug' => 'comments-policy' ],
+			'contact'  => [ 'title' => 'Contact',                       'slug' => 'contact' ],
+			'about'    => [ 'title' => 'About Us',                     'slug' => 'about-us' ],
 		],
 		'es_ES' => [
-			'terms'   => [ 'title' => 'Términos de Uso',              'slug' => 'terminos-de-uso' ],
-			'privacy' => [ 'title' => 'Política de Privacidad',       'slug' => 'politica-de-privacidad' ],
-			'contact' => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
-			'about'   => [ 'title' => 'Sobre Nosotros',               'slug' => 'sobre-nosotros' ],
+			'terms'    => [ 'title' => 'Términos de Uso',              'slug' => 'terminos-de-uso' ],
+			'privacy'  => [ 'title' => 'Política de Privacidad',       'slug' => 'politica-de-privacidad' ],
+			'cookies'  => [ 'title' => 'Política de Cookies',          'slug' => 'politica-de-cookies' ],
+			'comments' => [ 'title' => 'Política de Comentarios',      'slug' => 'politica-de-comentarios' ],
+			'contact'  => [ 'title' => 'Contacto',                      'slug' => 'contacto' ],
+			'about'    => [ 'title' => 'Sobre Nosotros',               'slug' => 'sobre-nosotros' ],
 		],
 		'fr_FR' => [
-			'terms'   => [ 'title' => "Conditions d'Utilisation",     'slug' => 'conditions-utilisation' ],
-			'privacy' => [ 'title' => 'Politique de Confidentialité', 'slug' => 'politique-confidentialite' ],
-			'contact' => [ 'title' => 'Contact',                       'slug' => 'contact' ],
-			'about'   => [ 'title' => 'À Propos',                     'slug' => 'a-propos' ],
+			'terms'    => [ 'title' => "Conditions d'Utilisation",     'slug' => 'conditions-utilisation' ],
+			'privacy'  => [ 'title' => 'Politique de Confidentialité', 'slug' => 'politique-confidentialite' ],
+			'cookies'  => [ 'title' => 'Politique de Cookies',         'slug' => 'politique-cookies' ],
+			'comments' => [ 'title' => 'Politique de Commentaires',    'slug' => 'politique-commentaires' ],
+			'contact'  => [ 'title' => 'Contact',                       'slug' => 'contact' ],
+			'about'    => [ 'title' => 'À Propos',                     'slug' => 'a-propos' ],
 		],
 		'de_DE' => [
-			'terms'   => [ 'title' => 'Nutzungsbedingungen',          'slug' => 'nutzungsbedingungen' ],
-			'privacy' => [ 'title' => 'Datenschutzrichtlinie',        'slug' => 'datenschutzrichtlinie' ],
-			'contact' => [ 'title' => 'Kontakt',                       'slug' => 'kontakt' ],
-			'about'   => [ 'title' => 'Über Uns',                     'slug' => 'ueber-uns' ],
+			'terms'    => [ 'title' => 'Nutzungsbedingungen',          'slug' => 'nutzungsbedingungen' ],
+			'privacy'  => [ 'title' => 'Datenschutzrichtlinie',        'slug' => 'datenschutzrichtlinie' ],
+			'cookies'  => [ 'title' => 'Cookie-Richtlinie',           'slug' => 'cookie-richtlinie' ],
+			'comments' => [ 'title' => 'Kommentarrichtlinie',         'slug' => 'kommentarrichtlinie' ],
+			'contact'  => [ 'title' => 'Kontakt',                       'slug' => 'kontakt' ],
+			'about'    => [ 'title' => 'Über Uns',                     'slug' => 'ueber-uns' ],
 		],
 		'it_IT' => [
-			'terms'   => [ 'title' => 'Termini di Utilizzo',          'slug' => 'termini-di-utilizzo' ],
-			'privacy' => [ 'title' => 'Informativa sulla Privacy',    'slug' => 'informativa-privacy' ],
-			'contact' => [ 'title' => 'Contatti',                      'slug' => 'contatti' ],
-			'about'   => [ 'title' => 'Chi Siamo',                    'slug' => 'chi-siamo' ],
+			'terms'    => [ 'title' => 'Termini di Utilizzo',          'slug' => 'termini-di-utilizzo' ],
+			'privacy'  => [ 'title' => 'Informativa sulla Privacy',    'slug' => 'informativa-privacy' ],
+			'cookies'  => [ 'title' => 'Politica sui Cookie',         'slug' => 'politica-cookie' ],
+			'comments' => [ 'title' => 'Politica sui Commenti',       'slug' => 'politica-commenti' ],
+			'contact'  => [ 'title' => 'Contatti',                      'slug' => 'contatti' ],
+			'about'    => [ 'title' => 'Chi Siamo',                    'slug' => 'chi-siamo' ],
 		],
 		'ja'    => [
-			'terms'   => [ 'title' => '利用規約',                      'slug' => 'terms-of-use' ],
-			'privacy' => [ 'title' => 'プライバシーポリシー',           'slug' => 'privacy-policy' ],
-			'contact' => [ 'title' => 'お問い合わせ',                  'slug' => 'contact' ],
-			'about'   => [ 'title' => '私たちについて',               'slug' => 'about-us' ],
+			'terms'    => [ 'title' => '利用規約',                      'slug' => 'terms-of-use' ],
+			'privacy'  => [ 'title' => 'プライバシーポリシー',           'slug' => 'privacy-policy' ],
+			'cookies'  => [ 'title' => 'Cookieポリシー',               'slug' => 'cookie-policy' ],
+			'comments' => [ 'title' => 'コメントポリシー',              'slug' => 'comments-policy' ],
+			'contact'  => [ 'title' => 'お問い合わせ',                  'slug' => 'contact' ],
+			'about'    => [ 'title' => '私たちについて',               'slug' => 'about-us' ],
 		],
 	];
 
@@ -778,6 +794,10 @@ class AlvoBotPro_EssentialPages {
 		$current_date = wp_date( get_option( 'date_format' ) );
 		$config       = $this->get_pages_config();
 
+		// Data de última revisão: 3 meses atrás no formato "mmm/aaaa"
+		$review_date        = strtotime( '-3 months' );
+		$last_review_date   = wp_date( 'M/Y', $review_date );
+
 		$replacements = [
 			// Informações básicas do site
 			'[site_name]'          => get_bloginfo( 'name' ),
@@ -785,6 +805,7 @@ class AlvoBotPro_EssentialPages {
 			'[current_year]'       => $current_year,
 			'[terms_date]'         => $current_date,
 			'[privacy_date]'       => $current_date,
+			'[last_review_date]'   => $last_review_date,
 
 			// Informações da empresa (simplificadas)
 			'[company_name]'       => $company['name'],
@@ -797,6 +818,8 @@ class AlvoBotPro_EssentialPages {
 			'[privacy_policy_url]' => home_url( '/' . $config['privacy']['slug'] ),
 			'[contact_url]'        => home_url( '/' . $config['contact']['slug'] ),
 			'[terms_url]'          => home_url( '/' . $config['terms']['slug'] ),
+			'[cookies_url]'        => home_url( '/' . $config['cookies']['slug'] ),
+			'[comments_policy_url]' => home_url( '/' . $config['comments']['slug'] ),
 			'[dpo_email]'          => 'dpo@' . parse_url( home_url(), PHP_URL_HOST ),
 
 			// Seção legal minimalista

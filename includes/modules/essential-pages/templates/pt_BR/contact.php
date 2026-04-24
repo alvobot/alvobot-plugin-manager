@@ -1,5 +1,9 @@
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
+	<!-- wp:paragraph {"className":"last-updated"} -->
+	<p class="last-updated"><?php echo esc_html( sprintf( __( 'Atualizado em: %s', 'alvobot-pro' ), '[last_review_date]' ) ); ?></p>
+	<!-- /wp:paragraph -->
+
 	<!-- wp:group {"style":{"spacing":{"margin":{"top":"2rem","bottom":"2rem"}}}} -->
 	<div class="wp-block-group" style="margin-top:2rem;margin-bottom:2rem">
 		<!-- wp:paragraph {"className":"form-intro"} -->

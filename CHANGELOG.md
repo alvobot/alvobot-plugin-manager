@@ -8,6 +8,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.6] - 2026-04-22
+
+### 🔧 Melhorado
+- **Pixel Tracking / Google Ads**: presets de arbitragem agora usam eventos internos claros para impressão/clique de anúncio e abertura/clique de vinheta
+- **Pixel Tracking / Google Ads**: assistente de setup cria também a conversão de impressão de página e mostra status de labels/valor na lista de conversões
+- **Pixel Tracking / Admin UI**: adicionada ação para arquivar conversões extras do Google Ads ao buscar labels
+
+### 🐛 Corrigido
+- **Pixel Tracking / CAPI**: corrigida chamada recursiva de retry de lote que podia falhar quando um envio em batch precisava ser dividido
+
+---
+
 ## [2.9.21] - 2026-02-18
 
 ### 🐛 Corrigido
