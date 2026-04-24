@@ -8,6 +8,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.8] - 2026-04-23
+
+### 🐛 Corrigido
+- **Pixel Tracking / Pixels tab**: corrige caso em que ao selecionar um Google Ads tracker e criar conversões, o pixel e/ou as conversões não persistiam após clicar em Salvar Configurações. A função de sincronização de trackers ativos movia silenciosamente regras de conversão para `draft` e apagava `_gads_labels_map` quando qualquer tracker ficava órfão — comportamento substituído por flag `_orphaned_pixel_ids` preservando todos os dados e exibindo admin notice
+- **Pixel Tracking / Conversions auto-save**: elimina race condition no fluxo "Criar" do picker de ConversionActions — múltiplos cliques rápidos podiam descartar salvamentos silenciosamente via `setTimeout(trigger('click'), 300)`. A regra agora é salva diretamente via AJAX no callback de criação, independente do botão compartilhado do form
+- **Pixel Tracking / sanitize**: aceita Google Ads `tracker_id`/`tag_id` com 6-15 dígitos (antes 7-12), acomodando MCCs e customer_ids fora do padrão de 10 dígitos
+- **Pixel Tracking / AJAX save_conversion**: rejeita `trigger_type` inválido com mensagem de erro ao invés de silenciosamente cair para `page_load`
+
+### 🔧 Melhorado
+- **Pixel Tracking / Admin notice**: novo aviso quando conversões existentes referenciam trackers que não estão mais ativos na aba Pixels
+
+---
+
 ## [2.17.6] - 2026-04-22
 
 ### 🔧 Melhorado

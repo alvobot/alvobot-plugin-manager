@@ -95,6 +95,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// Admin notice for expired tokens.
 		add_action( 'admin_notices', array( $this, 'admin_notice_expired_tokens' ) );
+		// Admin notice for orphaned conversion rules (selected trackers removed).
+		add_action( 'admin_notices', array( $this, 'admin_notice_orphaned_conversions' ) );
 
 		AlvoBotPro::debug_log( 'pixel-tracking', 'Module initialized' );
 	}
@@ -630,6 +632,51 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	}
 
 	/**
+	 * Show admin notice when any conversion rule references a tracker that is no
+	 * longer present in the pixels tab configuration. Prevents silent data loss
+	 * that previously drafted the rule and wiped its labels map.
+	 */
+	public function admin_notice_orphaned_conversions() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$orphaned = new WP_Query(
+			array(
+				'post_type'      => 'alvo_pixel_conv',
+				'post_status'    => array( 'publish', 'draft' ),
+				'posts_per_page' => 10,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'     => '_orphaned_pixel_ids',
+						'compare' => 'EXISTS',
+					),
+				),
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+
+		if ( empty( $orphaned->posts ) ) {
+			return;
+		}
+
+		$names = array();
+		foreach ( $orphaned->posts as $conv_id ) {
+			$names[] = get_the_title( $conv_id );
+		}
+		$page_url = admin_url( 'admin.php?page=alvobot-pro-pixel-tracking&tab=conversoes' );
+		printf(
+			'<div class="notice notice-warning"><p><strong>%s</strong> %s: %s. <a href="%s">%s</a></p></div>',
+			esc_html__( 'Pixel Tracking:', 'alvobot-pro' ),
+			esc_html__( 'Conversoes com trackers ausentes', 'alvobot-pro' ),
+			esc_html( implode( ', ', $names ) ),
+			esc_url( $page_url ),
+			esc_html__( 'Revisar', 'alvobot-pro' )
+		);
+	}
+
+	/**
 	 * Sync tokens from AlvoBot for all AlvoBot-sourced pixels on settings page load.
 	 *
 	 * Runs once per hour (throttled via transient) when admin visits the Pixels tab.
@@ -709,12 +756,17 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		$conversion_id = isset( $_POST['conversion_id'] ) ? absint( $_POST['conversion_id'] ) : 0;
-		$data          = array(
+		$allowed_triggers = array( 'page_load', 'page_time', 'form_submit', 'click', 'scroll', 'view_element', 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' );
+		$posted_trigger   = isset( $_POST['trigger_type'] ) ? sanitize_text_field( wp_unslash( $_POST['trigger_type'] ) ) : '';
+		if ( '' !== $posted_trigger && ! in_array( $posted_trigger, $allowed_triggers, true ) ) {
+			/* translators: %s: trigger type received */
+			wp_send_json_error( sprintf( __( 'Gatilho invalido: %s', 'alvobot-pro' ), $posted_trigger ) );
+		}
+		$data = array(
 			'name'              => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
 			'event_type'        => isset( $_POST['event_type'] ) ? sanitize_text_field( wp_unslash( $_POST['event_type'] ) ) : 'PageView',
 			'event_custom_name' => isset( $_POST['event_custom_name'] ) ? sanitize_text_field( wp_unslash( $_POST['event_custom_name'] ) ) : '',
-			'trigger_type'      => isset( $_POST['trigger_type'] ) && in_array( $_POST['trigger_type'], array( 'page_load', 'page_time', 'form_submit', 'click', 'scroll', 'view_element', 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' ), true )
-				? sanitize_text_field( wp_unslash( $_POST['trigger_type'] ) ) : 'page_load',
+			'trigger_type'      => '' !== $posted_trigger ? $posted_trigger : 'page_load',
 			'trigger_value'     => isset( $_POST['trigger_value'] ) ? absint( $_POST['trigger_value'] ) : 0,
 			'display_on'        => isset( $_POST['display_on'] ) ? sanitize_text_field( wp_unslash( $_POST['display_on'] ) ) : 'all',
 			'page_ids'          => isset( $_POST['page_ids'] ) ? array_map( 'absint', (array) $_POST['page_ids'] ) : array(),
@@ -1005,20 +1057,11 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			}
 
 			if ( $had_explicit_target && empty( $valid_ids ) ) {
+				// All selected trackers orphaned. Preserve the original selection so that
+				// a subsequent save (which may re-introduce the tracker) restores the rule
+				// without data loss. Flag as orphaned so the admin UI can surface a notice.
 				update_post_meta( $conv->ID, '_orphaned_pixel_ids', $raw_pixel_ids );
-				update_post_meta( $conv->ID, '_pixel_ids', '' );
-				update_post_meta( $conv->ID, '_platforms', 'all' );
-				update_post_meta( $conv->ID, '_gads_labels_map', wp_json_encode( array() ) );
-				update_post_meta( $conv->ID, '_gads_conversion_label', '' );
-				if ( 'publish' === $conv->post_status ) {
-					wp_update_post(
-						array(
-							'ID'          => $conv->ID,
-							'post_status' => 'draft',
-						)
-					);
-				}
-				AlvoBotPro::debug_log( 'pixel-tracking', 'Conversion ' . $conv->ID . ' foi desativada porque todos os trackers selecionados ficaram orfaos.' );
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Conversion ' . $conv->ID . ' marcada como orfa (trackers ausentes): ' . $raw_pixel_ids );
 				continue;
 			}
 
@@ -1258,9 +1301,10 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 				if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
 					$type = 'ga4';
-				} elseif ( preg_match( '/^AW-\d{7,12}$/', $tracker_id ) ) {
+				} elseif ( preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
 					$type = 'google_ads';
 				} else {
+					AlvoBotPro::debug_log( 'pixel-tracking', 'sanitize_settings: tracker_id descartado por formato invalido: ' . $tracker_id );
 					continue; // Invalid tracker ID, skip.
 				}
 
@@ -1269,10 +1313,10 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 					$conv_label = '';
 				}
 				$tag_id = isset( $tracker['tag_id'] ) ? sanitize_text_field( $tracker['tag_id'] ) : '';
-				if ( $tag_id && preg_match( '/^\d{7,12}$/', $tag_id ) ) {
+				if ( $tag_id && preg_match( '/^\d{6,15}$/', $tag_id ) ) {
 					$tag_id = 'AW-' . $tag_id;
 				}
-				if ( $tag_id && ! preg_match( '/^AW-\d{7,12}$/', $tag_id ) ) {
+				if ( $tag_id && ! preg_match( '/^AW-\d{6,15}$/', $tag_id ) ) {
 					$tag_id = '';
 				}
 				if ( 'google_ads' === $type && empty( $tag_id ) && empty( $tracker['connection_id'] ) ) {

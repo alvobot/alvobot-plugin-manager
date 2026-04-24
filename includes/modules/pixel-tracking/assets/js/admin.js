@@ -2293,28 +2293,43 @@
 							syncGadsLabelsMap();
 						}
 
-						// If suggestion with prefill data, auto-fill the conversion form and save
-							if (prefillData.trigger && prefillData.event_type) {
-								// Disable all other create buttons to prevent race condition
-								$( '.alvobot-ca-create-btn' ).prop( 'disabled', true );
-							// Set pixel_ids to the specific tracker
-							$( '#conv_pixel_ids' ).val( trackerId );
-							$( '#conv-pixel-selector .conv-pixel-checkbox' ).each( function () {
-								$( this ).prop( 'checked', $( this ).val() === trackerId );
-								});
-								$( '#conv_name' ).val( name );
-								$( '#conv_event_type' ).val( prefillData.event_type ).trigger( 'change' );
-								$( '#conv_event_custom_name' ).val( prefillData.event_custom_name || '' );
-								$( '#conv_trigger_type' ).val( prefillData.trigger ).trigger( 'change' );
-								$( '#conv_display_on' ).val( 'all' ).trigger( 'change' );
-								$( '#conv_content_name' ).val( name );
-								$( '#conv_gads_conversion_value' ).val( prefillData.value || '' );
-								$( '#conv_id' ).val( '0' ); // New conversion
+						// If suggestion with prefill data, persist the rule directly via AJAX.
+						// Avoids a race where multiple rapid "Criar" clicks clobber the shared
+						// conversion form and let the #alvobot-save-conversion-btn disabled guard
+						// silently drop later saves (see auto-save via trigger click bug).
+						if (prefillData.trigger && prefillData.event_type) {
+							var labelsMap = {};
+							if (label) { labelsMap[trackerId] = label; }
+							$.ajax({
+								url: config.ajaxurl,
+								method: 'POST',
+								data: {
+									action: 'alvobot_pixel_tracking_save_conversion',
+									nonce: config.nonce,
+									conversion_id: 0,
+									name: name,
+									event_type: prefillData.event_type,
+									event_custom_name: prefillData.event_custom_name || '',
+									trigger_type: prefillData.trigger,
+									display_on: 'all',
+									content_name: name,
+									pixel_ids: trackerId,
+									gads_conversion_label: label,
+									gads_labels_map: JSON.stringify( labelsMap ),
+									gads_conversion_value: prefillData.value || '',
+								},
+								success: function (saveResponse) {
+									if ( ! saveResponse.success) {
+										alert( saveResponse.data || 'Conversao criada no Google Ads mas falhou ao salvar a regra local.' );
+									}
+								},
+								error: function () {
+									alert( 'Conversao criada no Google Ads mas a conexao falhou ao salvar a regra local. Clique em Buscar novamente.' );
+								},
+							});
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
 								'<p class="alvobot-description" style="color:#16a34a;">' + escHtml( name ) + ' criada e configurada!' + (label ? ' Label: <code>' + escHtml( label ) + '</code>' : '') + '</p>'
 							);
-							// Auto-save the conversion rule (delay for form fields to update)
-							setTimeout( function () { $( '#alvobot-save-conversion-btn' ).trigger( 'click' ); }, 300 );
 						} else {
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
 								label
