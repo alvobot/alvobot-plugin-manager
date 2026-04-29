@@ -8,6 +8,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.13] - 2026-04-29
+
+### ✨ Adicionado
+- **Pixel Tracking / Renomeacao automatica de conversoes arquivadas**: o assistente "Criar em todas as contas Google Ads" agora detecta conversoes arquivadas (status REMOVED ou HIDDEN) que estavam bloqueando a criacao de novas com o mesmo nome — e **renomeia automaticamente** a antiga para `<nome> [arquivada YYYY-MM-DD #<id>]`, liberando o nome original. Em seguida cria uma nova conversao limpa (ENABLED) e a regra local. Verificado end-to-end na producao (portalagrovida.com.br): "Vignette View" REMOVED virou "Vignette View [arquivada 2026-04-29 #7592271308]" e uma nova "Vignette View" ENABLED foi criada com sucesso
+- **Edge Function `api_plugin` / handler `delete_google_conversion_action`**: novo handler que executa a operacao `remove` real do Google Ads (mutate com `remove` em vez de `update` com status). Necessario porque setar `status: 'REMOVED'` ou `status: 'HIDDEN'` via update_mask e rejeitado pelo Google Ads ("Enum value 'REMOVED' cannot be used" / "deny-list for this field") — apenas ENABLED e settable
+- **Plugin / `delete_google_conversion_action` PHP + AJAX**: wrapper completo que chama a nova Edge Function, registrado em `wp_ajax_alvobot_pixel_tracking_delete_conversion_action`
+
+### 🐛 Corrigido
+- **Pixel Tracking / Botao "Arquivar"**: trocado de `update_conversion_action` com `status: 'REMOVED'` (que era rejeitado pela API e nunca funcionou) para `delete_google_conversion_action` (operacao `remove` real). Mensagem de confirmacao atualizada para refletir que a acao e irreversivel via API (pode ser desarquivada apenas via UI do Google Ads)
+- **Pixel Tracking / Categorizacao no bulk-all**: removida a fase `reactivatePhase` (v2.17.12) baseada na premissa errada de que `status: 'ENABLED'` poderia ser setado em uma conversao REMOVED — testes diretos na API mostraram que isso nao funciona. Substituida por `renameArchivedPhase` que usa o campo `name` (que **e** settable em archived) para liberar o nome
+
+### 📦 Deploy required
+- Edge Function `api_plugin` ja foi deployada em `qbmbokpbcyempnaravaw` durante esta release
+- Plugin atualizado em portalagrovida.com.br
+
+---
+
 ## [2.17.12] - 2026-04-29
 
 ### ✨ Adicionado

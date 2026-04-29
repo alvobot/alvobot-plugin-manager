@@ -84,6 +84,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_conversion_actions', array( $this, 'ajax_fetch_google_conversion_actions' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_create_conversion_action', array( $this, 'ajax_create_google_conversion_action' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_update_conversion_action', array( $this, 'ajax_update_google_conversion_action' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion_action', array( $this, 'ajax_delete_google_conversion_action' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_refresh_token', array( $this, 'ajax_refresh_token' ) );
 
 		// AJAX handlers for conversion CRUD
@@ -429,6 +430,55 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	}
 
 	/**
+	 * Delete (archive via `remove` operation) a ConversionAction in Google Ads.
+	 *
+	 * Note: setting status=REMOVED via update_mask is rejected by the Google Ads API
+	 * ("Enum value 'REMOVED' cannot be used"). The proper API call is the dedicated
+	 * `remove` mutate operation, which the Edge Function exposes as
+	 * `delete_google_conversion_action`.
+	 */
+	public function delete_google_conversion_action( $connection_id, $customer_id, $conversion_action_id ) {
+		$server_url = defined( 'ALVOBOT_SERVER_URL' ) ? ALVOBOT_SERVER_URL : '';
+		$site_token = get_option( 'alvobot_site_token', '' );
+
+		if ( empty( $site_token ) || empty( $server_url ) ) {
+			return new WP_Error( 'no_config', __( 'Site nao conectado ao AlvoBot.', 'alvobot-pro' ) );
+		}
+
+		$response = wp_remote_post(
+			$server_url,
+			array(
+				'body'    => wp_json_encode(
+					array(
+						'action'               => 'delete_google_conversion_action',
+						'site_url'             => get_site_url(),
+						'token'                => $site_token,
+						'connection_id'        => $connection_id,
+						'customer_id'          => $customer_id,
+						'conversion_action_id' => $conversion_action_id,
+					)
+				),
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'timeout' => 30,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $code || empty( $body['success'] ) ) {
+			$msg = isset( $body['error'] ) ? $body['error'] : sprintf( 'HTTP %d', $code );
+			return new WP_Error( 'api_error', $msg );
+		}
+
+		return isset( $body['data'] ) ? $body['data'] : array();
+	}
+
+	/**
 	 * AJAX: Create a ConversionAction in Google Ads.
 	 */
 	public function ajax_create_google_conversion_action() {
@@ -494,6 +544,33 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		$result = $this->update_google_conversion_action( $connection_id, $customer_id, $conversion_action_id, $params );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: Delete (archive via `remove` operation) a ConversionAction in Google Ads.
+	 */
+	public function ajax_delete_google_conversion_action() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$connection_id        = isset( $_POST['connection_id'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_id'] ) ) : '';
+		$customer_id          = isset( $_POST['customer_id'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_id'] ) ) : '';
+		$conversion_action_id = isset( $_POST['conversion_action_id'] ) ? sanitize_text_field( wp_unslash( $_POST['conversion_action_id'] ) ) : '';
+
+		if ( empty( $connection_id ) || empty( $customer_id ) || empty( $conversion_action_id ) ) {
+			wp_send_json_error( __( 'Campos obrigatorios: connection_id, customer_id, conversion_action_id.', 'alvobot-pro' ) );
+		}
+
+		$result = $this->delete_google_conversion_action( $connection_id, $customer_id, $conversion_action_id );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message() );

@@ -1569,14 +1569,22 @@
 							var nname = normalizeConversionName( existingActions[e].name );
 							actionByName[ nname ] = existingActions[e];
 						}
-						var existingActiveNames = [];
-						var existingRemovedNames = [];
+						// Google Ads ConversionAction status: only ENABLED is settable via update_mask.
+						// Both HIDDEN and REMOVED are deny-listed when passed as status updates
+						// (verified in production: REMOVED returns "Enum value 'REMOVED' cannot be
+						// used" and HIDDEN returns "The field's value is on a deny-list for this
+						// field"). The name remains reserved while the conversion exists in any
+						// state, so we cannot recreate with the same name either. The honest
+						// behaviour is to surface the situation to the user with an actionable
+						// instruction (rename or restore in the Google Ads UI).
+						var existingActiveNames    = [];
+						var existingArchivedNames  = []; // REMOVED or HIDDEN — name blocked, cannot recreate or revive via API
 						var existingLabels = {};
 						for (var na in actionByName) {
 							if ( ! actionByName.hasOwnProperty( na )) { continue; }
 							var act = actionByName[na];
-							if (act.status === 'REMOVED') {
-								existingRemovedNames.push( na );
+							if (act.status === 'REMOVED' || act.status === 'HIDDEN') {
+								existingArchivedNames.push( na );
 							} else {
 								existingActiveNames.push( na );
 							}
@@ -1609,15 +1617,15 @@
 						}
 
 						// Categorize each preset:
-						//  - toMerge: local rule exists but does not include this tracker yet → patch it (add tracker + label)
-						//  - toReactivate: GAds conversion exists but is REMOVED (archived) → reactivate + save/merge rule
+						//  - toMerge: local rule exists but does not include this tracker yet → patch it
+						//  - blockedByArchived: GAds conversion is REMOVED/HIDDEN → name reserved, cannot create or revive via API
 						//  - toCreate: not in Google Ads AND not in any local rule → create both
 						//  - toSaveRule: in Google Ads (ENABLED) but no local rule → just save the rule
 						//  - skipped: rule exists AND already targets this tracker
-						var toCreate     = [];
-						var toSaveRule   = [];
-						var toMerge      = [];
-						var toReactivate = [];
+						var toCreate          = [];
+						var toSaveRule        = [];
+						var toMerge           = [];
+						var blockedByArchived = [];
 						for (var s = 0; s < suggestions.length; s++) {
 							var preset = suggestions[s];
 							if (hasPresetName( existingRuleNames, preset )) {
@@ -1633,9 +1641,8 @@
 								}
 								continue; // already targets this tracker
 							}
-							if (hasPresetName( existingRemovedNames, preset )) {
-								var removedAction = findActionForPreset( preset );
-								toReactivate.push( { action: removedAction, preset: preset } );
+							if (hasPresetName( existingArchivedNames, preset )) {
+								blockedByArchived.push( preset );
 								continue;
 							}
 							if (hasPresetName( existingActiveNames, preset )) {
@@ -1646,25 +1653,38 @@
 							}
 						}
 
-						if ( ! toCreate.length && ! toSaveRule.length && ! toMerge.length && ! toReactivate.length) {
-							summary.skipped = suggestions.length;
-							resolve( summary );
-							return;
-						}
+						// `name` is settable on archived conversions even when `status` is not, so we
+						// can rename "Page View" → "Page View [arquivada 2026-04-29 #id]" to
+						// release the original name, then create a fresh ENABLED one. Each
+						// rename that succeeds promotes the preset from blockedByArchived to
+						// toCreate. Renames that fail surface as a clear error so the user
+						// knows to act manually.
+						var total    = toCreate.length + toSaveRule.length + toMerge.length + blockedByArchived.length;
+						var saveIdx     = 0;
+						var mergeIdx    = 0;
+						var renameIdx   = 0;
 
-						var total        = toCreate.length + toSaveRule.length + toMerge.length + toReactivate.length;
-						var saveIdx      = 0;
-						var mergeIdx     = 0;
-						var reactivateIdx = 0;
+						function renameArchivedPhase() {
+							if (renameIdx >= blockedByArchived.length) { return mergeRulesPhase(); }
+							var sg = blockedByArchived[renameIdx];
+							var act = findActionForPreset( sg );
+							if ( ! act) {
+								// Should not happen — but be defensive.
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (arquivada — referencia interna nao encontrada)' );
+								renameIdx++;
+								renameArchivedPhase();
+								return;
+							}
 
-						function reactivatePhase() {
-							if (reactivateIdx >= toReactivate.length) { return mergeRulesPhase(); }
-							var item = toReactivate[reactivateIdx];
-							var sg   = item.preset;
-							var act  = item.action;
-							onProgress( 'reativando ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
+							onProgress( 'liberando nome ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
 
-							// 1) Tell Google Ads to flip status REMOVED → ENABLED.
+							// New unique name: append [arquivada YYYY-MM-DD #id]. Truncate to stay
+							// well under Google Ads' 100-char limit on conversion action names.
+							var dateStr = new Date().toISOString().slice( 0, 10 );
+							var suffix  = ' [arquivada ' + dateStr + ' #' + (act.id || Math.random().toString( 36 ).slice( 2, 7 )) + ']';
+							var origName = act.name || sg.name;
+							var newName  = (origName + suffix).slice( 0, 100 );
+
 							$.ajax({
 								url: config.ajaxurl,
 								method: 'POST',
@@ -1675,63 +1695,29 @@
 									connection_id: tracker.connection_id,
 									customer_id: customerId,
 									conversion_action_id: act.id,
-									status: 'ENABLED',
+									name: newName,
 								},
 							}).done( function (resp) {
-								if ( ! resp || ! resp.success) {
-									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (reativacao falhou)' );
-									reactivateIdx++;
-									reactivatePhase();
-									return;
+								if (resp && resp.success) {
+									// Name freed — promote to toCreate so the createPhase will
+									// build a fresh ENABLED conversion with the original preset name.
+									toCreate.push( sg );
+									debugLog( 'rename archived: success', { id: act.id, oldName: origName, newName: newName, preset: sg.name } );
+								} else {
+									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (arquivada — falha ao liberar nome: ' + ((resp && resp.data) || 'desconhecido') + ')' );
 								}
-								// 2) Save (or merge) the local rule with the existing label.
-								var label = act.conversion_label || getExistingLabelForPreset( existingLabels, sg );
-								var existingRule = findRuleForPreset( sg );
-								var labelsMap = {};
-								var pixelIds  = trackerId;
-								var convId    = 0;
-								if (existingRule) {
-									convId = existingRule.id;
-									try { labelsMap = JSON.parse( existingRule.gads_labels_map || '{}' ) || {}; } catch (ex) { labelsMap = {}; }
-									var ids = String( existingRule.pixel_ids || '' )
-										.split( ',' ).map( function (s2) { return s2.trim(); } )
-										.filter( Boolean );
-									if (ids.indexOf( trackerId ) === -1) { ids.push( trackerId ); }
-									pixelIds = ids.join( ',' );
-								}
-								if (label) { labelsMap[trackerId] = label; }
-								$.ajax({
-									url: config.ajaxurl,
-									method: 'POST',
-									timeout: 15000,
-									data: {
-										action: 'alvobot_pixel_tracking_save_conversion',
-										nonce: config.nonce,
-										conversion_id: convId,
-										name: sg.name,
-										event_type: sg.event_type,
-										event_custom_name: sg.event_custom_name || '',
-										trigger_type: sg.trigger,
-										display_on: 'all',
-										content_name: sg.name,
-										pixel_ids: pixelIds,
-										gads_conversion_label: label || '',
-										gads_labels_map: JSON.stringify( labelsMap ),
-										gads_conversion_value: sg.default_value || '',
-									},
-								}).done( function (saveResp) {
-									if (saveResp && saveResp.success) { summary.created++; } else { summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save apos reativar)' ); }
-								}).fail( function () {
-									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save apos reativar - rede)' );
-								}).always( function () {
-									reactivateIdx++;
-									reactivatePhase();
-								});
 							}).fail( function (xhr, status) {
-								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (reativacao ' + (status === 'timeout' ? 'timeout' : 'rede') + ')' );
-								reactivateIdx++;
-								reactivatePhase();
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (arquivada — ' + (status === 'timeout' ? 'timeout' : 'rede') + ' ao liberar nome)' );
+							}).always( function () {
+								renameIdx++;
+								renameArchivedPhase();
 							});
+						}
+
+						if ( ! toCreate.length && ! toSaveRule.length && ! toMerge.length && ! blockedByArchived.length) {
+							summary.skipped = suggestions.length;
+							resolve( summary );
+							return;
 						}
 
 						function mergeRulesPhase() {
@@ -1886,7 +1872,7 @@
 							});
 						}
 
-						reactivatePhase();
+						renameArchivedPhase();
 					}).fail( function () {
 						summary.errors.push( (tracker.label || trackerId) + ': falha ao listar conversoes existentes' );
 						resolve( summary );
@@ -2697,7 +2683,14 @@
 						return;
 					}
 
-				if ( ! confirm( 'Arquivar "' + actionName + '" no Google Ads? A regra local do AlvoBot nao sera apagada automaticamente.' ) ) {
+				// We use the dedicated `remove` mutate operation here. Google Ads rejects
+				// setting status=REMOVED or HIDDEN via update_mask ("Enum value 'REMOVED'
+				// cannot be used" / "deny-list for this field"); only ENABLED is settable.
+				// `remove` is the proper API call to archive a conversion action — the
+				// resource transitions to status=REMOVED, irreversible via the API. The
+				// wizard "Criar em todas" handles this case afterwards by renaming the
+				// archived entry and creating a fresh ENABLED one with the clean name.
+				if ( ! confirm( 'Arquivar "' + actionName + '" no Google Ads? Esta acao e irreversivel via API (apenas via UI do Google Ads). A regra local do AlvoBot nao sera apagada automaticamente.' ) ) {
 					return;
 				}
 
@@ -2706,12 +2699,11 @@
 					url: config.ajaxurl,
 					method: 'POST',
 					data: {
-						action: 'alvobot_pixel_tracking_update_conversion_action',
+						action: 'alvobot_pixel_tracking_delete_conversion_action',
 						nonce: config.nonce,
 						connection_id: adsTracker.connection_id,
 						customer_id: customerId,
 						conversion_action_id: actionId,
-						status: 'REMOVED',
 					},
 					success: function (response) {
 						if (response.success) {
