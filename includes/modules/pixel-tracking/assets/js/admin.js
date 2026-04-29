@@ -1559,13 +1559,32 @@
 						var gadsData    = gadsResp[0] || {};
 						var rulesData   = rulesResp[0] || {};
 						var existingActions = (gadsData.success && gadsData.data && gadsData.data.conversion_actions) ? gadsData.data.conversion_actions : [];
-						var existingGadsNames = existingActions.map( function (a) { return normalizeConversionName( a.name ); } );
-						var existingLabels = {};
+
+						// Index Google Ads conversions by name → { action, status }. We track REMOVED
+						// (archived) ones separately so we can offer to reactivate them instead of
+						// failing on "duplicate name" when re-creating (Google Ads keeps the name
+						// reserved even after archive).
+						var actionByName = {};
 						for (var e = 0; e < existingActions.length; e++) {
-							if (existingActions[e].conversion_label) {
-								existingLabels[ normalizeConversionName( existingActions[e].name ) ] = existingActions[e].conversion_label;
+							var nname = normalizeConversionName( existingActions[e].name );
+							actionByName[ nname ] = existingActions[e];
+						}
+						var existingActiveNames = [];
+						var existingRemovedNames = [];
+						var existingLabels = {};
+						for (var na in actionByName) {
+							if ( ! actionByName.hasOwnProperty( na )) { continue; }
+							var act = actionByName[na];
+							if (act.status === 'REMOVED') {
+								existingRemovedNames.push( na );
+							} else {
+								existingActiveNames.push( na );
+							}
+							if (act.conversion_label) {
+								existingLabels[ na ] = act.conversion_label;
 							}
 						}
+
 						var existingRules = (rulesData.success && rulesData.data && rulesData.data.conversions) ? rulesData.data.conversions : [];
 						var existingRuleNames = existingRules.map( function (r) { return normalizeConversionName( r.name ); } );
 
@@ -1579,14 +1598,26 @@
 							return null;
 						}
 
+						function findActionForPreset( preset ) {
+							var variants = getPresetNameVariants( preset );
+							for (var k = 0; k < variants.length; k++) {
+								if (actionByName[ variants[k] ]) {
+									return actionByName[ variants[k] ];
+								}
+							}
+							return null;
+						}
+
 						// Categorize each preset:
-						//  - toMerge: rule exists but does not include this tracker yet → patch it (add tracker + label)
+						//  - toMerge: local rule exists but does not include this tracker yet → patch it (add tracker + label)
+						//  - toReactivate: GAds conversion exists but is REMOVED (archived) → reactivate + save/merge rule
 						//  - toCreate: not in Google Ads AND not in any local rule → create both
-						//  - toSaveRule: in Google Ads but no local rule → just save the rule
+						//  - toSaveRule: in Google Ads (ENABLED) but no local rule → just save the rule
 						//  - skipped: rule exists AND already targets this tracker
-						var toCreate   = [];
-						var toSaveRule = [];
-						var toMerge    = [];
+						var toCreate     = [];
+						var toSaveRule   = [];
+						var toMerge      = [];
+						var toReactivate = [];
 						for (var s = 0; s < suggestions.length; s++) {
 							var preset = suggestions[s];
 							if (hasPresetName( existingRuleNames, preset )) {
@@ -1602,7 +1633,12 @@
 								}
 								continue; // already targets this tracker
 							}
-							if (hasPresetName( existingGadsNames, preset )) {
+							if (hasPresetName( existingRemovedNames, preset )) {
+								var removedAction = findActionForPreset( preset );
+								toReactivate.push( { action: removedAction, preset: preset } );
+								continue;
+							}
+							if (hasPresetName( existingActiveNames, preset )) {
 								preset.existingLabel = getExistingLabelForPreset( existingLabels, preset );
 								toSaveRule.push( preset );
 							} else {
@@ -1610,15 +1646,93 @@
 							}
 						}
 
-						if ( ! toCreate.length && ! toSaveRule.length && ! toMerge.length) {
+						if ( ! toCreate.length && ! toSaveRule.length && ! toMerge.length && ! toReactivate.length) {
 							summary.skipped = suggestions.length;
 							resolve( summary );
 							return;
 						}
 
-						var total      = toCreate.length + toSaveRule.length + toMerge.length;
-						var saveIdx    = 0;
-						var mergeIdx   = 0;
+						var total        = toCreate.length + toSaveRule.length + toMerge.length + toReactivate.length;
+						var saveIdx      = 0;
+						var mergeIdx     = 0;
+						var reactivateIdx = 0;
+
+						function reactivatePhase() {
+							if (reactivateIdx >= toReactivate.length) { return mergeRulesPhase(); }
+							var item = toReactivate[reactivateIdx];
+							var sg   = item.preset;
+							var act  = item.action;
+							onProgress( 'reativando ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
+
+							// 1) Tell Google Ads to flip status REMOVED → ENABLED.
+							$.ajax({
+								url: config.ajaxurl,
+								method: 'POST',
+								timeout: 30000,
+								data: {
+									action: 'alvobot_pixel_tracking_update_conversion_action',
+									nonce: config.nonce,
+									connection_id: tracker.connection_id,
+									customer_id: customerId,
+									conversion_action_id: act.id,
+									status: 'ENABLED',
+								},
+							}).done( function (resp) {
+								if ( ! resp || ! resp.success) {
+									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (reativacao falhou)' );
+									reactivateIdx++;
+									reactivatePhase();
+									return;
+								}
+								// 2) Save (or merge) the local rule with the existing label.
+								var label = act.conversion_label || getExistingLabelForPreset( existingLabels, sg );
+								var existingRule = findRuleForPreset( sg );
+								var labelsMap = {};
+								var pixelIds  = trackerId;
+								var convId    = 0;
+								if (existingRule) {
+									convId = existingRule.id;
+									try { labelsMap = JSON.parse( existingRule.gads_labels_map || '{}' ) || {}; } catch (ex) { labelsMap = {}; }
+									var ids = String( existingRule.pixel_ids || '' )
+										.split( ',' ).map( function (s2) { return s2.trim(); } )
+										.filter( Boolean );
+									if (ids.indexOf( trackerId ) === -1) { ids.push( trackerId ); }
+									pixelIds = ids.join( ',' );
+								}
+								if (label) { labelsMap[trackerId] = label; }
+								$.ajax({
+									url: config.ajaxurl,
+									method: 'POST',
+									timeout: 15000,
+									data: {
+										action: 'alvobot_pixel_tracking_save_conversion',
+										nonce: config.nonce,
+										conversion_id: convId,
+										name: sg.name,
+										event_type: sg.event_type,
+										event_custom_name: sg.event_custom_name || '',
+										trigger_type: sg.trigger,
+										display_on: 'all',
+										content_name: sg.name,
+										pixel_ids: pixelIds,
+										gads_conversion_label: label || '',
+										gads_labels_map: JSON.stringify( labelsMap ),
+										gads_conversion_value: sg.default_value || '',
+									},
+								}).done( function (saveResp) {
+									if (saveResp && saveResp.success) { summary.created++; } else { summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save apos reativar)' ); }
+								}).fail( function () {
+									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save apos reativar - rede)' );
+								}).always( function () {
+									reactivateIdx++;
+									reactivatePhase();
+								});
+							}).fail( function (xhr, status) {
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (reativacao ' + (status === 'timeout' ? 'timeout' : 'rede') + ')' );
+								reactivateIdx++;
+								reactivatePhase();
+							});
+						}
 
 						function mergeRulesPhase() {
 							if (mergeIdx >= toMerge.length) { return saveRulesPhase(); }
@@ -1772,7 +1886,7 @@
 							});
 						}
 
-						mergeRulesPhase();
+						reactivatePhase();
 					}).fail( function () {
 						summary.errors.push( (tracker.label || trackerId) + ': falha ao listar conversoes existentes' );
 						resolve( summary );

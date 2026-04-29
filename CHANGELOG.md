@@ -8,6 +8,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.12] - 2026-04-29
+
+### ✨ Adicionado
+- **Pixel Tracking / Reativacao de conversoes arquivadas**: o assistente "Criar em todas as contas Google Ads" agora detecta conversoes com status `REMOVED` (arquivadas no Google Ads) e oferece **reativacao automatica** em vez de falhar com "duplicate name". Antes, se o usuario tinha arquivado uma conversao manualmente no Google Ads, o plugin pensava que ela nao existia, tentava criar uma nova com mesmo nome, e o Google Ads recusava (o nome continua reservado mesmo apos arquivar). Agora o flow:
+  - Categoriza conversoes em **toReactivate** (REMOVED no GAds), **toMerge** (regra local existe sem o tracker), **toSaveRule** (ENABLED no GAds, sem regra local), **toCreate** (nao existe nada) ou **skipped** (ja configurada)
+  - Para `toReactivate`: chama `update_conversion_action` com `status: ENABLED`, depois cria/mescla a regra local **preservando o `conversion_label` original** (sem perder historico de conversoes acumulado)
+- **Edge Function `api_plugin` / get_google_conversion_actions**: a query GAQL agora inclui conversoes REMOVED (antes: `WHERE conversion_action.status != 'REMOVED'`). O campo `status` ja era retornado no payload — agora o plugin tem informacao para decidir entre criar, reativar ou mesclar
+
+### 🔧 Melhorado
+- **Pixel Tracking / Resumo do bulk-all**: mensagem final agora distingue conversoes criadas vs reativadas vs mescladas (todas contam como "configuradas" no total, mas erros sao listados com tag — `(reativacao falhou)`, `(merge)`, `(save apos reativar - rede)` — para diagnostico mais rapido)
+
+### 📦 Deploy
+- Requer deploy da Edge Function `api_plugin` no Supabase (`qbmbokpbcyempnaravaw`). Ate la, o flow funciona, mas a categoria `toReactivate` ficara vazia (Edge Function antiga nao expoe REMOVED) — comportamento equivalente ao v2.17.11
+
+---
+
 ## [2.17.11] - 2026-04-28
 
 ### ✨ Adicionado
