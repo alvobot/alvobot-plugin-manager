@@ -8,6 +8,11 @@
 
 	var config    = window.alvobot_pixel_tracking || {};
 	var extra     = window.alvobot_pixel_tracking_extra || {};
+	// Normalize types: PHP returns [] for empty maps, {} for populated maps. Coerce
+	// pixel_labels to plain object so Object.keys() always works as expected, and
+	// google_trackers to plain array so .filter()/.length is safe.
+	if (Array.isArray( extra.pixel_labels )) { extra.pixel_labels = {}; }
+	if ( ! Array.isArray( extra.google_trackers )) { extra.google_trackers = []; }
 	var activeTab = extra.active_tab || 'pixels';
 	var debugEnabled = !! (extra.debug_enabled || config.debug_enabled);
 	var debugPrefix  = '[AlvoBot Pixel][ADMIN]';
@@ -1081,9 +1086,9 @@
 								var badge = t.type === 'ga4'
 									? '<span class="alvobot-badge alvobot-badge-warning">GA4</span>'
 									: '<span class="alvobot-badge alvobot-badge-success">Google Ads</span>';
-								html += '<div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;">';
+								html += '<div class="alvobot-tracker-row-item">';
 								html += badge + ' <code>' + escHtml( t.tracker_id ) + '</code>';
-								if (tagId && tagId !== t.tracker_id) html += ' <span style="font-size:11px;color:#64748b;">Tag: <code>' + escHtml( tagId ) + '</code></span>';
+								if (tagId && tagId !== t.tracker_id) html += ' <span class="alvobot-text-muted-xs">Tag: <code>' + escHtml( tagId ) + '</code></span>';
 								if (t.label) html += ' — ' + escHtml( t.label );
 							if (already) {
 								html += ' <span class="alvobot-badge alvobot-badge-neutral" style="margin-left:auto;">Ja adicionado</span>';
@@ -1161,23 +1166,23 @@
 					// If all are configured, don't show the banner
 					if ( ! missing.length) { return; }
 
-					var html = '<div id="alvobot-conv-suggestion-banner" style="margin-top:16px;padding:12px 16px;border:1px solid #f59e0b;border-radius:8px;background:#fffbeb;">';
+					var html = '<div id="alvobot-conv-suggestion-banner" class="alvobot-suggestion-banner">';
 					html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
-					html += '<i data-lucide="sparkles" class="alvobot-icon" style="width:18px;height:18px;color:#f59e0b;"></i>';
+					html += '<i data-lucide="sparkles" class="alvobot-icon alvobot-icon-warning" style="width:18px;height:18px;"></i>';
 					html += '<strong>' + missing.length + ' conversao(oes) faltando para ' + escHtml( tracker.label || tracker.tracker_id ) + '</strong>';
 					html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary" id="alvobot-create-all-suggested" data-tracker=\'' + escAttr( JSON.stringify( tracker ) ) + '\' style="margin-left:auto;">';
 					html += '<i data-lucide="zap" class="alvobot-icon"></i> Criar faltantes</button>';
 					html += '<button type="button" style="background:none;border:none;cursor:pointer;padding:4px;margin-left:8px;" onclick="this.closest(\'#alvobot-conv-suggestion-banner\').remove();">';
-					html += '<i data-lucide="x" class="alvobot-icon" style="width:16px;height:16px;color:#666;"></i></button>';
+					html += '<i data-lucide="x" class="alvobot-icon alvobot-icon-muted" style="width:16px;height:16px;"></i></button>';
 					html += '</div>';
 					html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
 					for (var j = 0; j < allSuggestions.length; j++) {
 						var sg = allSuggestions[j];
 						var isMissing = missing.some( function (m) { return m.name === sg.name; } );
 						if (isMissing) {
-							html += '<span style="font-size:12px;padding:3px 8px;background:#fff;border:1px solid #f59e0b;border-radius:4px;color:#92400e;">' + escHtml( sg.name ) + '</span>';
+							html += '<span class="alvobot-suggestion-tag-missing">' + escHtml( sg.name ) + '</span>';
 						} else {
-							html += '<span style="font-size:12px;padding:3px 8px;background:#d1fae5;border:1px solid #10b981;border-radius:4px;color:#065f46;">&#10003; ' + escHtml( sg.name ) + '</span>';
+							html += '<span class="alvobot-suggestion-tag-done">&#10003; ' + escHtml( sg.name ) + '</span>';
 						}
 					}
 					html += '</div></div>';
@@ -1275,7 +1280,7 @@
 					}
 
 					if ( ! toCreate.length && ! toSaveRule.length) {
-						$banner.html( '<p class="alvobot-description" style="color:#16a34a;padding:12px;">Todas as conversoes ja estao configuradas!</p>' );
+						$banner.html( '<p class="alvobot-description" class="alvobot-text-success" style="padding:12px;">Todas as conversoes ja estao configuradas!</p>' );
 						releaseFormSave();
 						return;
 					}
@@ -1326,7 +1331,7 @@
 							// All done
 							var msg = created + ' conversoes configuradas!';
 							if (errors.length) { msg += ' (' + errors.length + ' erros: ' + errors.join( ', ' ) + ')'; }
-							$banner.html( '<p class="alvobot-description" style="color:#16a34a;padding:12px;"><i data-lucide="check-circle" class="alvobot-icon" style="width:16px;height:16px;"></i> ' + escHtml( msg ) + ' Va para a aba <strong>Conversoes</strong> para ver.</p>' );
+							$banner.html( '<p class="alvobot-description" class="alvobot-text-success" style="padding:12px;"><i data-lucide="check-circle" class="alvobot-icon" style="width:16px;height:16px;"></i> ' + escHtml( msg ) + ' Va para a aba <strong>Conversoes</strong> para ver.</p>' );
 							if (window.lucide) { window.lucide.createIcons(); }
 							releaseFormSave();
 
@@ -1469,14 +1474,14 @@
 							var sendId = getGoogleAdsTagId( t );
 							var customerId = getGoogleAdsCustomerId( t );
 							if (sendId && sendId !== t.tracker_id) {
-								idCell = '<code>' + escHtml( sendId ) + '</code><div style="font-size:11px;color:#64748b;margin-top:2px;">Conta: ' + escHtml( customerId || t.tracker_id.replace( 'AW-', '' ) ) + '</div>';
+								idCell = '<code>' + escHtml( sendId ) + '</code><div class="alvobot-text-muted-xs" style="margin-top:2px;">Conta: ' + escHtml( customerId || t.tracker_id.replace( 'AW-', '' ) ) + '</div>';
 							} else if ( ! sendId && t.connection_id) {
-								idCell = '<code>' + escHtml( t.tracker_id ) + '</code><div style="font-size:11px;color:#b45309;margin-top:2px;">Tag ID pendente</div>';
+								idCell = '<code>' + escHtml( t.tracker_id ) + '</code><div class="alvobot-text-warning-dark" style="font-size:11px;margin-top:2px;">Tag ID pendente</div>';
 							}
 							if (t.connection_id) {
 								idCell += '<div style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">';
 								idCell += '<input type="text" class="alvobot-input alvobot-gads-tag-id-input" data-index="' + j + '" value="' + escAttr( sendId || '' ) + '" placeholder="AW-17854527745" style="width:170px;min-height:30px;padding:4px 8px;font-size:12px;">';
-								idCell += '<span style="font-size:11px;color:#64748b;">Google Tag ID</span>';
+								idCell += '<span class="alvobot-text-muted-xs">Google Tag ID</span>';
 								idCell += '</div>';
 							}
 						}
@@ -1508,7 +1513,7 @@
 				html += '<button type="button" id="alvobot-create-conversions-all-trackers" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary">';
 				html += '<i data-lucide="zap" class="alvobot-icon"></i> Criar conversoes padrao em todas as contas Google Ads (' + bulkEligible.length + ')';
 				html += '</button>';
-				html += '<span class="alvobot-description" style="font-size:12px;color:#64748b;">Verifica e cria as conversoes padrao (Page View, Ad Impression, Ad Click, Vignette View, Vignette Click) em cada conta.</span>';
+				html += '<span class="alvobot-description alvobot-text-muted-xs">Verifica e cria as conversoes padrao (Page View, Ad Impression, Ad Click, Vignette View, Vignette Click) em cada conta.</span>';
 				html += '</div>';
 			}
 			$container.html( html );
@@ -1911,9 +1916,13 @@
 					alert( 'Nenhuma conta Google Ads conectada via AlvoBot foi encontrada.' );
 					return;
 				}
-				if ( ! confirm( 'Vamos verificar e criar as conversoes padrao em ' + trackers.length + ' conta(s) Google Ads. Isso pode levar alguns minutos. Deseja continuar?' )) {
-					return;
-				}
+				alvobotModal.confirm({
+					title: 'Criar conversoes em todas as contas',
+					message: 'Vamos verificar e criar as conversoes padrao em ' + trackers.length + ' conta(s) Google Ads. Isso pode levar alguns minutos. Deseja continuar?',
+					confirmText: 'Continuar',
+					cancelText: 'Cancelar',
+				}).then(function (ok) {
+					if ( ! ok) { return; }
 
 				// Lock the form-save submit while the chain runs (a mid-chain page reload
 				// would abort pending requests and silently drop conversions).
@@ -1933,7 +1942,9 @@
 				var totalCreated = 0;
 				var totalSkipped = 0;
 				var allErrors    = [];
-				var idx = 0;
+				var concurrency  = 3;
+				var inFlight     = 0;
+				var nextToStart  = 0;
 
 				function release() {
 					bulkAllInFlight = false;
@@ -1942,51 +1953,64 @@
 					if (window.lucide) { window.lucide.createIcons(); }
 				}
 
-				function step() {
-					if (idx >= trackers.length) {
-						release();
-						var msg = 'Concluido. ' + totalCreated + ' conversao(oes) configurada(s) em ' + trackers.length + ' conta(s).';
-						if (totalSkipped) {
-							msg += ' ' + totalSkipped + ' conta(s) ja estavam totalmente configurada(s).';
-						}
-						if (allErrors.length) {
-							var preview = allErrors.slice( 0, 6 ).join( '\n - ' );
-							msg += '\n\n' + allErrors.length + ' erro(s):\n - ' + preview;
-							if (allErrors.length > 6) { msg += '\n... e mais ' + (allErrors.length - 6) + '.'; }
-						}
-						alert( msg );
-						// Reload the conversions list if the user already opened the tab.
-						if (typeof window.alvobotPixelReloadConversions === 'function') {
-							try { window.alvobotPixelReloadConversions(); } catch (e) { /* ignore */ }
-						}
-						return;
+				function finishAll() {
+					release();
+					var msg = 'Concluido. ' + totalCreated + ' conversao(oes) configurada(s) em ' + trackers.length + ' conta(s).';
+					if (totalSkipped) {
+						msg += ' ' + totalSkipped + ' conta(s) ja estavam totalmente configurada(s).';
 					}
-					var t = trackers[idx];
-					var label = t.label || t.tracker_id;
-					$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Conta ' + (idx + 1) + '/' + trackers.length + ' (' + escHtml( label ) + ')...' );
-
-					runCreateConversionsForTracker( t, {
-						onProgress: function (text) {
-							$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Conta ' + (idx + 1) + '/' + trackers.length + ': ' + escHtml( text ) );
-						},
-					}).then( function (result) {
-						totalCreated += result.created || 0;
-						if (result.skipped && ! (result.errors && result.errors.length)) {
-							totalSkipped++;
-						}
-						if (result.errors && result.errors.length) {
-							allErrors = allErrors.concat( result.errors );
-						}
-						idx++;
-						step();
-					}, function () {
-						// Should not happen — runCreateConversionsForTracker never rejects.
-						idx++;
-						step();
-					});
+					if (allErrors.length) {
+						var preview = allErrors.slice( 0, 6 ).join( '\n - ' );
+						msg += '\n\n' + allErrors.length + ' erro(s):\n - ' + preview;
+						if (allErrors.length > 6) { msg += '\n... e mais ' + (allErrors.length - 6) + '.'; }
+					}
+					alvobotModal.alert({ title: 'Concluido', message: msg });
+					// Reload the conversions list if the user already opened the tab.
+					if (typeof window.alvobotPixelReloadConversions === 'function') {
+						try { window.alvobotPixelReloadConversions(); } catch (e) { /* ignore */ }
+					}
 				}
 
-				step();
+				function startNext() {
+					while (inFlight < concurrency && nextToStart < trackers.length) {
+						var i = nextToStart++;
+						inFlight++;
+						$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Processando ' + (i + 1) + '/' + trackers.length + ' contas...' );
+						/* jshint loopfunc: true */
+						(function (t) {
+							runCreateConversionsForTracker( t, {
+								onProgress: function (text) {
+									$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Processando ' + nextToStart + '/' + trackers.length + ' contas: ' + escHtml( text ) );
+								},
+							}).then( function (result) {
+								totalCreated += result.created || 0;
+								if (result.skipped && ! (result.errors && result.errors.length)) {
+									totalSkipped++;
+								}
+								if (result.errors && result.errors.length) {
+									allErrors = allErrors.concat( result.errors );
+								}
+								inFlight--;
+								if (inFlight === 0 && nextToStart >= trackers.length) {
+									finishAll();
+								} else {
+									startNext();
+								}
+							}, function () {
+								// Should not happen — runCreateConversionsForTracker never rejects.
+								inFlight--;
+								if (inFlight === 0 && nextToStart >= trackers.length) {
+									finishAll();
+								} else {
+									startNext();
+								}
+							});
+						}(trackers[i]));
+					}
+				}
+
+				startNext();
+				}); // end alvobotModal.confirm
 			});
 
 			// Initial render of unified table
@@ -2022,7 +2046,7 @@
 				for (var i = 0; i < metaIds.length; i++) {
 					var pid   = metaIds[i];
 					var pname = pixelLabels[pid] || '';
-					html += '<label class="alvobot-checkbox-label" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;cursor:pointer;">' +
+					html += '<label class="alvobot-checkbox-label alvobot-item-row">' +
 						'<input type="checkbox" class="conv-pixel-checkbox" value="' + escAttr( pid ) + '"> ' +
 						CONV_ICONS.meta + ' <span>' + escHtml( pid ) + (pname ? ' — ' + escHtml( pname ) : '') + '</span></label>';
 				}
@@ -2047,7 +2071,7 @@
 						typeName  = 'Google Ads';
 						displayId = t.tracker_id;
 					}
-					html += '<label class="alvobot-checkbox-label" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;cursor:pointer;">' +
+					html += '<label class="alvobot-checkbox-label alvobot-item-row">' +
 						'<input type="checkbox" class="conv-pixel-checkbox" value="' + escAttr( t.tracker_id ) + '"> ' +
 						icon + ' <span>' + escHtml( displayId ) + ' — ' + escHtml( typeName ) +
 						(t.label && t.type !== 'external' ? ' (' + escHtml( t.label ) + ')' : '') + '</span></label>';
@@ -2068,6 +2092,11 @@
 				});
 				$( '#conv_pixel_ids' ).val( selected.join( ',' ) );
 				updateGadsLabelsUI( selected );
+				var selectedCount = selected.length;
+				var announceMsg = selectedCount === 0
+					? 'Nenhum pixel selecionado — todos serao usados'
+					: (selectedCount === 1 ? '1 pixel selecionado' : selectedCount + ' pixels selecionados');
+				$( '#conv-pixel-selection-announce' ).text( announceMsg );
 			});
 		}
 
@@ -2110,17 +2139,17 @@
 					var savedLabel = currentMap[at.tracker_id] || '';
 					var tagId = getGoogleAdsTagId( at );
 					var customerId = getGoogleAdsCustomerId( at );
-					html += '<div class="alvobot-gads-label-row" data-tracker-id="' + escAttr( at.tracker_id ) + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:6px;">';
+					html += '<div class="alvobot-gads-label-row alvobot-item-row" data-tracker-id="' + escAttr( at.tracker_id ) + '">';
 					html += CONV_ICONS.gads + ' ';
 					html += '<span style="min-width:160px;font-weight:500;">' + escHtml( tagId || at.tracker_id ) + '</span>';
 					if (at.label) {
-						html += '<span style="color:#666;font-size:12px;">' + escHtml( at.label ) + '</span>';
+						html += '<span class="alvobot-text-muted-sm">' + escHtml( at.label ) + '</span>';
 					}
 					if (customerId && tagId && tagId !== at.tracker_id) {
-						html += '<span style="color:#64748b;font-size:11px;">Conta: ' + escHtml( customerId ) + '</span>';
+						html += '<span class="alvobot-text-muted-xs">Conta: ' + escHtml( customerId ) + '</span>';
 					}
 					if ( ! tagId && at.connection_id) {
-						html += '<span style="color:#b45309;font-size:11px;">Tag ID pendente: use Buscar</span>';
+						html += '<span class="alvobot-text-warning-dark alvobot-text-muted-xs">Tag ID pendente: use Buscar</span>';
 					}
 					html += '<input type="text" class="alvobot-input alvobot-gads-label-input" data-tracker-id="' + escAttr( at.tracker_id ) + '" value="' + escAttr( savedLabel ) + '" placeholder="Conversion Label" style="flex:1;max-width:200px;">';
 				if (at.connection_id) {
@@ -2358,10 +2387,10 @@
 				}
 
 				if ( ! labels.length) {
-					return '<div style="font-size:11px;margin-top:3px;color:#b45309;">Google Ads: sem label configurado</div>';
+					return '<div class="alvobot-text-warning-dark alvobot-text-muted-xs" style="margin-top:3px;">Google Ads: sem label configurado</div>';
 				}
 
-				return '<div style="font-size:11px;margin-top:3px;color:#047857;">Google Ads: ' +
+				return '<div class="alvobot-text-success-dark alvobot-text-muted-xs" style="margin-top:3px;">Google Ads: ' +
 					labels.length + ' label(s)' +
 					(value ? ' · valor ' + escHtml( value ) : ' · sem valor') +
 					'</div>';
@@ -2474,14 +2503,23 @@
 			var menuHeight = $menu.outerHeight() || 0;
 			var vw         = window.innerWidth;
 			var vh         = window.innerHeight;
+			// Read WP admin bar height so flipped menus are never hidden behind it.
+			var adminBarH  = 0;
+			var adminBar   = document.getElementById( 'wpadminbar' );
+			if (adminBar && adminBar.offsetParent !== null) {
+				adminBarH = adminBar.getBoundingClientRect().height || 0;
+			}
 			// Default: anchor the menu's right edge to the trigger's right edge,
 			// and place it just below the trigger.
 			var top  = rect.bottom + 4;
 			var left = Math.max( 8, rect.right - menuWidth );
 			// Flip to above the trigger if it would otherwise overflow viewport.
 			if (menuHeight && top + menuHeight > vh - 8) {
-				top = Math.max( 8, rect.top - menuHeight - 4 );
+				top = rect.top - menuHeight - 4;
 			}
+			// Clamp: never overlap the admin bar at the top, never overflow viewport bottom.
+			top = Math.max( adminBarH + 8, top );
+			if (menuHeight && top + menuHeight > vh - 8) { top = vh - menuHeight - 8; }
 			// Clamp horizontally inside the viewport.
 			if (left + menuWidth > vw - 8) { left = vw - menuWidth - 8; }
 			$menu.css({ position: 'fixed', top: top + 'px', left: left + 'px', right: 'auto' });
@@ -2637,12 +2675,16 @@
 		$( document ).on( 'click', '#alvobot-bulk-unlink-btn', function () {
 			var ids = selectedConversionIds();
 			if ( ! ids.length) { return; }
-
-			if ( ! confirm( 'Desvincular ' + ids.length + ' conversao(oes) do plugin?\n\nAs regras locais serao apagadas, mas as conversoes no Google Ads continuarao existindo (e podem ser recriadas com "Criar em todas").' ) ) {
-				return;
-			}
-
 			var $btn = $( this );
+
+			alvobotModal.confirm({
+				title: 'Desvincular selecionados',
+				message: 'Desvincular ' + ids.length + ' conversao(oes) do plugin?\n\nAs regras locais serao apagadas, mas as conversoes no Google Ads continuarao existindo (e podem ser recriadas com "Criar em todas").',
+				confirmText: 'Desvincular',
+				cancelText: 'Cancelar',
+			}).then(function (ok) {
+				if ( ! ok) { return; }
+
 			$btn.prop( 'disabled', true );
 
 			$.ajax({
@@ -2665,25 +2707,31 @@
 			}).always( function () {
 				$btn.prop( 'disabled', false );
 			});
+			}); // end alvobotModal.confirm
 		});
 
 		// Bulk: excluir tudo (regras locais + arquiva no Google Ads).
 		$( document ).on( 'click', '#alvobot-bulk-delete-btn', function () {
 			var ids = selectedConversionIds();
 			if ( ! ids.length) { return; }
-
-			if ( ! confirm( 'Excluir ' + ids.length + ' conversao(oes) COMPLETAMENTE?\n\n  1. Regras locais serao apagadas\n  2. Conversoes serao arquivadas no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API.\n\nSe voce quer apenas desvincular do plugin (mantendo o historico no Google Ads), use "Desvincular Selecionados".' ) ) {
-				return;
-			}
-
 			var $btn = $( this );
+
+			alvobotModal.confirm({
+				title: 'Excluir selecionados',
+				message: 'Excluir ' + ids.length + ' conversao(oes) COMPLETAMENTE?\n\n  1. Regras locais serao apagadas\n  2. Conversoes serao arquivadas no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API.\n\nSe voce quer apenas desvincular do plugin (mantendo o historico no Google Ads), use "Desvincular Selecionados".',
+				confirmText: 'Excluir tudo',
+				cancelText: 'Cancelar',
+				danger: true,
+			}).then(function (ok) {
+				if ( ! ok) { return; }
+
 			$btn.prop( 'disabled', true ).html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Excluindo...' );
 
 			// Pode demorar — sao N contas Google Ads x M conversoes. Timeout generoso.
 			$.ajax({
 				url: config.ajaxurl,
 				method: 'POST',
-				timeout: 120000,
+				timeout: 300000,
 				data: {
 					action: 'alvobot_pixel_tracking_bulk_delete_conversions_full',
 					nonce: config.nonce,
@@ -2700,7 +2748,7 @@
 					} else {
 						summary += '.';
 					}
-					alert( summary );
+					alvobotModal.alert({ title: 'Concluido', message: summary });
 					loadConversions();
 				} else {
 					alert( (response && response.data) || 'Erro ao excluir.' );
@@ -2711,6 +2759,7 @@
 				$btn.prop( 'disabled', false ).html( '<i data-lucide="trash-2" class="alvobot-icon"></i> Excluir Selecionados (com Google Ads)' );
 				if (window.lucide) { window.lucide.createIcons(); }
 			});
+			}); // end alvobotModal.confirm
 		});
 
 		// Cancel conversion form
@@ -2768,11 +2817,11 @@
 										actionTagId = getConversionActionTagId( ca );
 									}
 									var actionId = getConversionActionId( ca );
-								html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:3px;cursor:pointer;" class="alvobot-ca-pick-item" data-label="' + escAttr( ca.conversion_label ) + '" data-tracker-id="' + escAttr( trackerId ) + '">';
+								html += '<div class="alvobot-ca-pick-item alvobot-item-row-sm" data-label="' + escAttr( ca.conversion_label ) + '" data-tracker-id="' + escAttr( trackerId ) + '">';
 								html += '<i data-lucide="target" class="alvobot-icon" style="width:12px;height:12px;"></i> ';
 								html += '<span style="font-size:13px;">' + escHtml( ca.name ) + '</span>';
 								if (ca.status && ca.status !== 'ENABLED') {
-									html += '<span style="font-size:10px;padding:1px 4px;border-radius:3px;background:#fef3c7;color:#92400e;">' + escHtml( ca.status ) + '</span>';
+									html += '<span class="alvobot-status-tag-warning">' + escHtml( ca.status ) + '</span>';
 								}
 								html += '<code style="margin-left:auto;font-size:11px;">' + escHtml( ca.conversion_label ) + '</code>';
 								if (actionId && ca.status !== 'REMOVED') {
@@ -2796,13 +2845,13 @@
 							var missingSuggestions = suggestions.filter( function (s) { return ! hasPresetName( existingNames, s ); } );
 
 						if (missingSuggestions.length) {
-							html += '<div style="margin-top:10px;padding:8px 10px;border:1px dashed #f59e0b;border-radius:6px;background:#fffbeb;">';
+							html += '<div class="alvobot-suggestion-panel" style="margin-top:10px;">';
 							html += '<p class="alvobot-description" style="font-weight:600;margin-bottom:6px;"><i data-lucide="sparkles" class="alvobot-icon" style="width:14px;height:14px;"></i> Conversoes sugeridas</p>';
 							for (var s = 0; s < missingSuggestions.length; s++) {
 								var sg = missingSuggestions[s];
-								html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;background:#fff;">';
+								html += '<div class="alvobot-item-row-sm alvobot-item-row-white" style="margin-bottom:4px;">';
 								html += '<span style="font-size:13px;font-weight:500;">' + escHtml( sg.name ) + '</span>';
-								html += '<span style="font-size:11px;color:#666;">' + escHtml( sg.desc ) + '</span>';
+								html += '<span class="alvobot-text-muted-xs">' + escHtml( sg.desc ) + '</span>';
 									html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary alvobot-ca-create-btn" style="margin-left:auto;" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-tracker-id="' + escAttr( trackerId ) + '" data-prefill-name="' + escAttr( sg.name ) + '" data-prefill-category="' + escAttr( sg.category ) + '" data-prefill-primary-for-goal="' + escAttr( sg.primary_for_goal === false ? '0' : '1' ) + '" data-prefill-trigger="' + escAttr( sg.trigger ) + '" data-prefill-event-type="' + escAttr( sg.event_type ) + '" data-prefill-event-custom-name="' + escAttr( sg.event_custom_name || '' ) + '" data-prefill-value="' + escAttr( sg.default_value || '' ) + '">';
 									html += '<i data-lucide="plus" class="alvobot-icon"></i> Criar</button>';
 								html += '</div>';
@@ -2811,7 +2860,7 @@
 						}
 
 						// Custom create form
-						html += '<div class="alvobot-ca-create-form" style="margin-top:8px;padding:8px 10px;border:1px dashed #94a3b8;border-radius:6px;background:#f8fafc;">';
+						html += '<div class="alvobot-ca-create-form alvobot-create-form-panel" style="margin-top:8px;">';
 						html += '<p class="alvobot-description" style="font-weight:600;margin-bottom:6px;"><i data-lucide="plus-circle" class="alvobot-icon" style="width:14px;height:14px;"></i> Criar conversao personalizada</p>';
 						html += '<div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">';
 						html += '<div><label style="font-size:11px;font-weight:500;">Nome</label><input type="text" class="alvobot-input alvobot-ca-create-name" placeholder="Ex: Purchase, Lead" style="width:180px;"></div>';
@@ -2825,12 +2874,12 @@
 						$picker.html( html );
 						if (window.lucide) { window.lucide.createIcons(); }
 					} else {
-						$picker.html( '<p class="alvobot-description" style="color:#e53e3e;">' + escHtml( response.data || 'Erro ao buscar.' ) + '</p>' );
+						$picker.html( '<p class="alvobot-description" class="alvobot-text-error">' + escHtml( response.data || 'Erro ao buscar.' ) + '</p>' );
 					}
 				},
 				error: function () {
 					$btn.prop( 'disabled', false );
-					$picker.html( '<p class="alvobot-description" style="color:#e53e3e;">Erro de conexao.</p>' );
+					$picker.html( '<p class="alvobot-description" class="alvobot-text-error">Erro de conexao.</p>' );
 				},
 			});
 		});
@@ -2875,9 +2924,14 @@
 				// resource transitions to status=REMOVED, irreversible via the API. The
 				// wizard "Criar em todas" handles this case afterwards by renaming the
 				// archived entry and creating a fresh ENABLED one with the clean name.
-				if ( ! confirm( 'Arquivar "' + actionName + '" no Google Ads? Esta acao e irreversivel via API (apenas via UI do Google Ads). A regra local do AlvoBot nao sera apagada automaticamente.' ) ) {
-					return;
-				}
+				alvobotModal.confirm({
+					title: 'Arquivar conversao',
+					message: 'Arquivar "' + actionName + '" no Google Ads? Esta acao e irreversivel via API (apenas via UI do Google Ads). A regra local do AlvoBot nao sera apagada automaticamente.',
+					confirmText: 'Arquivar',
+					cancelText: 'Cancelar',
+					danger: true,
+				}).then(function (ok) {
+					if ( ! ok) { return; }
 
 				$btn.prop( 'disabled', true ).text( 'Arquivando...' );
 				$.ajax({
@@ -2905,6 +2959,7 @@
 						if (window.lucide) { window.lucide.createIcons(); }
 					},
 				});
+				}); // end alvobotModal.confirm
 			});
 
 			// Create a new ConversionAction in Google Ads (works for both suggested and custom)
@@ -3008,13 +3063,13 @@
 								alert( 'Conversao criada no Google Ads mas a conexao falhou ao salvar a regra local' + (status === 'timeout' ? ' (timeout)' : '') + '. Clique em Buscar novamente.' );
 							});
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
-								'<p class="alvobot-description" style="color:#16a34a;">' + escHtml( name ) + ' criada e configurada!' + (label ? ' Label: <code>' + escHtml( label ) + '</code>' : '') + '</p>'
+								'<p class="alvobot-description" class="alvobot-text-success">' + escHtml( name ) + ' criada e configurada!' + (label ? ' Label: <code>' + escHtml( label ) + '</code>' : '') + '</p>'
 							);
 						} else {
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
 								label
-									? '<p class="alvobot-description" style="color:#16a34a;">Conversao "' + escHtml( name ) + '" criada! Label: <code>' + escHtml( label ) + '</code></p>'
-									: '<p class="alvobot-description" style="color:#f59e0b;">Conversao criada, mas label nao disponivel. Clique em Buscar novamente.</p>'
+									? '<p class="alvobot-description" class="alvobot-text-success">Conversao "' + escHtml( name ) + '" criada! Label: <code>' + escHtml( label ) + '</code></p>'
+									: '<p class="alvobot-description" class="alvobot-text-warning">Conversao criada, mas label nao disponivel. Clique em Buscar novamente.</p>'
 							);
 						}
 					} else {
@@ -3189,9 +3244,13 @@
 				var $row = $btn.closest( 'tr' );
 				var name = $row.find( 'td:nth-child(2)' ).text().trim() || 'esta conversao';
 
-				if ( ! confirm( 'Desvincular "' + name + '" do plugin?\n\nA regra local sera apagada, mas a conversao no Google Ads continuara existindo (e pode ser recriada depois com "Criar em todas").' )) {
-					return;
-				}
+				alvobotModal.confirm({
+					title: 'Desvincular conversao',
+					message: 'Desvincular "' + name + '" do plugin?\n\nA regra local sera apagada, mas a conversao no Google Ads continuara existindo (e pode ser recriada depois com "Criar em todas").',
+					confirmText: 'Desvincular',
+					cancelText: 'Cancelar',
+				}).then(function (ok) {
+					if ( ! ok) { return; }
 
 				$btn.prop( 'disabled', true );
 
@@ -3218,6 +3277,7 @@
 				}).always( function () {
 					$btn.prop( 'disabled', false );
 				});
+				}); // end alvobotModal.confirm
 			}
 		);
 
@@ -3234,9 +3294,14 @@
 				var $row = $btn.closest( 'tr' );
 				var name = $row.find( 'td:nth-child(2)' ).text().trim() || 'esta conversao';
 
-				if ( ! confirm( 'Excluir "' + name + '" COMPLETAMENTE?\n\nIsso vai:\n  1. Apagar a regra local do plugin\n  2. Arquivar a conversao no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API (so reversivel pela UI do Google Ads).\n\nSe voce quer apenas parar de usar no plugin (mantendo o historico no Google Ads), use "Desvincular".' )) {
-					return;
-				}
+				alvobotModal.confirm({
+					title: 'Excluir conversao',
+					message: 'Excluir "' + name + '" COMPLETAMENTE?\n\nIsso vai:\n  1. Apagar a regra local do plugin\n  2. Arquivar a conversao no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API (so reversivel pela UI do Google Ads).\n\nSe voce quer apenas parar de usar no plugin (mantendo o historico no Google Ads), use "Desvincular".',
+					confirmText: 'Excluir',
+					cancelText: 'Cancelar',
+					danger: true,
+				}).then(function (ok) {
+					if ( ! ok) { return; }
 
 				$btn.prop( 'disabled', true );
 
@@ -3265,6 +3330,7 @@
 				}).always( function () {
 					$btn.prop( 'disabled', false );
 				});
+				}); // end alvobotModal.confirm
 			}
 		);
 	}
@@ -4424,4 +4490,83 @@
 		.replace( /'/g, '&#39;' )
 		.replace( /"/g, '&quot;' );
 	}
+
+	// ── Modal: lightweight a11y dialog replacing native confirm()/alert() ──
+	// API:
+	//   alvobotModal.confirm({title, message, confirmText, cancelText, danger}) → Promise<boolean>
+	//   alvobotModal.alert({title, message, okText}) → Promise<void>
+	// Honors WAI-ARIA Authoring Practices: role="alertdialog", aria-labelledby,
+	// focus trap, Esc closes (resolves false for confirm, void for alert), focus
+	// returns to trigger on close.
+	var alvobotModal = (function () {
+		var lastTrigger = null;
+		function trapFocus($modal, e) {
+			if (e.key !== 'Tab') { return; }
+			var focusables = $modal.find('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])').filter(':visible:not([disabled])');
+			if ( ! focusables.length) { return; }
+			var first = focusables[0], last = focusables[focusables.length - 1];
+			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+			else if ( ! e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+		}
+		function close($overlay) {
+			$overlay.remove();
+			$(document).off('keydown.alvobotModal');
+			if (lastTrigger) { try { lastTrigger.focus(); } catch (e) { /* ignore */ } }
+			lastTrigger = null;
+		}
+		function open(opts) {
+			return new $.Deferred(function (deferred) {
+				lastTrigger = document.activeElement;
+				var titleId = 'alvobot-modal-title-' + Date.now();
+				var msgId   = 'alvobot-modal-msg-' + Date.now();
+				var html = '<div class="alvobot-modal-overlay" role="presentation">';
+				html += '<div class="alvobot-modal-dialog" role="' + (opts.role || 'alertdialog') + '" aria-modal="true" aria-labelledby="' + titleId + '" aria-describedby="' + msgId + '">';
+				html += '<h3 id="' + titleId + '" class="alvobot-modal-title">' + escHtml(opts.title || '') + '</h3>';
+				// Render message: support either plain text (with \n → <br>) or pre-built HTML if opts.html===true
+				var msgHtml;
+				if (opts.html) { msgHtml = String(opts.message || ''); }
+				else {
+					msgHtml = String(opts.message || '').split('\n').map(function (line) {
+						if (line === '') { return '<br>'; }
+						return '<p class="alvobot-modal-message-line">' + escHtml(line) + '</p>';
+					}).join('');
+				}
+				html += '<div id="' + msgId + '" class="alvobot-modal-message">' + msgHtml + '</div>';
+				html += '<div class="alvobot-modal-actions">';
+				if (opts.kind === 'confirm') {
+					html += '<button type="button" class="alvobot-btn alvobot-btn-outline alvobot-modal-cancel">' + escHtml(opts.cancelText || 'Cancelar') + '</button>';
+					html += '<button type="button" class="alvobot-btn ' + (opts.danger ? 'alvobot-btn-danger' : 'alvobot-btn-primary') + ' alvobot-modal-confirm">' + escHtml(opts.confirmText || 'OK') + '</button>';
+				} else {
+					html += '<button type="button" class="alvobot-btn alvobot-btn-primary alvobot-modal-ok">' + escHtml(opts.okText || 'OK') + '</button>';
+				}
+				html += '</div></div></div>';
+				var $overlay = $(html);
+				$('body').append($overlay);
+				// Focus the primary action by default (or cancel if danger)
+				var $primary = opts.danger ? $overlay.find('.alvobot-modal-cancel') : $overlay.find('.alvobot-modal-confirm, .alvobot-modal-ok').first();
+				if ($primary.length) { $primary.focus(); }
+				// Wire events
+				$overlay.on('click', '.alvobot-modal-confirm', function () { close($overlay); deferred.resolve(true); });
+				$overlay.on('click', '.alvobot-modal-cancel', function () { close($overlay); deferred.resolve(false); });
+				$overlay.on('click', '.alvobot-modal-ok', function () { close($overlay); deferred.resolve(); });
+				$overlay.on('click', '.alvobot-modal-overlay', function (e) {
+					if (e.target === e.currentTarget) {
+						close($overlay);
+						deferred.resolve(opts.kind === 'confirm' ? false : undefined);
+					}
+				});
+				$(document).on('keydown.alvobotModal', function (e) {
+					if (e.key === 'Escape') {
+						close($overlay);
+						deferred.resolve(opts.kind === 'confirm' ? false : undefined);
+					}
+					trapFocus($overlay.find('.alvobot-modal-dialog'), e);
+				});
+			}).promise();
+		}
+		return {
+			confirm: function (opts) { return open($.extend({ kind: 'confirm' }, opts)); },
+			alert:   function (opts) { return open($.extend({ kind: 'alert' },   opts)); },
+		};
+	})();
 })( jQuery );

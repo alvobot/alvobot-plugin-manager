@@ -127,6 +127,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<!-- Populated via JS from pixel_labels + google_trackers -->
 					</div>
 					<input type="hidden" id="conv_pixel_ids" value="">
+					<span id="conv-pixel-selection-announce" class="alvobot-sr-only" aria-live="polite" aria-atomic="true"></span>
 					<input type="hidden" id="conv_page_ids" value="">
 				</div>
 			<!-- Ad-event notice -->
@@ -177,7 +178,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<!-- Bulk Actions: dois botoes intencionais (Nielsen #5 prevencao de erros). -->
-		<div id="alvobot-conversions-bulk-bar" style="display:none; margin-bottom: 12px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; align-items: center; gap: 12px; flex-wrap: wrap;">
+		<div id="alvobot-conversions-bulk-bar" class="alvobot-bulk-bar">
 			<span><strong id="alvobot-bulk-count">0</strong> <?php esc_html_e( 'selecionado(s)', 'alvobot-pro' ); ?></span>
 			<button type="button" id="alvobot-bulk-unlink-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline" title="<?php esc_attr_e( 'Apaga apenas as regras locais. Conversoes no Google Ads ficam intactas.', 'alvobot-pro' ); ?>">
 				<i data-lucide="unlink" class="alvobot-icon"></i>
@@ -190,6 +191,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<!-- Conversions Table -->
+		<div class="alvobot-table-wrap">
 		<table class="alvobot-conversions-table">
 			<thead>
 				<tr>
@@ -211,5 +213,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 			</tbody>
 		</table>
+		</div><!-- /.alvobot-table-wrap -->
 	</div>
 </div>

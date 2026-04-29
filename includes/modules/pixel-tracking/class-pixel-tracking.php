@@ -1122,10 +1122,14 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			wp_send_json_error( __( 'Nenhuma conversao selecionada.', 'alvobot-pro' ) );
 		}
 
+		if ( count( $ids ) > 50 ) {
+			wp_send_json_error( __( 'Limite de 50 conversoes por operacao em massa. Selecione menos itens e repita.', 'alvobot-pro' ) );
+		}
+
 		// Bulk archives can be slow (one fetch + one mutate per tracker per rule),
 		// so we ensure PHP doesn't timeout halfway through.
 		if ( function_exists( 'set_time_limit' ) ) {
-			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
 
 		$total_local   = 0;
@@ -1134,9 +1138,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		foreach ( $ids as $id ) {
 			$post = get_post( $id );
-			if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) {
-				continue;
-			}
+			if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) { continue; }
+			AlvoBotPro::debug_log( 'pixel-tracking', 'bulk-delete-full: processing rule ' . $id . ' (' . get_the_title( $id ) . ')' );
 			$gads_result   = $this->archive_gads_actions_for_rule( $id );
 			$total_archived += (int) $gads_result['archived'];
 			if ( ! empty( $gads_result['errors'] ) ) {

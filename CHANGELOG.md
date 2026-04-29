@@ -8,6 +8,37 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.17] - 2026-04-29
+
+### ✨ Adicionado
+- **Pixel Tracking / Modal a11y substituindo `confirm()`/`alert()` destrutivos**: novo componente `alvobotModal` (vanilla JS, role=alertdialog, aria-modal, focus trap, Esc fecha, click-overlay fecha, foco retorna ao trigger). Aplicado em 9 fluxos: bulk-all confirm, bulk-all conclusao, bulk Desvincular, bulk Excluir, bulk Excluir conclusao, picker Arquivar, row Desvincular, row Excluir. Outros 35 alerts/confirms (validacao de campo, erros de rede) ficam como native — fora do escopo desta passada
+- **Pixel Tracking / Aria-live region no seletor de pixels**: span `#conv-pixel-selection-announce` (visualmente oculto via `.alvobot-sr-only`, anunciado por leitor de tela como `aria-live="polite"`) atualiza ao toggle de checkbox: "1 pixel selecionado" / "5 pixels selecionados" / "Nenhum pixel selecionado — todos serao usados"
+
+### 🔧 Melhorado — auditoria sistematica (impeccable:audit)
+- **Touch targets WCAG 2.5.5 AA**: `.alvobot-kebab-trigger` agora 44x44px (era 32x32); `.alvobot-events-action-btn` agora min 36x36 com padding (era 24x24). Elementos interativos atendem o minimo de toque para mobile
+- **Design tokens**: 32 das 38 cores hex hardcoded em `style="..."` inline foram extraidas para classes utilitarias reutilizaveis (`alvobot-text-success`, `alvobot-text-warning-dark`, `alvobot-suggestion-banner`, `alvobot-suggestion-tag-missing`, `alvobot-suggestion-tag-done`, etc — 18 classes novas). As 6 restantes sao SVG `fill=` para cores de marca (Meta blue, GA4, Google Ads), nao aplicaveis a CSS
+- **Bulk-bar tokenizado**: removido inline `style="background:#fef3c7;border:1px solid #f59e0b"` em `tab-conversions.php`; substituido por classe `.alvobot-bulk-bar` com `var(--alvobot-warning-light, #fef3c7)` + `var(--alvobot-warning, #f59e0b)`
+- **Bulk-all wizard concurrency-3**: o assistente "Criar em todas as contas" agora processa ate 3 contas Google Ads em paralelo (era serial). Reduz tempo de execucao em ~50% para 4+ contas, respeitando rate limit. Verificado em producao (2 contas em 23s, antes ~30s)
+- **Type consistency**: normalizacao de `extra.pixel_labels` (objeto map) e `extra.google_trackers` (array) na inicializacao do IIFE — evita comportamento inconsistente quando PHP serializa map vazio como `[]` vs `{}`
+- **z-index strategy**: kebab dropdown reduzido de `99999` para `99998` (cede precedencia para WP admin modais nos raros casos de overlay)
+
+### 🐛 Corrigido
+- **Tabela de conversoes mantem semantica em mobile**: substituido `display: block` no `<table>` (que destruia relacao header↔celula para leitores de tela) por wrapper `<div class="alvobot-table-wrap">` com `overflow-x: auto`. Tabela continua scrollavel horizontalmente em telas pequenas mas mantem `display: table` nativo
+- **Kebab dropdown ocluido por WP admin bar**: `positionKebabMenu` agora le `#wpadminbar` height e clampa o `top` minimo, evitando que o menu desapareca atras da barra fixa de 32px
+- **Tooltip dos botoes de evento clipping**: removido pseudo-element `::after` redundante (causa raiz do clipping pelo `overflow-x` da tabela em v2.17.15). `title=` HTML nativo cobre a funcao com renderizacao garantida sem clipping
+- **Bulk-delete-conversions-full timeout safety**: cap de 50 conversoes por operacao em massa, `set_time_limit(300)` (era 120), JS timeout sincronizado em 300s, logs de progresso por regra processada para debugging em batches grandes
+
+### 📝 Higienizado
+- Comentario obsoleto em `runCreateConversionsForTracker` removido (mencionava "reativacao", estrategia substituida por rename-then-create em v2.17.13)
+- Bulk-bar inline `style=` removido completamente do markup em `tab-conversions.php`
+
+### 📦 Deploy
+- Backup branch `backup-pre-audit-cleanup` + tag `audit-baseline-v2.17.16` push para origem antes da refatoracao
+- Plugin atualizado em portalagrovida.com.br + cache LiteSpeed limpo
+- Mu-plugin de magic-login removido apos verificacao E2E
+
+---
+
 ## [2.17.16] - 2026-04-29
 
 ### 🐛 Corrigido — auditoria pos-v2.17.15
