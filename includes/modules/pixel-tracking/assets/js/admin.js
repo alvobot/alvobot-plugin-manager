@@ -11,11 +11,19 @@
 	var activeTab = extra.active_tab || 'pixels';
 	var debugEnabled = !! (extra.debug_enabled || config.debug_enabled);
 	var debugPrefix  = '[AlvoBot Pixel][ADMIN]';
+	// Preset taxonomy:
+	//   - "Click" events (Ad Click, Vignette Click) sao a verdadeira intencao de
+	//     conversao do funil de arbitragem. Categorizadas como PURCHASE e marcadas
+	//     primary_for_goal=true para que o Smart Bidding do Google otimize por elas.
+	//   - "View"/"Impression" events sao indicadores de funil mas nao a meta final.
+	//     PAGE_VIEW + primary_for_goal=false: ficam em "All conv." para reporting,
+	//     fora da otimizacao de lances (Conversions column).
 	var ARBITRAGE_CONVERSION_PRESETS = [
 		{
 			name: 'Page View',
 			category: 'PAGE_VIEW',
-			desc: 'Visitante carregou a pagina',
+			primary_for_goal: false,
+			desc: 'Visitante carregou a pagina (secundaria)',
 			trigger: 'page_load',
 			event_type: 'PageView',
 			event_custom_name: '',
@@ -25,7 +33,8 @@
 		{
 			name: 'Ad Impression',
 			category: 'PAGE_VIEW',
-			desc: 'Visitante viu um anuncio',
+			primary_for_goal: false,
+			desc: 'Visitante viu um anuncio (secundaria)',
 			trigger: 'ad_impression',
 			event_type: 'CustomEvent',
 			event_custom_name: 'AdImpression',
@@ -33,8 +42,9 @@
 		},
 		{
 			name: 'Ad Click',
-			category: 'DEFAULT',
-			desc: 'Visitante clicou num anuncio',
+			category: 'PURCHASE',
+			primary_for_goal: true,
+			desc: 'Visitante clicou num anuncio (principal)',
 			trigger: 'ad_click',
 			event_type: 'CustomEvent',
 			event_custom_name: 'AdClick',
@@ -43,7 +53,8 @@
 		{
 			name: 'Vignette View',
 			category: 'PAGE_VIEW',
-			desc: 'Visitante viu a vinheta',
+			primary_for_goal: false,
+			desc: 'Visitante viu a vinheta (secundaria)',
 			trigger: 'ad_vignette_open',
 			event_type: 'CustomEvent',
 			event_custom_name: 'AdVignetteOpen',
@@ -51,8 +62,9 @@
 		},
 		{
 			name: 'Vignette Click',
-			category: 'DEFAULT',
-			desc: 'Visitante clicou na vinheta',
+			category: 'PURCHASE',
+			primary_for_goal: true,
+			desc: 'Visitante clicou na vinheta (principal)',
 			trigger: 'ad_vignette_click',
 			event_type: 'CustomEvent',
 			event_custom_name: 'AdVignetteClick',
@@ -1334,6 +1346,7 @@
 										customer_id: customerId,
 										name: sg.name,
 										category: sg.category,
+										primary_for_goal: sg.primary_for_goal === undefined ? '1' : (sg.primary_for_goal ? '1' : '0'),
 										default_value: sg.default_value || 0,
 									currency: 'BRL',
 								},
@@ -1820,6 +1833,7 @@
 									customer_id: customerId,
 									name: sg.name,
 									category: sg.category,
+									primary_for_goal: sg.primary_for_goal === undefined ? '1' : (sg.primary_for_goal ? '1' : '0'),
 									default_value: sg.default_value || 0,
 									currency: 'BRL',
 								},
@@ -2218,16 +2232,52 @@
 				'" ' +
 				(isActive ? 'checked' : '') +
 				'><span class="alvobot-toggle-slider"></span></label></td>';
-				html    += '<td>';
+				// Responsive action group:
+				//   Desktop (>=768px): 3 inline buttons (immediate visibility, single click)
+				//   Mobile  (<768px):  kebab menu (... vertical) collapses to dropdown
+				// The same handlers (.alvobot-edit-conversion, .alvobot-unlink-conversion,
+				// .alvobot-delete-conversion-full) work in both views — clicks on items
+				// inside the kebab menu hit the same delegated handlers. Honors Nielsen
+				// #4 (Consistency) — same affordances cross-device — and #5 (Error
+				// prevention) — Excluir is separated by a divider in the kebab.
+				var convAttr = escAttr( JSON.stringify( c ) );
+				html    += '<td><div class="alvobot-row-actions">';
+				// Inline (desktop)
+				html    += '<div class="alvobot-row-actions-inline">';
 				html    +=
 				'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-edit-conversion" data-conversion=\'' +
-				escAttr( JSON.stringify( c ) ) +
-				"'>Editar</button> ";
+				convAttr +
+				'\' title="Editar nome, gatilho e selecao de pixels">' +
+				'<i data-lucide="pencil" class="alvobot-icon"></i> Editar</button>';
 				html +=
-				'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger alvobot-delete-conversion" data-id="' +
+				'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline alvobot-unlink-conversion" data-id="' +
 				c.id +
-				'">Excluir</button>';
-				html    += '</td>';
+				'" title="Apaga apenas a regra local. Conversao no Google Ads fica intacta — voce pode reativar via Criar em todas.">' +
+				'<i data-lucide="unlink" class="alvobot-icon"></i> Desvincular</button>';
+				html +=
+				'<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger alvobot-delete-conversion-full" data-id="' +
+				c.id +
+				'" title="Apaga a regra local E arquiva a conversao no Google Ads. Irreversivel via API.">' +
+				'<i data-lucide="trash-2" class="alvobot-icon"></i> Excluir</button>';
+				html    += '</div>';
+				// Kebab (mobile)
+				html    += '<div class="alvobot-row-actions-kebab">';
+				html    += '<button type="button" class="alvobot-kebab-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="Acoes da conversao">';
+				html    += '<i data-lucide="more-vertical" class="alvobot-icon"></i>';
+				html    += '</button>';
+				html    += '<div class="alvobot-kebab-menu" role="menu" hidden>';
+				html    +=
+				'<button type="button" role="menuitem" class="alvobot-kebab-item alvobot-edit-conversion" data-conversion=\'' +
+				convAttr + '\'><i data-lucide="pencil" class="alvobot-icon"></i> Editar</button>';
+				html +=
+				'<button type="button" role="menuitem" class="alvobot-kebab-item alvobot-unlink-conversion" data-id="' +
+				c.id + '"><i data-lucide="unlink" class="alvobot-icon"></i> Desvincular</button>';
+				html += '<div class="alvobot-kebab-divider" role="separator"></div>';
+				html +=
+				'<button type="button" role="menuitem" class="alvobot-kebab-item alvobot-kebab-item-danger alvobot-delete-conversion-full" data-id="' +
+				c.id + '"><i data-lucide="trash-2" class="alvobot-icon"></i> Excluir (com Google Ads)</button>';
+				html    += '</div></div>';
+				html    += '</div></td>';
 				html    += '</tr>';
 				$tbody.append( html );
 			}
@@ -2408,6 +2458,41 @@
 			$( '#conv_pixel_ids' ).val( '' );
 		}
 
+		// ── Kebab menu (mobile row actions) ──────────────────────────────────
+		// Toggles visibility of the dropdown attached to each row's kebab. We
+		// delegate from `document` because rows are re-rendered on each
+		// loadConversions() call. Closes on outside click and Esc, and ensures
+		// only one menu can be open at a time.
+		function closeAllKebabs() {
+			$( '.alvobot-kebab-menu' ).attr( 'hidden', true );
+			$( '.alvobot-kebab-trigger' ).attr( 'aria-expanded', 'false' );
+		}
+		$( document ).on( 'click', '.alvobot-kebab-trigger', function (e) {
+			e.stopPropagation();
+			var $trigger = $( this );
+			var $menu    = $trigger.siblings( '.alvobot-kebab-menu' );
+			var isOpen   = ! $menu.attr( 'hidden' );
+			closeAllKebabs();
+			if ( ! isOpen) {
+				$menu.removeAttr( 'hidden' );
+				$trigger.attr( 'aria-expanded', 'true' );
+			}
+		});
+		// Clicking an item inside the menu triggers the action handler (delegated)
+		// and then closes the menu. We use a tiny timeout so the underlying
+		// handler runs before the menu disappears.
+		$( document ).on( 'click', '.alvobot-kebab-item', function () {
+			setTimeout( closeAllKebabs, 0 );
+		});
+		$( document ).on( 'click', function (e) {
+			if ( ! $( e.target ).closest( '.alvobot-row-actions-kebab' ).length) {
+				closeAllKebabs();
+			}
+		});
+		$( document ).on( 'keydown', function (e) {
+			if (e.key === 'Escape') { closeAllKebabs(); }
+		});
+
 		// Conditional field visibility for conversion form
 		$( document ).on(
 			'change',
@@ -2490,16 +2575,20 @@
 			}
 		}
 
-		// Bulk delete
-		$( document ).on( 'click', '#alvobot-bulk-delete-btn', function () {
+		function selectedConversionIds() {
 			var ids = [];
 			$( '.alvobot-conv-select:checked' ).each( function () {
 				ids.push( $( this ).attr( 'data-id' ) );
 			});
+			return ids;
+		}
 
+		// Bulk: desvincular selecionados (regra local apenas).
+		$( document ).on( 'click', '#alvobot-bulk-unlink-btn', function () {
+			var ids = selectedConversionIds();
 			if ( ! ids.length) { return; }
 
-			if ( ! confirm( 'Excluir ' + ids.length + ' conversao(oes)? Esta acao nao pode ser desfeita.' ) ) {
+			if ( ! confirm( 'Desvincular ' + ids.length + ' conversao(oes) do plugin?\n\nAs regras locais serao apagadas, mas as conversoes no Google Ads continuarao existindo (e podem ser recriadas com "Criar em todas").' ) ) {
 				return;
 			}
 
@@ -2519,12 +2608,58 @@
 				if (response && response.success) {
 					loadConversions();
 				} else {
+					alert( (response && response.data) || 'Erro ao desvincular.' );
+				}
+			}).fail( function (xhr, status) {
+				alert( 'Erro de conexao ao desvincular' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
+			}).always( function () {
+				$btn.prop( 'disabled', false );
+			});
+		});
+
+		// Bulk: excluir tudo (regras locais + arquiva no Google Ads).
+		$( document ).on( 'click', '#alvobot-bulk-delete-btn', function () {
+			var ids = selectedConversionIds();
+			if ( ! ids.length) { return; }
+
+			if ( ! confirm( 'Excluir ' + ids.length + ' conversao(oes) COMPLETAMENTE?\n\n  1. Regras locais serao apagadas\n  2. Conversoes serao arquivadas no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API.\n\nSe voce quer apenas desvincular do plugin (mantendo o historico no Google Ads), use "Desvincular Selecionados".' ) ) {
+				return;
+			}
+
+			var $btn = $( this );
+			$btn.prop( 'disabled', true ).html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Excluindo...' );
+
+			// Pode demorar — sao N contas Google Ads x M conversoes. Timeout generoso.
+			$.ajax({
+				url: config.ajaxurl,
+				method: 'POST',
+				timeout: 120000,
+				data: {
+					action: 'alvobot_pixel_tracking_bulk_delete_conversions_full',
+					nonce: config.nonce,
+					ids: ids.join( ',' ),
+				},
+			}).done( function (response) {
+				if (response && response.success) {
+					var d = response.data || {};
+					var summary = 'Concluido. ' + (d.local_deleted || 0) + ' regra(s) local(is) apagada(s)';
+					if (d.gads_archived) { summary += ', ' + d.gads_archived + ' conversao(oes) arquivada(s) no Google Ads'; }
+					if (d.gads_errors && d.gads_errors.length) {
+						summary += '.\n\n' + d.gads_errors.length + ' erro(s) ao arquivar no Google Ads:\n - ' + d.gads_errors.slice( 0, 6 ).join( '\n - ' );
+						if (d.gads_errors.length > 6) { summary += '\n... e mais ' + (d.gads_errors.length - 6) + '.'; }
+					} else {
+						summary += '.';
+					}
+					alert( summary );
+					loadConversions();
+				} else {
 					alert( (response && response.data) || 'Erro ao excluir.' );
 				}
 			}).fail( function (xhr, status) {
 				alert( 'Erro de conexao ao excluir' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
 			}).always( function () {
-				$btn.prop( 'disabled', false );
+				$btn.prop( 'disabled', false ).html( '<i data-lucide="trash-2" class="alvobot-icon"></i> Excluir Selecionados (com Google Ads)' );
+				if (window.lucide) { window.lucide.createIcons(); }
 			});
 		});
 
@@ -2990,18 +3125,19 @@
 			}
 		);
 
-		// Delete conversion
+		// ── Desvincular: apaga apenas a regra local. Google Ads fica intacto. ──
 		$( document ).on(
 			'click',
-			'.alvobot-delete-conversion',
+			'.alvobot-unlink-conversion',
 			function () {
-				if ( ! confirm( 'Tem certeza que deseja excluir esta conversao?' )) {
-					return;
-				}
-
 				var $btn = $( this );
 				var id   = $btn.data( 'id' );
 				var $row = $btn.closest( 'tr' );
+				var name = $row.find( 'td:nth-child(2)' ).text().trim() || 'esta conversao';
+
+				if ( ! confirm( 'Desvincular "' + name + '" do plugin?\n\nA regra local sera apagada, mas a conversao no Google Ads continuara existindo (e pode ser recriada depois com "Criar em todas").' )) {
+					return;
+				}
 
 				$btn.prop( 'disabled', true );
 
@@ -3016,6 +3152,53 @@
 					},
 				}).done( function (response) {
 					if (response && response.success) {
+						$row.fadeOut( function () {
+							$( this ).remove();
+							loadConversions();
+						});
+					} else {
+						alert( (response && response.data) || 'Erro ao desvincular conversao.' );
+					}
+				}).fail( function (xhr, status) {
+					alert( 'Erro de conexao ao desvincular' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
+				}).always( function () {
+					$btn.prop( 'disabled', false );
+				});
+			}
+		);
+
+		// ── Excluir tudo: apaga regra local + arquiva conversao no Google Ads. ──
+		// Honors Nielsen #5 (Error prevention): the confirm message is explicit
+		// about the irreversible Google Ads side-effect so the user can choose
+		// "Desvincular" instead if that wasn't the intent.
+		$( document ).on(
+			'click',
+			'.alvobot-delete-conversion-full',
+			function () {
+				var $btn = $( this );
+				var id   = $btn.data( 'id' );
+				var $row = $btn.closest( 'tr' );
+				var name = $row.find( 'td:nth-child(2)' ).text().trim() || 'esta conversao';
+
+				if ( ! confirm( 'Excluir "' + name + '" COMPLETAMENTE?\n\nIsso vai:\n  1. Apagar a regra local do plugin\n  2. Arquivar a conversao no Google Ads (todas as contas vinculadas)\n\nA acao no Google Ads e IRREVERSIVEL via API (so reversivel pela UI do Google Ads).\n\nSe voce quer apenas parar de usar no plugin (mantendo o historico no Google Ads), use "Desvincular".' )) {
+					return;
+				}
+
+				$btn.prop( 'disabled', true );
+
+				$.ajax({
+					url: config.ajaxurl,
+					method: 'POST',
+					timeout: 60000,
+					data: {
+						action: 'alvobot_pixel_tracking_delete_conversion_full',
+						nonce: config.nonce,
+						conversion_id: id,
+					},
+				}).done( function (response) {
+					if (response && response.success) {
+						var msg = (response.data && response.data.message) || '';
+						if (msg) { debugLog( 'delete-full result', response.data ); }
 						$row.fadeOut( function () {
 							$( this ).remove();
 							loadConversions();

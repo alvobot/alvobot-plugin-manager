@@ -1349,3 +1349,108 @@
 		gap: var(--alvobot-space-sm);
 	}
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Conversoes tab — row actions: inline buttons (desktop) / kebab (mobile)
+   ────────────────────────────────────────────────────────────────────────── */
+.alvobot-row-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+.alvobot-row-actions-inline {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+.alvobot-row-actions-kebab {
+	display: none;
+	position: relative;
+}
+.alvobot-kebab-trigger {
+	background: transparent;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: #475569;
+	transition: background 120ms ease, border-color 120ms ease;
+}
+.alvobot-kebab-trigger:hover,
+.alvobot-kebab-trigger:focus-visible {
+	background: #f8fafc;
+	border-color: #cbd5e1;
+	outline: none;
+}
+.alvobot-kebab-trigger[aria-expanded="true"] {
+	background: #f1f5f9;
+	border-color: #94a3b8;
+}
+.alvobot-kebab-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 4px);
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+	z-index: 100;
+	min-width: 200px;
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.alvobot-kebab-menu[hidden] { display: none; }
+.alvobot-kebab-item {
+	background: transparent;
+	border: 0;
+	text-align: left;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 13px;
+	color: #1e293b;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	width: 100%;
+	transition: background 100ms ease;
+}
+.alvobot-kebab-item:hover,
+.alvobot-kebab-item:focus-visible {
+	background: #f1f5f9;
+	outline: none;
+}
+.alvobot-kebab-item-danger { color: #b91c1c; }
+.alvobot-kebab-item-danger:hover,
+.alvobot-kebab-item-danger:focus-visible {
+	background: #fef2f2;
+	color: #991b1b;
+}
+.alvobot-kebab-divider {
+	height: 1px;
+	background: #e2e8f0;
+	margin: 4px 0;
+}
+
+@media (max-width: 768px) {
+	.alvobot-row-actions-inline { display: none; }
+	.alvobot-row-actions-kebab { display: block; }
+	#alvobot-conversions-bulk-bar {
+		flex-direction: column;
+		align-items: stretch !important;
+	}
+	#alvobot-conversions-bulk-bar .alvobot-btn {
+		width: 100%;
+		justify-content: center;
+	}
+	.alvobot-conversions-table {
+		display: block;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+}

@@ -176,12 +176,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 		</div>
 
-		<!-- Bulk Actions -->
-		<div id="alvobot-conversions-bulk-bar" style="display:none; margin-bottom: 12px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; align-items: center; gap: 12px;">
-			<span id="alvobot-bulk-count">0</span> <?php esc_html_e( 'selecionados', 'alvobot-pro' ); ?>
-			<button type="button" id="alvobot-bulk-delete-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger">
+		<!-- Bulk Actions: dois botoes intencionais (Nielsen #5 prevencao de erros). -->
+		<div id="alvobot-conversions-bulk-bar" style="display:none; margin-bottom: 12px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; align-items: center; gap: 12px; flex-wrap: wrap;">
+			<span><strong id="alvobot-bulk-count">0</strong> <?php esc_html_e( 'selecionado(s)', 'alvobot-pro' ); ?></span>
+			<button type="button" id="alvobot-bulk-unlink-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-outline" title="<?php esc_attr_e( 'Apaga apenas as regras locais. Conversoes no Google Ads ficam intactas.', 'alvobot-pro' ); ?>">
+				<i data-lucide="unlink" class="alvobot-icon"></i>
+				<?php esc_html_e( 'Desvincular Selecionados', 'alvobot-pro' ); ?>
+			</button>
+			<button type="button" id="alvobot-bulk-delete-btn" class="alvobot-btn alvobot-btn-sm alvobot-btn-danger" title="<?php esc_attr_e( 'Apaga regras locais E arquiva no Google Ads. Irreversivel via API.', 'alvobot-pro' ); ?>">
 				<i data-lucide="trash-2" class="alvobot-icon"></i>
-				<?php esc_html_e( 'Excluir Selecionados', 'alvobot-pro' ); ?>
+				<?php esc_html_e( 'Excluir Selecionados (com Google Ads)', 'alvobot-pro' ); ?>
 			</button>
 		</div>
 

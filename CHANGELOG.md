@@ -8,6 +8,32 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.14] - 2026-04-29
+
+### ✨ Adicionado
+- **Pixel Tracking / Categorizacao de presets para Smart Bidding**: cada preset agora carrega `category` e `primary_for_goal` definidos a partir da sua intencao no funil de arbitragem:
+  - **Ad Click** e **Vignette Click** → `category: PURCHASE` + `primary_for_goal: true` ("Primary action used for bidding optimization"). Sao a meta real do funil; o Smart Bidding do Google otimiza por elas
+  - **Page View**, **Ad Impression** e **Vignette View** → `category: PAGE_VIEW` + `primary_for_goal: false` ("Secondary action not used for bidding optimization"). Aparecem em `All conv.` para reporting mas ficam fora da otimizacao de lances
+- **Pixel Tracking / Conversoes tab — botao "Desvincular"**: novo botao (outline neutro, icone `unlink`) ao lado de Editar/Excluir. Apaga **apenas** a regra local; a conversao no Google Ads fica intacta. Ideal para "parei de usar mas pode voltar" — a regra pode ser recriada via "Criar em todas". Tooltip explica o efeito
+- **Pixel Tracking / Conversoes tab — botao "Excluir" (atualizado)**: agora apaga regra local **E** arquiva a conversao no Google Ads (operacao `remove` real, nao mais update_status que nunca funcionou). Modal de confirmacao explica claramente os dois efeitos para honrar Nielsen #5 (prevencao de erros) e oferece "Desvincular" como alternativa
+- **Pixel Tracking / Bulk actions com 2 botoes**: barra de acao em massa agora tem `Desvincular Selecionados` e `Excluir Selecionados (com Google Ads)` — separados intencionalmente. O bulk-delete-full mostra resumo agregado: regras locais apagadas, conversoes arquivadas no Google Ads e lista dos primeiros 6 erros (se houver)
+- **Edge Function `api_plugin` / suporte a `primary_for_goal`**: tanto `create_google_conversion_action` quanto `update_google_conversion_action` aceitam o campo `primary_for_goal` (boolean) com mapeamento direto para `ConversionAction.primaryForGoal` da API. Update tambem aceita `category` agora (antes so name/status/value)
+
+### 🐛 Corrigido
+- **Pixel Tracking / "Excluir" da lista de Conversoes nao tocava no Google Ads**: o comportamento antigo apagava so o post local (semanticamente "desvincular") mas o nome "Excluir" sugeria deletar tudo. Agora a separacao e explicita: 2 botoes com tooltips e modais distintos
+
+- **Pixel Tracking / Conversoes tab — responsivo (mobile)**: linha de acoes adapta automaticamente ao viewport. Em desktop (>=768px) os 3 botoes ficam expostos. Em mobile (<768px) eles colapsam num **kebab menu** (`⋮`) com dropdown vertical contendo as mesmas acoes. O dropdown:
+  - Tem `role="menu"` e `aria-haspopup`/`aria-expanded` corretos (Nielsen #4 Consistencia + WCAG)
+  - Fecha com `Esc` e click fora (Nielsen #3 Controle do usuario)
+  - Excluir e separado por divider e estilizado em vermelho (Nielsen #5 Prevencao de erros)
+  - Bulk-action bar tambem reorganiza para empilhar verticalmente em mobile, e a tabela ganha scroll horizontal para preservar leitura das colunas
+
+### 📦 Deploy
+- Edge Function `api_plugin` foi deployada em `qbmbokpbcyempnaravaw` durante esta release
+- Plugin atualizado em portalagrovida.com.br
+
+---
+
 ## [2.17.13] - 2026-04-29
 
 ### ✨ Adicionado

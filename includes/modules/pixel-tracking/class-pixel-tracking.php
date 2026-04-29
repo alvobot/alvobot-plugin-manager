@@ -90,6 +90,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		// AJAX handlers for conversion CRUD
 		add_action( 'wp_ajax_alvobot_pixel_tracking_save_conversion', array( $this, 'ajax_save_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion', array( $this, 'ajax_delete_conversion' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion_full', array( $this, 'ajax_delete_conversion_full' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_bulk_delete_conversions_full', array( $this, 'ajax_bulk_delete_conversions_full' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_toggle_conversion', array( $this, 'ajax_toggle_conversion' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_get_conversions', array( $this, 'ajax_get_conversions' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_bulk_delete_conversions', array( $this, 'ajax_bulk_delete_conversions' ) );
@@ -503,6 +505,12 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			'default_value' => isset( $_POST['default_value'] ) ? floatval( $_POST['default_value'] ) : 0,
 			'currency'      => isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'BRL',
 		);
+		// primary_for_goal: '1'/'true'/true → primary (biddable), '0'/'false'/false → secondary (reporting only).
+		// If not provided, the Edge Function defaults to true (Google Ads default behaviour).
+		if ( isset( $_POST['primary_for_goal'] ) ) {
+			$raw_pfg = wp_unslash( $_POST['primary_for_goal'] );
+			$params['primary_for_goal'] = in_array( $raw_pfg, array( '1', 1, true, 'true', 'TRUE' ), true );
+		}
 
 		$result = $this->create_google_conversion_action( $connection_id, $customer_id, $params );
 
@@ -958,6 +966,186 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		wp_send_json_success( array( 'deleted' => $deleted ) );
+	}
+
+	/**
+	 * For a given local conversion rule, look up the Google Ads ConversionActions
+	 * mapped to it and archive each one in Google Ads via the `remove` operation.
+	 *
+	 * Returns an associative array { archived: int, errors: [string,...] }.
+	 * Local post is NOT deleted by this method — caller decides.
+	 */
+	private function archive_gads_actions_for_rule( $conversion_id ) {
+		$result = array( 'archived' => 0, 'errors' => array() );
+
+		$labels_map_raw = get_post_meta( $conversion_id, '_gads_labels_map', true );
+		if ( ! is_string( $labels_map_raw ) || '' === trim( $labels_map_raw ) ) {
+			return $result;
+		}
+		$labels_map = json_decode( $labels_map_raw, true );
+		if ( ! is_array( $labels_map ) || empty( $labels_map ) ) {
+			return $result;
+		}
+
+		// Look up trackers (connection_id + customer_id) from settings.
+		$settings        = $this->get_settings();
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+		$tracker_index   = array();
+		foreach ( $google_trackers as $t ) {
+			if ( isset( $t['tracker_id'] ) ) {
+				$tracker_index[ $t['tracker_id'] ] = $t;
+			}
+		}
+
+		// To find the ConversionAction id for each tracker, we have to query Google Ads
+		// using the existing `fetch_google_conversion_actions` and match by name.
+		$rule_name = get_the_title( $conversion_id );
+		if ( '' === $rule_name ) {
+			return $result; // can't match without a name
+		}
+
+		$rule_name_norm = $this->normalize_conversion_name( $rule_name );
+
+		foreach ( $labels_map as $tracker_id => $label ) {
+			$tracker_id = sanitize_text_field( (string) $tracker_id );
+			if ( ! isset( $tracker_index[ $tracker_id ] ) ) {
+				$result['errors'][] = $rule_name . ' / ' . $tracker_id . ' (tracker nao encontrado nas configuracoes)';
+				continue;
+			}
+			$tracker       = $tracker_index[ $tracker_id ];
+			$connection_id = isset( $tracker['connection_id'] ) ? sanitize_text_field( $tracker['connection_id'] ) : '';
+			$customer_id   = isset( $tracker['customer_id'] ) ? preg_replace( '/\D+/', '', (string) $tracker['customer_id'] ) : '';
+			if ( empty( $connection_id ) || empty( $customer_id ) ) {
+				$result['errors'][] = $rule_name . ' / ' . $tracker_id . ' (sem connection_id/customer_id; configure ou Desvincule esta regra)';
+				continue;
+			}
+
+			// Find the ConversionAction id by name in this account.
+			$actions = $this->fetch_google_conversion_actions( $connection_id, $customer_id );
+			if ( is_wp_error( $actions ) ) {
+				$result['errors'][] = $rule_name . ' / ' . $tracker_id . ' (' . $actions->get_error_message() . ')';
+				continue;
+			}
+			$matched_id = '';
+			foreach ( (array) $actions as $a ) {
+				if ( ! is_array( $a ) || empty( $a['name'] ) ) { continue; }
+				if ( $this->normalize_conversion_name( $a['name'] ) === $rule_name_norm && isset( $a['status'] ) && 'REMOVED' !== $a['status'] ) {
+					$matched_id = (string) $a['id'];
+					break;
+				}
+			}
+			if ( '' === $matched_id ) {
+				// Already removed (or never created) — count as archived for the user view.
+				++$result['archived'];
+				continue;
+			}
+
+			$delete_resp = $this->delete_google_conversion_action( $connection_id, $customer_id, $matched_id );
+			if ( is_wp_error( $delete_resp ) ) {
+				$result['errors'][] = $rule_name . ' / ' . ( $tracker['label'] ?? $tracker_id ) . ' (' . $delete_resp->get_error_message() . ')';
+				continue;
+			}
+			++$result['archived'];
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Mirror of the JS normalizeConversionName helper so the PHP side can
+	 * match preset/rule names against Google Ads action names consistently.
+	 */
+	private function normalize_conversion_name( $name ) {
+		$lower = function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $name ) : strtolower( (string) $name );
+		return preg_replace( '/[\s_\-]+/', '', $lower );
+	}
+
+	/**
+	 * AJAX: Delete a single conversion rule AND archive its associated
+	 * ConversionActions in Google Ads (via `remove` operation).
+	 */
+	public function ajax_delete_conversion_full() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$conversion_id = isset( $_POST['conversion_id'] ) ? absint( $_POST['conversion_id'] ) : 0;
+		if ( ! $conversion_id ) {
+			wp_send_json_error( __( 'ID invalido.', 'alvobot-pro' ) );
+		}
+		$post = get_post( $conversion_id );
+		if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) {
+			wp_send_json_error( __( 'Conversao nao encontrada.', 'alvobot-pro' ) );
+		}
+
+		$gads_result = $this->archive_gads_actions_for_rule( $conversion_id );
+		wp_delete_post( $conversion_id, true );
+
+		wp_send_json_success(
+			array(
+				'local_deleted' => 1,
+				'gads_archived' => $gads_result['archived'],
+				'gads_errors'   => $gads_result['errors'],
+			)
+		);
+	}
+
+	/**
+	 * AJAX: Bulk delete conversion rules + archive their ConversionActions in Google Ads.
+	 */
+	public function ajax_bulk_delete_conversions_full() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- IDs cast to int below.
+		$ids = isset( $_POST['ids'] ) ? wp_unslash( $_POST['ids'] ) : '';
+		if ( is_string( $ids ) ) {
+			$ids = array_filter( array_map( 'absint', explode( ',', $ids ) ) );
+		} elseif ( is_array( $ids ) ) {
+			$ids = array_filter( array_map( 'absint', $ids ) );
+		} else {
+			$ids = array();
+		}
+		if ( empty( $ids ) ) {
+			wp_send_json_error( __( 'Nenhuma conversao selecionada.', 'alvobot-pro' ) );
+		}
+
+		// Bulk archives can be slow (one fetch + one mutate per tracker per rule),
+		// so we ensure PHP doesn't timeout halfway through.
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		$total_local   = 0;
+		$total_archived = 0;
+		$all_errors    = array();
+
+		foreach ( $ids as $id ) {
+			$post = get_post( $id );
+			if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) {
+				continue;
+			}
+			$gads_result   = $this->archive_gads_actions_for_rule( $id );
+			$total_archived += (int) $gads_result['archived'];
+			if ( ! empty( $gads_result['errors'] ) ) {
+				$all_errors = array_merge( $all_errors, $gads_result['errors'] );
+			}
+			wp_delete_post( $id, true );
+			++$total_local;
+		}
+
+		wp_send_json_success(
+			array(
+				'local_deleted' => $total_local,
+				'gads_archived' => $total_archived,
+				'gads_errors'   => $all_errors,
+			)
+		);
 	}
 
 	/**
