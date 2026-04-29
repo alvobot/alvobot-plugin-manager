@@ -13,14 +13,14 @@
 	var debugPrefix  = '[AlvoBot Pixel][ADMIN]';
 	var ARBITRAGE_CONVERSION_PRESETS = [
 		{
-			name: 'Page Impression',
+			name: 'Page View',
 			category: 'PAGE_VIEW',
 			desc: 'Visitante carregou a pagina',
 			trigger: 'page_load',
 			event_type: 'PageView',
 			event_custom_name: '',
 			default_value: '0.01',
-			aliases: ['Pageview', 'Page View', 'Impressao de Pagina'],
+			aliases: ['Pageview', 'Page Impression', 'Impressao de Pagina'],
 		},
 		{
 			name: 'Ad Impression',
@@ -2036,23 +2036,22 @@
 			$.ajax({
 				url: config.ajaxurl,
 				method: 'POST',
+				timeout: 20000,
 				data: {
 					action: 'alvobot_pixel_tracking_bulk_delete_conversions',
 					nonce: config.nonce,
 					ids: ids.join( ',' ),
 				},
-				success: function (response) {
-					$btn.prop( 'disabled', false );
-					if (response.success) {
-						loadConversions();
-					} else {
-						alert( response.data || 'Erro ao excluir.' );
-					}
-				},
-				error: function () {
-					$btn.prop( 'disabled', false );
-					alert( 'Erro de conexao.' );
-				},
+			}).done( function (response) {
+				if (response && response.success) {
+					loadConversions();
+				} else {
+					alert( (response && response.data) || 'Erro ao excluir.' );
+				}
+			}).fail( function (xhr, status) {
+				alert( 'Erro de conexao ao excluir' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
+			}).always( function () {
+				$btn.prop( 'disabled', false );
 			});
 		});
 
@@ -2317,6 +2316,7 @@
 							$.ajax({
 								url: config.ajaxurl,
 								method: 'POST',
+								timeout: 20000,
 								data: {
 									action: 'alvobot_pixel_tracking_save_conversion',
 									nonce: config.nonce,
@@ -2332,14 +2332,12 @@
 									gads_labels_map: JSON.stringify( labelsMap ),
 									gads_conversion_value: prefillData.value || '',
 								},
-								success: function (saveResponse) {
-									if ( ! saveResponse.success) {
-										alert( saveResponse.data || 'Conversao criada no Google Ads mas falhou ao salvar a regra local.' );
-									}
-								},
-								error: function () {
-									alert( 'Conversao criada no Google Ads mas a conexao falhou ao salvar a regra local. Clique em Buscar novamente.' );
-								},
+							}).done( function (saveResponse) {
+								if ( ! saveResponse || ! saveResponse.success) {
+									alert( (saveResponse && saveResponse.data) || 'Conversao criada no Google Ads mas falhou ao salvar a regra local.' );
+								}
+							}).fail( function (xhr, status) {
+								alert( 'Conversao criada no Google Ads mas a conexao falhou ao salvar a regra local' + (status === 'timeout' ? ' (timeout)' : '') + '. Clique em Buscar novamente.' );
 							});
 							$btn.closest( '.alvobot-gads-row-picker' ).html(
 								'<p class="alvobot-description" style="color:#16a34a;">' + escHtml( name ) + ' criada e configurada!' + (label ? ' Label: <code>' + escHtml( label ) + '</code>' : '') + '</p>'
@@ -2363,58 +2361,118 @@
 			});
 		});
 
-		// Save conversion
+		// Save conversion.
+		// History: a previous version used `if ($btn.prop('disabled')) return;` to guard
+		// against double-submit. That backfired: a browser will not fire `click` on a
+		// disabled button at all (Codex confirmed), so if the previous AJAX never
+		// completed (network drop, tab backgrounding) the user got "nothing happens"
+		// with no recovery short of a full page reload. We now:
+		//   - never set the native `disabled` attribute (so re-clicks always reach the handler);
+		//   - track in-flight state via a JS flag and abort the prior XHR on re-click;
+		//   - use `complete` (not success/error twice) so the spinner is always cleared;
+		//   - hard timeout (20s) so a hung transport surfaces as an explicit error.
+		var saveConversionXhr = null;
+		var saveConversionInFlight = false;
+
 		$( document ).on(
 			'click',
 			'#alvobot-save-conversion-btn',
-				function () {
-					var $btn = $( this );
-					if ($btn.prop( 'disabled' )) { return; } // Guard against race condition with auto-save
-					$btn.prop( 'disabled', true );
-					var pageIdsRaw = $( '#conv_page_ids' ).val();
-					var pageIds = pageIdsRaw
-						? pageIdsRaw.split( ',' ).map( function (value) { return parseInt( value, 10 ); } ).filter( function (value) { return ! isNaN( value ) && value > 0; } )
-						: [];
+			function () {
+				var $btn         = $( this );
+				var $form        = $( '#alvobot-conversion-form' );
+				var originalHTML = $btn.data( 'original-html' );
+				if ( ! originalHTML) {
+					originalHTML = $btn.html();
+					$btn.data( 'original-html', originalHTML );
+				}
 
-						$.ajax(
-							{
-								url: config.ajaxurl,
-							method: 'POST',
-							data: {
+				if (saveConversionInFlight) {
+					debugLog( 'save conversion: re-click while in-flight — aborting prior request and retrying' );
+					if (saveConversionXhr && saveConversionXhr.abort) {
+						try { saveConversionXhr.abort(); } catch (e) { /* ignore */ }
+					}
+				}
+
+				if ( ! ( $( '#conv_name' ).val() || '' ).trim()) {
+					alert( 'Informe o nome da conversao.' );
+					$( '#conv_name' ).trigger( 'focus' );
+					return;
+				}
+
+				saveConversionInFlight = true;
+				$btn.attr( 'aria-busy', 'true' )
+					.css( 'opacity', '0.7' )
+					.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Salvando...' );
+
+				var releaseBtn = function () {
+					saveConversionInFlight = false;
+					saveConversionXhr      = null;
+					$btn.removeAttr( 'aria-busy' ).css( 'opacity', '' ).html( originalHTML );
+					if (window.lucide) { window.lucide.createIcons(); }
+				};
+
+				var pageIdsRaw = $( '#conv_page_ids' ).val();
+				var pageIds    = pageIdsRaw
+					? pageIdsRaw.split( ',' ).map( function (value) { return parseInt( value, 10 ); } ).filter( function (value) { return ! isNaN( value ) && value > 0; } )
+					: [];
+
+				debugLog( 'save conversion: submitting', {
+					conversion_id: $( '#conv_id' ).val(),
+					name: $( '#conv_name' ).val(),
+					trigger_type: $( '#conv_trigger_type' ).val(),
+					event_type: $( '#conv_event_type' ).val(),
+				} );
+
+				saveConversionXhr = $.ajax(
+					{
+						url: config.ajaxurl,
+						method: 'POST',
+						timeout: 20000,
+						data: {
 							action: 'alvobot_pixel_tracking_save_conversion',
 							nonce: config.nonce,
 							conversion_id: $( '#conv_id' ).val(),
 							name: $( '#conv_name' ).val(),
 							event_type: $( '#conv_event_type' ).val(),
-								event_custom_name: $( '#conv_event_custom_name' ).val(),
-								trigger_type: $( '#conv_trigger_type' ).val(),
-								trigger_value: $( '#conv_trigger_value' ).val(),
-								display_on: $( '#conv_display_on' ).val(),
-								page_ids: pageIds,
-								page_paths: $( '#conv_page_paths' ).val(),
-								css_selector: $( '#conv_css_selector' ).val(),
+							event_custom_name: $( '#conv_event_custom_name' ).val(),
+							trigger_type: $( '#conv_trigger_type' ).val(),
+							trigger_value: $( '#conv_trigger_value' ).val(),
+							display_on: $( '#conv_display_on' ).val(),
+							page_ids: pageIds,
+							page_paths: $( '#conv_page_paths' ).val(),
+							css_selector: $( '#conv_css_selector' ).val(),
 							content_name: $( '#conv_content_name' ).val(),
 							pixel_ids: $( '#conv_pixel_ids' ).val(),
 							gads_conversion_label: $( '#conv_gads_conversion_label' ).val(),
 							gads_labels_map: $( '#conv_gads_labels_map' ).val(),
 							gads_conversion_value: $( '#conv_gads_conversion_value' ).val(),
 						},
-						success: function (response) {
-							$btn.prop( 'disabled', false );
-							if (response.success) {
-								$( '#alvobot-conversion-form' ).hide();
-								resetConversionForm();
-								loadConversions();
-							} else {
-								alert( response.data || 'Erro ao salvar.' );
-							}
-						},
-						error: function () {
-							$btn.prop( 'disabled', false );
-							alert( 'Erro de conexao.' );
-						},
 					}
-				);
+				).done( function (response) {
+					if (response && response.success) {
+						$form.hide();
+						resetConversionForm();
+						loadConversions();
+					} else {
+						var msg = (response && response.data) || 'Erro ao salvar (resposta invalida do servidor).';
+						debugError( 'save conversion: server returned error', response );
+						alert( msg );
+					}
+				}).fail( function (xhr, status, err) {
+					if (status === 'abort') {
+						return; // re-click; new request already started.
+					}
+					debugError( 'save conversion: AJAX error', { status: status, http: xhr && xhr.status, error: err, body: xhr && xhr.responseText && xhr.responseText.slice( 0, 300 ) } );
+					var detail = '';
+					if (xhr && xhr.status === 403) {
+						detail = ' (Sessao expirada. Recarregue a pagina e tente novamente.)';
+					} else if (status === 'timeout') {
+						detail = ' (Tempo limite excedido. Verifique sua conexao e tente novamente.)';
+					} else if (xhr && xhr.status >= 500) {
+						detail = ' (Erro no servidor: HTTP ' + xhr.status + '.)';
+					}
+					alert( 'Erro ao salvar conversao.' + detail );
+				}).always( releaseBtn );
 			}
 		);
 
@@ -2429,32 +2487,27 @@
 
 				$toggle.prop( 'disabled', true );
 
-				$.ajax(
-					{
-						url: config.ajaxurl,
-						method: 'POST',
-						data: {
-							action: 'alvobot_pixel_tracking_toggle_conversion',
-							nonce: config.nonce,
-							conversion_id: id,
-							active: active,
-						},
-						success: function (response) {
-							$toggle.prop( 'disabled', false );
-							if ( ! response.success) {
-								// Revert on failure
-								$toggle.prop( 'checked', active !== '1' );
-								alert( response.data || 'Erro ao alterar status.' );
-							}
-						},
-						error: function () {
-							$toggle.prop( 'disabled', false );
-							// Revert on network failure
-							$toggle.prop( 'checked', active !== '1' );
-							alert( 'Erro de conexao ao alterar status.' );
-						},
+				$.ajax({
+					url: config.ajaxurl,
+					method: 'POST',
+					timeout: 15000,
+					data: {
+						action: 'alvobot_pixel_tracking_toggle_conversion',
+						nonce: config.nonce,
+						conversion_id: id,
+						active: active,
+					},
+				}).done( function (response) {
+					if ( ! response || ! response.success) {
+						$toggle.prop( 'checked', active !== '1' );
+						alert( (response && response.data) || 'Erro ao alterar status.' );
 					}
-				);
+				}).fail( function (xhr, status) {
+					$toggle.prop( 'checked', active !== '1' );
+					alert( 'Erro de conexao ao alterar status' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
+				}).always( function () {
+					$toggle.prop( 'disabled', false );
+				});
 			}
 		);
 
@@ -2467,30 +2520,35 @@
 					return;
 				}
 
-				var id   = $( this ).data( 'id' );
-				var $row = $( this ).closest( 'tr' );
+				var $btn = $( this );
+				var id   = $btn.data( 'id' );
+				var $row = $btn.closest( 'tr' );
 
-				$.ajax(
-					{
-						url: config.ajaxurl,
-						method: 'POST',
-						data: {
-							action: 'alvobot_pixel_tracking_delete_conversion',
-							nonce: config.nonce,
-							conversion_id: id,
-						},
-						success: function (response) {
-							if (response.success) {
-								$row.fadeOut(
-									function () {
-										$( this ).remove();
-										loadConversions();
-									}
-								);
-							}
-						},
+				$btn.prop( 'disabled', true );
+
+				$.ajax({
+					url: config.ajaxurl,
+					method: 'POST',
+					timeout: 15000,
+					data: {
+						action: 'alvobot_pixel_tracking_delete_conversion',
+						nonce: config.nonce,
+						conversion_id: id,
+					},
+				}).done( function (response) {
+					if (response && response.success) {
+						$row.fadeOut( function () {
+							$( this ).remove();
+							loadConversions();
+						});
+					} else {
+						alert( (response && response.data) || 'Erro ao excluir conversao.' );
 					}
-				);
+				}).fail( function (xhr, status) {
+					alert( 'Erro de conexao ao excluir' + (status === 'timeout' ? ' (timeout)' : '') + '.' );
+				}).always( function () {
+					$btn.prop( 'disabled', false );
+				});
 			}
 		);
 	}

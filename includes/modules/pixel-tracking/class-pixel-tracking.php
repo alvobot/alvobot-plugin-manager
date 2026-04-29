@@ -1084,6 +1084,40 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		$this->maybe_sync_tokens();
 
 		$settings = $this->get_settings();
+
+		// Re-localize after process_settings_form() so the JS sees the freshly-saved
+		// pixels/google_trackers. wp_localize_script in admin_enqueue_scripts ran with
+		// the pre-save values; without this overlay the user would see stale data
+		// until the next page reload (e.g. the Conversoes tab Pixel selector would
+		// be empty even though the tracker was just saved).
+		$pixel_labels = array();
+		if ( isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ) {
+			foreach ( $settings['pixels'] as $pixel ) {
+				$pixel_id = isset( $pixel['pixel_id'] ) ? sanitize_text_field( (string) $pixel['pixel_id'] ) : '';
+				if ( '' === $pixel_id ) {
+					continue;
+				}
+				$pixel_labels[ $pixel_id ] = isset( $pixel['label'] ) ? sanitize_text_field( (string) $pixel['label'] ) : '';
+			}
+		}
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+
+		// JSON_HEX_* flags neutralize </script> and quote-injection inside the inline <script> tag.
+		$inline_payload = wp_json_encode(
+			array(
+				'pixel_labels'    => $pixel_labels,
+				'google_trackers' => $google_trackers,
+			),
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+		);
+		if ( false !== $inline_payload ) {
+			wp_add_inline_script(
+				'alvobot-pro-pixel-tracking',
+				'window.alvobot_pixel_tracking_extra = Object.assign(window.alvobot_pixel_tracking_extra || {}, ' . $inline_payload . ');',
+				'before'
+			);
+		}
+
 		include plugin_dir_path( __FILE__ ) . 'views/admin-page.php';
 	}
 

@@ -8,6 +8,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.10] - 2026-04-28
+
+### 🐛 Corrigido
+- **Pixel Tracking / Save de conversão sem feedback**: removido o guard `if ($btn.prop('disabled')) return;` no handler do `#alvobot-save-conversion-btn` que silenciosamente engolia o clique se um AJAX anterior tivesse travado sem callback (ex: queda de rede, aba em background). O sintoma era "clico em Salvar e nada acontece" sem mensagem de erro, exigindo reload completo. Substituído por uma flag JS-only (`saveConversionInFlight` + `saveConversionXhr`) que aborta a request anterior e refaz a chamada — o atributo `disabled` nativo nunca mais é usado, então cliques sempre disparam o handler. Adicionado `timeout: 20000`, `.always(releaseBtn)` e mensagens explícitas para 403/timeout/5xx
+- **Pixel Tracking / Localize com dados pré-save**: `wp_localize_script` em `admin_enqueue_scripts` rodava antes do `process_settings_form()`, então logo após salvar a aba Pixels o JS recebia `extra.google_trackers` desatualizado (ex: o seletor de pixel da aba Conversões aparecia vazio mesmo com tracker recém-salvo). Adicionado overlay via `wp_add_inline_script` em `render_settings_template` que sobrescreve `window.alvobot_pixel_tracking_extra` com `pixels` + `google_trackers` frescos pós-save
+- **Pixel Tracking / AJAX handlers correlatos**: aplicado o mesmo padrão de resiliência (`.done().fail().always()` + `timeout`) em `bulk_delete_conversions`, `toggle_conversion`, `delete_conversion` e no auto-save disparado pelo botão "Criar" do picker de ConversionActions. Antes, falhas de transporte deixavam o controle disabled silenciosamente
+
+### 🔧 Melhorado
+- **Pixel Tracking / Preset "Page Impression" → "Page View"**: nome do preset de conversão padrão renomeado para alinhar com a terminologia do Meta Pixel / Google Ads. Conversões com nomes antigos ("Page Impression") continuam sendo reconhecidas via `aliases` para evitar duplicação ao rodar o assistente "Criar faltantes"
+
+---
+
 ## [2.17.9] - 2026-04-23
 
 ### 🐛 Corrigido
