@@ -1482,6 +1482,22 @@
 				html += '</tr>';
 			}
 			html += '</tbody></table>';
+
+			// Render the "Criar em todas" bulk button when at least one Google Ads tracker
+			// from the AlvoBot connection is configured. The button complements the
+			// per-tracker banner by walking every connected ads account in series and
+			// creating any missing default conversions.
+			var bulkEligible = googleTrackersData.filter( function (t) {
+				return t.type === 'google_ads' && t.connection_id;
+			});
+			if (bulkEligible.length) {
+				html += '<div class="alvobot-bulk-create-actions" style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+				html += '<button type="button" id="alvobot-create-conversions-all-trackers" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary">';
+				html += '<i data-lucide="zap" class="alvobot-icon"></i> Criar conversoes padrao em todas as contas Google Ads (' + bulkEligible.length + ')';
+				html += '</button>';
+				html += '<span class="alvobot-description" style="font-size:12px;color:#64748b;">Verifica e cria as conversoes padrao (Page View, Ad Impression, Ad Click, Vignette View, Vignette Click) em cada conta.</span>';
+				html += '</div>';
+			}
 			$container.html( html );
 			if (window.lucide) { window.lucide.createIcons(); }
 		}
@@ -1498,6 +1514,363 @@
 				var tagId = normalizeGoogleAdsId( $( this ).val() );
 				googleTrackersData[index].tag_id = tagId;
 				updateGoogleTrackersHiddenField();
+			});
+
+			// ─────────────────────────────────────────────────────────────────────
+			// Bulk wizard: create default conversions across ALL connected Google
+			// Ads accounts.
+			//
+			// Reusable per-tracker chain. Returns Promise<{created, skipped, errors}>.
+			// Mirrors the logic of the per-tracker `#alvobot-create-all-suggested`
+			// banner but resolves a Promise so the multi-tracker handler below can
+			// drive the loop sequentially. All AJAX calls have explicit timeouts so
+			// a hung Google Ads API doesn't strand the chain.
+			// ─────────────────────────────────────────────────────────────────────
+			function runCreateConversionsForTracker(tracker, opts) {
+				opts = opts || {};
+				var onProgress = typeof opts.onProgress === 'function' ? opts.onProgress : function () {};
+				var trackerId  = tracker.tracker_id;
+				var customerId = getGoogleAdsCustomerId( tracker );
+				var suggestions = getArbitrageConversionPresets( false );
+
+				return new Promise( function (resolve) {
+					var summary = { tracker: tracker, created: 0, skipped: 0, errors: [] };
+
+					if ( ! customerId) {
+						summary.errors.push( (tracker.label || trackerId) + ': sem customer_id' );
+						resolve( summary );
+						return;
+					}
+
+					onProgress( 'verificando conversoes existentes...' );
+
+					$.when(
+						$.ajax({ url: config.ajaxurl, method: 'POST', timeout: 30000, data: {
+							action: 'alvobot_pixel_tracking_fetch_conversion_actions',
+							nonce: config.nonce,
+							connection_id: tracker.connection_id,
+							customer_id: customerId,
+						}}),
+						$.ajax({ url: config.ajaxurl, method: 'POST', timeout: 15000, data: {
+							action: 'alvobot_pixel_tracking_get_conversions',
+							nonce: config.nonce,
+						}})
+					).done( function (gadsResp, rulesResp) {
+						var gadsData    = gadsResp[0] || {};
+						var rulesData   = rulesResp[0] || {};
+						var existingActions = (gadsData.success && gadsData.data && gadsData.data.conversion_actions) ? gadsData.data.conversion_actions : [];
+						var existingGadsNames = existingActions.map( function (a) { return normalizeConversionName( a.name ); } );
+						var existingLabels = {};
+						for (var e = 0; e < existingActions.length; e++) {
+							if (existingActions[e].conversion_label) {
+								existingLabels[ normalizeConversionName( existingActions[e].name ) ] = existingActions[e].conversion_label;
+							}
+						}
+						var existingRules = (rulesData.success && rulesData.data && rulesData.data.conversions) ? rulesData.data.conversions : [];
+						var existingRuleNames = existingRules.map( function (r) { return normalizeConversionName( r.name ); } );
+
+						function findRuleForPreset( preset ) {
+							var variants = getPresetNameVariants( preset );
+							for (var k = 0; k < existingRules.length; k++) {
+								if (variants.indexOf( normalizeConversionName( existingRules[k].name ) ) !== -1) {
+									return existingRules[k];
+								}
+							}
+							return null;
+						}
+
+						// Categorize each preset:
+						//  - toMerge: rule exists but does not include this tracker yet → patch it (add tracker + label)
+						//  - toCreate: not in Google Ads AND not in any local rule → create both
+						//  - toSaveRule: in Google Ads but no local rule → just save the rule
+						//  - skipped: rule exists AND already targets this tracker
+						var toCreate   = [];
+						var toSaveRule = [];
+						var toMerge    = [];
+						for (var s = 0; s < suggestions.length; s++) {
+							var preset = suggestions[s];
+							if (hasPresetName( existingRuleNames, preset )) {
+								var existingRule = findRuleForPreset( preset );
+								if (existingRule) {
+									var currentIds = String( existingRule.pixel_ids || '' )
+										.split( ',' ).map( function (s2) { return s2.trim(); } )
+										.filter( Boolean );
+									if (currentIds.indexOf( trackerId ) === -1) {
+										toMerge.push( { rule: existingRule, preset: preset, currentIds: currentIds } );
+										continue;
+									}
+								}
+								continue; // already targets this tracker
+							}
+							if (hasPresetName( existingGadsNames, preset )) {
+								preset.existingLabel = getExistingLabelForPreset( existingLabels, preset );
+								toSaveRule.push( preset );
+							} else {
+								toCreate.push( preset );
+							}
+						}
+
+						if ( ! toCreate.length && ! toSaveRule.length && ! toMerge.length) {
+							summary.skipped = suggestions.length;
+							resolve( summary );
+							return;
+						}
+
+						var total      = toCreate.length + toSaveRule.length + toMerge.length;
+						var saveIdx    = 0;
+						var mergeIdx   = 0;
+
+						function mergeRulesPhase() {
+							if (mergeIdx >= toMerge.length) { return saveRulesPhase(); }
+							var item = toMerge[mergeIdx];
+							var sg   = item.preset;
+							onProgress( 'mesclando ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
+
+							var label = getExistingLabelForPreset( existingLabels, sg );
+							var newIds = item.currentIds.slice();
+							newIds.push( trackerId );
+
+							// Merge labels map: existing tracker labels + new tracker label.
+							var labelsMap = {};
+							if (item.rule.gads_labels_map) {
+								try { labelsMap = JSON.parse( item.rule.gads_labels_map ) || {}; } catch (e) { labelsMap = {}; }
+							}
+							if (label) { labelsMap[trackerId] = label; }
+
+							$.ajax({
+								url: config.ajaxurl,
+								method: 'POST',
+								timeout: 15000,
+								data: {
+									action: 'alvobot_pixel_tracking_save_conversion',
+									nonce: config.nonce,
+									conversion_id: item.rule.id,
+									name: item.rule.name,
+									event_type: item.rule.event_type || sg.event_type,
+									event_custom_name: item.rule.event_custom_name || sg.event_custom_name || '',
+									trigger_type: item.rule.trigger_type || sg.trigger,
+									display_on: item.rule.display_on || 'all',
+									content_name: item.rule.content_name || sg.name,
+									pixel_ids: newIds.join( ',' ),
+									gads_conversion_label: item.rule.gads_conversion_label || label,
+									gads_labels_map: JSON.stringify( labelsMap ),
+									gads_conversion_value: item.rule.gads_conversion_value || sg.default_value || '',
+								},
+							}).done( function (r) {
+								if (r && r.success) { summary.created++; } else { summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (merge)' ); }
+							}).fail( function () {
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (merge rede)' );
+							}).always( function () {
+								mergeIdx++;
+								mergeRulesPhase();
+							});
+						}
+
+						function saveRulesPhase() {
+							if (saveIdx >= toSaveRule.length) { return createPhase( 0 ); }
+							var sg = toSaveRule[saveIdx];
+							onProgress( 'configurando ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
+							var labelsMap = {};
+							if (sg.existingLabel) { labelsMap[trackerId] = sg.existingLabel; }
+							$.ajax({
+								url: config.ajaxurl,
+								method: 'POST',
+								timeout: 15000,
+								data: {
+									action: 'alvobot_pixel_tracking_save_conversion',
+									nonce: config.nonce,
+									conversion_id: 0,
+									name: sg.name,
+									event_type: sg.event_type,
+									event_custom_name: sg.event_custom_name || '',
+									trigger_type: sg.trigger,
+									display_on: 'all',
+									content_name: sg.name,
+									pixel_ids: trackerId,
+									gads_conversion_label: sg.existingLabel || '',
+									gads_labels_map: JSON.stringify( labelsMap ),
+									gads_conversion_value: sg.default_value || '',
+								},
+							}).done( function (r) {
+								if (r && r.success) { summary.created++; } else { summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name ); }
+							}).fail( function () {
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (rede)' );
+							}).always( function () {
+								saveIdx++;
+								saveRulesPhase();
+							});
+						}
+
+						function createPhase( idx ) {
+							if (idx >= toCreate.length) {
+								resolve( summary );
+								return;
+							}
+							var sg = toCreate[idx];
+							onProgress( 'criando ' + (summary.created + summary.errors.length + 1) + '/' + total + ' (' + sg.name + ')' );
+
+							$.ajax({
+								url: config.ajaxurl,
+								method: 'POST',
+								timeout: 30000,
+								data: {
+									action: 'alvobot_pixel_tracking_create_conversion_action',
+									nonce: config.nonce,
+									connection_id: tracker.connection_id,
+									customer_id: customerId,
+									name: sg.name,
+									category: sg.category,
+									default_value: sg.default_value || 0,
+									currency: 'BRL',
+								},
+							}).done( function (response) {
+								if ( ! response || ! response.success || ! response.data) {
+									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name );
+									createPhase( idx + 1 );
+									return;
+								}
+								var label        = response.data.conversion_label || '';
+								var createdTagId = getConversionActionTagId( response.data );
+								if (createdTagId) {
+									tracker.tag_id      = createdTagId;
+									tracker.customer_id = customerId;
+									syncGoogleTrackerRuntimeIds( trackerId, { customer_id: customerId, tag_id: createdTagId } );
+								}
+								var labelsMap = {};
+								if (label) { labelsMap[trackerId] = label; }
+								// Persist the local rule.
+								$.ajax({
+									url: config.ajaxurl,
+									method: 'POST',
+									timeout: 15000,
+									data: {
+										action: 'alvobot_pixel_tracking_save_conversion',
+										nonce: config.nonce,
+										conversion_id: 0,
+										name: sg.name,
+										event_type: sg.event_type,
+										event_custom_name: sg.event_custom_name || '',
+										trigger_type: sg.trigger,
+										display_on: 'all',
+										content_name: sg.name,
+										pixel_ids: trackerId,
+										css_selector: sg.css_selector || '',
+										gads_conversion_label: label,
+										gads_labels_map: JSON.stringify( labelsMap ),
+										gads_conversion_value: sg.default_value || '',
+									},
+								}).done( function (r) {
+									if (r && r.success) { summary.created++; } else { summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save local)' ); }
+								}).fail( function () {
+									summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (save local rede)' );
+								}).always( function () {
+									createPhase( idx + 1 );
+								});
+							}).fail( function (xhr, status) {
+								summary.errors.push( (tracker.label || trackerId) + ' / ' + sg.name + ' (' + (status === 'timeout' ? 'timeout' : 'rede') + ')' );
+								createPhase( idx + 1 );
+							});
+						}
+
+						mergeRulesPhase();
+					}).fail( function () {
+						summary.errors.push( (tracker.label || trackerId) + ': falha ao listar conversoes existentes' );
+						resolve( summary );
+					});
+				});
+			}
+
+			// Bulk button handler — sequential to respect Google Ads API rate limits.
+			var bulkAllInFlight = false;
+			$( document ).on( 'click', '#alvobot-create-conversions-all-trackers', function () {
+				if (bulkAllInFlight) {
+					debugLog( 'bulk-all: ignored re-click while in-flight' );
+					return;
+				}
+				var $btn = $( this );
+				var trackers = googleTrackersData.filter( function (t) {
+					return t.type === 'google_ads' && t.connection_id;
+				});
+				if ( ! trackers.length) {
+					alert( 'Nenhuma conta Google Ads conectada via AlvoBot foi encontrada.' );
+					return;
+				}
+				if ( ! confirm( 'Vamos verificar e criar as conversoes padrao em ' + trackers.length + ' conta(s) Google Ads. Isso pode levar alguns minutos. Deseja continuar?' )) {
+					return;
+				}
+
+				// Lock the form-save submit while the chain runs (a mid-chain page reload
+				// would abort pending requests and silently drop conversions).
+				var $formSaveBtn = $( '.alvobot-module-form button[type="submit"]' );
+				var origTitle    = $formSaveBtn.attr( 'title' ) || '';
+				$formSaveBtn.prop( 'disabled', true ).attr( 'title', 'Aguarde: criando conversoes em massa...' );
+
+				var originalBtnHtml = $btn.data( 'original-html' );
+				if ( ! originalBtnHtml) {
+					originalBtnHtml = $btn.html();
+					$btn.data( 'original-html', originalBtnHtml );
+				}
+				$btn.attr( 'aria-busy', 'true' ).css( 'opacity', '0.7' )
+					.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Iniciando...' );
+
+				bulkAllInFlight = true;
+				var totalCreated = 0;
+				var totalSkipped = 0;
+				var allErrors    = [];
+				var idx = 0;
+
+				function release() {
+					bulkAllInFlight = false;
+					$formSaveBtn.prop( 'disabled', false ).attr( 'title', origTitle );
+					$btn.removeAttr( 'aria-busy' ).css( 'opacity', '' ).html( originalBtnHtml );
+					if (window.lucide) { window.lucide.createIcons(); }
+				}
+
+				function step() {
+					if (idx >= trackers.length) {
+						release();
+						var msg = 'Concluido. ' + totalCreated + ' conversao(oes) configurada(s) em ' + trackers.length + ' conta(s).';
+						if (totalSkipped) {
+							msg += ' ' + totalSkipped + ' conta(s) ja estavam totalmente configurada(s).';
+						}
+						if (allErrors.length) {
+							var preview = allErrors.slice( 0, 6 ).join( '\n - ' );
+							msg += '\n\n' + allErrors.length + ' erro(s):\n - ' + preview;
+							if (allErrors.length > 6) { msg += '\n... e mais ' + (allErrors.length - 6) + '.'; }
+						}
+						alert( msg );
+						// Reload the conversions list if the user already opened the tab.
+						if (typeof window.alvobotPixelReloadConversions === 'function') {
+							try { window.alvobotPixelReloadConversions(); } catch (e) { /* ignore */ }
+						}
+						return;
+					}
+					var t = trackers[idx];
+					var label = t.label || t.tracker_id;
+					$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Conta ' + (idx + 1) + '/' + trackers.length + ' (' + escHtml( label ) + ')...' );
+
+					runCreateConversionsForTracker( t, {
+						onProgress: function (text) {
+							$btn.html( '<span class="spinner is-active" style="float:none;margin:0 6px 0 0;"></span> Conta ' + (idx + 1) + '/' + trackers.length + ': ' + escHtml( text ) );
+						},
+					}).then( function (result) {
+						totalCreated += result.created || 0;
+						if (result.skipped && ! (result.errors && result.errors.length)) {
+							totalSkipped++;
+						}
+						if (result.errors && result.errors.length) {
+							allErrors = allErrors.concat( result.errors );
+						}
+						idx++;
+						step();
+					}, function () {
+						// Should not happen — runCreateConversionsForTracker never rejects.
+						idx++;
+						step();
+					});
+				}
+
+				step();
 			});
 
 			// Initial render of unified table

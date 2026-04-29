@@ -8,6 +8,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.11] - 2026-04-28
+
+### ✨ Adicionado
+- **Pixel Tracking / Wizard "Criar conversoes em todas as contas Google Ads"**: novo botao na aba Pixels (abaixo da tabela de Pixels & Trackers Configurados) que percorre cada conta Google Ads conectada e cria as 5 conversoes padrao (Page View, Ad Impression, Ad Click, Vignette View, Vignette Click) em uma unica acao. Roda em serie (respeitando rate limit do Google Ads API), com progresso por conta e resumo final com erros agregados. So aparece quando ha pelo menos 1 tracker `google_ads` com `connection_id`
+- **Pixel Tracking / Merge automatico de regras existentes**: quando uma regra de conversao (ex: "Page View") ja existe mas nao inclui o tracker que esta sendo processado, o assistente agora MERGE — adiciona o `tracker_id` ao `pixel_ids` (CSV) da regra e ao `gads_labels_map` (JSON), em vez de pular silenciosamente. Resolvendo o cenario "adicionei conta nova e quero que as conversoes existentes disparem nela tambem"
+
+### 🔧 Melhorado
+- **Pixel Tracking / runCreateConversionsForTracker**: nova funcao Promise-based reutilizavel que encapsula o flow de criacao por tracker (fetch existentes → merge → save → create+save). Timeouts explicitos em todas as etapas (15s/30s) para que uma chamada lenta ao Google Ads API nao trave a chain inteira
+
+---
+
 ## [2.17.10] - 2026-04-28
 
 ### 🐛 Corrigido
