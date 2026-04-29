@@ -1055,31 +1055,10 @@
 	color: #b91c1c;
 }
 
-.alvobot-events-action-btn::after {
-	content: attr(data-tooltip);
-	position: absolute;
-	right: calc(100% + 8px);
-	top: 50%;
-	transform: translateY(-50%);
-	padding: 4px 6px;
-	border-radius: 4px;
-	background: #111827;
-	color: #fff;
-	font-size: 11px;
-	line-height: 1;
-	white-space: nowrap;
-	pointer-events: none;
-	opacity: 0;
-	visibility: hidden;
-	transition: opacity 0.12s ease;
-	z-index: 100050;
-}
-
-.alvobot-events-action-btn:hover::after,
-.alvobot-events-action-btn:focus-visible::after {
-	opacity: 1;
-	visibility: visible;
-}
+/* Custom CSS tooltip removed: pseudo-element with `position: absolute` was
+   clipped by the events table's `overflow-x: auto` wrapper (same root cause as
+   the kebab clipping bug fixed in v2.17.15). The buttons already carry a
+   native `title=` attribute, which the browser renders without clipping. */
 
 /* Pagination */
 .alvobot-events-pagination {

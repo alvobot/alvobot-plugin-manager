@@ -1573,10 +1573,12 @@
 						var rulesData   = rulesResp[0] || {};
 						var existingActions = (gadsData.success && gadsData.data && gadsData.data.conversion_actions) ? gadsData.data.conversion_actions : [];
 
-						// Index Google Ads conversions by name → { action, status }. We track REMOVED
-						// (archived) ones separately so we can offer to reactivate them instead of
-						// failing on "duplicate name" when re-creating (Google Ads keeps the name
-						// reserved even after archive).
+						// Index Google Ads conversions by name → { action, status }. We track
+						// REMOVED/HIDDEN (archived) ones separately so the renameArchivedPhase
+						// can rename them out of the way ("[arquivada YYYY-MM-DD #id]"),
+						// freeing the original name for a fresh ENABLED one — the only path
+						// that works because Google Ads' API rejects setting status back to
+						// ENABLED on archived resources.
 						var actionByName = {};
 						for (var e = 0; e < existingActions.length; e++) {
 							var nname = normalizeConversionName( existingActions[e].name );
@@ -2801,7 +2803,7 @@
 								html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;background:#fff;">';
 								html += '<span style="font-size:13px;font-weight:500;">' + escHtml( sg.name ) + '</span>';
 								html += '<span style="font-size:11px;color:#666;">' + escHtml( sg.desc ) + '</span>';
-									html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary alvobot-ca-create-btn" style="margin-left:auto;" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-tracker-id="' + escAttr( trackerId ) + '" data-prefill-name="' + escAttr( sg.name ) + '" data-prefill-category="' + escAttr( sg.category ) + '" data-prefill-trigger="' + escAttr( sg.trigger ) + '" data-prefill-event-type="' + escAttr( sg.event_type ) + '" data-prefill-event-custom-name="' + escAttr( sg.event_custom_name || '' ) + '" data-prefill-value="' + escAttr( sg.default_value || '' ) + '">';
+									html += '<button type="button" class="alvobot-btn alvobot-btn-sm alvobot-btn-primary alvobot-ca-create-btn" style="margin-left:auto;" data-tracker=\'' + escAttr( JSON.stringify( adsTracker ) ) + '\' data-tracker-id="' + escAttr( trackerId ) + '" data-prefill-name="' + escAttr( sg.name ) + '" data-prefill-category="' + escAttr( sg.category ) + '" data-prefill-primary-for-goal="' + escAttr( sg.primary_for_goal === false ? '0' : '1' ) + '" data-prefill-trigger="' + escAttr( sg.trigger ) + '" data-prefill-event-type="' + escAttr( sg.event_type ) + '" data-prefill-event-custom-name="' + escAttr( sg.event_custom_name || '' ) + '" data-prefill-value="' + escAttr( sg.default_value || '' ) + '">';
 									html += '<i data-lucide="plus" class="alvobot-icon"></i> Criar</button>';
 								html += '</div>';
 							}
@@ -2936,6 +2938,7 @@
 					event_type: $btn.attr( 'data-prefill-event-type' ) || '',
 					event_custom_name: $btn.attr( 'data-prefill-event-custom-name' ) || '',
 					value: $btn.attr( 'data-prefill-value' ) || '',
+					primary_for_goal: $btn.attr( 'data-prefill-primary-for-goal' ),
 				};
 
 			$btn.prop( 'disabled', true ).text( 'Criando...' );
@@ -2950,6 +2953,9 @@
 						customer_id: customerId,
 						name: name,
 						category: category,
+						// Default '1' (primary) when prefill data is missing — preserves prior behaviour
+						// for the manual-form path while letting suggestion buttons opt-in to '0'.
+						primary_for_goal: prefillData.primary_for_goal === undefined ? '1' : prefillData.primary_for_goal,
 						default_value: prefillData.value || 0,
 						currency: 'BRL',
 					},

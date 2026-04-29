@@ -8,6 +8,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.16] - 2026-04-29
+
+### 🐛 Corrigido — auditoria pos-v2.17.15
+- **`alvobot-ca-create-btn` (botao "Criar" do picker manual de ConversionAction) nao propagava `primary_for_goal`**: quando o usuario clica em "Criar" numa sugestao individual (fora do bulk-all), a conversao era criada no Google Ads com `primary_for_goal` defaultando para `true` (legacy). Agora o botao serializa o valor do preset via `data-prefill-primary-for-goal` e o handler envia ao backend, garantindo que Vignette View / Ad Impression / Page View sejam de fato secundarias mesmo quando criadas por esse caminho
+- **`ajax_update_google_conversion_action` (PHP wrapper) ignorava `category` e `primary_for_goal`**: a Edge Function ja aceitava esses campos desde v2.17.14 mas o wrapper PHP filtrava-os, anulando qualquer tentativa do JS de atualizar a categoria/biddability de uma ConversionAction existente. Adicionados como parametros sanitizados
+- **Tooltip dos botoes de evento (`.alvobot-events-action-btn::after`) sofria do mesmo bug de clipping do kebab v2.17.15**: o pseudo-element `position: absolute` ficava recortado pela tabela com `overflow-x: auto`. Removido em favor do atributo `title=` HTML nativo que ja estava presente em todos os botoes (sem clipping, suporte a leitor de tela)
+
+### 📝 Higienizado
+- Comentario obsoleto em `runCreateConversionsForTracker` que falava em "reativacao" — atualizado para descrever a estrategia real (rename-then-create) implementada em v2.17.13
+
+---
+
 ## [2.17.15] - 2026-04-29
 
 ### 🐛 Corrigido

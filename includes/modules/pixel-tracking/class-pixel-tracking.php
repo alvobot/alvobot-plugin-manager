@@ -546,6 +546,13 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		if ( isset( $_POST['status'] ) ) {
 			$params['status'] = sanitize_text_field( wp_unslash( $_POST['status'] ) );
 		}
+		if ( isset( $_POST['category'] ) ) {
+			$params['category'] = sanitize_text_field( wp_unslash( $_POST['category'] ) );
+		}
+		if ( isset( $_POST['primary_for_goal'] ) ) {
+			$raw_pfg = wp_unslash( $_POST['primary_for_goal'] );
+			$params['primary_for_goal'] = in_array( $raw_pfg, array( '1', 1, true, 'true', 'TRUE' ), true );
+		}
 		if ( isset( $_POST['default_value'] ) ) {
 			$params['default_value'] = floatval( $_POST['default_value'] );
 			$params['currency']      = isset( $_POST['currency'] ) ? sanitize_text_field( wp_unslash( $_POST['currency'] ) ) : 'BRL';
