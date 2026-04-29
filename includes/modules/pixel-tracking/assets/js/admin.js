@@ -2459,14 +2459,50 @@
 		}
 
 		// ── Kebab menu (mobile row actions) ──────────────────────────────────
-		// Toggles visibility of the dropdown attached to each row's kebab. We
-		// delegate from `document` because rows are re-rendered on each
-		// loadConversions() call. Closes on outside click and Esc, and ensures
-		// only one menu can be open at a time.
-		function closeAllKebabs() {
-			$( '.alvobot-kebab-menu' ).attr( 'hidden', true );
-			$( '.alvobot-kebab-trigger' ).attr( 'aria-expanded', 'false' );
+		// We position the dropdown with `position: fixed` calculated from the
+		// trigger's bounding rect, instead of `position: absolute` relative to
+		// the row. This dodges clipping by ANY ancestor that uses overflow:hidden
+		// or overflow-x:auto (the conversions table does, for horizontal scroll
+		// on small screens). Re-calculates on scroll and resize while open.
+		var openKebabRefs = null; // { $trigger, $menu } when a menu is open
+
+		function positionKebabMenu( $trigger, $menu ) {
+			var rect       = $trigger[0].getBoundingClientRect();
+			var menuWidth  = Math.max( 200, $menu.outerWidth() || 200 );
+			var menuHeight = $menu.outerHeight() || 0;
+			var vw         = window.innerWidth;
+			var vh         = window.innerHeight;
+			// Default: anchor the menu's right edge to the trigger's right edge,
+			// and place it just below the trigger.
+			var top  = rect.bottom + 4;
+			var left = Math.max( 8, rect.right - menuWidth );
+			// Flip to above the trigger if it would otherwise overflow viewport.
+			if (menuHeight && top + menuHeight > vh - 8) {
+				top = Math.max( 8, rect.top - menuHeight - 4 );
+			}
+			// Clamp horizontally inside the viewport.
+			if (left + menuWidth > vw - 8) { left = vw - menuWidth - 8; }
+			$menu.css({ position: 'fixed', top: top + 'px', left: left + 'px', right: 'auto' });
 		}
+
+		function closeAllKebabs() {
+			$( '.alvobot-kebab-menu' ).attr( 'hidden', true ).css({ position: '', top: '', left: '', right: '' });
+			$( '.alvobot-kebab-trigger' ).attr( 'aria-expanded', 'false' );
+			openKebabRefs = null;
+		}
+
+		function repositionOpenKebab() {
+			if (openKebabRefs && openKebabRefs.$trigger.length && openKebabRefs.$menu.length) {
+				// If trigger scrolled out of viewport, just close.
+				var rect = openKebabRefs.$trigger[0].getBoundingClientRect();
+				if (rect.bottom < 0 || rect.top > window.innerHeight) {
+					closeAllKebabs();
+					return;
+				}
+				positionKebabMenu( openKebabRefs.$trigger, openKebabRefs.$menu );
+			}
+		}
+
 		$( document ).on( 'click', '.alvobot-kebab-trigger', function (e) {
 			e.stopPropagation();
 			var $trigger = $( this );
@@ -2475,23 +2511,35 @@
 			closeAllKebabs();
 			if ( ! isOpen) {
 				$menu.removeAttr( 'hidden' );
+				positionKebabMenu( $trigger, $menu );
 				$trigger.attr( 'aria-expanded', 'true' );
+				openKebabRefs = { $trigger: $trigger, $menu: $menu };
 			}
 		});
-		// Clicking an item inside the menu triggers the action handler (delegated)
-		// and then closes the menu. We use a tiny timeout so the underlying
-		// handler runs before the menu disappears.
+		// Clicking an item inside the menu triggers the delegated action handler
+		// then closes the menu. setTimeout ensures the underlying handler runs
+		// before we strip the inline positioning.
 		$( document ).on( 'click', '.alvobot-kebab-item', function () {
 			setTimeout( closeAllKebabs, 0 );
 		});
 		$( document ).on( 'click', function (e) {
-			if ( ! $( e.target ).closest( '.alvobot-row-actions-kebab' ).length) {
+			if ( ! $( e.target ).closest( '.alvobot-row-actions-kebab, .alvobot-kebab-menu' ).length) {
 				closeAllKebabs();
 			}
 		});
 		$( document ).on( 'keydown', function (e) {
 			if (e.key === 'Escape') { closeAllKebabs(); }
 		});
+		// Reposition / dismiss on scroll + resize while open.
+		$( window ).on( 'scroll resize', function () {
+			if (openKebabRefs) { repositionOpenKebab(); }
+		});
+		// Capture-phase scroll for any nested scrollable ancestor (e.g. the
+		// conversions table wrapper). jQuery doesn't support `capture: true`
+		// directly, so use native addEventListener.
+		document.addEventListener( 'scroll', function () {
+			if (openKebabRefs) { repositionOpenKebab(); }
+		}, true );
 
 		// Conditional field visibility for conversion form
 		$( document ).on(

@@ -1389,15 +1389,16 @@
 	background: #f1f5f9;
 	border-color: #94a3b8;
 }
+/* Position is set inline by JS (position: fixed + computed top/left) so the
+   menu can escape any scrollable / overflow:hidden ancestor (the conversions
+   table itself uses overflow-x:auto on small screens). The CSS below only
+   handles appearance + the highest-of-all stacking context. */
 .alvobot-kebab-menu {
-	position: absolute;
-	right: 0;
-	top: calc(100% + 4px);
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-	z-index: 100;
+	z-index: 99999;
 	min-width: 200px;
 	padding: 4px;
 	display: flex;

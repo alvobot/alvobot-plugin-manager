@@ -8,6 +8,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.15] - 2026-04-29
+
+### 🐛 Corrigido
+- **Pixel Tracking / Conversoes — kebab menu cortado pela borda do card**: o dropdown do kebab estava sendo clipado pelo `overflow-x: auto` da tabela em mobile (e potencialmente pelo card em qualquer viewport com ancestor `overflow:hidden`). O sintoma: clica no `⋮` e so aparece "Editar"; "Desvincular" e "Excluir" ficavam escondidos atras da borda do card. Fix: o menu agora usa `position: fixed` com coordenadas calculadas via JS (`getBoundingClientRect` do trigger), escapando qualquer ancestral scrollable. Inclui:
+  - **Auto-flip vertical**: se nao couber abaixo do trigger (perto da borda inferior do viewport), o menu pula para acima
+  - **Clamp horizontal**: nunca sai dos 8px da borda esquerda/direita do viewport
+  - **Reposiciona em scroll/resize** (capture-phase, pega scroll de qualquer container)
+  - **Auto-fecha** se o trigger sair do viewport durante scroll
+  - z-index 99999 para garantir que aparece acima de qualquer overlay
+
+### 🔧 Auditado
+- Tooltips dos botoes de evento (`alvobot-events-action-btn::after`) tambem usam `position: absolute` dentro do wrap com `overflow-x:auto`. Comportamento similar ao bug do kebab, mas e tooltip (informacional, nao acao critica) — registrado para fix futuro se necessario
+
+---
+
 ## [2.17.14] - 2026-04-29
 
 ### ✨ Adicionado
