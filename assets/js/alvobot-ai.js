@@ -2,207 +2,241 @@
  * AlvoBot AI - JavaScript compartilhado para funcionalidades de AI
  * Gerencia creditos, custos e geracoes AI para todos os modulos.
  */
-(function($) {
-    'use strict';
+(function ($) {
+	window.AlvobotAI = {
+		/**
+		 * Atualiza creditos via AJAX e re-renderiza badges
+		 */
+		refreshCredits: function (callback) {
+			$.post(
+				alvobotAI.ajaxurl,
+				{
+					action: 'alvobot_ai_get_credits',
+					nonce: alvobotAI.nonce,
+				},
+				function (response) {
+					if (response.success) {
+						alvobotAI.credits = response.data;
+						AlvobotAI._updateAllBadges();
+					}
+					if (typeof callback === 'function') {
+						callback(response.success ? response.data : null);
+					}
+				},
+			).fail(function () {
+				if (window.console && window.console.error) {
+					window.console.error('Erro de conexão ao atualizar créditos.');
+				}
+				if (typeof callback === 'function') {
+					callback(null);
+				}
+			});
+		},
 
-    window.AlvobotAI = {
+		/**
+		 * Renderiza badge de creditos num container
+		 */
+		renderCreditsBadge: function ($container) {
+			var credits = alvobotAI.credits || {};
+			var total = parseInt(credits.total_available, 10) || 0;
+			var limit = parseInt(credits.monthly_limit, 10) || 0;
+			var hasPlan = !!credits.has_active_plan;
+			var hasError = !!credits.error;
 
-        /**
-         * Atualiza creditos via AJAX e re-renderiza badges
-         */
-        refreshCredits: function(callback) {
-            $.post(alvobotAI.ajaxurl, {
-                action: 'alvobot_ai_get_credits',
-                nonce: alvobotAI.nonce
-            }, function(response) {
-                if (response.success) {
-                    alvobotAI.credits = response.data;
-                    AlvobotAI._updateAllBadges();
-                }
-                if (typeof callback === 'function') {
-                    callback(response.success ? response.data : null);
-                }
-            });
-        },
+			var colorClass = 'alvobot-credits-ok';
+			var text = '';
 
-        /**
-         * Renderiza badge de creditos num container
-         */
-        renderCreditsBadge: function($container) {
-            var credits = alvobotAI.credits || {};
-            var total = parseInt(credits.total_available) || 0;
-            var limit = parseInt(credits.monthly_limit) || 0;
-            var hasPlan = !!credits.has_active_plan;
-            var hasError = !!credits.error;
+			if (hasError) {
+				colorClass = 'alvobot-credits-error';
+				text = 'Erro ao carregar créditos';
+			} else if (!hasPlan) {
+				colorClass = 'alvobot-credits-noplan';
+				text = 'Sem plano ativo';
+			} else {
+				if (limit > 0 && total <= limit * 0.1) {
+					colorClass = 'alvobot-credits-critical';
+				} else if (limit > 0 && total <= limit * 0.25) {
+					colorClass = 'alvobot-credits-low';
+				}
+				text = '<strong>' + total + '</strong> créditos disponíveis';
+			}
 
-            var colorClass = 'alvobot-credits-ok';
-            var text = '';
+			var html =
+				'<div class="alvobot-credits-badge ' +
+				colorClass +
+				'">' +
+				'<i data-lucide="ticket" class="alvobot-icon"></i> ' +
+				text +
+				' <button type="button" class="alvobot-credits-refresh" title="Atualizar créditos">' +
+				'<i data-lucide="refresh-cw" class="alvobot-icon"></i>' +
+				'</button></div>';
 
-            if (hasError) {
-                colorClass = 'alvobot-credits-error';
-                text = 'Erro ao carregar créditos';
-            } else if (!hasPlan) {
-                colorClass = 'alvobot-credits-noplan';
-                text = 'Sem plano ativo';
-            } else {
-                if (limit > 0 && total <= limit * 0.1) {
-                    colorClass = 'alvobot-credits-critical';
-                } else if (limit > 0 && total <= limit * 0.25) {
-                    colorClass = 'alvobot-credits-low';
-                }
-                text = '<strong>' + total + '</strong> créditos disponíveis';
-            }
+			$container.html(html);
+			if (window.lucide && typeof window.lucide.createIcons === 'function') {
+				window.lucide.createIcons();
+			}
+		},
 
-            var html = '<div class="alvobot-credits-badge ' + colorClass + '">' +
-                '<i data-lucide="ticket" class="alvobot-icon"></i> ' +
-                text +
-                ' <button type="button" class="alvobot-credits-refresh" title="Atualizar créditos">' +
-                '<i data-lucide="refresh-cw" class="alvobot-icon"></i>' +
-                '</button></div>';
+		/**
+		 * Mostra modal de confirmacao de custo
+		 */
+		showCostConfirmation: function (actionName, cost, onConfirm) {
+			var credits = alvobotAI.credits || {};
+			var total = parseInt(credits.total_available, 10) || 0;
 
-            $container.html(html);
-        },
+			if (total < cost) {
+				alert('Créditos insuficientes. Você tem ' + total + ' créditos, mas precisa de ' + cost + '.');
+				return;
+			}
 
-        /**
-         * Mostra modal de confirmacao de custo
-         */
-        showCostConfirmation: function(actionName, cost, onConfirm) {
-            var credits = alvobotAI.credits || {};
-            var total = parseInt(credits.total_available) || 0;
+			var msg =
+				'Esta ação consome ' +
+				cost +
+				' crédito' +
+				(cost > 1 ? 's' : '') +
+				'.\n' +
+				'Você tem ' +
+				total +
+				' créditos disponíveis.\n\n' +
+				'Deseja continuar?';
 
-            if (total < cost) {
-                alert('Créditos insuficientes. Você tem ' + total + ' créditos, mas precisa de ' + cost + '.');
-                return;
-            }
+			if (confirm(msg)) {
+				onConfirm();
+			}
+		},
 
-            var msg = 'Esta ação consome ' + cost + ' crédito' + (cost > 1 ? 's' : '') + '.\n' +
-                'Você tem ' + total + ' créditos disponíveis.\n\n' +
-                'Deseja continuar?';
+		/**
+		 * Chama geracao AI generica
+		 */
+		generate: function (generationType, params, callbacks) {
+			callbacks = callbacks || {};
 
-            if (confirm(msg)) {
-                onConfirm();
-            }
-        },
+			if (typeof callbacks.onStart === 'function') {
+				callbacks.onStart();
+			}
 
-        /**
-         * Chama geracao AI generica
-         */
-        generate: function(generationType, params, callbacks) {
-            callbacks = callbacks || {};
+			$.post(
+				alvobotAI.ajaxurl,
+				{
+					action: 'alvobot_ai_generate',
+					nonce: alvobotAI.nonce,
+					generation_type: generationType,
+					params: params,
+				},
+				function (response) {
+					if (response.success) {
+						// Update local credits
+						if (response.data?.credits) {
+							alvobotAI.credits = alvobotAI.credits || {};
+							if (typeof response.data.credits.remaining !== 'undefined') {
+								alvobotAI.credits.total_available = response.data.credits.remaining;
+							}
+							AlvobotAI._updateAllBadges();
+						}
+						if (typeof callbacks.onSuccess === 'function') {
+							callbacks.onSuccess(response.data);
+						}
+					} else {
+						if (typeof callbacks.onError === 'function') {
+							callbacks.onError(response.data);
+						}
+					}
+				},
+			)
+				.fail(function () {
+					if (typeof callbacks.onError === 'function') {
+						callbacks.onError({ message: 'Erro de conexão com o servidor.' });
+					}
+				})
+				.always(function () {
+					if (typeof callbacks.onComplete === 'function') {
+						callbacks.onComplete();
+					}
+				});
+		},
 
-            if (typeof callbacks.onStart === 'function') {
-                callbacks.onStart();
-            }
+		/**
+		 * Aplica autor gerado ao WordPress
+		 */
+		applyAuthor: function (data, callbacks) {
+			callbacks = callbacks || {};
 
-            $.post(alvobotAI.ajaxurl, {
-                action: 'alvobot_ai_generate',
-                nonce: alvobotAI.nonce,
-                generation_type: generationType,
-                params: params
-            }, function(response) {
-                if (response.success) {
-                    // Update local credits
-                    if (response.data && response.data.credits) {
-                        alvobotAI.credits.total_available = response.data.credits.remaining;
-                        AlvobotAI._updateAllBadges();
-                    }
-                    if (typeof callbacks.onSuccess === 'function') {
-                        callbacks.onSuccess(response.data);
-                    }
-                } else {
-                    if (typeof callbacks.onError === 'function') {
-                        callbacks.onError(response.data);
-                    }
-                }
-            }).fail(function() {
-                if (typeof callbacks.onError === 'function') {
-                    callbacks.onError({ message: 'Erro de conexão com o servidor.' });
-                }
-            }).always(function() {
-                if (typeof callbacks.onComplete === 'function') {
-                    callbacks.onComplete();
-                }
-            });
-        },
+			$.post(
+				alvobotAI.ajaxurl,
+				{
+					action: 'alvobot_ai_apply_author',
+					nonce: alvobotAI.nonce,
+					user_id: data.user_id,
+					display_name: data.display_name,
+					description: data.description,
+					avatar_url: data.avatar_url || '',
+					lang_code: data.lang_code || '',
+				},
+				function (response) {
+					if (response.success) {
+						if (typeof callbacks.onSuccess === 'function') {
+							callbacks.onSuccess(response.data);
+						}
+					} else {
+						if (typeof callbacks.onError === 'function') {
+							callbacks.onError(response.data);
+						}
+					}
+				},
+			).fail(function () {
+				if (typeof callbacks.onError === 'function') {
+					callbacks.onError({ message: 'Erro de conexão com o servidor.' });
+				}
+			});
+		},
 
-        /**
-         * Aplica autor gerado ao WordPress
-         */
-        applyAuthor: function(data, callbacks) {
-            callbacks = callbacks || {};
+		/**
+		 * Atualiza todos os badges e cards de creditos na pagina
+		 */
+		_updateAllBadges: function () {
+			var credits = alvobotAI.credits || {};
 
-            $.post(alvobotAI.ajaxurl, {
-                action: 'alvobot_ai_apply_author',
-                nonce: alvobotAI.nonce,
-                user_id: data.user_id,
-                display_name: data.display_name,
-                description: data.description,
-                avatar_url: data.avatar_url || '',
-                lang_code: data.lang_code || ''
-            }, function(response) {
-                if (response.success) {
-                    if (typeof callbacks.onSuccess === 'function') {
-                        callbacks.onSuccess(response.data);
-                    }
-                } else {
-                    if (typeof callbacks.onError === 'function') {
-                        callbacks.onError(response.data);
-                    }
-                }
-            }).fail(function() {
-                if (typeof callbacks.onError === 'function') {
-                    callbacks.onError('Erro de conexão com o servidor.');
-                }
-            });
-        },
+			$('.alvobot-credits-badge-container').each(function () {
+				AlvobotAI.renderCreditsBadge($(this));
+			});
 
-        /**
-         * Atualiza todos os badges e cards de creditos na pagina
-         */
-        _updateAllBadges: function() {
-            var credits = alvobotAI.credits || {};
+			// Atualiza o card principal da dashboard (se existir)
+			var $card = $('.alvobot-credits-card');
+			if ($card.length && credits.has_active_plan) {
+				var total = parseInt(credits.total_available, 10) || 0;
+				var limit = parseInt(credits.monthly_limit, 10) || 0;
+				var used = parseInt(credits.monthly_used, 10) || 0;
+				var extra = parseInt(credits.extra_available, 10) || 0;
+				var pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+				var barColor = pct >= 90 ? 'red' : pct >= 75 ? 'yellow' : 'green';
 
-            $('.alvobot-credits-badge-container').each(function() {
-                AlvobotAI.renderCreditsBadge($(this));
-            });
+				// Atualiza texto de uso
+				var detailText = used + ' de ' + limit + ' créditos mensais usados';
+				if (extra > 0) {
+					detailText += ' <span class="alvobot-credits-card-extra">+' + extra + ' extras</span>';
+				}
+				$card.find('.alvobot-credits-card-detail').html(detailText);
 
-            // Atualiza o card principal da dashboard (se existir)
-            var $card = $('.alvobot-credits-card');
-            if ($card.length && credits.has_active_plan) {
-                var total = parseInt(credits.total_available) || 0;
-                var limit = parseInt(credits.monthly_limit) || 0;
-                var used = parseInt(credits.monthly_used) || 0;
-                var extra = parseInt(credits.extra_available) || 0;
-                var pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-                var barColor = pct >= 90 ? 'red' : (pct >= 75 ? 'yellow' : 'green');
+				// Atualiza número grande
+				$card.find('.alvobot-credits-value').text(total);
 
-                // Atualiza texto de uso
-                var detailText = used + ' de ' + limit + ' créditos mensais usados';
-                if (extra > 0) {
-                    detailText += ' <span class="alvobot-credits-card-extra">+' + extra + ' extras</span>';
-                }
-                $card.find('.alvobot-credits-card-detail').html(detailText);
+				// Atualiza barra de progresso
+				var $fill = $card.find('.alvobot-credits-bar-fill');
+				$fill
+					.css('width', pct + '%')
+					.removeClass('red yellow green')
+					.addClass(barColor);
+			}
+		},
+	};
 
-                // Atualiza número grande
-                $card.find('.alvobot-credits-value').text(total);
-
-                // Atualiza barra de progresso
-                var $fill = $card.find('.alvobot-credits-bar-fill');
-                $fill.css('width', pct + '%')
-                    .removeClass('red yellow green')
-                    .addClass(barColor);
-            }
-        }
-    };
-
-    // Event delegation: refresh button
-    $(document).on('click', '.alvobot-credits-refresh', function(e) {
-        e.preventDefault();
-        var $btn = $(this);
-        $btn.find('.alvobot-icon, svg').addClass('spin');
-        AlvobotAI.refreshCredits(function() {
-            $btn.find('.alvobot-icon, svg').removeClass('spin');
-        });
-    });
-
+	// Event delegation: refresh button
+	$(document).on('click', '.alvobot-credits-refresh', function (e) {
+		e.preventDefault();
+		var $btn = $(this);
+		$btn.find('.alvobot-icon, svg').addClass('spin');
+		AlvobotAI.refreshCredits(function () {
+			$btn.find('.alvobot-icon, svg').removeClass('spin');
+		});
+	});
 })(jQuery);

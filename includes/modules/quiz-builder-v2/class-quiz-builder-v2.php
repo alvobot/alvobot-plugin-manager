@@ -46,7 +46,8 @@ class AlvoBotPro_QuizBuilderV2 {
 		add_action( 'wp_ajax_nopriv_alvobot_qbv2_lead', array( $this, 'ajax_save_lead' ) );
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * DATA HELPERS
 	 * ====================================================================== */
 
@@ -63,7 +64,8 @@ class AlvoBotPro_QuizBuilderV2 {
 		return isset( $quizzes[ $id ] ) ? $quizzes[ $id ] : null;
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * ADMIN
 	 * ====================================================================== */
 
@@ -73,9 +75,9 @@ class AlvoBotPro_QuizBuilderV2 {
 		<div class="alvobot-admin-wrap">
 			<div class="alvobot-admin-container">
 				<div id="alvobot-qbv2-root"
-					 data-quizzes="<?php echo esc_attr( wp_json_encode( array_values( $quizzes ) ) ); ?>"
-					 data-nonce="<?php echo esc_attr( wp_create_nonce( 'alvobot_qbv2_nonce' ) ); ?>"
-					 data-ajax="<?php echo esc_attr( admin_url( 'admin-ajax.php' ) ); ?>">
+					data-quizzes="<?php echo esc_attr( wp_json_encode( array_values( $quizzes ) ) ); ?>"
+					data-nonce="<?php echo esc_attr( wp_create_nonce( 'alvobot_qbv2_nonce' ) ); ?>"
+					data-ajax="<?php echo esc_attr( admin_url( 'admin-ajax.php' ) ); ?>">
 				</div>
 			</div>
 		</div>
@@ -98,7 +100,8 @@ class AlvoBotPro_QuizBuilderV2 {
 		wp_enqueue_script( 'alvobot-qbv2-admin', $base . 'js/admin.js', array( 'jquery', 'alvobot-ai' ), ALVOBOT_PRO_VERSION, true );
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * AJAX — QUIZ CRUD
 	 * ====================================================================== */
 
@@ -109,6 +112,7 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_send_json_error( 'Sem permissão.' );
 		}
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- JSON payload is decoded and sanitized field-by-field by sanitize_quiz().
 		$raw = json_decode( wp_unslash( $_POST['quiz'] ?? '' ), true );
 		if ( ! $raw || empty( $raw['title'] ) ) {
 			wp_send_json_error( 'Dados inválidos.' );
@@ -134,7 +138,7 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_send_json_error( 'Sem permissão.' );
 		}
 
-		$id      = sanitize_text_field( $_POST['id'] ?? '' );
+		$id      = sanitize_text_field( wp_unslash( $_POST['id'] ?? '' ) );
 		$quizzes = $this->get_all_quizzes();
 
 		if ( ! isset( $quizzes[ $id ] ) ) {
@@ -150,7 +154,8 @@ class AlvoBotPro_QuizBuilderV2 {
 		wp_send_json_success();
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * AJAX — LEADS
 	 * ====================================================================== */
 
@@ -158,9 +163,9 @@ class AlvoBotPro_QuizBuilderV2 {
 		// Public endpoint — uses its own nonce
 		check_ajax_referer( 'alvobot_qbv2_public', 'nonce' );
 
-		$quiz_id = sanitize_text_field( $_POST['quiz_id'] ?? '' );
-		$name    = sanitize_text_field( $_POST['lead_name'] ?? '' );
-		$email   = sanitize_email( $_POST['lead_email'] ?? '' );
+		$quiz_id = sanitize_text_field( wp_unslash( $_POST['quiz_id'] ?? '' ) );
+		$name    = sanitize_text_field( wp_unslash( $_POST['lead_name'] ?? '' ) );
+		$email   = sanitize_email( wp_unslash( $_POST['lead_email'] ?? '' ) );
 
 		if ( ! $quiz_id || ! $email ) {
 			wp_send_json_error( 'Dados incompletos.' );
@@ -171,12 +176,47 @@ class AlvoBotPro_QuizBuilderV2 {
 			'name'       => $name,
 			'email'      => $email,
 			'created_at' => current_time( 'mysql' ),
-			'ip'         => sanitize_text_field( $_SERVER['REMOTE_ADDR'] ?? '' ),
+			'ip'         => $this->get_anonymized_client_ip(),
 		);
 
 		update_option( 'alvobot_qbv2_leads_' . $quiz_id, $leads, false );
 
 		wp_send_json_success();
+	}
+
+	private function get_anonymized_client_ip() {
+		$candidates = array();
+
+		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+			$candidates[] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+		}
+
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$forwarded = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+			foreach ( $forwarded as $ip ) {
+				$candidates[] = trim( $ip );
+			}
+		}
+
+		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			$candidates[] = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		}
+
+		foreach ( $candidates as $ip ) {
+			$ip = trim( (string) $ip );
+			if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+				return preg_replace( '/\.\d+$/', '.0', $ip );
+			}
+			if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+				$packed = inet_pton( $ip );
+				if ( false === $packed ) {
+					continue;
+				}
+				return inet_ntop( substr( $packed, 0, 8 ) . str_repeat( "\0", 8 ) );
+			}
+		}
+
+		return '';
 	}
 
 	public function ajax_get_leads() {
@@ -186,7 +226,7 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_send_json_error( 'Sem permissão.' );
 		}
 
-		$quiz_id = sanitize_text_field( $_POST['quiz_id'] ?? '' );
+		$quiz_id = sanitize_text_field( wp_unslash( $_POST['quiz_id'] ?? '' ) );
 		$leads   = get_option( 'alvobot_qbv2_leads_' . $quiz_id, array() );
 
 		wp_send_json_success( $leads );
@@ -199,7 +239,7 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_die( 'Sem permissão.' );
 		}
 
-		$quiz_id = sanitize_text_field( $_GET['quiz_id'] ?? '' );
+		$quiz_id = sanitize_text_field( wp_unslash( $_GET['quiz_id'] ?? '' ) );
 		$leads   = get_option( 'alvobot_qbv2_leads_' . $quiz_id, array() );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
@@ -209,19 +249,23 @@ class AlvoBotPro_QuizBuilderV2 {
 		fputcsv( $out, array( 'Nome', 'Email', 'Data', 'IP' ) );
 
 		foreach ( $leads as $lead ) {
-			fputcsv( $out, array(
-				$lead['name'] ?? '',
-				$lead['email'] ?? '',
-				$lead['created_at'] ?? '',
-				$lead['ip'] ?? '',
-			) );
+			fputcsv(
+				$out,
+				array(
+					$lead['name'] ?? '',
+					$lead['email'] ?? '',
+					$lead['created_at'] ?? '',
+					$lead['ip'] ?? '',
+				)
+			);
 		}
 
-		fclose( $out );
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- CSV is streamed directly to php://output.
 		exit;
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * AJAX — FETCH ARTICLE CONTENT (for AI generation)
 	 * ====================================================================== */
 
@@ -232,7 +276,7 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_send_json_error( 'Sem permissão.' );
 		}
 
-		$url = esc_url_raw( $_POST['url'] ?? '' );
+		$url = esc_url_raw( wp_unslash( $_POST['url'] ?? '' ) );
 		if ( empty( $url ) ) {
 			wp_send_json_error( 'URL não informada.' );
 		}
@@ -242,21 +286,28 @@ class AlvoBotPro_QuizBuilderV2 {
 		if ( $post_id ) {
 			$post = get_post( $post_id );
 			if ( $post ) {
-				wp_send_json_success( array(
-					'title'   => $post->post_title,
-					'content' => wp_strip_all_tags( strip_shortcodes( $post->post_content ) ),
-					'source'  => 'local',
-				) );
+				wp_send_json_success(
+					array(
+						'title'   => $post->post_title,
+						'content' => wp_strip_all_tags( strip_shortcodes( $post->post_content ) ),
+						'source'  => 'local',
+					)
+				);
 			}
 		}
 
 		// Fallback: fetch external URL
-		$response = wp_remote_get( $url, array(
-			'timeout'   => 15,
-			'sslverify' => false,
-		) );
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 15,
+			)
+		);
 
 		if ( is_wp_error( $response ) ) {
+			if ( false !== stripos( $response->get_error_message(), 'ssl' ) || false !== stripos( $response->get_error_message(), 'certificate' ) ) {
+				wp_send_json_error( 'Erro de certificado SSL ao acessar a URL. Verifique o certificado do site de origem.' );
+			}
 			wp_send_json_error( 'Erro ao acessar a URL: ' . $response->get_error_message() );
 		}
 
@@ -291,35 +342,42 @@ class AlvoBotPro_QuizBuilderV2 {
 			wp_send_json_error( 'Não foi possível extrair conteúdo da página.' );
 		}
 
-		wp_send_json_success( array(
-			'title'   => $title,
-			'content' => $content,
-			'source'  => 'remote',
-		) );
+		wp_send_json_success(
+			array(
+				'title'   => $title,
+				'content' => $content,
+				'source'  => 'remote',
+			)
+		);
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * SANITIZATION
 	 * ====================================================================== */
 
 	private function sanitize_quiz( $raw ) {
+		$color_header  = sanitize_hex_color( $raw['color_header'] ?? '#1a3a2a' );
+		$color_primary = sanitize_hex_color( $raw['color_primary'] ?? '#22c55e' );
+		$color_accent  = sanitize_hex_color( $raw['color_accent'] ?? '#f97316' );
+
 		$quiz = array(
-			'id'              => sanitize_text_field( $raw['id'] ?? '' ),
-			'title'           => sanitize_text_field( $raw['title'] ?? '' ),
-			'headline'        => sanitize_text_field( $raw['headline'] ?? '' ),
-			'subheadline'     => sanitize_text_field( $raw['subheadline'] ?? '' ),
-			'logo_url'        => esc_url_raw( $raw['logo_url'] ?? '' ),
-			'color_header'    => sanitize_hex_color( $raw['color_header'] ?? '#1a3a2a' ) ?: '#1a3a2a',
-			'color_primary'   => sanitize_hex_color( $raw['color_primary'] ?? '#22c55e' ) ?: '#22c55e',
-			'color_accent'    => sanitize_hex_color( $raw['color_accent'] ?? '#f97316' ) ?: '#f97316',
-			'redirect_url'    => esc_url_raw( $raw['redirect_url'] ?? '' ),
-			'enable_lead'     => ! empty( $raw['enable_lead'] ),
-			'lead_title'      => sanitize_text_field( $raw['lead_title'] ?? '' ),
-			'lead_subtitle'   => sanitize_text_field( $raw['lead_subtitle'] ?? '' ),
-			'lead_btn_text'   => sanitize_text_field( $raw['lead_btn_text'] ?? 'ENVIAR RESPOSTAS' ),
-			'footer_text'     => sanitize_text_field( $raw['footer_text'] ?? '' ),
-			'footer_links'    => array(),
-			'questions'       => array(),
+			'id'            => sanitize_text_field( $raw['id'] ?? '' ),
+			'title'         => sanitize_text_field( $raw['title'] ?? '' ),
+			'headline'      => sanitize_text_field( $raw['headline'] ?? '' ),
+			'subheadline'   => sanitize_text_field( $raw['subheadline'] ?? '' ),
+			'logo_url'      => esc_url_raw( $raw['logo_url'] ?? '' ),
+			'color_header'  => $color_header ? $color_header : '#1a3a2a',
+			'color_primary' => $color_primary ? $color_primary : '#22c55e',
+			'color_accent'  => $color_accent ? $color_accent : '#f97316',
+			'redirect_url'  => esc_url_raw( $raw['redirect_url'] ?? '' ),
+			'enable_lead'   => ! empty( $raw['enable_lead'] ),
+			'lead_title'    => sanitize_text_field( $raw['lead_title'] ?? '' ),
+			'lead_subtitle' => sanitize_text_field( $raw['lead_subtitle'] ?? '' ),
+			'lead_btn_text' => sanitize_text_field( $raw['lead_btn_text'] ?? 'ENVIAR RESPOSTAS' ),
+			'footer_text'   => sanitize_text_field( $raw['footer_text'] ?? '' ),
+			'footer_links'  => array(),
+			'questions'     => array(),
 		);
 
 		// Footer links (e.g. Termos de uso, Política de privacidade)
@@ -365,17 +423,20 @@ class AlvoBotPro_QuizBuilderV2 {
 		return $quiz;
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * FRONTEND — FULL PAGE MODE
 	 * ====================================================================== */
 
 	public function maybe_full_page() {
 		// Trigger: ?alvobot_quiz=<id>
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public read-only standalone quiz route; the ID is sanitized before lookup.
 		if ( empty( $_GET['alvobot_quiz'] ) ) {
 			return;
 		}
 
-		$id   = sanitize_text_field( $_GET['alvobot_quiz'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public read-only standalone quiz route; the ID is sanitized before lookup.
+		$id   = sanitize_text_field( wp_unslash( $_GET['alvobot_quiz'] ) );
 		$quiz = $this->get_quiz( $id );
 
 		if ( ! $quiz ) {
@@ -387,32 +448,41 @@ class AlvoBotPro_QuizBuilderV2 {
 	}
 
 	private function render_full_page( $quiz ) {
-		$html = $this->build_html( $quiz, true );
-		$css  = file_get_contents( ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder-v2/css/frontend.css' );
-		$js   = file_get_contents( ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder-v2/js/frontend.js' );
+		$html     = $this->build_html( $quiz, true );
+		$css_path = ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder-v2/css/frontend.css';
+		$js_path  = ALVOBOT_PRO_PLUGIN_DIR . 'includes/modules/quiz-builder-v2/js/frontend.js';
+		$css      = is_readable( $css_path ) ? file_get_contents( $css_path ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local plugin asset is inlined for standalone quiz rendering.
+		$js       = is_readable( $js_path ) ? file_get_contents( $js_path ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local plugin asset is inlined for standalone quiz rendering.
 
-		?><!DOCTYPE html>
+		if ( '' === $css || '' === $js ) {
+			AlvoBotPro::debug_log( 'quiz-builder-v2', 'Standalone quiz assets missing or unreadable.' );
+		}
+
+		?>
+		<!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title><?php echo esc_html( $quiz['title'] ); ?></title>
-<style><?php echo $css; ?></style>
-<?php
-// Inject pixel tracking scripts (Meta Pixel, GA4, Google Ads, tracking.js)
-do_action( 'wp_head' );
-?>
+	<style><?php echo $css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static plugin CSS is intentionally inlined for standalone quiz rendering. ?></style>
+		<?php
+		// Inject pixel tracking scripts (Meta Pixel, GA4, Google Ads, tracking.js)
+		do_action( 'wp_head' );
+		?>
 </head>
 <body>
-<?php echo $html; ?>
-<script><?php echo $js; ?></script>
-<?php do_action( 'wp_footer' ); ?>
+			<?php echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- build_html() returns escaped quiz markup. ?>
+	<script><?php echo $js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static plugin JavaScript is intentionally inlined for standalone quiz rendering. ?></script>
+		<?php do_action( 'wp_footer' ); ?>
 </body>
-</html><?php
+</html>
+		<?php
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * FRONTEND — SHORTCODE MODE
 	 * ====================================================================== */
 
@@ -441,7 +511,8 @@ do_action( 'wp_head' );
 		}
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * HTML BUILDER
 	 * ====================================================================== */
 
@@ -458,14 +529,14 @@ do_action( 'wp_head' );
 
 		ob_start();
 		?>
-		<div class="<?php echo $wrapper_class; ?>"
-			 id="qbv2-<?php echo $id; ?>"
-			 data-quiz-id="<?php echo $id; ?>"
-			 data-redirect="<?php echo $redirect_url; ?>"
-			 data-enable-lead="<?php echo $enable_lead ? '1' : '0'; ?>"
-			 data-nonce="<?php echo esc_attr( $nonce ); ?>"
-			 data-ajax="<?php echo esc_url( $ajax_url ); ?>"
-			 style="--qbv2-header:<?php echo esc_attr( $quiz['color_header'] ?? '#1a3a2a' ); ?>;--qbv2-primary:<?php echo esc_attr( $quiz['color_primary'] ?? '#22c55e' ); ?>;--qbv2-accent:<?php echo esc_attr( $quiz['color_accent'] ?? '#f97316' ); ?>">
+		<div class="<?php echo esc_attr( $wrapper_class ); ?>"
+			id="qbv2-<?php echo esc_attr( $id ); ?>"
+			data-quiz-id="<?php echo esc_attr( $id ); ?>"
+			data-redirect="<?php echo esc_url( $redirect_url ); ?>"
+			data-enable-lead="<?php echo $enable_lead ? '1' : '0'; ?>"
+			data-nonce="<?php echo esc_attr( $nonce ); ?>"
+			data-ajax="<?php echo esc_url( $ajax_url ); ?>"
+			style="--qbv2-header:<?php echo esc_attr( $quiz['color_header'] ?? '#1a3a2a' ); ?>;--qbv2-primary:<?php echo esc_attr( $quiz['color_primary'] ?? '#22c55e' ); ?>;--qbv2-accent:<?php echo esc_attr( $quiz['color_accent'] ?? '#f97316' ); ?>">
 
 			<!-- HEADER -->
 			<div class="qbv2__header">
@@ -487,8 +558,8 @@ do_action( 'wp_head' );
 			<!-- PROGRESS -->
 			<div class="qbv2__stepper">
 				<?php for ( $si = 0; $si < $total; $si++ ) : ?>
-					<div class="qbv2__step<?php echo 0 === $si ? ' qbv2__step--active' : ''; ?>" data-step="<?php echo $si; ?>">
-						<span class="qbv2__step-dot"><?php echo $si + 1; ?></span>
+				<div class="qbv2__step<?php echo 0 === $si ? ' qbv2__step--active' : ''; ?>" data-step="<?php echo esc_attr( $si ); ?>">
+					<span class="qbv2__step-dot"><?php echo esc_html( $si + 1 ); ?></span>
 					</div>
 					<?php if ( $si < $total - 1 ) : ?>
 						<div class="qbv2__step-line"></div>
@@ -503,20 +574,22 @@ do_action( 'wp_head' );
 				$last_qi = count( $questions ) - 1;
 				foreach ( $questions as $qi => $q ) :
 					$is_last = ( $qi === $last_qi );
-				?>
+					?>
 					<div class="qbv2__question <?php echo 0 === $qi ? 'qbv2__question--active' : ''; ?>"
-						 data-qi="<?php echo (int) $qi; ?>"
-						 <?php echo $is_last ? 'data-last="1"' : ''; ?>
-						 <?php echo 0 !== $qi ? 'aria-hidden="true"' : ''; ?>>
+						data-qi="<?php echo (int) $qi; ?>"
+						<?php echo $is_last ? 'data-last="1"' : ''; ?>
+						<?php echo 0 !== $qi ? 'aria-hidden="true"' : ''; ?>>
 						<h2 class="qbv2__q-text"><?php echo esc_html( $q['text'] ); ?></h2>
 						<div class="qbv2__answers">
-							<?php foreach ( ( $q['answers'] ?? array() ) as $a ) :
-								$href = esc_url( ! empty( $a['url'] ) ? $a['url'] : ( $redirect_url ?: '#' ) );
-							?>
+							<?php
+							foreach ( ( $q['answers'] ?? array() ) as $a ) :
+								$fallback_url = $redirect_url ? $redirect_url : '#';
+								$href         = ! empty( $a['url'] ) ? $a['url'] : $fallback_url;
+								?>
 								<a class="qbv2__ans"
-								   href="<?php echo $href; ?>"
-								   data-url="<?php echo $href; ?>">
-									<?php echo esc_html( $a['text'] ); ?>
+									href="<?php echo esc_url( $href ); ?>"
+									data-url="<?php echo esc_url( $href ); ?>">
+								<?php echo esc_html( $a['text'] ); ?>
 								</a>
 							<?php endforeach; ?>
 						</div>
@@ -526,13 +599,13 @@ do_action( 'wp_head' );
 				<!-- LEAD CAPTURE STEP (hidden by default) -->
 				<?php if ( $enable_lead ) : ?>
 					<div class="qbv2__lead" aria-hidden="true">
-						<h2 class="qbv2__lead-title"><?php echo esc_html( $quiz['lead_title'] ?: 'VOCÊ ESTÁ NO CAMINHO CERTO!' ); ?></h2>
-						<p class="qbv2__lead-subtitle"><?php echo esc_html( $quiz['lead_subtitle'] ?: 'Preencha as informações abaixo para receber seu resultado.' ); ?></p>
+							<h2 class="qbv2__lead-title"><?php echo esc_html( $quiz['lead_title'] ? $quiz['lead_title'] : 'VOCÊ ESTÁ NO CAMINHO CERTO!' ); ?></h2>
+							<p class="qbv2__lead-subtitle"><?php echo esc_html( $quiz['lead_subtitle'] ? $quiz['lead_subtitle'] : 'Preencha as informações abaixo para receber seu resultado.' ); ?></p>
 						<form class="qbv2__lead-form">
 							<input type="text" name="lead_name" class="qbv2__input" placeholder="Seu nome" required>
 							<input type="email" name="lead_email" class="qbv2__input" placeholder="Seu email" required>
 							<button type="submit" class="qbv2__lead-btn">
-								<?php echo esc_html( $quiz['lead_btn_text'] ?: 'ENVIAR RESPOSTAS' ); ?>
+								<?php echo esc_html( $quiz['lead_btn_text'] ? $quiz['lead_btn_text'] : 'ENVIAR RESPOSTAS' ); ?>
 							</button>
 						</form>
 						<p class="qbv2__lead-note">Ao clicar no botão, você será redirecionado para o conteúdo.</p>

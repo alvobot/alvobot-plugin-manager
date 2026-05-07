@@ -326,7 +326,7 @@ if ( ! class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
 			// Prioridade 8: Detecta pelo Accept-Language do navegador
 			if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) {
 				$accept_language_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) );
-				$accept_languages      = explode( ',', $accept_language_header );
+				$accept_languages       = explode( ',', $accept_language_header );
 				foreach ( $accept_languages as $lang_str ) {
 					$lang_code = substr( trim( $lang_str ), 0, 2 );
 					if ( isset( self::$cta_translations[ $lang_code ] ) ) {

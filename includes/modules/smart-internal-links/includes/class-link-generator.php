@@ -155,7 +155,7 @@ class AlvoBotPro_Smart_Links_Generator {
 		$configured_positions = isset( $settings['positions'] ) && is_array( $settings['positions'] )
 			? $settings['positions']
 			: $natural_order;
-		$enabled_positions = array_values( array_intersect( $natural_order, $configured_positions ) );
+		$enabled_positions    = array_values( array_intersect( $natural_order, $configured_positions ) );
 		if ( empty( $enabled_positions ) ) {
 			$enabled_positions = $natural_order;
 		}

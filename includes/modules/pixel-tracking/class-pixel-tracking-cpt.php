@@ -11,6 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		exit;
 }
 
+if ( ! class_exists( 'AlvoBotPro_PixelTracking_Attribution' ) ) {
+	require_once __DIR__ . '/class-pixel-tracking-attribution.php';
+}
+
 /**
  * Data access layer for pixel-tracking CPT entities.
  */
@@ -126,7 +130,7 @@ class AlvoBotPro_PixelTracking_CPT {
 	}
 
 	private function save_event_meta( $post_id, $data, $event_name, $event_id, $preserve_existing = false ) {
-			$current_event_time = (int) get_post_meta( $post_id, '_event_time', true );
+			$current_event_time  = (int) get_post_meta( $post_id, '_event_time', true );
 			$current_retry_count = (int) get_post_meta( $post_id, '_fb_retry_count', true );
 
 			wp_update_post(
@@ -137,32 +141,43 @@ class AlvoBotPro_PixelTracking_CPT {
 			);
 
 			$meta_fields = array(
-				'_event_id'               => $event_id,
-				'_event_name'             => $event_name,
-				'_event_time'             => ( $preserve_existing && $current_event_time > 0 ) ? $current_event_time : time(),
-				'_event_url'              => isset( $data['event_url'] ) ? esc_url_raw( $data['event_url'] ) : '',
-				'_page_url'               => isset( $data['page_url'] ) ? esc_url_raw( $data['page_url'] ) : '',
-				'_page_title'             => isset( $data['page_title'] ) ? sanitize_text_field( $data['page_title'] ) : '',
-				'_page_id'                => isset( $data['page_id'] ) ? absint( $data['page_id'] ) : 0,
-				'_referrer'               => isset( $data['referrer'] ) ? esc_url_raw( $data['referrer'] ) : '',
-				'_request_referer'        => isset( $data['request_referer'] ) ? esc_url_raw( $data['request_referer'] ) : '',
-				'_lead_id'                => isset( $data['lead_id'] ) ? sanitize_text_field( $data['lead_id'] ) : '',
-				'_fbp'                    => isset( $data['fbp'] ) ? sanitize_text_field( $data['fbp'] ) : '',
-				'_fbc'                    => isset( $data['fbc'] ) ? sanitize_text_field( $data['fbc'] ) : '',
-				'_ip'                     => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : '',
-				'_browser_ip'             => isset( $data['browser_ip'] ) ? sanitize_text_field( $data['browser_ip'] ) : '',
-				'_user_agent'             => isset( $data['user_agent'] ) ? sanitize_text_field( $data['user_agent'] ) : '',
-				'_pixel_ids'              => isset( $data['pixel_ids'] ) ? sanitize_text_field( $data['pixel_ids'] ) : '',
-				'_custom_data'            => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? $this->sanitize_custom_data( $data['custom_data'] ) : array(),
-				'_fb_retry_count'         => $preserve_existing ? $current_retry_count : 0,
-				'_gclid'                  => isset( $data['gclid'] ) ? sanitize_text_field( $data['gclid'] ) : '',
-				'_gbraid'                 => isset( $data['gbraid'] ) ? sanitize_text_field( $data['gbraid'] ) : '',
-				'_wbraid'                 => isset( $data['wbraid'] ) ? sanitize_text_field( $data['wbraid'] ) : '',
-				'_dclid'                  => isset( $data['dclid'] ) ? sanitize_text_field( $data['dclid'] ) : '',
-				'_ga_client_id'           => isset( $data['ga_client_id'] ) ? sanitize_text_field( $data['ga_client_id'] ) : '',
-				'_gads_conversion_label'  => isset( $data['gads_conversion_label'] ) ? sanitize_text_field( $data['gads_conversion_label'] ) : '',
-				'_gads_conversion_value'  => isset( $data['gads_conversion_value'] ) ? sanitize_text_field( $data['gads_conversion_value'] ) : '',
+				'_event_id'              => $event_id,
+				'_event_name'            => $event_name,
+				'_event_time'            => ( $preserve_existing && $current_event_time > 0 ) ? $current_event_time : time(),
+				'_event_url'             => isset( $data['event_url'] ) ? esc_url_raw( $data['event_url'] ) : '',
+				'_page_url'              => isset( $data['page_url'] ) ? esc_url_raw( $data['page_url'] ) : '',
+				'_page_title'            => isset( $data['page_title'] ) ? sanitize_text_field( $data['page_title'] ) : '',
+				'_page_id'               => isset( $data['page_id'] ) ? absint( $data['page_id'] ) : 0,
+				'_referrer'              => isset( $data['referrer'] ) ? esc_url_raw( $data['referrer'] ) : '',
+				'_request_referer'       => isset( $data['request_referer'] ) ? esc_url_raw( $data['request_referer'] ) : '',
+				'_external_id'           => isset( $data['external_id'] ) ? sanitize_text_field( $data['external_id'] ) : '',
+				'_lead_id'               => isset( $data['lead_id'] ) ? sanitize_text_field( $data['lead_id'] ) : '',
+				'_fbp'                   => isset( $data['fbp'] ) ? sanitize_text_field( $data['fbp'] ) : '',
+				'_fbc'                   => isset( $data['fbc'] ) ? sanitize_text_field( $data['fbc'] ) : '',
+				'_ip'                    => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : '',
+				'_browser_ip'            => isset( $data['browser_ip'] ) ? sanitize_text_field( $data['browser_ip'] ) : '',
+				'_user_agent'            => isset( $data['user_agent'] ) ? sanitize_text_field( $data['user_agent'] ) : '',
+				'_pixel_ids'             => isset( $data['pixel_ids'] ) ? sanitize_text_field( $data['pixel_ids'] ) : '',
+				'_custom_data'           => isset( $data['custom_data'] ) && is_array( $data['custom_data'] ) ? $this->sanitize_custom_data( $data['custom_data'] ) : array(),
+				'_fb_retry_count'        => $preserve_existing ? $current_retry_count : 0,
+				'_gclid'                 => isset( $data['gclid'] ) ? sanitize_text_field( $data['gclid'] ) : '',
+				'_gbraid'                => isset( $data['gbraid'] ) ? sanitize_text_field( $data['gbraid'] ) : '',
+				'_wbraid'                => isset( $data['wbraid'] ) ? sanitize_text_field( $data['wbraid'] ) : '',
+				'_dclid'                 => isset( $data['dclid'] ) ? sanitize_text_field( $data['dclid'] ) : '',
+				'_ga_client_id'          => isset( $data['ga_client_id'] ) ? sanitize_text_field( $data['ga_client_id'] ) : '',
+				'_gads_conversion_label' => isset( $data['gads_conversion_label'] ) ? sanitize_text_field( $data['gads_conversion_label'] ) : '',
+				'_gads_conversion_value' => isset( $data['gads_conversion_value'] ) ? sanitize_text_field( $data['gads_conversion_value'] ) : '',
+				'_click_ids'             => isset( $data['click_ids'] ) && is_array( $data['click_ids'] ) ? AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( $data['click_ids'] ) : array(),
+				'_attribution'           => isset( $data['attribution'] ) && is_array( $data['attribution'] ) ? AlvoBotPro_PixelTracking_Attribution::sanitize_attribution_payload( $data['attribution'] ) : array(),
+				'_edge_context'          => isset( $data['edge_context'] ) && is_array( $data['edge_context'] ) ? AlvoBotPro_PixelTracking_Attribution::sanitize_edge_context( $data['edge_context'] ) : array(),
+				'_raw_payload'           => isset( $data['raw_payload'] ) && is_array( $data['raw_payload'] ) ? $this->sanitize_snapshot_payload( $data['raw_payload'] ) : array(),
 			);
+
+			if ( isset( $data['click_ids'] ) && is_array( $data['click_ids'] ) ) {
+				foreach ( AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( $data['click_ids'] ) as $click_key => $click_value ) {
+					$meta_fields[ '_' . sanitize_key( $click_key ) ] = $click_value;
+				}
+			}
 
 			// Store pre-hashed WP user data for CAPI matching (em, fn, ln, external_id)
 			if ( isset( $data['user_data_hashed'] ) && is_array( $data['user_data_hashed'] ) ) {
@@ -260,7 +275,7 @@ class AlvoBotPro_PixelTracking_CPT {
 				return $existing_id;
 		}
 
-			$title   = $email ? $email : 'Lead - ' . substr( $lead_id, 0, 8 );
+			$title   = $this->build_lead_title( $lead_id );
 			$post_id = wp_insert_post(
 				array(
 					'post_type'   => 'alvobot_pixel_lead',
@@ -276,10 +291,12 @@ class AlvoBotPro_PixelTracking_CPT {
 			update_post_meta( $post_id, '_lead_id', $lead_id );
 			update_post_meta( $post_id, '_first_seen', $now );
 			update_post_meta( $post_id, '_last_seen', $now );
+			update_post_meta( $post_id, '_last_seen_ts', time() );
 
 			$this->set_lead_identity( $post_id, $data );
 			$this->set_lead_tracking( $post_id, $data );
 			$this->set_lead_geo( $post_id, $data );
+			$this->set_lead_attribution( $post_id, $data );
 
 		if ( isset( $data['utms'] ) && is_array( $data['utms'] ) ) {
 			foreach ( $data['utms'] as $key => $value ) {
@@ -300,6 +317,7 @@ class AlvoBotPro_PixelTracking_CPT {
 
 	private function update_lead_meta( $post_id, $data, $now ) {
 			update_post_meta( $post_id, '_last_seen', $now );
+			update_post_meta( $post_id, '_last_seen_ts', time() );
 
 		if ( ! empty( $data['email'] ) ) {
 				$curr_email = get_post_meta( $post_id, '_email', true );
@@ -309,7 +327,7 @@ class AlvoBotPro_PixelTracking_CPT {
 				wp_update_post(
 					array(
 						'ID'         => $post_id,
-						'post_title' => sanitize_email( $data['email'] ),
+						'post_title' => $this->build_lead_title( (string) get_post_meta( $post_id, '_lead_id', true ) ),
 					)
 				);
 			}
@@ -332,6 +350,7 @@ class AlvoBotPro_PixelTracking_CPT {
 
 			$this->set_lead_tracking( $post_id, $data );
 			$this->set_lead_geo( $post_id, $data );
+			$this->set_lead_attribution( $post_id, $data );
 
 		if ( isset( $data['utms'] ) && is_array( $data['utms'] ) ) {
 			foreach ( $data['utms'] as $key => $value ) {
@@ -363,7 +382,20 @@ class AlvoBotPro_PixelTracking_CPT {
 		}
 	}
 
+	private function build_lead_title( $lead_id ) {
+		$lead_id = sanitize_text_field( (string) $lead_id );
+		if ( '' === $lead_id ) {
+			return 'Lead';
+		}
+
+		return 'Lead - ' . substr( $lead_id, 0, 8 );
+	}
+
 	private function set_lead_tracking( $post_id, $data ) {
+		if ( isset( $data['external_id'] ) ) {
+				update_post_meta( $post_id, '_external_id', sanitize_text_field( $data['external_id'] ) );
+				update_post_meta( $post_id, '_external_id_hash', self::hash_pii( $data['external_id'] ) );
+		}
 		if ( isset( $data['fbp'] ) ) {
 				update_post_meta( $post_id, '_fbp', sanitize_text_field( $data['fbp'] ) );
 		}
@@ -393,6 +425,25 @@ class AlvoBotPro_PixelTracking_CPT {
 		}
 		if ( isset( $data['user_agent'] ) ) {
 				update_post_meta( $post_id, '_user_agent', sanitize_text_field( $data['user_agent'] ) );
+		}
+		if ( isset( $data['click_ids'] ) && is_array( $data['click_ids'] ) ) {
+			$click_ids = AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( $data['click_ids'] );
+			update_post_meta( $post_id, '_click_ids', $click_ids );
+			foreach ( $click_ids as $click_key => $click_value ) {
+				update_post_meta( $post_id, '_' . sanitize_key( $click_key ), $click_value );
+			}
+		}
+	}
+
+	private function set_lead_attribution( $post_id, $data ) {
+		if ( isset( $data['attribution'] ) && is_array( $data['attribution'] ) ) {
+			update_post_meta( $post_id, '_attribution', AlvoBotPro_PixelTracking_Attribution::sanitize_attribution_payload( $data['attribution'] ) );
+		}
+		if ( isset( $data['edge_context'] ) && is_array( $data['edge_context'] ) ) {
+			update_post_meta( $post_id, '_edge_context', AlvoBotPro_PixelTracking_Attribution::sanitize_edge_context( $data['edge_context'] ) );
+		}
+		if ( isset( $data['raw_payload'] ) && is_array( $data['raw_payload'] ) ) {
+			update_post_meta( $post_id, '_raw_payload', $this->sanitize_snapshot_payload( $data['raw_payload'] ) );
 		}
 	}
 
@@ -522,14 +573,14 @@ class AlvoBotPro_PixelTracking_CPT {
 				}
 			}
 
-			// Save per-tracker labels map as JSON (e.g. {"AW-123":"label_a","AW-456":"label_b"}).
-			if ( isset( $data['gads_labels_map'] ) ) {
+				// Save per-tracker labels map as JSON (e.g. {"AW-123":"label_a","AW-456":"label_b"}).
+			if ( array_key_exists( 'gads_labels_map', $data ) ) {
 				$map = $data['gads_labels_map'];
 				if ( is_string( $map ) ) {
 					$map = json_decode( $map, true );
 				}
+				$sanitized_map = array();
 				if ( is_array( $map ) ) {
-					$sanitized_map = array();
 					foreach ( $map as $tracker_id => $label ) {
 						$sanitized_tracker = sanitize_text_field( $tracker_id );
 						$sanitized_label   = sanitize_text_field( $label );
@@ -538,8 +589,8 @@ class AlvoBotPro_PixelTracking_CPT {
 						}
 						$sanitized_map[ $sanitized_tracker ] = $sanitized_label;
 					}
-					update_post_meta( $post_id, '_gads_labels_map', wp_json_encode( $sanitized_map ) );
 				}
+				update_post_meta( $post_id, '_gads_labels_map', wp_json_encode( $sanitized_map ) );
 			}
 	}
 
@@ -564,10 +615,10 @@ class AlvoBotPro_PixelTracking_CPT {
 				),
 			);
 
-		$min_age_seconds = absint( $min_age_seconds );
-		if ( $min_age_seconds > 0 ) {
+			$min_age_seconds = absint( $min_age_seconds );
+			if ( $min_age_seconds > 0 ) {
 				$date_query[0]['before'] = $min_age_seconds . ' seconds ago';
-		}
+			}
 
 			$query = new WP_Query(
 				array(
@@ -620,8 +671,14 @@ class AlvoBotPro_PixelTracking_CPT {
 			return '';
 		}
 			$normalized = preg_replace( '/[^0-9]/', '', $phone );
+		if ( 0 === strpos( $normalized, '00' ) ) {
+			$normalized = substr( $normalized, 2 );
+		}
 		if ( strlen( $normalized ) <= 11 && strlen( $normalized ) >= 10 ) {
 				$normalized = '55' . $normalized;
+		}
+		if ( strlen( $normalized ) < 8 || strlen( $normalized ) > 15 || '0' === substr( $normalized, 0, 1 ) ) {
+			return '';
 		}
 			return hash( 'sha256', $normalized );
 	}
@@ -635,6 +692,30 @@ class AlvoBotPro_PixelTracking_CPT {
 			} else {
 				$result[ $sanitized_key ] = sanitize_text_field( $value );
 			}
+		}
+		return $result;
+	}
+
+	private function sanitize_snapshot_payload( array $data ) {
+		$result = array();
+		foreach ( $data as $key => $value ) {
+			$sanitized_key = sanitize_text_field( (string) $key );
+			if ( '' === $sanitized_key ) {
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$result[ $sanitized_key ] = $this->sanitize_snapshot_payload( $value );
+				continue;
+			}
+			if ( is_bool( $value ) ) {
+				$result[ $sanitized_key ] = $value;
+				continue;
+			}
+			if ( is_int( $value ) || is_float( $value ) ) {
+				$result[ $sanitized_key ] = $value;
+				continue;
+			}
+			$result[ $sanitized_key ] = sanitize_text_field( is_scalar( $value ) ? (string) $value : '' );
 		}
 		return $result;
 	}

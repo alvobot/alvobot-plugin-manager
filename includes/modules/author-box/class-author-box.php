@@ -535,40 +535,41 @@ class AlvoBotPro_AuthorBox {
 				</div>
 
 				<!-- AI Author Generation Card -->
-				<?php if ( get_option( 'alvobot_site_token' ) ) : ?>
-					<?php
-					$ai_api            = class_exists( 'AlvoBotPro_AI_API' ) ? AlvoBotPro_AI_API::get_instance() : null;
-					$ai_cost_generate  = $ai_api ? $ai_api->get_action_cost( 'generate_author' ) : 3;
-					$ai_cost_translate = $ai_api ? ( $ai_api->get_action_cost( 'translate_bio' ) ?: 1 ) : 1;
-					$ai_multilingual   = function_exists( 'PLL' ) || function_exists( 'icl_get_languages' );
-					$ai_languages      = $ai_multilingual && class_exists( 'Alvobot_AuthorBox_Translations' )
+					<?php if ( get_option( 'alvobot_site_token' ) ) : ?>
+						<?php
+						$ai_api            = class_exists( 'AlvoBotPro_AI_API' ) ? AlvoBotPro_AI_API::get_instance() : null;
+						$ai_cost_generate  = $ai_api ? $ai_api->get_action_cost( 'generate_author' ) : 3;
+						$translate_cost    = $ai_api ? $ai_api->get_action_cost( 'translate_bio' ) : 0;
+						$ai_cost_translate = $translate_cost ? $translate_cost : 1;
+						$ai_multilingual   = function_exists( 'PLL' ) || function_exists( 'icl_get_languages' );
+						$ai_languages      = $ai_multilingual && class_exists( 'Alvobot_AuthorBox_Translations' )
 						? Alvobot_AuthorBox_Translations::get_site_languages()
 						: array();
-					$ai_num_langs      = count( $ai_languages );
-					$ai_cost           = $ai_multilingual && $ai_num_langs > 1
+						$ai_num_langs      = count( $ai_languages );
+						$ai_cost           = $ai_multilingual && $ai_num_langs > 1
 						? $ai_cost_generate + ( $ai_num_langs - 1 ) * $ai_cost_translate
 						: $ai_cost_generate;
-					$wp_users          = get_users(
-						array(
-							'role__in' => array( 'administrator', 'editor', 'author' ),
-							'orderby'  => 'display_name',
-						)
-					);
-					$locale            = get_locale();
-					$default_lang      = substr( $locale, 0, 2 );
-					$locale_country    = array(
-						'pt_BR' => 'BR',
-						'en_US' => 'US',
-						'en_GB' => 'GB',
-						'es_ES' => 'ES',
-						'fr_FR' => 'FR',
-						'de_DE' => 'DE',
-						'it_IT' => 'IT',
-					);
-					$default_country   = isset( $locale_country[ $locale ] ) ? $locale_country[ $locale ] : 'BR';
-					$countries         = alvobot_get_countries();
-					$all_languages     = alvobot_get_languages();
-					?>
+						$wp_users          = get_users(
+							array(
+								'role__in' => array( 'administrator', 'editor', 'author' ),
+								'orderby'  => 'display_name',
+							)
+						);
+						$locale            = get_locale();
+						$default_lang      = substr( $locale, 0, 2 );
+						$locale_country    = array(
+							'pt_BR' => 'BR',
+							'en_US' => 'US',
+							'en_GB' => 'GB',
+							'es_ES' => 'ES',
+							'fr_FR' => 'FR',
+							'de_DE' => 'DE',
+							'it_IT' => 'IT',
+						);
+						$default_country   = isset( $locale_country[ $locale ] ) ? $locale_country[ $locale ] : 'BR';
+						$countries         = alvobot_get_countries();
+						$all_languages     = alvobot_get_languages();
+						?>
 				<div class="alvobot-card alvobot-ai-section">
 					<div class="alvobot-card-header">
 						<div>
@@ -760,8 +761,8 @@ class AlvoBotPro_AuthorBox {
 						'pt' => 'Português',
 						'en' => 'English',
 					);
-					$current_uid   = get_current_user_id();
-					$first_user_id = $current_uid ? $current_uid : ( ! empty( $bio_users ) ? $bio_users[0]->ID : 0 );
+					$current_uid    = get_current_user_id();
+					$first_user_id  = $current_uid ? $current_uid : ( ! empty( $bio_users ) ? $bio_users[0]->ID : 0 );
 					?>
 				<div class="alvobot-card">
 					<div class="alvobot-card-header">
@@ -786,7 +787,7 @@ class AlvoBotPro_AuthorBox {
 										<?php
 										$current_user_id = get_current_user_id();
 										foreach ( $bio_users as $bio_user ) :
-										?>
+											?>
 											<option value="<?php echo esc_attr( $bio_user->ID ); ?>" <?php selected( $bio_user->ID, $current_user_id ); ?>>
 												<?php echo esc_html( $bio_user->display_name . ' (' . $bio_user->user_login . ')' ); ?>
 											</option>
@@ -914,7 +915,7 @@ endforeach;
 	public function enqueue_admin_assets( $hook ) {
 		$is_profile_page = ( 'profile.php' === $hook || 'user-edit.php' === $hook );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Page detection for asset loading, no data modification.
-		$is_module_page  = ( isset( $_GET['page'] ) && sanitize_text_field( wp_unslash( $_GET['page'] ) ) === 'alvobot-pro-author-box' );
+		$is_module_page = ( isset( $_GET['page'] ) && sanitize_text_field( wp_unslash( $_GET['page'] ) ) === 'alvobot-pro-author-box' );
 
 		if ( ! $is_profile_page && ! $is_module_page ) {
 			return;

@@ -13,10 +13,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$alvobot_pt_mode      = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
-$alvobot_pt_pixels    = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-$alvobot_pt_test_mode = ! empty( $settings['test_mode'] );
-$alvobot_pt_test_code = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
+$alvobot_pt_mode            = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
+$alvobot_pt_pixels          = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+$alvobot_pt_pixels_for_js   = array_map(
+	function ( $pixel ) {
+		$pixel['has_api_token'] = ! empty( $pixel['api_token'] );
+		unset( $pixel['api_token'] );
+		return $pixel;
+	},
+	$alvobot_pt_pixels
+);
+$alvobot_pt_test_mode       = ! empty( $settings['test_mode'] );
+$alvobot_pt_test_code       = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
 $alvobot_pt_google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
 ?>
 
@@ -200,7 +208,7 @@ $alvobot_pt_google_trackers = isset( $settings['google_trackers'] ) && is_array(
 				<div id="alvobot-configured-all-pixels">
 					<!-- Rendered dynamically by JS from both pixels_json + google_trackers_json -->
 				</div>
-				<input type="hidden" name="pixels_json" id="pixels_json" value="<?php echo esc_attr( wp_json_encode( $alvobot_pt_pixels ) ); ?>">
+				<input type="hidden" name="pixels_json" id="pixels_json" value="<?php echo esc_attr( wp_json_encode( $alvobot_pt_pixels_for_js ) ); ?>">
 				<input type="hidden" name="google_trackers_json" id="google_trackers_json" value="<?php echo esc_attr( wp_json_encode( $alvobot_pt_google_trackers ) ); ?>">
 				<input type="hidden" name="mode" id="pixel_mode" value="<?php echo esc_attr( $alvobot_pt_mode ); ?>">
 			</div>

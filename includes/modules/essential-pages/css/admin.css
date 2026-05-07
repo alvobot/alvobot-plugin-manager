@@ -84,7 +84,8 @@
 	display: inline-block;
 }
 
-.status-pending {
+.status-pending,
+.status-draft {
 	background: var(--alvobot-warning-bg);
 	color: var(--alvobot-warning);
 	padding: var(--alvobot-space-xs) var(--alvobot-space-sm);

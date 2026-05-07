@@ -17,7 +17,7 @@
 
 	<div class="page-cards">
 		<?php
-		$pages = array(
+		$essential_pages = array(
 			'terms'   => array(
 				'title' => __( 'Termos de Uso', 'alvobot-pro' ),
 				'slug'  => 'termos-de-uso',
@@ -32,21 +32,29 @@
 			),
 		);
 
-		foreach ( $pages as $key => $page ) {
-			$existing_page = get_page_by_path( $page['slug'] );
-			$status        = $existing_page ? 'Publicado' : 'Não criada';
-			$status_class  = $existing_page ? 'status-published' : 'status-pending';
+		foreach ( $essential_pages as $key => $essential_page ) {
+			$existing_page = get_page_by_path( $essential_page['slug'] );
+			if ( $existing_page && 'publish' === $existing_page->post_status ) {
+				$essential_page_status = __( 'Publicado', 'alvobot-pro' );
+				$essential_page_class  = 'status-published';
+			} elseif ( $existing_page ) {
+				$essential_page_status = __( 'Não publicada', 'alvobot-pro' );
+				$essential_page_class  = 'status-draft';
+			} else {
+				$essential_page_status = __( 'Não criada', 'alvobot-pro' );
+				$essential_page_class  = 'status-pending';
+			}
 			?>
 			<div class="page-card">
-				<h2><?php esc_html_e( $page['title'], 'alvobot-pro' ); ?></h2>
+				<h2><?php echo esc_html( $essential_page['title'] ); ?></h2>
 				<div class="page-info">
 					<p>
 						<span class="label"><?php esc_html_e( 'Slug:', 'alvobot-pro' ); ?></span>
-						<span><?php echo esc_html( $page['slug'] ); ?></span>
+						<span><?php echo esc_html( $essential_page['slug'] ); ?></span>
 					</p>
 					<p>
 						<span class="label"><?php esc_html_e( 'Status:', 'alvobot-pro' ); ?></span>
-						<span class="status-badge <?php echo esc_attr( $status_class ); ?>"><?php esc_html_e( $status, 'alvobot-pro' ); ?></span>
+						<span class="status-badge <?php echo esc_attr( $essential_page_class ); ?>"><?php echo esc_html( $essential_page_status ); ?></span>
 					</p>
 				</div>
 				<div class="page-actions">

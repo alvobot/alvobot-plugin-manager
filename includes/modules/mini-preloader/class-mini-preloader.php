@@ -59,19 +59,22 @@ class AlvoBotPro_MiniPreloader {
 		$sanitized['message']          = sanitize_text_field( $input['message'] ?? $defaults['message'] );
 		$sanitized['animation']        = in_array( $input['animation'] ?? '', array( 'infinity', 'spinner', 'dots', 'pulse', 'bars' ), true )
 			? $input['animation'] : $defaults['animation'];
-		$sanitized['bg_color']         = sanitize_hex_color( $input['bg_color'] ?? '' ) ?: $defaults['bg_color'];
+		$sanitized_bg_color            = sanitize_hex_color( $input['bg_color'] ?? '' );
+		$sanitized['bg_color']         = $sanitized_bg_color ? $sanitized_bg_color : $defaults['bg_color'];
 		$sanitized['bg_opacity']       = max( 0, min( 100, intval( $input['bg_opacity'] ?? $defaults['bg_opacity'] ) ) );
-		$sanitized['text_color']       = sanitize_hex_color( $input['text_color'] ?? '' ) ?: $defaults['text_color'];
-		$sanitized['accent_color']     = sanitize_hex_color( $input['accent_color'] ?? '' ) ?: $defaults['accent_color'];
+		$sanitized_text_color          = sanitize_hex_color( $input['text_color'] ?? '' );
+		$sanitized['text_color']       = $sanitized_text_color ? $sanitized_text_color : $defaults['text_color'];
+		$sanitized_accent_color        = sanitize_hex_color( $input['accent_color'] ?? '' );
+		$sanitized['accent_color']     = $sanitized_accent_color ? $sanitized_accent_color : $defaults['accent_color'];
 		$sanitized['blur']             = max( 0, min( 30, intval( $input['blur'] ?? $defaults['blur'] ) ) );
 		$sanitized['min_display_time'] = max( 0.2, min( 15, round( floatval( str_replace( ',', '.', $input['min_display_time'] ?? $defaults['min_display_time'] ) ), 1 ) ) );
 		$sanitized['max_display_time'] = max( 1, min( 30, round( floatval( str_replace( ',', '.', $input['max_display_time'] ?? $defaults['max_display_time'] ) ), 1 ) ) );
 		if ( $sanitized['min_display_time'] > $sanitized['max_display_time'] ) {
 			$sanitized['min_display_time'] = $sanitized['max_display_time'];
 		}
-		$sanitized['fade_duration']    = max( 0.1, min( 3, round( floatval( str_replace( ',', '.', $input['fade_duration'] ?? $defaults['fade_duration'] ) ), 1 ) ) );
-		$sanitized['wait_for_ads']     = ! empty( $input['wait_for_ads'] );
-		$sanitized['show_on']          = in_array( $input['show_on'] ?? '', array( 'all', 'homepage', 'posts', 'pages' ), true )
+		$sanitized['fade_duration'] = max( 0.1, min( 3, round( floatval( str_replace( ',', '.', $input['fade_duration'] ?? $defaults['fade_duration'] ) ), 1 ) ) );
+		$sanitized['wait_for_ads']  = ! empty( $input['wait_for_ads'] );
+		$sanitized['show_on']       = in_array( $input['show_on'] ?? '', array( 'all', 'homepage', 'posts', 'pages' ), true )
 			? $input['show_on'] : $defaults['show_on'];
 
 		return $sanitized;
@@ -92,17 +95,21 @@ class AlvoBotPro_MiniPreloader {
 			&& wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'mini_preloader_settings' ) ) {
 
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above.
-			$input     = isset( $_POST[ $this->option_name ] ) ? wp_unslash( $_POST[ $this->option_name ] ) : array();
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Options array is sanitized field-by-field by sanitize_options().
+				$input = isset( $_POST[ $this->option_name ] ) ? wp_unslash( $_POST[ $this->option_name ] ) : array();
 			$sanitized = $this->sanitize_options( $input );
 			update_option( $this->option_name, $sanitized );
-			$notice = array( 'type' => 'success', 'message' => __( 'Configurações salvas com sucesso!', 'alvobot-pro' ) );
+			$notice = array(
+				'type'    => 'success',
+				'message' => __( 'Configurações salvas com sucesso!', 'alvobot-pro' ),
+			);
 		}
 
 		$options = $this->get_options();
 		?>
 		<style>
 			/* Module-scoped form spacing — these classes are used by the base class
-			   pattern but not yet defined in the global stylesheet. */
+				pattern but not yet defined in the global stylesheet. */
 			.alvobot-form-sections {
 				display: flex;
 				flex-direction: column;
@@ -173,19 +180,31 @@ class AlvoBotPro_MiniPreloader {
 									<h3 class="alvobot-section-title"><?php esc_html_e( 'Aparência', 'alvobot-pro' ); ?></h3>
 
 									<?php
-									$this->render_form_field( 'message', __( 'Mensagem de carregamento', 'alvobot-pro' ), 'text', $options, array(
-										'placeholder' => 'Carregando...',
-									) );
+									$this->render_form_field(
+										'message',
+										__( 'Mensagem de carregamento', 'alvobot-pro' ),
+										'text',
+										$options,
+										array(
+											'placeholder' => 'Carregando...',
+										)
+									);
 
-									$this->render_form_field( 'animation', __( 'Estilo de animação', 'alvobot-pro' ), 'select', $options, array(
-										'options' => array(
-											'infinity' => 'Infinity Loop (∞)',
-											'spinner'  => 'Spinner circular',
-											'dots'     => 'Dots pulsantes',
-											'pulse'    => 'Pulse (logotipo)',
-											'bars'     => 'Barras equalizador',
-										),
-									) );
+									$this->render_form_field(
+										'animation',
+										__( 'Estilo de animação', 'alvobot-pro' ),
+										'select',
+										$options,
+										array(
+											'options' => array(
+												'infinity' => __( 'Infinity Loop (∞)', 'alvobot-pro' ),
+												'spinner'  => __( 'Spinner circular', 'alvobot-pro' ),
+												'dots'     => __( 'Dots pulsantes', 'alvobot-pro' ),
+												'pulse'    => __( 'Pulse (logotipo)', 'alvobot-pro' ),
+												'bars'     => __( 'Barras equalizador', 'alvobot-pro' ),
+											),
+										)
+									);
 									?>
 
 									<div class="alvobot-form-field">
@@ -202,13 +221,27 @@ class AlvoBotPro_MiniPreloader {
 									</div>
 
 									<?php
-									$this->render_form_field( 'bg_opacity', __( 'Opacidade do fundo (%)', 'alvobot-pro' ), 'range', $options, array(
-										'min' => 0, 'max' => 100,
-									) );
+									$this->render_form_field(
+										'bg_opacity',
+										__( 'Opacidade do fundo (%)', 'alvobot-pro' ),
+										'range',
+										$options,
+										array(
+											'min' => 0,
+											'max' => 100,
+										)
+									);
 
-									$this->render_form_field( 'blur', __( 'Desfoque do fundo (px)', 'alvobot-pro' ), 'range', $options, array(
-										'min' => 0, 'max' => 30,
-									) );
+									$this->render_form_field(
+										'blur',
+										__( 'Desfoque do fundo (px)', 'alvobot-pro' ),
+										'range',
+										$options,
+										array(
+											'min' => 0,
+											'max' => 30,
+										)
+									);
 									?>
 								</div>
 
@@ -217,23 +250,56 @@ class AlvoBotPro_MiniPreloader {
 									<h3 class="alvobot-section-title"><?php esc_html_e( 'Comportamento', 'alvobot-pro' ); ?></h3>
 
 									<?php
-									$this->render_form_field( 'min_display_time', __( 'Tempo mínimo', 'alvobot-pro' ), 'range_decimal', $options, array(
-										'min' => 0.2, 'max' => 15, 'step' => 0.1, 'suffix' => 's',
-										'description' => __( 'Tempo mínimo antes do fade-out iniciar.', 'alvobot-pro' ),
-									) );
+									$this->render_form_field(
+										'min_display_time',
+										__( 'Tempo mínimo', 'alvobot-pro' ),
+										'range_decimal',
+										$options,
+										array(
+											'min'         => 0.2,
+											'max'         => 15,
+											'step'        => 0.1,
+											'suffix'      => 's',
+											'description' => __( 'Tempo mínimo antes do fade-out iniciar.', 'alvobot-pro' ),
+										)
+									);
 
-									$this->render_form_field( 'max_display_time', __( 'Tempo máximo', 'alvobot-pro' ), 'range_decimal', $options, array(
-										'min' => 1, 'max' => 30, 'step' => 0.5, 'suffix' => 's',
-										'description' => __( 'Força o fechamento após este tempo.', 'alvobot-pro' ),
-									) );
+									$this->render_form_field(
+										'max_display_time',
+										__( 'Tempo máximo', 'alvobot-pro' ),
+										'range_decimal',
+										$options,
+										array(
+											'min'         => 1,
+											'max'         => 30,
+											'step'        => 0.5,
+											'suffix'      => 's',
+											'description' => __( 'Força o fechamento após este tempo.', 'alvobot-pro' ),
+										)
+									);
 
-									$this->render_form_field( 'fade_duration', __( 'Duração do fade-out', 'alvobot-pro' ), 'range_decimal', $options, array(
-										'min' => 0.1, 'max' => 3, 'step' => 0.1, 'suffix' => 's',
-									) );
+									$this->render_form_field(
+										'fade_duration',
+										__( 'Duração do fade-out', 'alvobot-pro' ),
+										'range_decimal',
+										$options,
+										array(
+											'min'    => 0.1,
+											'max'    => 3,
+											'step'   => 0.1,
+											'suffix' => 's',
+										)
+									);
 
-									$this->render_form_field( 'wait_for_ads', __( 'Aguardar Google Ads (AdSense / Ad Manager) antes de esconder', 'alvobot-pro' ), 'checkbox', $options, array(
-										'description' => __( 'Mantém o preloader visível até detectar um anúncio carregado na página.', 'alvobot-pro' ),
-									) );
+									$this->render_form_field(
+										'wait_for_ads',
+										__( 'Aguardar Google Ads (AdSense / Ad Manager) antes de esconder', 'alvobot-pro' ),
+										'checkbox',
+										$options,
+										array(
+											'description' => __( 'Mantém o preloader visível até detectar um anúncio carregado na página.', 'alvobot-pro' ),
+										)
+									);
 									?>
 								</div>
 
@@ -242,14 +308,20 @@ class AlvoBotPro_MiniPreloader {
 									<h3 class="alvobot-section-title"><?php esc_html_e( 'Exibição', 'alvobot-pro' ); ?></h3>
 
 									<?php
-									$this->render_form_field( 'show_on', __( 'Exibir em', 'alvobot-pro' ), 'select', $options, array(
-										'options' => array(
-											'all'      => __( 'Todas as páginas', 'alvobot-pro' ),
-											'homepage' => __( 'Somente homepage', 'alvobot-pro' ),
-											'posts'    => __( 'Somente posts', 'alvobot-pro' ),
-											'pages'    => __( 'Somente páginas', 'alvobot-pro' ),
-										),
-									) );
+									$this->render_form_field(
+										'show_on',
+										__( 'Exibir em', 'alvobot-pro' ),
+										'select',
+										$options,
+										array(
+											'options' => array(
+												'all'      => __( 'Todas as páginas', 'alvobot-pro' ),
+												'homepage' => __( 'Somente homepage', 'alvobot-pro' ),
+												'posts'    => __( 'Somente posts', 'alvobot-pro' ),
+												'pages'    => __( 'Somente páginas', 'alvobot-pro' ),
+											),
+										)
+									);
 									?>
 								</div>
 							</div>
@@ -553,28 +625,31 @@ class AlvoBotPro_MiniPreloader {
 			return;
 		}
 
-		$bg_rgba   = esc_attr( $this->hex_to_rgba( $options['bg_color'], $options['bg_opacity'] ) );
-		$blur      = intval( $options['blur'] );
-		$animation = $this->get_animation_svg( $options['animation'], $options['accent_color'] );
-		$message   = esc_html( $options['message'] );
-		$text_clr  = esc_attr( $options['text_color'] );
+		$bg_rgba     = $this->hex_to_rgba( $options['bg_color'], $options['bg_opacity'] );
+		$blur        = intval( $options['blur'] );
+		$animation   = $this->get_animation_svg( $options['animation'], $options['accent_color'] );
+		$message     = $options['message'];
+		$text_clr    = $options['text_color'];
 		$fade_dur_ms = round( floatval( $options['fade_duration'] ) * 1000 );
 
 		// JS config — seconds → ms. JSON_HEX_TAG prevents </script> breakout.
-		$js_config = wp_json_encode( array(
-			'minTime'    => round( floatval( $options['min_display_time'] ) * 1000 ),
-			'maxTime'    => round( floatval( $options['max_display_time'] ) * 1000 ),
-			'fadeDur'    => $fade_dur_ms,
-			'waitForAds' => (bool) $options['wait_for_ads'],
-		), JSON_HEX_TAG );
+		$js_config = wp_json_encode(
+			array(
+				'minTime'    => round( floatval( $options['min_display_time'] ) * 1000 ),
+				'maxTime'    => round( floatval( $options['max_display_time'] ) * 1000 ),
+				'fadeDur'    => $fade_dur_ms,
+				'waitForAds' => (bool) $options['wait_for_ads'],
+			),
+			JSON_HEX_TAG
+		);
 
 		?>
 		<div id="alvobot-preloader" role="progressbar" aria-label="<?php esc_attr_e( 'Carregando página', 'alvobot-pro' ); ?>" style="
 			position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
-			background-color:<?php echo $bg_rgba; ?>;
+				background-color:<?php echo esc_attr( $bg_rgba ); ?>;
 			backdrop-filter:blur(<?php echo esc_attr( $blur ); ?>px);
 			-webkit-backdrop-filter:blur(<?php echo esc_attr( $blur ); ?>px);
-			transition:opacity <?php echo $fade_dur_ms; ?>ms ease-out;
+				transition:opacity <?php echo esc_attr( $fade_dur_ms ); ?>ms ease-out;
 		">
 			<div style="width:120px;height:60px;">
 				<?php

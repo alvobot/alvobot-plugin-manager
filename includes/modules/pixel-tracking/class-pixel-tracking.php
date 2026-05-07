@@ -63,6 +63,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		// Load sub-components
 		$module_dir = plugin_dir_path( __FILE__ );
 
+		require_once $module_dir . 'class-pixel-tracking-attribution.php';
+
 		require_once $module_dir . 'class-pixel-tracking-cpt.php';
 		$this->cpt = new AlvoBotPro_PixelTracking_CPT();
 
@@ -80,11 +82,13 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// AJAX handlers for pixel/tracker fetch (AlvoBot mode)
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_pixels', array( $this, 'ajax_fetch_pixels' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_store_pixel_token_ref', array( $this, 'ajax_store_pixel_token_ref' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_google_trackers', array( $this, 'ajax_fetch_google_trackers' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_fetch_conversion_actions', array( $this, 'ajax_fetch_google_conversion_actions' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_create_conversion_action', array( $this, 'ajax_create_google_conversion_action' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_update_conversion_action', array( $this, 'ajax_update_google_conversion_action' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_delete_conversion_action', array( $this, 'ajax_delete_google_conversion_action' ) );
+		add_action( 'wp_ajax_alvobot_pixel_tracking_update_google_tracker_runtime_ids', array( $this, 'ajax_update_google_tracker_runtime_ids' ) );
 		add_action( 'wp_ajax_alvobot_pixel_tracking_refresh_token', array( $this, 'ajax_refresh_token' ) );
 
 		// AJAX handlers for conversion CRUD
@@ -98,6 +102,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// Admin notice for expired tokens.
 		add_action( 'admin_notices', array( $this, 'admin_notice_expired_tokens' ) );
+		add_action( 'admin_notices', array( $this, 'admin_notice_token_encryption' ) );
 		// Admin notice for orphaned conversion rules (selected trackers removed).
 		add_action( 'admin_notices', array( $this, 'admin_notice_orphaned_conversions' ) );
 
@@ -191,7 +196,148 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			wp_send_json_error( $pixels->get_error_message() );
 		}
 
-		wp_send_json_success( array( 'pixels' => $pixels ) );
+		wp_send_json_success( array( 'pixels' => $this->prepare_alvobot_pixels_for_admin( $pixels ) ) );
+	}
+
+	/**
+	 * AJAX handler to exchange a manually typed CAPI token for a short-lived server-side reference.
+	 */
+	public function ajax_store_pixel_token_ref() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$pixel_id      = isset( $_POST['pixel_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_id'] ) ) : '';
+		$connection_id = isset( $_POST['connection_id'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_id'] ) ) : '';
+		$api_token     = isset( $_POST['api_token'] ) ? sanitize_text_field( wp_unslash( $_POST['api_token'] ) ) : '';
+
+		if ( ! preg_match( '/^\d{15,16}$/', $pixel_id ) ) {
+			wp_send_json_error( __( 'Pixel ID invalido.', 'alvobot-pro' ) );
+		}
+
+		if ( '' === $api_token ) {
+			wp_send_json_error( __( 'Token CAPI vazio.', 'alvobot-pro' ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'token_ref'     => $this->store_admin_pixel_token_ref( $pixel_id, $connection_id, $api_token ),
+				'has_api_token' => true,
+			)
+		);
+	}
+
+	/**
+	 * Return admin-safe pixel data and keep access tokens only in short-lived transients.
+	 *
+	 * @param array $pixels Raw pixels from AlvoBot.
+	 * @return array
+	 */
+	public function prepare_alvobot_pixels_for_admin( $pixels ) {
+		if ( ! is_array( $pixels ) ) {
+			return array();
+		}
+
+		$prepared = array();
+		foreach ( $pixels as $pixel ) {
+			if ( ! is_array( $pixel ) ) {
+				continue;
+			}
+
+			$pixel_id      = isset( $pixel['pixel_id'] ) ? sanitize_text_field( (string) $pixel['pixel_id'] ) : '';
+			$connection_id = isset( $pixel['connection_id'] ) ? sanitize_text_field( (string) $pixel['connection_id'] ) : '';
+			$api_token     = isset( $pixel['access_token'] ) ? sanitize_text_field( (string) $pixel['access_token'] ) : '';
+			if ( '' === $api_token && isset( $pixel['api_token'] ) ) {
+				$api_token = sanitize_text_field( (string) $pixel['api_token'] );
+			}
+
+			unset( $pixel['access_token'], $pixel['api_token'] );
+			$pixel['has_api_token'] = '' !== $api_token;
+
+			if ( '' !== $pixel_id && '' !== $api_token ) {
+				$pixel['token_ref'] = $this->store_admin_pixel_token_ref( $pixel_id, $connection_id, $api_token );
+			}
+
+			$prepared[] = $pixel;
+		}
+
+		return $prepared;
+	}
+
+	/**
+	 * Store a CAPI token outside the DOM until the settings form is submitted.
+	 *
+	 * @param string $pixel_id      Pixel ID.
+	 * @param string $connection_id Optional AlvoBot connection ID.
+	 * @param string $api_token     CAPI token.
+	 * @return string Token reference.
+	 */
+	private function store_admin_pixel_token_ref( $pixel_id, $connection_id, $api_token ) {
+		$ref     = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : wp_generate_password( 32, false, false );
+		$user_id = get_current_user_id();
+
+		set_transient(
+			$this->get_admin_pixel_token_transient_key( $ref, $user_id ),
+			array(
+				'pixel_id'      => sanitize_text_field( (string) $pixel_id ),
+				'connection_id' => sanitize_text_field( (string) $connection_id ),
+				'api_token'     => sanitize_text_field( (string) $api_token ),
+				'created_at'    => time(),
+			),
+			15 * MINUTE_IN_SECONDS
+		);
+
+		return $ref;
+	}
+
+	/**
+	 * Resolve a short-lived server-side token reference from the current admin user.
+	 *
+	 * @param string $token_ref     Token reference.
+	 * @param string $pixel_id      Expected pixel ID.
+	 * @param string $connection_id Expected connection ID.
+	 * @return string
+	 */
+	private function resolve_admin_pixel_token_ref( $token_ref, $pixel_id, $connection_id ) {
+		$token_ref = sanitize_text_field( (string) $token_ref );
+		if ( '' === $token_ref ) {
+			return '';
+		}
+
+		$user_id = get_current_user_id();
+		$key     = $this->get_admin_pixel_token_transient_key( $token_ref, $user_id );
+		$payload = get_transient( $key );
+		if ( ! is_array( $payload ) ) {
+			$message = __( 'Referencia temporaria do token CAPI expirou antes do salvamento. Readicione ou renove o pixel para salvar o token.', 'alvobot-pro' );
+			AlvoBotPro::debug_log( 'pixel-tracking', $message );
+			set_transient( 'alvobot_pixel_tracking_token_ref_warning', $message, HOUR_IN_SECONDS );
+			return '';
+		}
+
+		$stored_pixel_id      = isset( $payload['pixel_id'] ) ? (string) $payload['pixel_id'] : '';
+		$stored_connection_id = isset( $payload['connection_id'] ) ? (string) $payload['connection_id'] : '';
+		if ( $stored_pixel_id !== $pixel_id || ( '' !== $stored_connection_id && '' !== $connection_id && $stored_connection_id !== $connection_id ) ) {
+			$message = __( 'Referencia temporaria do token CAPI foi rejeitada por incompatibilidade de pixel ou conexao.', 'alvobot-pro' );
+			AlvoBotPro::debug_log( 'pixel-tracking', $message );
+			set_transient( 'alvobot_pixel_tracking_token_ref_warning', $message, HOUR_IN_SECONDS );
+			return '';
+		}
+
+		delete_transient( $key );
+		return isset( $payload['api_token'] ) ? sanitize_text_field( (string) $payload['api_token'] ) : '';
+	}
+
+	/**
+	 * Build a user-scoped transient key for admin token refs.
+	 *
+	 * @param string $token_ref Token reference.
+	 * @param int    $user_id   Current admin user ID.
+	 * @return string
+	 */
+	private function get_admin_pixel_token_transient_key( $token_ref, $user_id ) {
+		return 'alvobot_pt_token_' . absint( $user_id ) . '_' . hash( 'sha256', (string) $token_ref );
 	}
 
 	/**
@@ -508,7 +654,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		// primary_for_goal: '1'/'true'/true → primary (biddable), '0'/'false'/false → secondary (reporting only).
 		// If not provided, the Edge Function defaults to true (Google Ads default behaviour).
 		if ( isset( $_POST['primary_for_goal'] ) ) {
-			$raw_pfg = wp_unslash( $_POST['primary_for_goal'] );
+			$raw_pfg                    = sanitize_text_field( wp_unslash( $_POST['primary_for_goal'] ) );
 			$params['primary_for_goal'] = in_array( $raw_pfg, array( '1', 1, true, 'true', 'TRUE' ), true );
 		}
 
@@ -550,7 +696,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$params['category'] = sanitize_text_field( wp_unslash( $_POST['category'] ) );
 		}
 		if ( isset( $_POST['primary_for_goal'] ) ) {
-			$raw_pfg = wp_unslash( $_POST['primary_for_goal'] );
+			$raw_pfg                    = sanitize_text_field( wp_unslash( $_POST['primary_for_goal'] ) );
 			$params['primary_for_goal'] = in_array( $raw_pfg, array( '1', 1, true, 'true', 'TRUE' ), true );
 		}
 		if ( isset( $_POST['default_value'] ) ) {
@@ -621,6 +767,62 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	}
 
 	/**
+	 * AJAX: persist runtime Google Ads identifiers discovered in the admin UI.
+	 */
+	public function ajax_update_google_tracker_runtime_ids() {
+		check_ajax_referer( 'pixel-tracking_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
+		}
+
+		$tracker_id      = isset( $_POST['tracker_id'] ) ? sanitize_text_field( wp_unslash( $_POST['tracker_id'] ) ) : '';
+		$customer_id_raw = isset( $_POST['customer_id'] ) ? sanitize_text_field( wp_unslash( $_POST['customer_id'] ) ) : '';
+		$customer_id     = preg_replace( '/\D+/', '', $customer_id_raw );
+		$tag_id          = isset( $_POST['tag_id'] ) ? sanitize_text_field( wp_unslash( $_POST['tag_id'] ) ) : '';
+
+		if ( empty( $tracker_id ) ) {
+			wp_send_json_error( __( 'tracker_id obrigatorio.', 'alvobot-pro' ) );
+		}
+
+		if ( $tag_id && preg_match( '/^\d{6,15}$/', $tag_id ) ) {
+			$tag_id = 'AW-' . $tag_id;
+		}
+		if ( $tag_id && ! preg_match( '/^AW-\d{6,15}$/', $tag_id ) ) {
+			wp_send_json_error( __( 'Google Tag ID invalido.', 'alvobot-pro' ) );
+		}
+
+		$settings        = $this->get_settings();
+		$google_trackers = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+		$updated         = false;
+
+		foreach ( $google_trackers as &$tracker ) {
+			if ( ! isset( $tracker['tracker_id'] ) || $tracker['tracker_id'] !== $tracker_id ) {
+				continue;
+			}
+			if ( $customer_id && ( empty( $tracker['customer_id'] ) || (string) $tracker['customer_id'] !== (string) $customer_id ) ) {
+				$tracker['customer_id'] = $customer_id;
+				$updated                = true;
+			}
+			if ( $tag_id && ( empty( $tracker['tag_id'] ) || $tracker['tag_id'] !== $tag_id ) ) {
+				$tracker['tag_id'] = $tag_id;
+				$updated           = true;
+			}
+			break;
+		}
+		unset( $tracker );
+
+		if ( ! $updated ) {
+			wp_send_json_success( array( 'updated' => false ) );
+		}
+
+		$settings['google_trackers'] = $google_trackers;
+		$this->save_settings( $settings );
+
+		wp_send_json_success( array( 'updated' => true ) );
+	}
+
+	/**
 	 * AJAX handler to refresh a single pixel's token from AlvoBot.
 	 *
 	 * Fetches fresh data from the platform and updates the stored token
@@ -683,9 +885,9 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		wp_send_json_success(
 			array(
-				'message'   => __( 'Token renovado com sucesso!', 'alvobot-pro' ),
-				'api_token' => $new_token,
-				'label'     => $new_label,
+				'message'       => __( 'Token renovado com sucesso!', 'alvobot-pro' ),
+				'has_api_token' => true,
+				'label'         => $new_label,
 			)
 		);
 	}
@@ -721,6 +923,34 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			esc_url( $page_url ),
 			esc_html__( 'Renovar token', 'alvobot-pro' )
 		);
+	}
+
+	/**
+	 * Show admin notice when token encryption had to preserve a legacy plaintext value.
+	 */
+	public function admin_notice_token_encryption() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$messages = array_filter(
+			array(
+				get_transient( 'alvobot_pixel_tracking_token_encryption_warning' ),
+				get_transient( 'alvobot_pixel_tracking_token_ref_warning' ),
+				get_transient( 'alvobot_pixel_tracking_duplicate_pixel_warning' ),
+			)
+		);
+		if ( empty( $messages ) ) {
+			return;
+		}
+
+		foreach ( $messages as $message ) {
+			printf(
+				'<div class="notice notice-warning"><p><strong>%s</strong> %s</p></div>',
+				esc_html__( 'Pixel Tracking:', 'alvobot-pro' ),
+				esc_html( $message )
+			);
+		}
 	}
 
 	/**
@@ -847,7 +1077,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			wp_send_json_error( __( 'Permissao negada.', 'alvobot-pro' ) );
 		}
 
-		$conversion_id = isset( $_POST['conversion_id'] ) ? absint( $_POST['conversion_id'] ) : 0;
+		$conversion_id    = isset( $_POST['conversion_id'] ) ? absint( $_POST['conversion_id'] ) : 0;
 		$allowed_triggers = array( 'page_load', 'page_time', 'form_submit', 'click', 'scroll', 'view_element', 'ad_impression', 'ad_click', 'ad_vignette_open', 'ad_vignette_click' );
 		$posted_trigger   = isset( $_POST['trigger_type'] ) ? sanitize_text_field( wp_unslash( $_POST['trigger_type'] ) ) : '';
 		if ( '' !== $posted_trigger && ! in_array( $posted_trigger, $allowed_triggers, true ) ) {
@@ -855,26 +1085,26 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			wp_send_json_error( sprintf( __( 'Gatilho invalido: %s', 'alvobot-pro' ), $posted_trigger ) );
 		}
 		$data = array(
-			'name'              => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
-			'event_type'        => isset( $_POST['event_type'] ) ? sanitize_text_field( wp_unslash( $_POST['event_type'] ) ) : 'PageView',
-			'event_custom_name' => isset( $_POST['event_custom_name'] ) ? sanitize_text_field( wp_unslash( $_POST['event_custom_name'] ) ) : '',
-			'trigger_type'      => '' !== $posted_trigger ? $posted_trigger : 'page_load',
-			'trigger_value'     => isset( $_POST['trigger_value'] ) ? absint( $_POST['trigger_value'] ) : 0,
-			'display_on'        => isset( $_POST['display_on'] ) ? sanitize_text_field( wp_unslash( $_POST['display_on'] ) ) : 'all',
-			'page_ids'          => isset( $_POST['page_ids'] ) ? array_map( 'absint', (array) $_POST['page_ids'] ) : array(),
-			'page_paths'        => isset( $_POST['page_paths'] ) ? sanitize_text_field( wp_unslash( $_POST['page_paths'] ) ) : '',
-			'css_selector'      => isset( $_POST['css_selector'] ) ? sanitize_text_field( wp_unslash( $_POST['css_selector'] ) ) : '',
-			'content_name'      => isset( $_POST['content_name'] ) ? sanitize_text_field( wp_unslash( $_POST['content_name'] ) ) : '',
-			'pixel_ids'              => isset( $_POST['pixel_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_ids'] ) ) : '',
-			'gads_conversion_label'  => isset( $_POST['gads_conversion_label'] ) ? sanitize_text_field( wp_unslash( $_POST['gads_conversion_label'] ) ) : '',
-			'gads_labels_map'        => isset( $_POST['gads_labels_map'] ) ? wp_unslash( $_POST['gads_labels_map'] ) : '{}', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized in CPT save_conversion_meta.
-			'gads_conversion_value'  => isset( $_POST['gads_conversion_value'] )
+			'name'                  => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
+			'event_type'            => isset( $_POST['event_type'] ) ? sanitize_text_field( wp_unslash( $_POST['event_type'] ) ) : 'PageView',
+			'event_custom_name'     => isset( $_POST['event_custom_name'] ) ? sanitize_text_field( wp_unslash( $_POST['event_custom_name'] ) ) : '',
+			'trigger_type'          => '' !== $posted_trigger ? $posted_trigger : 'page_load',
+			'trigger_value'         => isset( $_POST['trigger_value'] ) ? absint( $_POST['trigger_value'] ) : 0,
+			'display_on'            => isset( $_POST['display_on'] ) ? sanitize_text_field( wp_unslash( $_POST['display_on'] ) ) : 'all',
+			'page_ids'              => isset( $_POST['page_ids'] ) ? array_map( 'absint', (array) $_POST['page_ids'] ) : array(),
+			'page_paths'            => isset( $_POST['page_paths'] ) ? sanitize_text_field( wp_unslash( $_POST['page_paths'] ) ) : '',
+			'css_selector'          => isset( $_POST['css_selector'] ) ? sanitize_text_field( wp_unslash( $_POST['css_selector'] ) ) : '',
+			'content_name'          => isset( $_POST['content_name'] ) ? sanitize_text_field( wp_unslash( $_POST['content_name'] ) ) : '',
+			'pixel_ids'             => isset( $_POST['pixel_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['pixel_ids'] ) ) : '',
+			'gads_conversion_label' => isset( $_POST['gads_conversion_label'] ) ? sanitize_text_field( wp_unslash( $_POST['gads_conversion_label'] ) ) : '',
+			'gads_labels_map'       => isset( $_POST['gads_labels_map'] ) ? wp_unslash( $_POST['gads_labels_map'] ) : '{}', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized in CPT save_conversion_meta.
+			'gads_conversion_value' => isset( $_POST['gads_conversion_value'] )
 				? (string) min( 1000000, max( 0, floatval( wp_unslash( $_POST['gads_conversion_value'] ) ) ) ) : '',
 		);
 
 		// Derive platforms from selected pixel_ids.
-		$ids_array = array_filter( array_map( 'trim', explode( ',', $data['pixel_ids'] ) ) );
-		$has_meta  = false;
+		$ids_array  = array_filter( array_map( 'trim', explode( ',', $data['pixel_ids'] ) ) );
+		$has_meta   = false;
 		$has_google = false;
 		foreach ( $ids_array as $pid ) {
 			if ( preg_match( '/^\d{15,16}$/', $pid ) ) {
@@ -983,7 +1213,10 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 	 * Local post is NOT deleted by this method — caller decides.
 	 */
 	private function archive_gads_actions_for_rule( $conversion_id ) {
-		$result = array( 'archived' => 0, 'errors' => array() );
+		$result = array(
+			'archived' => 0,
+			'errors'   => array(),
+		);
 
 		$labels_map_raw = get_post_meta( $conversion_id, '_gads_labels_map', true );
 		if ( ! is_string( $labels_map_raw ) || '' === trim( $labels_map_raw ) ) {
@@ -1022,6 +1255,9 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$tracker       = $tracker_index[ $tracker_id ];
 			$connection_id = isset( $tracker['connection_id'] ) ? sanitize_text_field( $tracker['connection_id'] ) : '';
 			$customer_id   = isset( $tracker['customer_id'] ) ? preg_replace( '/\D+/', '', (string) $tracker['customer_id'] ) : '';
+			if ( empty( $customer_id ) && preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
+				$customer_id = preg_replace( '/\D+/', '', $tracker_id );
+			}
 			if ( empty( $connection_id ) || empty( $customer_id ) ) {
 				$result['errors'][] = $rule_name . ' / ' . $tracker_id . ' (sem connection_id/customer_id; configure ou Desvincule esta regra)';
 				continue;
@@ -1035,7 +1271,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			}
 			$matched_id = '';
 			foreach ( (array) $actions as $a ) {
-				if ( ! is_array( $a ) || empty( $a['name'] ) ) { continue; }
+				if ( ! is_array( $a ) || empty( $a['name'] ) ) {
+					continue; }
 				if ( $this->normalize_conversion_name( $a['name'] ) === $rule_name_norm && isset( $a['status'] ) && 'REMOVED' !== $a['status'] ) {
 					$matched_id = (string) $a['id'];
 					break;
@@ -1132,15 +1369,16 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
 
-		$total_local   = 0;
+		$total_local    = 0;
 		$total_archived = 0;
-		$all_errors    = array();
+		$all_errors     = array();
 
 		foreach ( $ids as $id ) {
 			$post = get_post( $id );
-			if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) { continue; }
+			if ( ! $post || 'alvo_pixel_conv' !== $post->post_type ) {
+				continue; }
 			AlvoBotPro::debug_log( 'pixel-tracking', 'bulk-delete-full: processing rule ' . $id . ' (' . get_the_title( $id ) . ')' );
-			$gads_result   = $this->archive_gads_actions_for_rule( $id );
+			$gads_result     = $this->archive_gads_actions_for_rule( $id );
 			$total_archived += (int) $gads_result['archived'];
 			if ( ! empty( $gads_result['errors'] ) ) {
 				$all_errors = array_merge( $all_errors, $gads_result['errors'] );
@@ -1205,24 +1443,24 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		foreach ( $conversions as $conv ) {
 			$result[] = array(
-				'id'                => $conv->ID,
-				'name'              => $conv->post_title,
-				'status'            => $conv->post_status,
-				'event_type'        => get_post_meta( $conv->ID, '_event_type', true ),
-				'event_custom_name' => get_post_meta( $conv->ID, '_event_custom_name', true ),
-				'trigger_type'      => get_post_meta( $conv->ID, '_trigger_type', true ),
-				'trigger_value'     => get_post_meta( $conv->ID, '_trigger_value', true ),
-				'display_on'        => get_post_meta( $conv->ID, '_display_on', true ),
-				'page_ids'          => get_post_meta( $conv->ID, '_page_ids', true ),
-				'page_paths'        => get_post_meta( $conv->ID, '_page_paths', true ),
-				'css_selector'      => get_post_meta( $conv->ID, '_css_selector', true ),
-				'content_name'      => get_post_meta( $conv->ID, '_content_name', true ),
-				'pixel_ids'         => get_post_meta( $conv->ID, '_pixel_ids', true ),
-				'platforms'              => get_post_meta( $conv->ID, '_platforms', true ),
-				'gads_conversion_label'  => get_post_meta( $conv->ID, '_gads_conversion_label', true ),
-				'gads_labels_map'        => get_post_meta( $conv->ID, '_gads_labels_map', true ),
-				'gads_conversion_value'  => get_post_meta( $conv->ID, '_gads_conversion_value', true ),
-				'is_system'              => get_post_meta( $conv->ID, '_is_system', true ),
+				'id'                    => $conv->ID,
+				'name'                  => $conv->post_title,
+				'status'                => $conv->post_status,
+				'event_type'            => get_post_meta( $conv->ID, '_event_type', true ),
+				'event_custom_name'     => get_post_meta( $conv->ID, '_event_custom_name', true ),
+				'trigger_type'          => get_post_meta( $conv->ID, '_trigger_type', true ),
+				'trigger_value'         => get_post_meta( $conv->ID, '_trigger_value', true ),
+				'display_on'            => get_post_meta( $conv->ID, '_display_on', true ),
+				'page_ids'              => get_post_meta( $conv->ID, '_page_ids', true ),
+				'page_paths'            => get_post_meta( $conv->ID, '_page_paths', true ),
+				'css_selector'          => get_post_meta( $conv->ID, '_css_selector', true ),
+				'content_name'          => get_post_meta( $conv->ID, '_content_name', true ),
+				'pixel_ids'             => get_post_meta( $conv->ID, '_pixel_ids', true ),
+				'platforms'             => get_post_meta( $conv->ID, '_platforms', true ),
+				'gads_conversion_label' => get_post_meta( $conv->ID, '_gads_conversion_label', true ),
+				'gads_labels_map'       => get_post_meta( $conv->ID, '_gads_labels_map', true ),
+				'gads_conversion_value' => get_post_meta( $conv->ID, '_gads_conversion_value', true ),
+				'is_system'             => get_post_meta( $conv->ID, '_is_system', true ),
 			);
 		}
 
@@ -1298,7 +1536,7 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				continue;
 			}
 
-			$valid_ids     = array_values(
+			$valid_ids = array_values(
 				array_filter(
 					$selected_ids,
 					function ( $target_id ) use ( $valid_lookup ) {
@@ -1323,15 +1561,14 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				}
 			}
 
-			$pixel_ids_changed   = implode( ',', $selected_ids ) !== implode( ',', $valid_ids );
-			$labels_map_changed  = wp_json_encode( $labels_map ) !== wp_json_encode( $filtered_labels_map );
-			$had_explicit_target = ! empty( $selected_ids );
+				$pixel_ids_changed  = implode( ',', $selected_ids ) !== implode( ',', $valid_ids );
+				$labels_map_changed = wp_json_encode( $labels_map ) !== wp_json_encode( $filtered_labels_map );
 
 			if ( ! $pixel_ids_changed && ! $labels_map_changed ) {
 				continue;
 			}
 
-			if ( $had_explicit_target && empty( $valid_ids ) ) {
+			if ( empty( $valid_ids ) ) {
 				// All selected trackers orphaned. Preserve the original selection so that
 				// a subsequent save (which may re-introduce the tracker) restores the rule
 				// without data loss. Flag as orphaned so the admin UI can surface a notice.
@@ -1425,13 +1662,13 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			}
 		} elseif ( 'settings' === $active_tab ) {
 			// Settings tab fields — checkboxes absent = unchecked.
-			$merged['test_mode']       = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
-			$merged['test_event_code'] = isset( $posted['test_event_code'] ) ? $posted['test_event_code'] : '';
+			$merged['test_mode']         = isset( $posted['test_mode'] ) ? $posted['test_mode'] : '';
+			$merged['test_event_code']   = isset( $posted['test_event_code'] ) ? $posted['test_event_code'] : '';
 			$merged['realtime_dispatch'] = isset( $posted['realtime_dispatch'] ) ? $posted['realtime_dispatch'] : '';
-			$merged['excluded_roles']  = isset( $posted['excluded_roles'] ) ? $posted['excluded_roles'] : array();
-			$merged['retention_days']  = isset( $posted['retention_days'] ) ? $posted['retention_days'] : '';
-			$merged['max_events']      = isset( $posted['max_events'] ) ? $posted['max_events'] : '';
-			$merged['max_leads']       = isset( $posted['max_leads'] ) ? $posted['max_leads'] : '';
+			$merged['excluded_roles']    = isset( $posted['excluded_roles'] ) ? $posted['excluded_roles'] : array();
+			$merged['retention_days']    = isset( $posted['retention_days'] ) ? $posted['retention_days'] : '';
+			$merged['max_events']        = isset( $posted['max_events'] ) ? $posted['max_events'] : '';
+			$merged['max_leads']         = isset( $posted['max_leads'] ) ? $posted['max_leads'] : '';
 		}
 
 		if ( $this->save_settings( $merged ) ) {
@@ -1453,9 +1690,9 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab display logic.
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'pixels';
-		$settings   = $this->get_settings();
-		$pixels     = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$active_tab   = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'pixels';
+		$settings     = $this->get_settings();
+		$pixels       = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
 		$pixel_labels = array();
 		foreach ( $pixels as $pixel ) {
 			$pixel_id = isset( $pixel['pixel_id'] ) ? sanitize_text_field( (string) $pixel['pixel_id'] ) : '';
@@ -1469,22 +1706,41 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 				'alvobot-pro-pixel-tracking',
 				'alvobot_pixel_tracking_extra',
 				array(
-					'rest_url'      => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
-					'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
-					'active_tab'    => $active_tab,
-					'pixel_labels'  => $pixel_labels,
-					'debug_enabled'    => class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' ) ? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' ) : false,
-					'google_trackers'  => isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array(),
+					'rest_url'        => esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/' ) ),
+					'rest_nonce'      => wp_create_nonce( 'wp_rest' ),
+					'active_tab'      => $active_tab,
+					'pixel_labels'    => $pixel_labels,
+					'debug_enabled'   => class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' ) ? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' ) : false,
+					'google_trackers' => isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array(),
 				)
 			);
-		}
+	}
 
 	protected function render_settings_sections( $settings ) {
 		// Kept for backward compatibility — content now rendered via tab view files.
 	}
 
+	/**
+	 * Return configured Meta pixels with API tokens decrypted for server-side dispatch only.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function get_runtime_pixels() {
+		$settings = $this->get_settings();
+		$pixels   = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
+
+		foreach ( $pixels as &$pixel ) {
+			if ( ! empty( $pixel['api_token'] ) ) {
+				$pixel['api_token'] = $this->decrypt_api_token( (string) $pixel['api_token'] );
+			}
+		}
+		unset( $pixel );
+
+		return $pixels;
+	}
+
 	protected function sanitize_settings( $settings ) {
-		$sanitized = array();
+		$sanitized    = array();
 		$old_settings = $this->get_settings();
 		$old_pixels   = isset( $old_settings['pixels'] ) && is_array( $old_settings['pixels'] ) ? $old_settings['pixels'] : array();
 
@@ -1509,9 +1765,9 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 
 		// Detect removed pixels and handle pending events
-		$old_ids      = array_column( $old_pixels, 'pixel_id' );
-		$new_ids      = array_column( $pixels, 'pixel_id' );
-		$removed_ids  = array_diff( $old_ids, $new_ids );
+		$old_ids     = array_column( $old_pixels, 'pixel_id' );
+		$new_ids     = array_column( $pixels, 'pixel_id' );
+		$removed_ids = array_diff( $old_ids, $new_ids );
 
 		foreach ( $removed_ids as $removed_id ) {
 			$this->handle_removed_pixel( $removed_id );
@@ -1519,14 +1775,38 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 
 		// Validate each pixel
 		$sanitized_pixels = array();
+		$seen_pixel_ids   = array();
 		foreach ( $pixels as $pixel ) {
 			$pixel_id = isset( $pixel['pixel_id'] ) ? sanitize_text_field( $pixel['pixel_id'] ) : '';
 			if ( ! preg_match( '/^\d{15,16}$/', $pixel_id ) ) {
 				continue;
 			}
+			if ( isset( $seen_pixel_ids[ $pixel_id ] ) ) {
+				$message = sprintf(
+					/* translators: %s: Meta pixel ID */
+					__( 'Pixel duplicado %s ignorado para evitar disparos CAPI duplicados.', 'alvobot-pro' ),
+					$pixel_id
+				);
+				AlvoBotPro::debug_log( 'pixel-tracking', $message );
+				set_transient( 'alvobot_pixel_tracking_duplicate_pixel_warning', $message, HOUR_IN_SECONDS );
+				continue;
+			}
+			$seen_pixel_ids[ $pixel_id ] = true;
+			$old_pixel                   = $this->find_existing_pixel_settings( $old_pixels, $pixel_id );
+			$api_token                   = isset( $pixel['api_token'] ) ? sanitize_text_field( $pixel['api_token'] ) : '';
+			if ( '' === $api_token && ! empty( $pixel['token_ref'] ) ) {
+				$api_token = $this->resolve_admin_pixel_token_ref(
+					(string) $pixel['token_ref'],
+					$pixel_id,
+					isset( $pixel['connection_id'] ) ? sanitize_text_field( $pixel['connection_id'] ) : ''
+				);
+			}
+			if ( '' === $api_token && ! empty( $old_pixel['api_token'] ) ) {
+				$api_token = (string) $old_pixel['api_token'];
+			}
 			$sanitized_pixels[] = array(
 				'pixel_id'      => $pixel_id,
-				'api_token'     => isset( $pixel['api_token'] ) ? sanitize_text_field( $pixel['api_token'] ) : '',
+				'api_token'     => $this->encrypt_api_token( $api_token ),
 				'source'        => isset( $pixel['source'] ) && in_array( $pixel['source'], array( 'alvobot', 'manual' ), true ) ? $pixel['source'] : 'manual',
 				'connection_id' => isset( $pixel['connection_id'] ) ? sanitize_text_field( $pixel['connection_id'] ) : '',
 				'label'         => isset( $pixel['label'] ) ? sanitize_text_field( $pixel['label'] ) : '',
@@ -1535,8 +1815,8 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		}
 		$sanitized['pixels'] = $sanitized_pixels;
 
-		$sanitized['test_mode']       = ! empty( $settings['test_mode'] );
-		$sanitized['test_event_code'] = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
+		$sanitized['test_mode']         = ! empty( $settings['test_mode'] );
+		$sanitized['test_event_code']   = isset( $settings['test_event_code'] ) ? sanitize_text_field( $settings['test_event_code'] ) : '';
 		$sanitized['realtime_dispatch'] = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
 
 		$sanitized['excluded_roles'] = array();
@@ -1603,34 +1883,34 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 						'label'            => isset( $tracker['label'] ) ? sanitize_text_field( $tracker['label'] ) : 'Google Tag existente',
 						'conversion_label' => '',
 					);
-					$has_external = true;
+					$has_external         = true;
 				}
 				continue;
 			}
 
-				if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
-					$type = 'ga4';
-				} elseif ( preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
-					$type = 'google_ads';
-				} else {
-					AlvoBotPro::debug_log( 'pixel-tracking', 'sanitize_settings: tracker_id descartado por formato invalido: ' . $tracker_id );
-					continue; // Invalid tracker ID, skip.
-				}
+			if ( preg_match( '/^G-[A-Z0-9]{7,12}$/', $tracker_id ) ) {
+				$type = 'ga4';
+			} elseif ( preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
+				$type = 'google_ads';
+			} else {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'sanitize_settings: tracker_id descartado por formato invalido: ' . $tracker_id );
+				continue; // Invalid tracker ID, skip.
+			}
 
 				$conv_label = isset( $tracker['conversion_label'] ) ? sanitize_text_field( $tracker['conversion_label'] ) : '';
-				if ( $conv_label && ! preg_match( '/^[A-Za-z0-9_-]{1,32}$/', $conv_label ) ) {
-					$conv_label = '';
-				}
+			if ( $conv_label && ! preg_match( '/^[A-Za-z0-9_-]{1,32}$/', $conv_label ) ) {
+				$conv_label = '';
+			}
 				$tag_id = isset( $tracker['tag_id'] ) ? sanitize_text_field( $tracker['tag_id'] ) : '';
-				if ( $tag_id && preg_match( '/^\d{6,15}$/', $tag_id ) ) {
-					$tag_id = 'AW-' . $tag_id;
-				}
-				if ( $tag_id && ! preg_match( '/^AW-\d{6,15}$/', $tag_id ) ) {
-					$tag_id = '';
-				}
-				if ( 'google_ads' === $type && empty( $tag_id ) && empty( $tracker['connection_id'] ) ) {
-					$tag_id = $tracker_id;
-				}
+			if ( $tag_id && preg_match( '/^\d{6,15}$/', $tag_id ) ) {
+				$tag_id = 'AW-' . $tag_id;
+			}
+			if ( $tag_id && ! preg_match( '/^AW-\d{6,15}$/', $tag_id ) ) {
+				$tag_id = '';
+			}
+			if ( 'google_ads' === $type && empty( $tag_id ) && empty( $tracker['connection_id'] ) ) {
+				$tag_id = $tracker_id;
+			}
 
 				$customer_id = isset( $tracker['customer_id'] ) ? preg_replace( '/\D+/', '', (string) $tracker['customer_id'] ) : '';
 
@@ -1643,21 +1923,21 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 					'tag_id'           => $tag_id,
 					'customer_id'      => $customer_id,
 				);
-			}
+		}
 		$sanitized['google_trackers'] = $sanitized_trackers;
 
 		// Derive flat fields for backward compatibility.
 		$sanitized['google_analytics_id']         = '';
 		$sanitized['google_ads_id']               = '';
-		$sanitized['google_ads_conversion_label']  = '';
-			foreach ( $sanitized_trackers as $t ) {
+		$sanitized['google_ads_conversion_label'] = '';
+		foreach ( $sanitized_trackers as $t ) {
 			if ( 'ga4' === $t['type'] && '' === $sanitized['google_analytics_id'] ) {
 				$sanitized['google_analytics_id'] = $t['tracker_id'];
 			}
-				if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
-					$sanitized['google_ads_id']               = ! empty( $t['tag_id'] ) ? $t['tag_id'] : $t['tracker_id'];
-					$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
-				}
+			if ( 'google_ads' === $t['type'] && '' === $sanitized['google_ads_id'] ) {
+				$sanitized['google_ads_id']               = ! empty( $t['tag_id'] ) ? $t['tag_id'] : $t['tracker_id'];
+				$sanitized['google_ads_conversion_label'] = $t['conversion_label'];
+			}
 		}
 
 			$active_target_ids = array_merge(
@@ -1667,7 +1947,161 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 			$this->sync_conversion_targets_to_active_trackers( $active_target_ids );
 
 			return $sanitized;
+	}
+
+	/**
+	 * Find a saved pixel row by ID.
+	 *
+	 * @param array  $pixels   Existing pixels.
+	 * @param string $pixel_id Pixel ID.
+	 * @return array<string,mixed>
+	 */
+	private function find_existing_pixel_settings( $pixels, $pixel_id ) {
+		if ( ! is_array( $pixels ) ) {
+			return array();
 		}
+		foreach ( $pixels as $pixel ) {
+			if ( isset( $pixel['pixel_id'] ) && (string) $pixel['pixel_id'] === (string) $pixel_id ) {
+				return is_array( $pixel ) ? $pixel : array();
+			}
+		}
+		return array();
+	}
+
+	/**
+	 * Encrypt a Meta CAPI token before saving options.
+	 *
+	 * @param string $token Plain or already encrypted token.
+	 * @return string
+	 */
+	private function encrypt_api_token( $token ) {
+		$token = trim( (string) $token );
+		if ( '' === $token || 0 === strpos( $token, 'enc:v1:' ) || 0 === strpos( $token, 'enc:v2:' ) ) {
+			return $token;
+		}
+
+		if ( ! $this->is_token_encryption_available() ) {
+			$this->flag_token_encryption_warning( __( 'Token CAPI salvo em texto legado porque OpenSSL AES-256-GCM ou random_bytes nao estao disponiveis neste servidor.', 'alvobot-pro' ) );
+			return $token;
+		}
+
+		$tag    = '';
+		$iv     = random_bytes( 12 );
+		$cipher = openssl_encrypt( $token, 'aes-256-gcm', $this->get_token_encryption_key(), OPENSSL_RAW_DATA, $iv, $tag );
+		if ( false === $cipher ) {
+			$this->flag_token_encryption_warning( __( 'Falha ao criptografar token CAPI; valor legado preservado para evitar perda de configuracao.', 'alvobot-pro' ) );
+			return $token;
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Base64 stores binary IV bytes in a text option value.
+		$encoded_iv = base64_encode( $iv );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Base64 stores binary authentication tag bytes in a text option value.
+		$encoded_tag = base64_encode( $tag );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Base64 stores binary ciphertext bytes in a text option value.
+		$encoded_cipher = base64_encode( $cipher );
+
+		return 'enc:v2:' . $encoded_iv . ':' . $encoded_tag . ':' . $encoded_cipher;
+	}
+
+	/**
+	 * Decrypt a stored Meta CAPI token. Plain legacy tokens still work.
+	 *
+	 * @param string $token Stored token.
+	 * @return string
+	 */
+	public function decrypt_api_token( $token ) {
+		$token = trim( (string) $token );
+		if ( '' === $token || ( 0 !== strpos( $token, 'enc:v1:' ) && 0 !== strpos( $token, 'enc:v2:' ) ) ) {
+			return $token;
+		}
+
+		if ( 0 === strpos( $token, 'enc:v2:' ) ) {
+			$parts = explode( ':', $token, 5 );
+			if ( 5 !== count( $parts ) || ! function_exists( 'openssl_decrypt' ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Encrypted API token v2 has invalid format.' );
+				return '';
+			}
+
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the binary IV stored by encrypt_api_token().
+			$iv = base64_decode( $parts[2], true );
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the binary authentication tag stored by encrypt_api_token().
+			$tag = base64_decode( $parts[3], true );
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the binary ciphertext stored by encrypt_api_token().
+			$cipher = base64_decode( $parts[4], true );
+			if ( false === $iv || false === $tag || false === $cipher || 12 !== strlen( $iv ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Encrypted API token v2 cannot be decoded.' );
+				return '';
+			}
+
+			$plain = openssl_decrypt( $cipher, 'aes-256-gcm', $this->get_token_encryption_key(), OPENSSL_RAW_DATA, $iv, $tag );
+			return false === $plain ? '' : $plain;
+		}
+
+		$parts = explode( ':', $token, 4 );
+		if ( 4 !== count( $parts ) ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Encrypted API token has invalid format.' );
+			return '';
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the binary IV stored by encrypt_api_token().
+		$iv = base64_decode( $parts[2], true );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the binary ciphertext stored by encrypt_api_token().
+		$cipher = base64_decode( $parts[3], true );
+		if ( false === $iv || false === $cipher || 16 !== strlen( $iv ) || ! function_exists( 'openssl_decrypt' ) ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Encrypted API token cannot be decoded.' );
+			return '';
+		}
+
+		$plain = openssl_decrypt( $cipher, 'aes-256-cbc', $this->get_token_encryption_key(), OPENSSL_RAW_DATA, $iv );
+		return false === $plain ? '' : $plain;
+	}
+
+	/**
+	 * Determine whether authenticated local token encryption is available.
+	 *
+	 * @return bool
+	 */
+	private function is_token_encryption_available() {
+		return function_exists( 'openssl_encrypt' )
+			&& function_exists( 'openssl_decrypt' )
+			&& function_exists( 'openssl_get_cipher_methods' )
+			&& function_exists( 'random_bytes' )
+			&& in_array( 'aes-256-gcm', array_map( 'strtolower', openssl_get_cipher_methods() ), true );
+	}
+
+	/**
+	 * Surface token encryption failures to admins and logs.
+	 *
+	 * @param string $message Warning message.
+	 * @return void
+	 */
+	private function flag_token_encryption_warning( $message ) {
+		$message = sanitize_text_field( $message );
+		AlvoBotPro::debug_log( 'pixel-tracking', $message );
+		set_transient( 'alvobot_pixel_tracking_token_encryption_warning', $message, HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Build a stable local encryption key from WordPress salts.
+	 *
+	 * @return string Binary 32-byte key.
+	 */
+	private function get_token_encryption_key() {
+		$material = '';
+		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT' ) as $constant ) {
+			if ( defined( $constant ) ) {
+				$material .= constant( $constant );
+			}
+		}
+		if ( '' === $material && function_exists( 'wp_salt' ) ) {
+			$material = wp_salt( 'auth' );
+		}
+		if ( '' === $material ) {
+			$material = ABSPATH;
+		}
+
+		return hash( 'sha256', $material . '|alvobot-pixel-tracking', true );
+	}
 
 	protected function render_additional_content( $settings ) {
 		// Content now rendered via tab view files.
@@ -1683,5 +2117,21 @@ class AlvoBotPro_PixelTracking extends AlvoBotPro_Module_Base {
 		if ( $this->cleanup instanceof AlvoBotPro_PixelTracking_Cleanup ) {
 			$this->cleanup->schedule_urgent_cleanup( $delay_seconds );
 		}
+	}
+
+	/**
+	 * Run cleanup immediately and return a summary for admin feedback.
+	 *
+	 * @return array Cleanup summary.
+	 */
+	public function run_cleanup_now() {
+		if ( $this->cleanup instanceof AlvoBotPro_PixelTracking_Cleanup ) {
+			return $this->cleanup->run_cleanup();
+		}
+
+		return array(
+			'message'       => __( 'Limpeza indisponivel: rotina de limpeza nao inicializada.', 'alvobot-pro' ),
+			'deleted_total' => 0,
+		);
 	}
 }

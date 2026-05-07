@@ -34,7 +34,8 @@ class AlvoBotPro_QuizBuilderV2_API {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * ROUTES
 	 * ====================================================================== */
 
@@ -98,7 +99,8 @@ class AlvoBotPro_QuizBuilderV2_API {
 		);
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * AUTH
 	 * ====================================================================== */
 
@@ -124,7 +126,8 @@ class AlvoBotPro_QuizBuilderV2_API {
 		return true;
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * CALLBACKS
 	 * ====================================================================== */
 
@@ -137,11 +140,11 @@ class AlvoBotPro_QuizBuilderV2_API {
 		// Attach lead count to each quiz
 		$result = array();
 		foreach ( $quizzes as $quiz ) {
-			$leads               = get_option( 'alvobot_qbv2_leads_' . $quiz['id'], array() );
-			$quiz['lead_count']  = count( $leads );
+			$leads                 = get_option( 'alvobot_qbv2_leads_' . $quiz['id'], array() );
+			$quiz['lead_count']    = count( $leads );
 			$quiz['full_page_url'] = home_url( '/?alvobot_quiz=' . $quiz['id'] );
 			$quiz['shortcode']     = '[alvobot_quiz id="' . $quiz['id'] . '"]';
-			$result[]            = $quiz;
+			$result[]              = $quiz;
 		}
 
 		return new WP_REST_Response(
@@ -189,10 +192,10 @@ class AlvoBotPro_QuizBuilderV2_API {
 			return new WP_Error( 'missing_title', 'O campo title é obrigatório', array( 'status' => 400 ) );
 		}
 
-		$quiz = $this->sanitize_quiz( $json );
+		$quiz       = $this->sanitize_quiz( $json );
 		$quiz['id'] = 'qb_' . substr( md5( uniqid( '', true ) ), 0, 8 );
 
-		$quizzes = get_option( 'alvobot_qbv2_data', array() );
+		$quizzes                = get_option( 'alvobot_qbv2_data', array() );
 		$quizzes[ $quiz['id'] ] = $quiz;
 		update_option( 'alvobot_qbv2_data', $quizzes, false );
 
@@ -223,7 +226,7 @@ class AlvoBotPro_QuizBuilderV2_API {
 		$current = $quizzes[ $id ];
 
 		// Merge: only overwrite fields that were sent
-		$merged = array_merge( $current, $json );
+		$merged       = array_merge( $current, $json );
 		$merged['id'] = $id; // prevent ID change
 
 		$quiz = $this->sanitize_quiz( $merged );
@@ -290,7 +293,8 @@ class AlvoBotPro_QuizBuilderV2_API {
 		);
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * ARGS DEFINITION
 	 * ====================================================================== */
 
@@ -372,20 +376,25 @@ class AlvoBotPro_QuizBuilderV2_API {
 		);
 	}
 
-	/* =========================================================================
+	/*
+	=========================================================================
 	 * SANITIZATION (same logic as main class)
 	 * ====================================================================== */
 
 	private function sanitize_quiz( $raw ) {
+		$color_header  = sanitize_hex_color( $raw['color_header'] ?? '#1a3a2a' );
+		$color_primary = sanitize_hex_color( $raw['color_primary'] ?? '#22c55e' );
+		$color_accent  = sanitize_hex_color( $raw['color_accent'] ?? '#f97316' );
+
 		$quiz = array(
 			'id'            => sanitize_text_field( $raw['id'] ?? '' ),
 			'title'         => sanitize_text_field( $raw['title'] ?? '' ),
 			'headline'      => sanitize_text_field( $raw['headline'] ?? '' ),
 			'subheadline'   => sanitize_text_field( $raw['subheadline'] ?? '' ),
 			'logo_url'      => esc_url_raw( $raw['logo_url'] ?? '' ),
-			'color_header'  => sanitize_hex_color( $raw['color_header'] ?? '#1a3a2a' ) ?: '#1a3a2a',
-			'color_primary' => sanitize_hex_color( $raw['color_primary'] ?? '#22c55e' ) ?: '#22c55e',
-			'color_accent'  => sanitize_hex_color( $raw['color_accent'] ?? '#f97316' ) ?: '#f97316',
+			'color_header'  => $color_header ? $color_header : '#1a3a2a',
+			'color_primary' => $color_primary ? $color_primary : '#22c55e',
+			'color_accent'  => $color_accent ? $color_accent : '#f97316',
 			'redirect_url'  => esc_url_raw( $raw['redirect_url'] ?? '' ),
 			'enable_lead'   => ! empty( $raw['enable_lead'] ),
 			'lead_title'    => sanitize_text_field( $raw['lead_title'] ?? '' ),

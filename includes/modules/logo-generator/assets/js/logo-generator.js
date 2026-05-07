@@ -43,13 +43,13 @@ jQuery(document).ready(function ($) {
 		if (!iconData) return null;
 
 		// iconData is [attrs, children] where children are [elementName, elAttrs] tuples
-		var iconAttrs = iconData[0] || {};
+		var _iconAttrs = iconData[0] || {};
 		var iconChildren = iconData[1] || [];
 
 		// If old format (array of tuples directly), handle it
 		if (Array.isArray(iconData[0]) && typeof iconData[0][0] === 'string') {
 			iconChildren = iconData;
-			iconAttrs = {};
+			_iconAttrs = {};
 		}
 
 		var svgAttrs = {
@@ -346,20 +346,24 @@ jQuery(document).ready(function ($) {
 				var faviconResponse = results[1];
 				var messages = [];
 
-				if (logoResponse && logoResponse.success) {
-					messages.push(logoResponse.data.message);
-					if (logoResponse.data.logo) {
+				if (logoResponse?.success) {
+					if (logoResponse.data?.message) {
+						messages.push(logoResponse.data.message);
+					}
+					if (logoResponse.data?.logo?.url) {
 						var customLogoImg = $('.custom-logo');
 						if (customLogoImg.length) {
-							customLogoImg.attr('src', logoResponse.data.logo.url + '?t=' + new Date().getTime());
+							customLogoImg.attr('src', logoResponse.data.logo.url + '?t=' + Date.now());
 						}
 					}
 				}
 
-				if (faviconResponse && faviconResponse.success) {
-					messages.push(faviconResponse.data.message);
+				if (faviconResponse?.success) {
+					if (faviconResponse.data?.message) {
+						messages.push(faviconResponse.data.message);
+					}
 					if (faviconResponse.data.favicon) {
-						var faviconUrl = faviconResponse.data.favicon.url + '?t=' + new Date().getTime();
+						var faviconUrl = faviconResponse.data.favicon.url + '?t=' + Date.now();
 						$('link[rel*="icon"]').each(function () {
 							$(this).attr('href', faviconUrl);
 						});

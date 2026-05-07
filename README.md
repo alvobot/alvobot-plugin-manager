@@ -1,6 +1,6 @@
 # AlvoBot Pro - Plugin Manager Suite
 
-[![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
+[![Version](https://img.shields.io/badge/version-2.17.18-blue.svg)](https://github.com/alvobot/alvobot-plugin-manager)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-brightgreen.svg)](https://wordpress.org/)
 [![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
@@ -555,25 +555,17 @@ tests/
 
 Veja o arquivo [CHANGELOG.md](CHANGELOG.md) para histórico completo de versões.
 
-### Versão Atual: 2.9.0
+### Versão Atual: 2.17.18
 
 **✨ Novidades:**
-- **Smart Internal Links**: Módulo completo de links internos inteligentes com geração por IA
-  - Editor visual de links com busca de posts e autocomplete
-  - 10 endpoints REST API para integração completa
-  - Geração em massa com paginação
-  - Compatibilidade com page builders (Elementor, Divi, etc.)
-  - Personalização de cores e estilos dos botões
-  - Extensibilidade via hooks e filtros
-- **CTA Cards**: Preview AJAX em tempo real com fallback estático
-- **Testes**: Adicionados testes automatizados para Smart Internal Links
+- **Pixel Tracking**: atribuição first-party, PageView mais resiliente, cleanup com feedback real e UX melhor para contas Google Ads múltiplas.
+- **Buscar Pixels automático**: ativos são carregados ao selecionar plataforma/conta, sem depender de clique manual.
+- **Testes**: regressões Brain Monkey para tracking, REST, frontend, CPT e limpeza de dados.
 
 **🔧 Melhorias:**
-- Singleton pattern refinado na classe principal
-- Design system auditado e padronizado (CSS variables)
-- Consolidação de dados compartilhados (countries-languages)
-- Melhoria na validação de meta data em todos os módulos
-- Hooks extensíveis em módulos existentes
+- Sanitização de tokens e metadados expostos no admin.
+- Hardening de cookies de atribuição e anonimização de IP no Quiz Builder v2.
+- Correções de UX e robustez em Essential Pages, Logo Generator e Smart Internal Links.
 
 ## 🤝 Contribuição
 
@@ -602,7 +594,7 @@ Use nosso [sistema de issues](https://github.com/alvobot/alvobot-plugin-manager/
 **Template de Bug Report:**
 ```markdown
 **Descrição:** Breve descrição do bug
-**Versão:** 2.9.0
+**Versão:** 2.17.18
 **WordPress:** 6.x
 **PHP:** 8.x
 **Passos para reproduzir:**

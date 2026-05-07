@@ -213,20 +213,27 @@ jQuery(document).ready(function ($) {
 					var gap = 8;
 
 					// Position holder below input-wrap
-					$holder.css('top', (buttonH + gap + inputWrapH) + 'px');
+					$holder.css('top', buttonH + gap + inputWrapH + 'px');
 
 					// Size & position backdrop to cover both
 					var totalH = inputWrapH + holderH;
-					$backdrop.css({
-						top: (buttonH + gap) + 'px',
-						height: totalH + 'px',
-						width: Math.max($inputWrap.outerWidth(), $holder.outerWidth(), 280) + 'px'
-					}).show();
+					$backdrop
+						.css({
+							top: buttonH + gap + 'px',
+							height: totalH + 'px',
+							width: Math.max($inputWrap.outerWidth(), $holder.outerWidth(), 280) + 'px',
+						})
+						.show();
 				}, 20);
 			}
 
 			// Watch for open/close
-			new MutationObserver(updatePositions).observe($inputWrap[0], { attributes: true, attributeFilter: ['class'] });
+			if ($inputWrap.length && $inputWrap[0]) {
+				new MutationObserver(updatePositions).observe($inputWrap[0], {
+					attributes: true,
+					attributeFilter: ['class'],
+				});
+			}
 
 			// 4) Close on outside click
 			$(document).on('mousedown', function (e) {
@@ -246,7 +253,10 @@ jQuery(document).ready(function ($) {
 			for (var m = 0; m < mutations.length; m++) {
 				for (var n = 0; n < mutations[m].addedNodes.length; n++) {
 					var node = mutations[m].addedNodes[n];
-					if (node.nodeType === 1 && ($(node).hasClass('wp-picker-container') || $(node).find('.wp-picker-container').length)) {
+					if (
+						node.nodeType === 1 &&
+						($(node).hasClass('wp-picker-container') || $(node).find('.wp-picker-container').length)
+					) {
 						setTimeout(enhanceColorPickers, 200);
 						return;
 					}

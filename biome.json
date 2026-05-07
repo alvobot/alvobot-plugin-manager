@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.15/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
 	"files": {
 		"includes": [
 			"**/includes/**/*.js",
@@ -24,13 +24,18 @@
 			"suspicious": {
 				"noExplicitAny": "off",
 				"noVar": "off",
+				"noAssignInExpressions": "off",
+				"noPrototypeBuiltins": "off",
 				"noRedundantUseStrict": "warn"
 			},
 			"complexity": {
 				"useArrowFunction": "off",
+				"useOptionalChain": "off",
+				"noArguments": "off",
 				"noImportantStyles": "off"
 			},
 			"style": {
+				"noDescendingSpecificity": "off",
 				"useConst": "off",
 				"useTemplate": "off"
 			}

@@ -131,8 +131,8 @@ class AlvoBotPro_MissedSchedule {
 			function () use ( $ajax_url, $nonce ) {
 				printf(
 					'<script>fetch("%s",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"action=%s&nonce=%s"})</script>',
-					$ajax_url,
-					self::ACTION,
+					esc_js( $ajax_url ),
+					esc_js( self::ACTION ),
 					esc_js( $nonce )
 				);
 			}
@@ -151,6 +151,7 @@ class AlvoBotPro_MissedSchedule {
 	 * (publishing already-overdue posts) is idempotent and non-destructive.
 	 */
 	public function handle_ajax() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Public AJAX endpoint verifies this custom nonce immediately below.
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 
 		if ( ! $this->verify_nonce( $nonce ) ) {

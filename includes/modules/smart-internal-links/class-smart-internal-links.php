@@ -467,11 +467,23 @@ class AlvoBotPro_Smart_Internal_Links {
 		$sort     = isset( $_POST['sort'] ) ? sanitize_text_field( wp_unslash( $_POST['sort'] ) ) : 'title_asc';
 		$per_page = 50;
 
-		$sort_map = array(
-			'title_asc'  => array( 'orderby' => 'title', 'order' => 'ASC' ),
-			'title_desc' => array( 'orderby' => 'title', 'order' => 'DESC' ),
-			'date_desc'  => array( 'orderby' => 'date', 'order' => 'DESC' ),
-			'date_asc'   => array( 'orderby' => 'date', 'order' => 'ASC' ),
+		$sort_map   = array(
+			'title_asc'  => array(
+				'orderby' => 'title',
+				'order'   => 'ASC',
+			),
+			'title_desc' => array(
+				'orderby' => 'title',
+				'order'   => 'DESC',
+			),
+			'date_desc'  => array(
+				'orderby' => 'date',
+				'order'   => 'DESC',
+			),
+			'date_asc'   => array(
+				'orderby' => 'date',
+				'order'   => 'ASC',
+			),
 		);
 		$sort_cfg   = isset( $sort_map[ $sort ] ) ? $sort_map[ $sort ] : $sort_map['title_asc'];
 		$post_types = $this->get_settings()['post_types'];
@@ -490,7 +502,8 @@ class AlvoBotPro_Smart_Internal_Links {
 			$language
 		);
 
-		AlvoBotPro::debug_log( 'smart-links', 'ajax_load_posts: POST[category]=' . ( isset( $_POST['category'] ) ? $_POST['category'] : 'NOT SET' ) . ' resolved=$category=' . $category );
+		$posted_category = isset( $_POST['category'] ) ? sanitize_text_field( wp_unslash( $_POST['category'] ) ) : 'NOT SET';
+		AlvoBotPro::debug_log( 'smart-links', 'ajax_load_posts: POST[category]=' . $posted_category . ' resolved=$category=' . $category );
 
 		$query = new WP_Query( $args );
 
@@ -561,7 +574,7 @@ class AlvoBotPro_Smart_Internal_Links {
 		);
 
 		if ( $query->found_posts > $max_posts ) {
-			$response['truncated'] = true;
+			$response['truncated']       = true;
 			$response['total_available'] = (int) $query->found_posts;
 		}
 
@@ -739,7 +752,7 @@ class AlvoBotPro_Smart_Internal_Links {
 		// Enriquecer links com títulos dos posts alvo
 		foreach ( $meta['blocks'] as &$block ) {
 			foreach ( $block['links'] as &$link ) {
-				$target_post = get_post( $link['post_id'] );
+				$target_post          = get_post( $link['post_id'] );
 				$link['target_title'] = $target_post ? $target_post->post_title : '(Post removido)';
 				$link['url']          = $target_post ? get_permalink( $target_post->ID ) : '';
 			}

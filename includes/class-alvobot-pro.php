@@ -112,7 +112,7 @@ class AlvoBotPro {
 				'menu_title' => 'Quiz Builder',
 			),
 		),
-'smart-internal-links' => array(
+		'smart-internal-links' => array(
 			'file'          => 'includes/modules/smart-internal-links/class-smart-internal-links.php',
 			'class'         => 'AlvoBotPro_Smart_Internal_Links',
 			'name'          => 'Smart Internal Links',
@@ -277,7 +277,7 @@ class AlvoBotPro {
 
 		// Se não existir no banco, cria com os valores padrão
 		if ( false === $saved_modules ) {
-			$this->active_modules       = $this->resolve_active_modules_map( $default_modules );
+			$this->active_modules = $this->resolve_active_modules_map( $default_modules );
 			update_option( 'alvobot_pro_active_modules', $this->active_modules );
 			self::$active_modules_cache = $this->active_modules;
 			self::debug_log( 'plugin-manager', 'Criando módulos padrão' );

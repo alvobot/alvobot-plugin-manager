@@ -63,7 +63,7 @@ class AlvoBotPro_LogoGenerator_API {
 		}
 
 		// Get and sanitize parameters
-		$blog_name        = sanitize_text_field( $params['blog_name'] );
+		$blog_name = sanitize_text_field( $params['blog_name'] );
 		$sanitizer = new \enshrined\svgSanitize\Sanitizer();
 		$icon_svg  = $sanitizer->sanitize( wp_unslash( $params['icon_svg'] ) );
 		if ( ! $icon_svg ) {

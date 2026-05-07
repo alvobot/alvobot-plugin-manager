@@ -83,8 +83,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 								</span>
 								<div class="alvobot-token-field alvobot-mt-sm">
 									<?php
-									$site_token_str  = (string) $site_token;
-									$token_length    = strlen( $site_token_str );
+									$site_token_str    = (string) $site_token;
+									$token_length      = strlen( $site_token_str );
 									$masked_site_token = $token_length <= 4
 										? str_repeat( '•', $token_length )
 										: str_repeat( '•', $token_length - 4 ) . substr( $site_token_str, -4 );
@@ -104,12 +104,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<td>
 						<?php
 						if ( $connection_status && is_array( $connection_status ) ) :
-							$status      = isset( $connection_status['status'] ) ? $connection_status['status'] : '';
-							$error_type  = isset( $connection_status['error_type'] ) ? $connection_status['error_type'] : '';
-							$http_status = isset( $connection_status['http_status'] ) ? $connection_status['http_status'] : '';
-							$message     = isset( $connection_status['message'] ) ? $connection_status['message'] : '';
+							$connection_status_value = isset( $connection_status['status'] ) ? $connection_status['status'] : '';
+							$error_type              = isset( $connection_status['error_type'] ) ? $connection_status['error_type'] : '';
+							$http_status             = isset( $connection_status['http_status'] ) ? $connection_status['http_status'] : '';
+							$message                 = isset( $connection_status['message'] ) ? $connection_status['message'] : '';
 
-							if ( $status === 'connected' ) :
+							if ( $connection_status_value === 'connected' ) :
 								?>
 								<span class="alvobot-badge alvobot-badge-success">
 									<span class="alvobot-status-indicator success"></span>

@@ -57,7 +57,6 @@ jQuery(document).ready(function ($) {
 				// Verifica se já existem CTAs
 				if ($('#alvobot_ctas_container').children('.cta-box').length === 0) {
 					// Inicializa com o número atual de CTAs
-					var numCTAs = $('#alvobot_num_ctas').val() || 1;
 					$('#alvobot_num_ctas').trigger('change');
 				}
 			});
@@ -68,7 +67,7 @@ jQuery(document).ready(function ($) {
 
 	// Handler para mudança na quantidade de CTAs no metabox
 	$('#alvobot_num_ctas').on('change', function () {
-		var numCTAs = parseInt($(this).val()) || 1;
+		var numCTAs = parseInt($(this).val(), 10) || 1;
 		var container = $('#alvobot_ctas_container');
 		var currentCTAs = container.children('.cta-box').length;
 
@@ -121,7 +120,7 @@ jQuery(document).ready(function ($) {
 
 	// Handler para a página de configurações
 	$('#num_ctas').on('change input', function () {
-		var quantidade = parseInt($(this).val());
+		var quantidade = parseInt($(this).val(), 10);
 		var container = $('#ctas_container');
 		var ctasAtuais = container.find('.alvobot-card').length;
 

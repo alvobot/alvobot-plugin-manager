@@ -186,7 +186,29 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 
 		if ( $user ) {
 			// Transfere todos os posts para o admin
-			$admin_id = get_current_user_id() ?: 1;
+			$current_user_id = get_current_user_id();
+			$admin_id        = $current_user_id;
+			if ( ! $admin_id ) {
+				$created_by = absint( get_user_meta( $user->ID, 'alvobot_created_by', true ) );
+				if ( $created_by && get_user_by( 'ID', $created_by ) ) {
+					$admin_id = $created_by;
+				}
+			}
+			if ( ! $admin_id ) {
+				$admins   = get_users(
+					array(
+						'role'    => 'administrator',
+						'number'  => 1,
+						'fields'  => 'ID',
+						'exclude' => array( $user->ID ),
+					)
+				);
+				$admin_id = ! empty( $admins ) ? absint( $admins[0] ) : 0;
+			}
+			if ( ! $admin_id ) {
+				AlvoBotPro::debug_log( 'temporary-login', 'Temporary user removal skipped: no administrator available for content reassignment.' );
+				return;
+			}
 
 			$posts = get_posts(
 				array(
@@ -226,7 +248,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 		$settings   = $this->get_settings();
 		$expiration = isset( $settings['temp_user_expiration'] ) ? $settings['temp_user_expiration'] : 0;
 
-		if ( $expiration == 0 ) {
+		if ( 0 === (int) $expiration ) {
 			return false;
 		}
 
@@ -364,7 +386,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 				'status'           => 'active',
 				'login_url'        => $this->generate_temp_login_url(),
 				'expiration_human' => human_time_diff( time(), $expiration ) . ' remaining',
-				'expires_at'       => date( 'Y-m-d H:i:s', $expiration ),
+				'expires_at'       => gmdate( 'Y-m-d H:i:s', $expiration ),
 				'username'         => 'alvobot_temp',
 			);
 		} else {
@@ -408,7 +430,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 
 		$response = array(
 			'login_url'        => $login_url,
-			'expires_at'       => date( 'Y-m-d H:i:s', $expiration_timestamp ),
+			'expires_at'       => gmdate( 'Y-m-d H:i:s', $expiration_timestamp ),
 			'expires_in_hours' => $expiration_hours,
 			'description'      => $description,
 			'username'         => 'alvobot_temp',
@@ -442,7 +464,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 
 		$response = array(
 			'login_url'  => $login_url,
-			'expires_at' => date( 'Y-m-d H:i:s', $expiration_timestamp ),
+			'expires_at' => gmdate( 'Y-m-d H:i:s', $expiration_timestamp ),
 			'username'   => 'alvobot_temp',
 			'message'    => __( 'Usuário temporário criado com sucesso', 'alvobot-pro' ),
 		);
@@ -480,7 +502,7 @@ class AlvoBotPro_TemporaryLogin extends AlvoBotPro_Module_Base {
 
 		$response = array(
 			'message'        => __( 'Acesso estendido com sucesso', 'alvobot-pro' ),
-			'new_expiration' => date( 'Y-m-d H:i:s', $new_expiration ),
+			'new_expiration' => gmdate( 'Y-m-d H:i:s', $new_expiration ),
 			'expires_in'     => human_time_diff( time(), $new_expiration ),
 		);
 

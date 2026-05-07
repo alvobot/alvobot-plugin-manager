@@ -49,7 +49,9 @@
 	border-radius: 8px;
 	background: var(--alvobot-white);
 	flex: 1;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .alvobot-radio-label:hover {
@@ -433,7 +435,12 @@
 	display: inline-block;
 	width: 48px;
 	height: 28px;
-	background: linear-gradient(90deg, var(--alvobot-gray-200) 25%, var(--alvobot-gray-100) 50%, var(--alvobot-gray-200) 75%);
+	background: linear-gradient(
+		90deg,
+		var(--alvobot-gray-200) 25%,
+		var(--alvobot-gray-100) 50%,
+		var(--alvobot-gray-200) 75%
+	);
 	background-size: 200% 100%;
 	animation: alvobot-skeleton-pulse 1.5s ease-in-out infinite;
 	border-radius: 4px;
@@ -446,8 +453,12 @@
 }
 
 @keyframes alvobot-skeleton-pulse {
-	0% { background-position: 200% 0; }
-	100% { background-position: -200% 0; }
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
 }
 
 /* Info + Actions row: 2 columns */
@@ -499,7 +510,9 @@
 	border-radius: 8px;
 	cursor: pointer;
 	text-align: left;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .alvobot-action-btn:hover {
@@ -549,6 +562,12 @@
 	border: 1px solid var(--alvobot-success-dark);
 }
 
+#alvobot-action-feedback.feedback-info {
+	background: var(--alvobot-info-bg);
+	color: var(--alvobot-info-dark);
+	border: 1px solid var(--alvobot-info);
+}
+
 #alvobot-action-feedback.feedback-error {
 	background: var(--alvobot-error-bg);
 	color: var(--alvobot-error);
@@ -563,7 +582,7 @@
 }
 
 .alvobot-loading-overlay::after {
-	content: "";
+	content: '';
 	position: absolute;
 	inset: 0;
 	background: rgba(255, 255, 255, 0.7);
@@ -695,7 +714,7 @@
 	align-items: center;
 	gap: var(--alvobot-space-lg);
 	padding: var(--alvobot-space-sm) var(--alvobot-space-xl);
-	background: var(--alvobot-primary-light, #FFFBEC);
+	background: var(--alvobot-primary-light, #fffbec);
 	border-top: 1px solid var(--alvobot-gray-200);
 	border-bottom: 1px solid var(--alvobot-gray-200);
 }
@@ -1029,7 +1048,9 @@
 	cursor: pointer;
 	padding: 6px;
 	color: var(--alvobot-gray-500);
-	transition: background 0.15s, border-color 0.15s;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
 }
 
 .alvobot-events-action-btn:hover {
@@ -1360,7 +1381,9 @@
 	justify-content: center;
 	cursor: pointer;
 	color: #475569;
-	transition: background 120ms ease, border-color 120ms ease;
+	transition:
+		background 120ms ease,
+		border-color 120ms ease;
 }
 .alvobot-kebab-trigger:hover,
 .alvobot-kebab-trigger:focus-visible {
@@ -1368,7 +1391,7 @@
 	border-color: #cbd5e1;
 	outline: none;
 }
-.alvobot-kebab-trigger[aria-expanded="true"] {
+.alvobot-kebab-trigger[aria-expanded='true'] {
 	background: #f1f5f9;
 	border-color: #94a3b8;
 }
@@ -1388,7 +1411,9 @@
 	flex-direction: column;
 	gap: 2px;
 }
-.alvobot-kebab-menu[hidden] { display: none; }
+.alvobot-kebab-menu[hidden] {
+	display: none;
+}
 .alvobot-kebab-item {
 	background: transparent;
 	border: 0;
@@ -1409,7 +1434,9 @@
 	background: #f1f5f9;
 	outline: none;
 }
-.alvobot-kebab-item-danger { color: #b91c1c; }
+.alvobot-kebab-item-danger {
+	color: #b91c1c;
+}
 .alvobot-kebab-item-danger:hover,
 .alvobot-kebab-item-danger:focus-visible {
 	background: #fef2f2;
@@ -1422,8 +1449,12 @@
 }
 
 @media (max-width: 768px) {
-	.alvobot-row-actions-inline { display: none; }
-	.alvobot-row-actions-kebab { display: block; }
+	.alvobot-row-actions-inline {
+		display: none;
+	}
+	.alvobot-row-actions-kebab {
+		display: block;
+	}
 	.alvobot-bulk-bar {
 		flex-direction: column;
 		align-items: stretch !important;
@@ -1462,8 +1493,10 @@
    ────────────────────────────────────────────────────────────────────────── */
 .alvobot-sr-only {
 	position: absolute;
-	width: 1px; height: 1px;
-	padding: 0; margin: -1px;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
 	overflow: hidden;
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
@@ -1473,16 +1506,38 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Text-color utility classes — replace scattered inline hex colors
    ────────────────────────────────────────────────────────────────────────── */
-.alvobot-text-success  { color: var(--alvobot-success, #10b981); }
-.alvobot-text-warning  { color: var(--alvobot-warning, #f59e0b); }
-.alvobot-text-warning-dark  { color: #b45309; }
-.alvobot-text-warning-darker { color: #92400e; }
-.alvobot-text-success-dark   { color: #047857; }
-.alvobot-text-error    { color: #e53e3e; }
-.alvobot-text-muted-xs { font-size: 11px; color: var(--alvobot-gray-500, #64748b); }
-.alvobot-text-muted-sm { font-size: 12px; color: #666; }
-.alvobot-icon-warning  { color: var(--alvobot-warning, #f59e0b); }
-.alvobot-icon-muted    { color: #666; }
+.alvobot-text-success {
+	color: var(--alvobot-success, #10b981);
+}
+.alvobot-text-warning {
+	color: var(--alvobot-warning, #f59e0b);
+}
+.alvobot-text-warning-dark {
+	color: #b45309;
+}
+.alvobot-text-warning-darker {
+	color: #92400e;
+}
+.alvobot-text-success-dark {
+	color: #047857;
+}
+.alvobot-text-error {
+	color: #e53e3e;
+}
+.alvobot-text-muted-xs {
+	font-size: 11px;
+	color: var(--alvobot-gray-500, #64748b);
+}
+.alvobot-text-muted-sm {
+	font-size: 12px;
+	color: #666;
+}
+.alvobot-icon-warning {
+	color: var(--alvobot-warning, #f59e0b);
+}
+.alvobot-icon-muted {
+	color: #666;
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
    Suggestion banner & tags
@@ -1550,7 +1605,9 @@
 	margin-bottom: 3px;
 	cursor: pointer;
 }
-.alvobot-item-row-white { background: #fff; }
+.alvobot-item-row-white {
+	background: #fff;
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
    Conversion action status tag (warning palette)
@@ -1578,7 +1635,7 @@
 	position: fixed;
 	inset: 0;
 	background: rgba(15, 23, 42, 0.5);
-	z-index: 100100;  /* above kebab (99998) and WP admin bar */
+	z-index: 100100; /* above kebab (99998) and WP admin bar */
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1586,8 +1643,12 @@
 	animation: alvobot-modal-fade-in 120ms ease;
 }
 @keyframes alvobot-modal-fade-in {
-	from { opacity: 0; }
-	to   { opacity: 1; }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 .alvobot-modal-dialog {
 	background: #fff;
@@ -1614,7 +1675,9 @@
 .alvobot-modal-message-line {
 	margin: 0 0 8px 0;
 }
-.alvobot-modal-message-line:last-child { margin-bottom: 0; }
+.alvobot-modal-message-line:last-child {
+	margin-bottom: 0;
+}
 .alvobot-modal-actions {
 	display: flex;
 	justify-content: flex-end;
@@ -1622,6 +1685,11 @@
 	flex-wrap: wrap;
 }
 @media (max-width: 480px) {
-	.alvobot-modal-actions { flex-direction: column-reverse; }
-	.alvobot-modal-actions .alvobot-btn { width: 100%; justify-content: center; }
+	.alvobot-modal-actions {
+		flex-direction: column-reverse;
+	}
+	.alvobot-modal-actions .alvobot-btn {
+		width: 100%;
+		justify-content: center;
+	}
 }

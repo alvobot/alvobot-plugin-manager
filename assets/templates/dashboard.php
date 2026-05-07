@@ -6,6 +6,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab navigation display logic, no data modification.
 $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'modules';
 $page_slug  = 'alvobot-pro';
+
+$module_names       = isset( $module_names ) && is_array( $module_names ) ? $module_names : array();
+$active_modules     = isset( $active_modules ) && is_array( $active_modules ) ? $active_modules : array();
+$alvobot_user       = isset( $alvobot_user ) ? $alvobot_user : null;
+$has_app_password   = ! empty( $has_app_password );
+$app_password_count = isset( $app_password_count ) ? absint( $app_password_count ) : 0;
+$site_token         = isset( $site_token ) ? (string) $site_token : '';
+$connection_status  = isset( $connection_status ) && is_array( $connection_status ) ? $connection_status : array();
 ?>
 
 <div class="alvobot-admin-wrap">
@@ -297,12 +305,12 @@ $page_slug  = 'alvobot-pro';
 						<span class="alvobot-badge alvobot-badge-success">
 							<span class="alvobot-status-indicator success"></span>
 							<?php
-						printf(
+							printf(
 							/* translators: %d: number of app passwords */
-							esc_html( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ) ),
-							intval( $app_password_count )
-						);
-						?>
+								esc_html( _n( '1 senha criada', '%d senhas criadas', $app_password_count, 'alvobot-pro' ) ),
+								intval( $app_password_count )
+							);
+							?>
 						</span>
 						<p class="description" style="margin-top: var(--alvobot-space-sm);">
 							<?php esc_html_e( 'Application Password ativo para autenticação API', 'alvobot-pro' ); ?>
@@ -349,12 +357,12 @@ $page_slug  = 'alvobot-pro';
 					<td>
 						<?php
 						if ( $connection_status && is_array( $connection_status ) ) :
-							$status      = $connection_status['status'];
-							$error_type  = isset( $connection_status['error_type'] ) ? $connection_status['error_type'] : '';
-							$http_status = isset( $connection_status['http_status'] ) ? $connection_status['http_status'] : '';
-							$message     = isset( $connection_status['message'] ) ? $connection_status['message'] : '';
+							$connection_status_value = isset( $connection_status['status'] ) ? $connection_status['status'] : '';
+							$error_type              = isset( $connection_status['error_type'] ) ? $connection_status['error_type'] : '';
+							$http_status             = isset( $connection_status['http_status'] ) ? $connection_status['http_status'] : '';
+							$message                 = isset( $connection_status['message'] ) ? $connection_status['message'] : '';
 
-							if ( $status === 'connected' ) :
+							if ( $connection_status_value === 'connected' ) :
 								?>
 							<span class="alvobot-badge alvobot-badge-success">
 								<span class="alvobot-status-indicator success"></span>
@@ -383,7 +391,7 @@ $page_slug  = 'alvobot-pro';
 								<?php elseif ( $error_type === 'registration_failed' ) : ?>
 									<p style="margin: var(--alvobot-space-md) 0 0 0; color: var(--alvobot-gray-600); font-size: var(--alvobot-font-size-xs);">
 										<strong>Tipo:</strong> Falha no registro com servidor AlvoBot<br>
-										<?php if ( $http_status == 404 ) : ?>
+										<?php if ( 404 === (int) $http_status ) : ?>
 											<strong>Causa:</strong> Domínio não cadastrado no painel AlvoBot<br>
 											<strong>Solução:</strong> Cadastre <code><?php echo esc_html( get_site_url() ); ?></code> em <a href="https://app.alvobot.com" target="_blank">app.alvobot.com</a>
 										<?php endif; ?>

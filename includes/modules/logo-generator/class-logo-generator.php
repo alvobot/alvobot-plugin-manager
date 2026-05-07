@@ -72,13 +72,54 @@ class AlvoBotPro_LogoGenerator {
 				'stroke-linejoin' => true,
 				'class'           => true,
 			),
-			'path'     => array( 'd' => true, 'fill' => true, 'stroke' => true ),
-			'circle'   => array( 'cx' => true, 'cy' => true, 'r' => true, 'fill' => true, 'stroke' => true ),
-			'line'     => array( 'x1' => true, 'y1' => true, 'x2' => true, 'y2' => true, 'fill' => true, 'stroke' => true ),
-			'polyline' => array( 'points' => true, 'fill' => true, 'stroke' => true ),
-			'polygon'  => array( 'points' => true, 'fill' => true, 'stroke' => true ),
-			'rect'     => array( 'x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true ),
-			'ellipse'  => array( 'cx' => true, 'cy' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true ),
+			'path'     => array(
+				'd'      => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'circle'   => array(
+				'cx'     => true,
+				'cy'     => true,
+				'r'      => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'line'     => array(
+				'x1'     => true,
+				'y1'     => true,
+				'x2'     => true,
+				'y2'     => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'polyline' => array(
+				'points' => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'polygon'  => array(
+				'points' => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'rect'     => array(
+				'x'      => true,
+				'y'      => true,
+				'width'  => true,
+				'height' => true,
+				'rx'     => true,
+				'ry'     => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
+			'ellipse'  => array(
+				'cx'     => true,
+				'cy'     => true,
+				'rx'     => true,
+				'ry'     => true,
+				'fill'   => true,
+				'stroke' => true,
+			),
 		);
 		return wp_kses( $svg, $allowed );
 	}
@@ -831,7 +872,7 @@ class AlvoBotPro_LogoGenerator {
 		}
 
 		// Sanitiza o título
-		$title = sanitize_text_field( $title ?: 'Logo' );
+		$title = sanitize_text_field( $title ? $title : 'Logo' );
 
 		// Configura o diretório de upload
 		$upload_dir = wp_upload_dir();

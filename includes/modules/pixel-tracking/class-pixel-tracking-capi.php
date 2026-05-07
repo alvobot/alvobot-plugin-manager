@@ -11,13 +11,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 		exit;
 }
 
+if ( ! class_exists( 'AlvoBotPro_PixelTracking_Attribution' ) ) {
+	require_once __DIR__ . '/class-pixel-tracking-attribution.php';
+}
+
 /**
  * Server-side sender for pending events.
  */
 class AlvoBotPro_PixelTracking_CAPI {
 
 		private $module;
-		private $max_retries = 3;
+		private $max_retries       = 3;
 		private $dispatch_lock_key = 'alvobot_pixel_dispatch_process_lock';
 		private $dispatch_lock_ttl = 600;
 
@@ -69,7 +73,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 * @return array Results summary.
 		 */
 	public function process_pending_events( $context = array() ) {
-		$dispatch_source = 'queue';
+		$dispatch_source      = 'queue';
 		$target_event_post_id = 0;
 		if ( is_array( $context ) && ! empty( $context['source'] ) ) {
 			$dispatch_source = sanitize_key( (string) $context['source'] );
@@ -94,7 +98,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 
 		try {
 			$settings = $this->module->get_settings();
-			$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+			$pixels   = method_exists( $this->module, 'get_runtime_pixels' )
+				? $this->module->get_runtime_pixels()
+				: ( isset( $settings['pixels'] ) ? $settings['pixels'] : array() );
 
 			if ( empty( $pixels ) ) {
 				return array(
@@ -133,11 +139,18 @@ class AlvoBotPro_PixelTracking_CAPI {
 			// - $active_pixels: only pixels with a valid (non-expired) token — used for actual sending.
 			$all_capi_pixels = array();
 			$active_pixels   = array();
+			$seen_pixel_ids  = array();
 			foreach ( $pixels as $pixel_config ) {
 				if ( empty( $pixel_config['pixel_id'] ) || empty( $pixel_config['api_token'] ) ) {
 					continue;
 				}
-				$all_capi_pixels[] = $pixel_config;
+				$pixel_id = (string) $pixel_config['pixel_id'];
+				if ( isset( $seen_pixel_ids[ $pixel_id ] ) ) {
+					AlvoBotPro::debug_log( 'pixel-tracking', "Skipping duplicate CAPI pixel {$pixel_id}" );
+					continue;
+				}
+				$seen_pixel_ids[ $pixel_id ] = true;
+				$all_capi_pixels[]           = $pixel_config;
 				if ( ! empty( $pixel_config['token_expired'] ) ) {
 					AlvoBotPro::debug_log( 'pixel-tracking', "Skipping pixel {$pixel_config['pixel_id']}: token expired (events kept pending)" );
 					continue;
@@ -162,9 +175,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			// Send to each active pixel using split-batch logic on failure.
-				foreach ( $active_pixels as $pixel_config ) {
-					$this->process_pixel_batch( $events, $pixel_config, $settings, $all_capi_pixels );
-				}
+			foreach ( $active_pixels as $pixel_config ) {
+				$this->process_pixel_batch( $events, $pixel_config, $settings, $all_capi_pixels );
+			}
 
 			$sent   = 0;
 			$failed = 0;
@@ -179,17 +192,17 @@ class AlvoBotPro_PixelTracking_CAPI {
 				}
 
 					$expected_pixel_ids = $this->get_expected_pixel_ids_for_event( $event_post_id, $all_capi_pixels );
-					if ( empty( $expected_pixel_ids ) ) {
-						update_post_meta( $event_post_id, '_dispatch_channel', 'none' );
-						$this->module->cpt->mark_events_sent( array( $event_post_id ) );
-						++$sent;
-						continue;
-					}
+				if ( empty( $expected_pixel_ids ) ) {
+					update_post_meta( $event_post_id, '_dispatch_channel', 'none' );
+					$this->module->cpt->mark_events_sent( array( $event_post_id ) );
+					++$sent;
+					continue;
+				}
 
-					if ( ! $this->all_pixels_delivered( $event_post_id, $expected_pixel_ids ) ) {
-						++$failed;
-						continue;
-					}
+				if ( ! $this->all_pixels_delivered( $event_post_id, $expected_pixel_ids ) ) {
+					++$failed;
+					continue;
+				}
 
 				update_post_meta( $event_post_id, '_dispatch_channel', 'track_event' === $dispatch_source ? 'realtime' : 'queue' );
 				$this->module->cpt->mark_events_sent( array( $event_post_id ) );
@@ -226,7 +239,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 		}
 
-		$payload = array(
+		$payload  = array(
 			'started_at' => $now,
 			'context'    => $context,
 		);
@@ -284,12 +297,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * @param int   $delay_secs Retry delay in seconds.
 	 */
 	private function schedule_dispatch_retry( $context, $delay_secs = 2 ) {
-		$context          = is_array( $context ) ? $context : array();
-		$source           = isset( $context['source'] ) ? sanitize_key( (string) $context['source'] ) : 'manual';
-		$event_post_id    = isset( $context['event_post_id'] ) ? absint( $context['event_post_id'] ) : 0;
-		$delay_secs       = max( 1, absint( $delay_secs ) );
-		$retry_lock_key   = 'alvobot_pixel_dispatch_retry_lock_' . $source . '_' . $event_post_id;
-		$retry_lock_ttl   = max( 3, $delay_secs + 2 );
+		$context        = is_array( $context ) ? $context : array();
+		$source         = isset( $context['source'] ) ? sanitize_key( (string) $context['source'] ) : 'manual';
+		$event_post_id  = isset( $context['event_post_id'] ) ? absint( $context['event_post_id'] ) : 0;
+		$delay_secs     = max( 1, absint( $delay_secs ) );
+		$retry_lock_key = 'alvobot_pixel_dispatch_retry_lock_' . $source . '_' . $event_post_id;
+		$retry_lock_ttl = max( 3, $delay_secs + 2 );
 
 		if ( get_transient( $retry_lock_key ) ) {
 			return;
@@ -436,7 +449,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 * Check whether an event has been delivered to all active pixels.
 	 *
 	 * @param int   $event_post_id Event post ID.
-	 * @param array $active_pixels Active pixel settings.
+	 * @param array $expected_pixel_ids Expected pixel IDs.
 	 * @return bool
 	 */
 	private function all_pixels_delivered( $event_post_id, $expected_pixel_ids ) {
@@ -529,12 +542,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 * @see https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/custom-data
 		 */
 	private function build_event_payload( $event ) {
-			$post_id    = $event->ID;
-			$event_name = get_post_meta( $post_id, '_event_name', true );
-			$event_id   = get_post_meta( $post_id, '_event_id', true );
-			$event_time = get_post_meta( $post_id, '_event_time', true );
-			$page_id    = absint( get_post_meta( $post_id, '_page_id', true ) );
-			$public_ip  = $this->resolve_public_ip_for_capi( $post_id );
+			$post_id          = $event->ID;
+			$event_name       = get_post_meta( $post_id, '_event_name', true );
+			$event_id         = get_post_meta( $post_id, '_event_id', true );
+			$event_time       = get_post_meta( $post_id, '_event_time', true );
+			$page_id          = absint( get_post_meta( $post_id, '_page_id', true ) );
+			$public_ip        = $this->resolve_public_ip_for_capi( $post_id );
 			$event_source_url = $this->resolve_event_source_url( $post_id );
 
 			// --- user_data: not-hashed fields ---
@@ -635,6 +648,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 					$user_data['external_id'] = array( $wp_external_id );
 			}
 
+			// --- user_data: durable anonymous external ID from first-party cookie ---
+			$anonymous_external_id = get_post_meta( $post_id, '_external_id', true );
+			if ( $anonymous_external_id ) {
+				$this->append_user_data_hash( $user_data, 'external_id', AlvoBotPro_PixelTracking_CPT::hash_pii( $anonymous_external_id ) );
+			}
+
 			// --- user_data: external_id fallback for anonymous visitors ---
 			if ( empty( $user_data['external_id'] ) && ! empty( $user_data['fbp'] ) ) {
 					$user_data['external_id'] = array( AlvoBotPro_PixelTracking_CPT::hash_pii( $user_data['fbp'] ) );
@@ -684,6 +703,28 @@ class AlvoBotPro_PixelTracking_CAPI {
 				}
 			}
 
+			$attribution = get_post_meta( $post_id, '_attribution', true );
+			if ( is_array( $attribution ) ) {
+				foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_content', 'utm_term', 'src', 'sck' ) as $attr_key ) {
+					if ( empty( $custom_data[ $attr_key ] ) && ! empty( $attribution[ $attr_key ] ) ) {
+						$custom_data[ $attr_key ] = sanitize_text_field( (string) $attribution[ $attr_key ] );
+					}
+				}
+				if ( empty( $custom_data['landing_first'] ) && ! empty( $attribution['landing_first'] ) ) {
+					$custom_data['landing_first'] = esc_url_raw( (string) $attribution['landing_first'] );
+				}
+				if ( empty( $custom_data['referrer_first'] ) && ! empty( $attribution['referrer_first'] ) ) {
+					$custom_data['referrer_first'] = esc_url_raw( (string) $attribution['referrer_first'] );
+				}
+			}
+
+			$click_ids = get_post_meta( $post_id, '_click_ids', true );
+			if ( is_array( $click_ids ) ) {
+				foreach ( AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( $click_ids ) as $click_key => $click_value ) {
+					$custom_data[ 'click_id_' . sanitize_key( $click_key ) ] = $click_value;
+				}
+			}
+
 			// Event timing enrichment — helps Meta optimize delivery by day/hour.
 			$event_ts = (int) $event_time;
 			if ( $event_ts > 0 ) {
@@ -695,11 +736,11 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			$payload = array(
-				'event_name'       => $event_name,
-				'event_time'       => $event_ts,
-				'event_id'         => $event_id,
-				'action_source'    => 'website',
-				'user_data'        => $user_data,
+				'event_name'    => $event_name,
+				'event_time'    => $event_ts,
+				'event_id'      => $event_id,
+				'action_source' => 'website',
+				'user_data'     => $user_data,
 			);
 			if ( '' !== $event_source_url ) {
 				$payload['event_source_url'] = $event_source_url;
@@ -710,6 +751,34 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			return $payload;
+	}
+
+	/**
+	 * Append a hashed value to a CAPI user_data array field without duplicates.
+	 *
+	 * @param array  $user_data User data payload.
+	 * @param string $field     Field name.
+	 * @param string $hash      SHA-256 hash.
+	 * @return void
+	 */
+	private function append_user_data_hash( &$user_data, $field, $hash ) {
+		$hash = sanitize_text_field( (string) $hash );
+		if ( '' === $hash ) {
+			return;
+		}
+
+		if ( empty( $user_data[ $field ] ) ) {
+			$user_data[ $field ] = array( $hash );
+			return;
+		}
+
+		if ( ! is_array( $user_data[ $field ] ) ) {
+			$user_data[ $field ] = array( sanitize_text_field( (string) $user_data[ $field ] ) );
+		}
+
+		if ( ! in_array( $hash, $user_data[ $field ], true ) ) {
+			$user_data[ $field ][] = $hash;
+		}
 	}
 
 	/**
@@ -937,7 +1006,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 			return '';
 		}
 
-		$parts = array_map( 'trim', explode( ',', $value ) );
+		$parts       = array_map( 'trim', explode( ',', $value ) );
 		$fallback_ip = '';
 		foreach ( $parts as $part ) {
 			$candidate = $this->normalize_ip_candidate( $part );
@@ -972,12 +1041,12 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$candidate = trim( $candidate, "\"'" );
 		}
 
-		// [IPv6]:port.
+		// IPv6 address with optional port.
 		if ( preg_match( '/^\[([0-9a-fA-F:]+)\](?::\d+)?$/', $candidate, $matches ) ) {
 			return $matches[1];
 		}
 
-		// IPv4:port.
+		// IPv4 address with optional port.
 		if ( preg_match( '/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $candidate, $matches ) ) {
 			return $matches[1];
 		}
@@ -1016,7 +1085,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$url = "https://graph.facebook.com/v24.0/{$pixel_id}/events";
 
 			// Store sanitized request (without access_token) for debugging.
-			$debug_request = $request_body;
+			$debug_request                 = $request_body;
 			$debug_request['access_token'] = '***REDACTED***';
 
 			$response = wp_remote_post(
@@ -1045,18 +1114,18 @@ class AlvoBotPro_PixelTracking_CAPI {
 				'body'      => $decoded_body,
 			);
 
-		if ( 429 === $code ) {
-			return array(
-				'success'          => false,
-				'error'            => 'rate_limited',
-				'code'             => 429,
-				'retry_after'      => $this->parse_retry_after_seconds( wp_remote_retrieve_header( $response, 'retry-after' ) ),
-				'request_payload'  => $debug_request,
-				'response_payload' => $response_payload,
-			);
-		}
+			if ( 429 === $code ) {
+				return array(
+					'success'          => false,
+					'error'            => 'rate_limited',
+					'code'             => 429,
+					'retry_after'      => $this->parse_retry_after_seconds( wp_remote_retrieve_header( $response, 'retry-after' ) ),
+					'request_payload'  => $debug_request,
+					'response_payload' => $response_payload,
+				);
+			}
 
-		if ( $code >= 400 ) {
+			if ( $code >= 400 ) {
 				$error = isset( $decoded_body['error']['message'] ) ? $decoded_body['error']['message'] : "HTTP {$code}";
 				return array(
 					'success'          => false,
@@ -1065,16 +1134,16 @@ class AlvoBotPro_PixelTracking_CAPI {
 					'request_payload'  => $debug_request,
 					'response_payload' => $response_payload,
 				);
-		}
+			}
 
-		if ( ! isset( $decoded_body['events_received'] ) ) {
+			if ( ! isset( $decoded_body['events_received'] ) ) {
 				return array(
 					'success'          => false,
 					'error'            => 'No events_received in response',
 					'request_payload'  => $debug_request,
 					'response_payload' => $response_payload,
 				);
-		}
+			}
 
 			return array(
 				'success'          => true,
@@ -1097,8 +1166,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 	 */
 	private function store_debug_payloads( $events, $payload_batch, $result, $pixel_id ) {
 		$response_payload = $this->sanitize_debug_response_payload( isset( $result['response_payload'] ) ? $result['response_payload'] : array() );
-		$test_event_code = '';
-		$batch_size      = count( $payload_batch );
+		$test_event_code  = '';
+		$batch_size       = count( $payload_batch );
 		if ( isset( $result['request_payload']['test_event_code'] ) ) {
 			$test_event_code = sanitize_text_field( (string) $result['request_payload']['test_event_code'] );
 		}
@@ -1121,8 +1190,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 			}
 
 			// Append to existing log (multiple pixels may write to same event).
-			$existing_log = get_post_meta( $event->ID, '_fb_request_payload', true );
-			$log_entries  = is_array( $existing_log ) ? $existing_log : array();
+			$existing_log  = get_post_meta( $event->ID, '_fb_request_payload', true );
+			$log_entries   = is_array( $existing_log ) ? $existing_log : array();
 			$log_entries[] = array(
 				'request'  => $per_event_request,
 				'response' => $response_payload,
@@ -1259,9 +1328,8 @@ class AlvoBotPro_PixelTracking_CAPI {
 			return false;
 		}
 
-		// Update the token in settings.
-		$option_key = 'alvobot_module_pixel-tracking_settings';
-		$settings   = get_option( $option_key, array() );
+		// Update the token in the module settings.
+		$settings = $this->module->get_settings();
 		if ( isset( $settings['pixels'] ) ) {
 			foreach ( $settings['pixels'] as &$pixel ) {
 				if ( isset( $pixel['pixel_id'] ) && $pixel['pixel_id'] === $pixel_id ) {
@@ -1270,7 +1338,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 					break;
 				}
 			}
-			update_option( $option_key, $settings );
+			$this->module->save_settings( $settings );
 		}
 
 		AlvoBotPro::debug_log( 'pixel-tracking', "Token refreshed successfully for pixel {$pixel_id}" );
@@ -1285,8 +1353,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 * Mark a pixel's token as expired in settings.
 		 */
 	private function mark_token_expired( $pixel_id ) {
-			$option_key = 'alvobot_module_pixel-tracking_settings';
-			$settings   = get_option( $option_key, array() );
+			$settings = $this->module->get_settings();
 
 		if ( isset( $settings['pixels'] ) ) {
 			foreach ( $settings['pixels'] as &$pixel ) {
@@ -1295,7 +1362,7 @@ class AlvoBotPro_PixelTracking_CAPI {
 						break;
 				}
 			}
-				update_option( $option_key, $settings );
+				$this->module->save_settings( $settings );
 		}
 			AlvoBotPro::debug_log( 'pixel-tracking', "Token expired for pixel {$pixel_id}" );
 	}
@@ -1320,25 +1387,25 @@ class AlvoBotPro_PixelTracking_CAPI {
 			$context = array(
 				'source' => sanitize_key( (string) $reason ),
 			);
-		if ( $event_post_id > 0 ) {
-			$context['event_post_id'] = $event_post_id;
-		}
+			if ( $event_post_id > 0 ) {
+				$context['event_post_id'] = $event_post_id;
+			}
 
-		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action( 'alvobot_pixel_send_events', array( $context ) );
-			AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled ({$reason})" );
-			return;
-		}
+			if ( function_exists( 'as_enqueue_async_action' ) ) {
+				as_enqueue_async_action( 'alvobot_pixel_send_events', array( $context ) );
+				AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled ({$reason})" );
+				return;
+			}
 
-		// Fallback when Action Scheduler is unavailable.
-		$next = wp_next_scheduled( 'alvobot_pixel_send_events' );
-		if ( ! $next || $next > ( time() + 15 ) ) {
-			wp_schedule_single_event( time() + 1, 'alvobot_pixel_send_events', array( $context ) );
-		}
-		if ( function_exists( 'spawn_cron' ) ) {
-			spawn_cron( time() );
-		}
-		AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled via WP-Cron fallback ({$reason})" );
+			// Fallback when Action Scheduler is unavailable.
+			$next = wp_next_scheduled( 'alvobot_pixel_send_events' );
+			if ( ! $next || $next > ( time() + 15 ) ) {
+				wp_schedule_single_event( time() + 1, 'alvobot_pixel_send_events', array( $context ) );
+			}
+			if ( function_exists( 'spawn_cron' ) ) {
+				spawn_cron( time() );
+			}
+			AlvoBotPro::debug_log( 'pixel-tracking', "Immediate dispatch scheduled via WP-Cron fallback ({$reason})" );
 	}
 
 		/**
@@ -1346,7 +1413,9 @@ class AlvoBotPro_PixelTracking_CAPI {
 		 */
 	public function send_test_event() {
 			$settings = $this->module->get_settings();
-			$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+			$pixels   = method_exists( $this->module, 'get_runtime_pixels' )
+				? $this->module->get_runtime_pixels()
+				: ( isset( $settings['pixels'] ) ? $settings['pixels'] : array() );
 			$results  = array();
 
 			$test_event = array(

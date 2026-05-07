@@ -2,7 +2,7 @@
 
 :root {
 	--alvobot-primary-dark: #d4970a;
-	--alvobot-gray-500: #A1A1AA;
+	--alvobot-gray-500: #a1a1aa;
 }
 
 .alvobot-sil {
@@ -48,7 +48,9 @@ nav.alvobot-sil:not([data-sil-pending]) {
 	font-size: 1em;
 	font-weight: 600;
 	line-height: 1.3;
-	transition: filter 0.2s ease, transform 0.2s ease;
+	transition:
+		filter 0.2s ease,
+		transform 0.2s ease;
 	box-sizing: border-box;
 	border: none;
 	cursor: pointer;
@@ -104,7 +106,9 @@ nav.alvobot-sil:not([data-sil-pending]) {
 }
 
 @keyframes sil-nudge {
-	0%, 86%, 100% {
+	0%,
+	86%,
+	100% {
 		transform: translateX(0);
 		opacity: 1;
 	}

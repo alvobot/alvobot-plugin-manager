@@ -125,7 +125,7 @@
 				data: JSON.stringify({}),
 				contentType: 'application/json',
 				success: function (response) {
-					if (response && response.message) {
+					if (response?.message) {
 						tempLoginAdmin.showNotice(response.message, 'success');
 						tempLoginAdmin.loadStatus();
 					} else {
@@ -162,7 +162,7 @@
 					xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce);
 				},
 				success: function (response) {
-					if (response && response.message) {
+					if (response?.message) {
 						tempLoginAdmin.showNotice(response.message, 'success');
 						tempLoginAdmin.loadStatus();
 					} else {
@@ -186,7 +186,7 @@
 			const button = $(this);
 			const url = button.data('url') || button.closest('.temp-login-url-field').find('input').val();
 
-			if (navigator.clipboard && navigator.clipboard.writeText) {
+			if (navigator.clipboard?.writeText) {
 				navigator.clipboard
 					.writeText(url)
 					.then(function () {
@@ -249,7 +249,7 @@
 					xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce);
 				},
 				success: function (response) {
-					if (response && response.message) {
+					if (response?.message) {
 						tempLoginAdmin.showNotice(response.message, 'success');
 						tempLoginAdmin.loadStatus();
 					} else {

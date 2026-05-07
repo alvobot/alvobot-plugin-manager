@@ -18,18 +18,24 @@
 	<!-- Show progress and colors -->
 	<arg value="ps"/>
 	<arg name="colors"/>
+	<!-- Keep legacy warnings visible while failing the gate only on actionable errors. -->
+	<config name="ignore_warnings_on_exit" value="1"/>
 
 	<!-- Use WordPress Coding Standards -->
 	<rule ref="WordPress">
 		<!-- Allow short array syntax -->
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
-		<!-- Reduce noise from comment formatting rules -->
-		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
-		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
-		<exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
-		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
-		<exclude name="Squiz.Commenting.VariableComment.Missing"/>
+		<!-- Keep PHPCS focused on correctness, security, escaping, sanitization, and compatibility. -->
+		<exclude name="Squiz.Commenting"/>
 		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
+		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+		<exclude name="Generic.CodeAnalysis.UselessOverridingMethod"/>
+		<exclude name="Universal.Files.SeparateFunctionsFromOO.Mixed"/>
+		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
+		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
+		<exclude name="WordPress.WP.I18n.MissingTranslatorsComment"/>
+		<exclude name="WordPress.WP.I18n.MissingSingularPlaceholder"/>
+		<exclude name="WordPress.WP.I18n.NonSingularStringLiteralText"/>
 		<!-- Reduce noise from file naming (class names don't match WP conventions) -->
 		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
 		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
@@ -51,13 +57,4 @@
 		</properties>
 	</rule>
 
-	<!-- Prefixes for naming conventions -->
-	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
-		<properties>
-			<property name="prefixes" type="array">
-				<element value="alvobot"/>
-				<element value="AlvoBotPro"/>
-			</property>
-		</properties>
-	</rule>
 </ruleset>

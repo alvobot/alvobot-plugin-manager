@@ -8,6 +8,33 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.17.18] - 2026-05-07
+
+### ✨ Adicionado
+- **Pixel Tracking / atribuição first-party**: captura consolidada de UTM, click IDs, contexto de origem e sinais de infraestrutura quando disponíveis, com fallback seguro para hosts sem Cloudflare.
+- **Pixel Tracking / testes de regressão**: nova cobertura Brain Monkey para atribuição, limpeza, CPT, frontend e ações REST críticas.
+- **Especificação operacional**: documentação do módulo de tracking com modelo de dados, plano e tarefas para retenção, privacidade, rate limit, retry e normalização de eventos.
+
+### 🔧 Melhorado
+- **Buscar Pixels automático**: a tela de Pixels & Trackers busca automaticamente os ativos ao selecionar a plataforma/conta, reduzindo cliques e estados vazios.
+- **UX Google Ads multi-conta**: quando há mais de uma conta associada, o aviso de conversões faltantes consolida a ação em um fluxo único para todas as contas em vez de sugerir uma conta isolada.
+- **Aba Conversões**: fluxos de nova conversão, editar conversão, ações de evento e feedback de limpeza foram reforçados para responder com mensagens persistentes e estados visíveis.
+- **Limpeza de dados**: o endpoint agora retorna resumo detalhado, invalida cache de contagem, usa `_last_seen_ts` numérico para retenção e evita paginação por offset durante exclusões.
+- **Segurança REST/admin**: respostas de refresh/get settings removem tokens brutos, payloads de modal escapam metadados por padrão e cookies de atribuição são sanitizados na leitura.
+- **Resiliência frontend**: carregamento do Meta Pixel SDK ganhou fallback quando não há `<script>` existente e a coleta de geo/IP permanece best-effort sem bloquear PageView.
+
+### 🐛 Corrigido
+- **PageView intermitente**: reforçada a inicialização do tracking para não depender de enriquecimentos assíncronos antes do disparo principal.
+- **Botão “Limpar dados”**: a ação agora executa o cleanup real e mostra o resultado retornado pelo backend.
+- **Botões sem resposta no admin**: corrigidos caminhos de clique em conversões/eventos e mensagens de erro que antes podiam falhar sem feedback claro.
+- **Quiz Builder v2**: IP de lead passa a ser anonimizado e fluxos AJAX de copiar, editar e listar leads tratam falhas explicitamente.
+- **Essential Pages, Logo Generator e Smart Internal Links**: ajustes de status, fallback de notices, mensagens escapadas e guards contra respostas parciais.
+
+### 📦 Deploy
+- Release focada em auditoria profunda do plugin, hardening de tracking e correções de achados CodeRabbit/codex.
+
+---
+
 ## [2.17.17] - 2026-04-29
 
 ### ✨ Adicionado

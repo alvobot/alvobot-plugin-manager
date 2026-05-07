@@ -18,9 +18,7 @@
  * so users without JS see them normally (PHP detection still applies).
  */
 
-( function () {
-	'use strict';
-
+(function () {
 	/**
 	 * DOM selectors for ad containers.
 	 * Mirrors PHP is_ad_block() patterns but operates on the fully-rendered DOM,
@@ -104,16 +102,16 @@
 	 * @param {Element|null} el
 	 * @returns {boolean}
 	 */
-	function isAdElement( el ) {
-		if ( ! el || el.nodeType !== 1 ) {
+	function isAdElement(el) {
+		if (!el || el.nodeType !== 1) {
 			return false;
 		}
-		for ( var i = 0; i < AD_SELECTORS.length; i++ ) {
+		for (var i = 0; i < AD_SELECTORS.length; i++) {
 			try {
-				if ( el.matches( AD_SELECTORS[ i ] ) || el.querySelector( AD_SELECTORS[ i ] ) ) {
+				if (el.matches(AD_SELECTORS[i]) || el.querySelector(AD_SELECTORS[i])) {
 					return true;
 				}
-			} catch ( e ) {
+			} catch (_e) {
 				// Skip selectors unsupported by the current browser.
 			}
 		}
@@ -126,8 +124,8 @@
 	 * @param {Element|null} el
 	 * @returns {boolean}
 	 */
-	function isHeadingElement( el ) {
-		return !! el && el.nodeType === 1 && /^H[12]$/.test( el.tagName );
+	function isHeadingElement(el) {
+		return !!el && el.nodeType === 1 && /^H[12]$/.test(el.tagName);
 	}
 
 	/**
@@ -139,11 +137,10 @@
 	 * @param {Element} el
 	 * @returns {boolean}
 	 */
-	function isUnsafePosition( el ) {
+	function isUnsafePosition(el) {
 		var prev = el.previousElementSibling;
 		var next = el.nextElementSibling;
-		return isAdElement( prev ) || isAdElement( next ) ||
-			isHeadingElement( prev ) || isHeadingElement( next );
+		return isAdElement(prev) || isAdElement(next) || isHeadingElement(prev) || isHeadingElement(next);
 	}
 
 	/**
@@ -157,25 +154,24 @@
 	 * @param {Element} cta
 	 * @returns {boolean} true if successfully repositioned, false otherwise.
 	 */
-	function tryReposition( cta ) {
+	function tryReposition(cta) {
 		var parent = cta.parentNode;
-		if ( ! parent ) {
+		if (!parent) {
 			return false;
 		}
 
 		// Snapshot of all siblings EXCLUDING the CTA itself.
 		// After cta is removed from the DOM, siblings[i] === original parent.children[i > idx ? i+1 : i].
-		var siblings = Array.prototype.filter.call(
-			parent.children,
-			function ( child ) { return child !== cta; }
-		);
+		var siblings = Array.prototype.filter.call(parent.children, function (child) {
+			return child !== cta;
+		});
 
 		// The CTA's current slot index among its siblings.
 		// "Slot N" means: insert before siblings[N], i.e., after siblings[N-1].
-		var currentSlot = Array.prototype.indexOf.call( parent.children, cta );
+		var currentSlot = Array.prototype.indexOf.call(parent.children, cta);
 
 		// Detach CTA so sibling lookups below are clean.
-		parent.removeChild( cta );
+		parent.removeChild(cta);
 
 		/**
 		 * Checks whether inserting at `slot` would be safe.
@@ -185,32 +181,33 @@
 		 * @param {number} slot
 		 * @returns {boolean}
 		 */
-		function slotIsSafe( slot ) {
-			if ( slot < 1 ) {
+		function slotIsSafe(slot) {
+			if (slot < 1) {
 				return false;
 			}
-			var prevEl = slot > 0 ? ( siblings[ slot - 1 ] || null ) : null;
-			var nextEl = slot < siblings.length ? ( siblings[ slot ] || null ) : null;
-			return ! isAdElement( prevEl ) && ! isAdElement( nextEl ) &&
-				! isHeadingElement( prevEl ) && ! isHeadingElement( nextEl );
+			var prevEl = slot > 0 ? siblings[slot - 1] || null : null;
+			var nextEl = slot < siblings.length ? siblings[slot] || null : null;
+			return (
+				!isAdElement(prevEl) && !isAdElement(nextEl) && !isHeadingElement(prevEl) && !isHeadingElement(nextEl)
+			);
 		}
 
 		// Try one slot down, then one slot up.
 		var targetSlot = null;
-		if ( slotIsSafe( currentSlot + 1 ) ) {
+		if (slotIsSafe(currentSlot + 1)) {
 			targetSlot = currentSlot + 1;
-		} else if ( slotIsSafe( currentSlot - 1 ) ) {
+		} else if (slotIsSafe(currentSlot - 1)) {
 			targetSlot = currentSlot - 1;
 		}
 
-		if ( targetSlot !== null ) {
+		if (targetSlot !== null) {
 			// Insert at the chosen safe slot.
-			parent.insertBefore( cta, siblings[ targetSlot ] || null );
+			parent.insertBefore(cta, siblings[targetSlot] || null);
 			return true;
 		}
 
 		// No safe slot found: restore original position.
-		parent.insertBefore( cta, siblings[ currentSlot ] || null );
+		parent.insertBefore(cta, siblings[currentSlot] || null);
 		return false;
 	}
 
@@ -220,45 +217,44 @@
 	 *
 	 * @param {Element} cta
 	 */
-	function reveal( cta ) {
-		cta.removeAttribute( 'data-sil-pending' );
+	function reveal(cta) {
+		cta.removeAttribute('data-sil-pending');
 	}
 
 	/**
 	 * Main routine: evaluate all pending CTAs and reveal or reposition them.
 	 */
 	function run() {
-		var ctas = document.querySelectorAll( 'nav.alvobot-sil[data-sil-pending]' );
-		if ( ! ctas.length ) {
+		var ctas = document.querySelectorAll('nav.alvobot-sil[data-sil-pending]');
+		if (!ctas.length) {
 			return;
 		}
 
-		Array.prototype.forEach.call( ctas, function ( cta ) {
-			if ( ! isUnsafePosition( cta ) ) {
+		Array.prototype.forEach.call(ctas, function (cta) {
+			if (!isUnsafePosition(cta)) {
 				// PHP placed it correctly — just reveal.
-				reveal( cta );
+				reveal(cta);
 				return;
 			}
 
 			// Unsafe position (ad or heading adjacent): attempt DOM repositioning.
-			var moved = tryReposition( cta );
-			if ( moved ) {
-				reveal( cta );
+			var moved = tryReposition(cta);
+			if (moved) {
+				reveal(cta);
 			} else {
 				// No safe slot found — hide entirely.
 				cta.style.display = 'none';
-				cta.removeAttribute( 'data-sil-pending' );
+				cta.removeAttribute('data-sil-pending');
 			}
-		} );
+		});
 	}
 
 	// Run after all third-party scripts (ad networks) have executed.
 	// If the document is already complete (e.g., script loaded via defer/async
 	// and the load event already fired), run synchronously.
-	if ( document.readyState === 'complete' ) {
+	if (document.readyState === 'complete') {
 		run();
 	} else {
-		window.addEventListener( 'load', run );
+		window.addEventListener('load', run);
 	}
-
-} )();
+})();

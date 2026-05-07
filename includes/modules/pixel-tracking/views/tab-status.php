@@ -12,16 +12,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$alvobot_pt_pixels           = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-$alvobot_pt_google_trackers  = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
-$alvobot_pt_total_trackers   = count( $alvobot_pt_pixels ) + count( $alvobot_pt_google_trackers );
-$alvobot_pt_has_meta         = ! empty( $alvobot_pt_pixels );
-$alvobot_pt_has_google_only  = ! $alvobot_pt_has_meta && ! empty( $alvobot_pt_google_trackers );
-$alvobot_pt_mode             = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
-$alvobot_pt_test_mode        = ! empty( $settings['test_mode'] );
+$alvobot_pt_pixels            = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+$alvobot_pt_google_trackers   = isset( $settings['google_trackers'] ) && is_array( $settings['google_trackers'] ) ? $settings['google_trackers'] : array();
+$alvobot_pt_total_trackers    = count( $alvobot_pt_pixels ) + count( $alvobot_pt_google_trackers );
+$alvobot_pt_has_meta          = ! empty( $alvobot_pt_pixels );
+$alvobot_pt_has_google_only   = ! $alvobot_pt_has_meta && ! empty( $alvobot_pt_google_trackers );
+$alvobot_pt_mode              = isset( $settings['mode'] ) ? $settings['mode'] : 'alvobot';
+$alvobot_pt_test_mode         = ! empty( $settings['test_mode'] );
 $alvobot_pt_realtime_dispatch = ! isset( $settings['realtime_dispatch'] ) || ! empty( $settings['realtime_dispatch'] );
-$alvobot_pt_consent_check    = ! empty( $settings['consent_check'] );
-$alvobot_pt_retention_days   = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
+$alvobot_pt_consent_check     = ! empty( $settings['consent_check'] );
+$alvobot_pt_retention_days    = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
 ?>
 
 <!-- Stats Grid -->

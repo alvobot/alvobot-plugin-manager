@@ -227,9 +227,9 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 							<td>
 								<select id="sil_bulk_category" class="alvobot-select">
 									<option value="">Todas</option>
-									<?php foreach ( $categories as $cat ) : ?>
-										<option value="<?php echo esc_attr( $cat->term_id ); ?>">
-											<?php echo esc_html( $cat->name ); ?> (<?php echo intval( $cat->count ); ?>)
+									<?php foreach ( $categories as $category ) : ?>
+										<option value="<?php echo esc_attr( $category->term_id ); ?>">
+											<?php echo esc_html( $category->name ); ?> (<?php echo intval( $category->count ); ?>)
 										</option>
 									<?php endforeach; ?>
 								</select>
@@ -296,6 +296,7 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 </div>
 
 <!-- Load frontend CSS for preview -->
+<?php // phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- Admin preview intentionally mirrors frontend CSS and local preview overrides. ?>
 <link rel="stylesheet" href="<?php echo esc_url( ALVOBOT_PRO_PLUGIN_URL . 'includes/modules/smart-internal-links/assets/css/smart-internal-links.css' ); ?>">
 
 <style>
@@ -592,6 +593,7 @@ $btn_border_style = $btn_border_size > 0 ? $btn_border_size . 'px solid ' . esc_
 	}
 }
 </style>
+<?php // phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet ?>
 
 <script>
 jQuery(function($) {

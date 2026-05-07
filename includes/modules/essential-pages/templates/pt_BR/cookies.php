@@ -5,7 +5,7 @@
 	<!-- /wp:paragraph -->
 
 	<!-- wp:paragraph {"className":"intro"} -->
-	<p class="intro"><?php echo esc_html( sprintf( __( 'A sua privacidade é importante para nós. É política do %s respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar em nosso site %s, e outros sites que possuímos e operamos.', 'alvobot-pro' ), '[site_name]', '[site_name]' ) ); ?></p>
+	<p class="intro"><?php echo esc_html( sprintf( __( 'A sua privacidade é importante para nós. É política do %1$s respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar em nosso site %2$s, e outros sites que possuímos e operamos.', 'alvobot-pro' ), '[site_name]', '[site_name]' ) ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:separator -->

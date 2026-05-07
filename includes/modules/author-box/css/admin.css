@@ -360,8 +360,8 @@ input:focus {
 }
 
 .ab-bio-lang-tab-btn.active {
-	color: var(--alvobot-primary, #CD9042);
-	border-bottom-color: var(--alvobot-primary, #CD9042);
+	color: var(--alvobot-primary, #cd9042);
+	border-bottom-color: var(--alvobot-primary, #cd9042);
 	font-weight: 600;
 }
 
@@ -386,7 +386,7 @@ input:focus {
 }
 
 .ab-bio-textarea:focus {
-	border-color: var(--alvobot-primary, #CD9042);
+	border-color: var(--alvobot-primary, #cd9042);
 	box-shadow: 0 0 0 2px rgba(205, 144, 66, 0.15);
 	outline: none;
 }

@@ -192,11 +192,19 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 						</label>
 					</div>
 
-					<div id="alvobot_custom_options" class="custom-cta-options"<?php if ( '1' !== $use_custom ) { echo ' style="display:none;"'; } ?>>
+					<div id="alvobot_custom_options" class="custom-cta-options"
+					<?php
+					if ( '1' !== $use_custom ) {
+						echo ' style="display:none;"'; }
+					?>
+					>
 						<div class="form-field">
 							<label>
 								<input type="radio" name="alvobot_cta_type" value="default" 
-								<?php if ( '' === $use_shortcode || '0' === $use_shortcode ) { echo 'checked="checked"'; } ?>
+								<?php
+								if ( '' === $use_shortcode || '0' === $use_shortcode ) {
+									echo 'checked="checked"'; }
+								?>
 								/>
 								<?php esc_html_e( 'Usar CTAs padrão', 'alvobot-pro' ); ?>
 							</label>
@@ -206,7 +214,12 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 							</label>
 						</div>
 
-						<div id="alvobot_default_cta_options"<?php if ( '1' === $use_shortcode ) { echo ' style="display:none;"'; } ?>>
+						<div id="alvobot_default_cta_options"
+						<?php
+						if ( '1' === $use_shortcode ) {
+							echo ' style="display:none;"'; }
+						?>
+						>
 							<div class="form-field">
 								<label for="alvobot_num_ctas"><?php esc_html_e( 'Número de CTAs:', 'alvobot-pro' ); ?></label>
 								<input type="number" name="alvobot_num_ctas" id="alvobot_num_ctas"
@@ -255,7 +268,12 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 							</div>
 						</div>
 
-						<div id="alvobot_shortcode_options"<?php if ( '1' !== $use_shortcode ) { echo ' style="display:none;"'; } ?>>
+						<div id="alvobot_shortcode_options"
+						<?php
+						if ( '1' !== $use_shortcode ) {
+							echo ' style="display:none;"'; }
+						?>
+						>
 							<div class="form-field">
 								<label for="alvobot_shortcode"><?php esc_html_e( 'Shortcode:', 'alvobot-pro' ); ?></label>
 								<textarea name="alvobot_shortcode" id="alvobot_shortcode" rows="3" class="widefat" placeholder="[meu_shortcode parametro='valor']"><?php echo esc_textarea( $shortcode ); ?></textarea>
@@ -1096,6 +1114,7 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 									class="large-text code"
 									placeholder="
 									<?php
+									// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Example script is textarea placeholder text, not executed markup.
 									esc_html_e(
 										'<!-- Cole aqui seu código -->
 <script async src=&quot;https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js&quot;></script>
@@ -1103,6 +1122,7 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>',
 										'alvobot-pro'
 									);
+									// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
 									?>
 													"><?php echo esc_textarea( $custom_script ); ?></textarea>
 								
@@ -1638,15 +1658,14 @@ if ( ! class_exists( 'Alvobot_Pre_Article' ) ) {
 
 			$languages = array();
 
-			// Primeiro tenta Polylang
+			// Primeiro tenta Polylang.
 			if ( function_exists( 'PLL' ) && PLL()->model ) {
 				$pll_languages = PLL()->model->get_languages_list();
 				foreach ( $pll_languages as $lang ) {
 					$languages[ $lang->slug ] = $lang->name;
 				}
-			}
-			// Se não tem Polylang, usa as traduções estáticas disponíveis
-			elseif ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
+			} elseif ( class_exists( 'Alvobot_PreArticle_CTA_Translations' ) ) {
+				// Se não tem Polylang, usa as traduções estáticas disponíveis.
 				$supported = Alvobot_PreArticle_CTA_Translations::get_supported_languages();
 				foreach ( $supported as $code ) {
 					$languages[ $code ] = Alvobot_PreArticle_CTA_Translations::get_language_native_name( $code );

@@ -134,7 +134,21 @@ class AlvoBotPro_PluginManager {
 					<?php if ( ! empty( $items ) ) : ?>
 						<ul class="alvobot-conn-notice-details">
 							<?php foreach ( $items as $item ) : ?>
-								<li><?php echo wp_kses( $item, array( 'strong' => array(), 'a' => array( 'href' => array(), 'target' => array() ), 'code' => array() ) ); ?></li>
+								<li>
+								<?php
+								echo wp_kses(
+									$item,
+									array(
+										'strong' => array(),
+										'a'      => array(
+											'href'   => array(),
+											'target' => array(),
+										),
+										'code'   => array(),
+									)
+								);
+								?>
+									</li>
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
@@ -184,7 +198,8 @@ class AlvoBotPro_PluginManager {
 	}
 
 	public function handle_retry_registration() {
-		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] ) {
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+		if ( 'POST' !== $request_method ) {
 			return;
 		}
 		if ( ! isset( $_POST['action'] ) || 'retry_registration' !== sanitize_text_field( wp_unslash( $_POST['action'] ) ) ) {
@@ -459,11 +474,9 @@ class AlvoBotPro_PluginManager {
 		// Check if we need to trigger activation manually
 		if ( isset( $_POST['action'] ) ) {
 			$pm_post_action = sanitize_text_field( wp_unslash( $_POST['action'] ) );
-			if ( $pm_post_action === 'activate_plugin_manager' ) {
+			if ( 'activate_plugin_manager' === $pm_post_action ) {
 				check_admin_referer( 'activate_plugin_manager' );
 				$this->activate();
-			} elseif ( $pm_post_action === 'retry_registration' ) {
-				// Handled in handle_retry_registration() via admin_init — redirected before render.
 			}
 
 			// Refresh status after any action
@@ -853,7 +866,7 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 2. HTTPS
-		$is_ssl = is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) === 'https' );
+		$is_ssl          = is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) === 'https' );
 		$checks['https'] = array(
 			'label'  => 'HTTPS Ativo',
 			'status' => $is_ssl ? 'ok' : 'warning',
@@ -862,7 +875,7 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 3. Application Passwords available
-		$app_pass_available = function_exists( 'wp_is_application_passwords_available' ) && wp_is_application_passwords_available();
+		$app_pass_available      = function_exists( 'wp_is_application_passwords_available' ) && wp_is_application_passwords_available();
 		$checks['app_passwords'] = array(
 			'label'  => 'Application Passwords Disponíveis',
 			'status' => $app_pass_available ? 'ok' : 'error',
@@ -871,7 +884,7 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 4. Alvobot user exists
-		$alvobot_user = get_user_by( 'login', 'alvobot' );
+		$alvobot_user   = get_user_by( 'login', 'alvobot' );
 		$checks['user'] = array(
 			'label'  => 'Usuário AlvoBot',
 			'status' => $alvobot_user ? 'ok' : 'error',
@@ -896,7 +909,7 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 6. Site token exists
-		$site_token = get_option( 'alvobot_site_token' );
+		$site_token      = get_option( 'alvobot_site_token' );
 		$checks['token'] = array(
 			'label'  => 'Token do Site',
 			'status' => ! empty( $site_token ) ? 'ok' : 'error',
@@ -933,14 +946,14 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 8. Outgoing HTTP connections (can reach Supabase)
-		$outgoing_check = wp_remote_get(
+		$outgoing_check          = wp_remote_get(
 			'https://qbmbokpbcyempnaravaw.supabase.co/functions/v1/',
 			array(
 				'timeout'   => 15,
 				'sslverify' => true,
 			)
 		);
-		$outgoing_ok = ! is_wp_error( $outgoing_check );
+		$outgoing_ok             = ! is_wp_error( $outgoing_check );
 		$checks['outgoing_http'] = array(
 			'label'  => 'Conexão com Servidor AlvoBot',
 			'status' => $outgoing_ok ? 'ok' : 'error',
@@ -949,12 +962,12 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 9. Authorization header passthrough (real self-test)
-		$auth_test_result = $this->test_auth_header_passthrough();
+		$auth_test_result      = $this->test_auth_header_passthrough();
 		$checks['auth_header'] = $auth_test_result;
 
 		// 10. Check for known conflicting plugins
-		$conflicting_plugins = $this->detect_conflicting_plugins();
-		$has_conflicts       = ! empty( $conflicting_plugins );
+		$conflicting_plugins           = $this->detect_conflicting_plugins();
+		$has_conflicts                 = ! empty( $conflicting_plugins );
 		$checks['conflicting_plugins'] = array(
 			'label'  => 'Plugins de Segurança',
 			'status' => $has_conflicts ? 'warning' : 'ok',
@@ -963,8 +976,8 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 11. Connection status
-		$conn_status = get_option( 'alvobot_connection_status' );
-		$conn_ok     = is_array( $conn_status ) && isset( $conn_status['status'] ) && $conn_status['status'] === 'connected';
+		$conn_status          = get_option( 'alvobot_connection_status' );
+		$conn_ok              = is_array( $conn_status ) && isset( $conn_status['status'] ) && $conn_status['status'] === 'connected';
 		$checks['connection'] = array(
 			'label'  => 'Status da Conexão',
 			'status' => $conn_ok ? 'ok' : ( $conn_status ? 'error' : 'warning' ),
@@ -973,9 +986,9 @@ class AlvoBotPro_PluginManager {
 		);
 
 		// 12. Site URL consistency check
-		$site_url = get_site_url();
-		$home_url = get_home_url();
-		$urls_match = untrailingslashit( $site_url ) === untrailingslashit( $home_url );
+		$site_url                  = get_site_url();
+		$home_url                  = get_home_url();
+		$urls_match                = untrailingslashit( $site_url ) === untrailingslashit( $home_url );
 		$checks['url_consistency'] = array(
 			'label'  => 'Consistência de URL',
 			'status' => $urls_match ? 'ok' : 'warning',
@@ -992,18 +1005,18 @@ class AlvoBotPro_PluginManager {
 	 * @return array List of conflicting plugin names.
 	 */
 	private function detect_conflicting_plugins() {
-		$active_plugins = get_option( 'active_plugins', array() );
+		$active_plugins  = get_option( 'active_plugins', array() );
 		$known_conflicts = array(
-			'wordfence'          => 'Wordfence Security',
-			'better-wp-security' => 'iThemes Security',
-			'ithemes-security'   => 'iThemes Security',
+			'wordfence'              => 'Wordfence Security',
+			'better-wp-security'     => 'iThemes Security',
+			'ithemes-security'       => 'iThemes Security',
 			'all-in-one-wp-security' => 'All In One WP Security',
-			'sucuri-scanner'     => 'Sucuri Security',
-			'disable-json-api'   => 'Disable REST API',
-			'disable-wp-rest-api' => 'Disable WP REST API',
-			'really-simple-ssl'  => 'Really Simple SSL',
-			'shield-security'    => 'Shield Security',
-			'cerber'             => 'WP Cerber Security',
+			'sucuri-scanner'         => 'Sucuri Security',
+			'disable-json-api'       => 'Disable REST API',
+			'disable-wp-rest-api'    => 'Disable WP REST API',
+			'really-simple-ssl'      => 'Really Simple SSL',
+			'shield-security'        => 'Shield Security',
+			'cerber'                 => 'WP Cerber Security',
 		);
 
 		$found = array();
@@ -1041,10 +1054,10 @@ class AlvoBotPro_PluginManager {
 
 		if ( is_wp_error( $response ) ) {
 			return array(
-				'label'  => 'Authorization Header',
-				'status' => 'warning',
-				'value'  => 'Não foi possível testar',
-				'help'   => 'Erro ao testar: ' . $response->get_error_message(),
+				'label'   => 'Authorization Header',
+				'status'  => 'warning',
+				'value'   => 'Não foi possível testar',
+				'help'    => 'Erro ao testar: ' . $response->get_error_message(),
 				'fixable' => false,
 			);
 		}
@@ -1052,10 +1065,10 @@ class AlvoBotPro_PluginManager {
 		$status_code = wp_remote_retrieve_response_code( $response );
 		if ( $status_code !== 200 ) {
 			return array(
-				'label'  => 'Authorization Header',
-				'status' => 'warning',
-				'value'  => 'Teste inconclusivo (HTTP ' . $status_code . ')',
-				'help'   => 'O endpoint de teste retornou status ' . $status_code . '. Verifique se a REST API está acessível.',
+				'label'   => 'Authorization Header',
+				'status'  => 'warning',
+				'value'   => 'Teste inconclusivo (HTTP ' . $status_code . ')',
+				'help'    => 'O endpoint de teste retornou status ' . $status_code . '. Verifique se a REST API está acessível.',
 				'fixable' => false,
 			);
 		}
@@ -1064,10 +1077,10 @@ class AlvoBotPro_PluginManager {
 
 		if ( ! empty( $body['received'] ) ) {
 			return array(
-				'label'  => 'Authorization Header',
-				'status' => 'ok',
-				'value'  => 'Funcionando',
-				'help'   => '',
+				'label'   => 'Authorization Header',
+				'status'  => 'ok',
+				'value'   => 'Funcionando',
+				'help'    => '',
 				'fixable' => false,
 			);
 		}
@@ -1077,10 +1090,10 @@ class AlvoBotPro_PluginManager {
 		$can_fix       = $htaccess_path && is_writable( $htaccess_path );
 
 		return array(
-			'label'  => 'Authorization Header',
-			'status' => 'error',
-			'value'  => 'Bloqueado pelo servidor',
-			'help'   => $can_fix
+			'label'   => 'Authorization Header',
+			'status'  => 'error',
+			'value'   => 'Bloqueado pelo servidor',
+			'help'    => $can_fix
 				? 'O servidor está removendo o header Authorization. Clique em "Corrigir" para adicionar a regra necessária ao .htaccess automaticamente.'
 				: 'O servidor está removendo o header Authorization. Adicione manualmente ao .htaccess: RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]',
 			'fixable' => $can_fix,
@@ -1246,7 +1259,7 @@ class AlvoBotPro_PluginManager {
 			);
 		}
 
-		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Starting command execution at ' . date( 'Y-m-d H:i:s' ) );
+		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Starting command execution at ' . gmdate( 'Y-m-d H:i:s' ) );
 
 		$params = $request->get_json_params();
 		AlvoBotPro::debug_log( 'plugin-manager', '[AlvoBot Debug] Received parameters: ' . wp_json_encode( $this->sanitize_log_data( $params ) ) );
@@ -1635,11 +1648,11 @@ class AlvoBotPro_PluginManager {
 
 			return new WP_REST_Response(
 				array(
-					'success'            => true,
-					'message'            => 'Plugin resetado com sucesso',
-					'new_token'          => $new_token,
-					'registration_ok'    => (bool) $register_result,
-					'user'               => array(
+					'success'         => true,
+					'message'         => 'Plugin resetado com sucesso',
+					'new_token'       => $new_token,
+					'registration_ok' => (bool) $register_result,
+					'user'            => array(
 						'id'    => $new_user->ID,
 						'login' => $new_user->user_login,
 					),

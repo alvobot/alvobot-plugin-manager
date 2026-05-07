@@ -12,13 +12,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$alvobot_pt_test_mode      = ! empty( $settings['test_mode'] );
-$alvobot_pt_test_code      = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
+$alvobot_pt_test_mode         = ! empty( $settings['test_mode'] );
+$alvobot_pt_test_code         = isset( $settings['test_event_code'] ) ? $settings['test_event_code'] : '';
 $alvobot_pt_realtime_dispatch = isset( $settings['realtime_dispatch'] ) ? (bool) $settings['realtime_dispatch'] : true;
-$alvobot_pt_excluded_roles = isset( $settings['excluded_roles'] ) ? $settings['excluded_roles'] : array();
-$alvobot_pt_retention_days = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
-$alvobot_pt_max_events     = isset( $settings['max_events'] ) ? $settings['max_events'] : 50000;
-$alvobot_pt_max_leads      = isset( $settings['max_leads'] ) ? $settings['max_leads'] : 10000;
+$alvobot_pt_excluded_roles    = isset( $settings['excluded_roles'] ) ? $settings['excluded_roles'] : array();
+$alvobot_pt_retention_days    = isset( $settings['retention_days'] ) ? $settings['retention_days'] : 7;
+$alvobot_pt_max_events        = isset( $settings['max_events'] ) ? $settings['max_events'] : 50000;
+$alvobot_pt_max_leads         = isset( $settings['max_leads'] ) ? $settings['max_leads'] : 10000;
 ?>
 
 <form method="post" action="" class="alvobot-module-form">

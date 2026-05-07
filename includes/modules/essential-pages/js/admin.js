@@ -15,9 +15,21 @@ jQuery(document).ready(function ($) {
 	$('.alvobot-btn').prop('onclick', null);
 	$('button[type="submit"]').prop('onclick', null);
 
-	function showNotice(message) {
-		const $notice = $(`<div class="notice notice-info is-dismissible"><p>${message}</p></div>`);
-		$('.alvobot-notice-container').empty().append($notice);
+	function showNotice(message, status) {
+		const noticeClass = status === 'error' ? 'notice-error' : 'notice-success';
+		const $notice = $('<div class="notice is-dismissible"><p></p></div>').addClass(noticeClass);
+		$notice.find('p').text(message);
+		const $container = $('.alvobot-notice-container');
+		if ($container.length) {
+			$container.empty().append($notice);
+			return;
+		}
+		const $wrap = $('.wrap').first();
+		if ($wrap.length) {
+			$wrap.prepend($notice);
+			return;
+		}
+		$('body').prepend($notice);
 	}
 
 	// Não vamos prevenir o comportamento padrão dos formulários
@@ -26,7 +38,7 @@ jQuery(document).ready(function ($) {
 	const urlParams = new URLSearchParams(window.location.search);
 	if (urlParams.has('action_complete')) {
 		const action = urlParams.get('action_complete');
-		const status = urlParams.get('status') || 'success';
+		const _status = urlParams.get('status') || 'success';
 
 		let message = '';
 		switch (action) {
@@ -46,7 +58,7 @@ jQuery(document).ready(function ($) {
 				message = 'Operação concluída com sucesso!';
 		}
 
-		showNotice(message);
+		showNotice(message, _status);
 
 		// Clean URL to prevent duplicate notifications on refresh
 		window.history.replaceState({}, document.title, window.location.pathname + '?page=alvobot-pro-essential-pages');

@@ -108,7 +108,7 @@ class AlvoBotPro_PixelTracking_Cleanup {
 		$deleted_event_age = $this->cleanup_events_by_age( $retention_days, $total_deleted );
 		$total_deleted    += $deleted_event_age;
 
-		$deleted_lead_age = $this->cleanup_by_age( 'alvobot_pixel_lead', $retention_days, $total_deleted );
+		$deleted_lead_age = $this->cleanup_leads_by_last_seen( $retention_days, $total_deleted );
 		$total_deleted   += $deleted_lead_age;
 
 		$deleted_event_volume = $this->cleanup_events_by_volume( $max_events, $total_deleted );
@@ -121,8 +121,41 @@ class AlvoBotPro_PixelTracking_Cleanup {
 		$deleted_leads  = $deleted_lead_age + $deleted_lead_volume;
 
 		if ( $deleted_events > 0 || $deleted_leads > 0 ) {
+			$this->invalidate_storage_count_cache();
 			AlvoBotPro::debug_log( 'pixel-tracking', "Cleanup: deleted {$deleted_events} events, {$deleted_leads} leads" );
 		}
+
+		$hit_deletion_run_limit = $total_deleted >= $this->max_deletions_per_run;
+		$message                = $total_deleted > 0
+			? sprintf(
+				/* translators: 1: total deleted records, 2: deleted events, 3: deleted leads */
+				__( 'Limpeza concluida: %1$d registro(s) removido(s) (%2$d evento(s), %3$d lead(s)).', 'alvobot-pro' ),
+				$total_deleted,
+				$deleted_events,
+				$deleted_leads
+			)
+			: __( 'Limpeza concluida: nenhum dado antigo elegivel encontrado.', 'alvobot-pro' );
+
+		if ( $hit_deletion_run_limit ) {
+			$message .= ' ' . __( 'Limite de remocoes desta execucao atingido; rode novamente para continuar.', 'alvobot-pro' );
+		}
+
+		return array(
+			'message'                => $message,
+			'deleted_events'         => $deleted_events,
+			'deleted_leads'          => $deleted_leads,
+			'deleted_total'          => $total_deleted,
+			'deleted_stale_pending'  => $deleted_stale,
+			'deleted_event_age'      => $deleted_event_age,
+			'deleted_event_volume'   => $deleted_event_volume,
+			'deleted_lead_age'       => $deleted_lead_age,
+			'deleted_lead_volume'    => $deleted_lead_volume,
+			'retention_days'         => $retention_days,
+			'max_events'             => $max_events,
+			'max_leads'              => $max_leads,
+			'max_deletions_per_run'  => $this->max_deletions_per_run,
+			'hit_deletion_run_limit' => $hit_deletion_run_limit,
+		);
 	}
 
 	/**
@@ -263,6 +296,109 @@ class AlvoBotPro_PixelTracking_Cleanup {
 		} while ( $posts_count === $limit && $deleted < $cap );
 
 		return $deleted;
+	}
+
+	/**
+	 * Delete lead posts only when they have not been seen within retention.
+	 *
+	 * Leads can be updated repeatedly while keeping the original post_date. Using
+	 * post_date alone would delete active leads that were first captured long ago.
+	 *
+	 * @param int $retention_days Retention window in days.
+	 * @param int $already_deleted Number of records already deleted in this run.
+	 * @return int Deleted lead count.
+	 */
+	private function cleanup_leads_by_last_seen( $retention_days, $already_deleted = 0 ) {
+		$deleted       = 0;
+		$batch         = 100;
+		$cap           = $this->max_deletions_per_run - $already_deleted;
+		$cutoff_ts     = time() - ( max( 1, absint( $retention_days ) ) * DAY_IN_SECONDS );
+		$processed_ids = array();
+
+		if ( $cap <= 0 ) {
+			return 0;
+		}
+
+		do {
+			$limit = min( $batch, $cap - $deleted );
+			$query = new WP_Query(
+				array(
+					'post_type'              => 'alvobot_pixel_lead',
+					'post_status'            => 'any',
+					'posts_per_page'         => $limit,
+					'post__not_in'           => $processed_ids,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'date_query'             => array(
+						array(
+							'before' => "{$retention_days} days ago",
+						),
+					),
+					'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						'relation' => 'OR',
+						array(
+							'key'     => '_last_seen_ts',
+							'value'   => $cutoff_ts,
+							'compare' => '<=',
+							'type'    => 'NUMERIC',
+						),
+						array(
+							'key'     => '_last_seen_ts',
+							'compare' => 'NOT EXISTS',
+						),
+					),
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_term_cache' => false,
+				)
+			);
+
+			if ( empty( $query->posts ) ) {
+				break;
+			}
+
+				$posts_count = count( $query->posts );
+
+			foreach ( $query->posts as $post_id ) {
+				$post_id         = (int) $post_id;
+				$processed_ids[] = $post_id;
+				$last_seen_ts    = absint( get_post_meta( $post_id, '_last_seen_ts', true ) );
+				if ( ! $last_seen_ts ) {
+					$last_seen    = get_post_meta( $post_id, '_last_seen', true );
+					$last_seen_ts = $last_seen ? strtotime( (string) $last_seen ) : 0;
+				}
+				if ( ! $last_seen_ts ) {
+					$post         = get_post( $post_id );
+					$last_seen_ts = $post && ! empty( $post->post_date_gmt )
+						? strtotime( $post->post_date_gmt . ' GMT' )
+						: 0;
+				}
+
+				if ( $last_seen_ts && $last_seen_ts > $cutoff_ts ) {
+					update_post_meta( $post_id, '_last_seen_ts', $last_seen_ts );
+					continue;
+				}
+
+				wp_delete_post( $post_id, true );
+				++$deleted;
+
+				if ( $deleted >= $cap ) {
+					break 2;
+				}
+			}
+		} while ( $posts_count === $limit && $deleted < $cap );
+
+		return $deleted;
+	}
+
+	/**
+	 * Clear short-lived storage counters after deleting records.
+	 *
+	 * @return void
+	 */
+	private function invalidate_storage_count_cache() {
+		delete_transient( 'alvobot_pt_storage_count_event' );
+		delete_transient( 'alvobot_pt_storage_count_lead' );
 	}
 
 	/**

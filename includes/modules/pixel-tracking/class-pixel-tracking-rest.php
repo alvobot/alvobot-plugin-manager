@@ -11,6 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! class_exists( 'AlvoBotPro_PixelTracking_Attribution' ) ) {
+	require_once __DIR__ . '/class-pixel-tracking-attribution.php';
+}
+
 /**
  * REST controller for pixel-tracking.
  */
@@ -274,7 +278,6 @@ class AlvoBotPro_PixelTracking_REST {
 				'permission_callback' => array( $this, 'check_admin' ),
 			)
 		);
-
 	}
 
 	public function check_admin() {
@@ -295,11 +298,12 @@ class AlvoBotPro_PixelTracking_REST {
 			return $body_size_check;
 		}
 
-		$data = $request->get_json_params();
-		if ( ! is_array( $data ) ) {
-			$data = array();
+		$raw_data = $request->get_json_params();
+		if ( ! is_array( $raw_data ) ) {
+			$raw_data = array();
 		}
-		$data = $this->sanitize_public_event_payload( $data );
+		$data                = $this->sanitize_public_event_payload( $raw_data );
+		$data['raw_payload'] = $this->build_capture_snapshot( 'event', $raw_data, $data, $request );
 
 		$resolved_event_url = $this->resolve_event_url_from_request( $data, $request );
 		if ( '' !== $resolved_event_url ) {
@@ -396,11 +400,12 @@ class AlvoBotPro_PixelTracking_REST {
 			return $body_size_check;
 		}
 
-		$data = $request->get_json_params();
-		if ( ! is_array( $data ) ) {
-			$data = array();
+		$raw_data = $request->get_json_params();
+		if ( ! is_array( $raw_data ) ) {
+			$raw_data = array();
 		}
-		$data = $this->sanitize_public_lead_payload( $data );
+		$data                = $this->sanitize_public_lead_payload( $raw_data );
+		$data['raw_payload'] = $this->build_capture_snapshot( 'lead', $raw_data, $data, $request );
 
 		$payload_check = $this->validate_lead_payload_minimums( $data );
 		if ( true !== $payload_check ) {
@@ -471,6 +476,42 @@ class AlvoBotPro_PixelTracking_REST {
 	}
 
 	/**
+	 * Build a compact forensic snapshot for debugging failed or missing dispatches.
+	 *
+	 * @param string          $type     Capture type.
+	 * @param array           $raw_data Raw request JSON.
+	 * @param array           $clean    Sanitized payload.
+	 * @param WP_REST_Request $request  REST request.
+	 * @return array<string,mixed>
+	 */
+	private function build_capture_snapshot( $type, $raw_data, $clean, $request ) {
+		$headers = array(
+			'user_agent'     => $this->sanitize_limited_text( (string) $request->get_header( 'User-Agent' ), 255 ),
+			'referer'        => $this->sanitize_limited_text( (string) $request->get_header( 'Referer' ), 2048 ),
+			'origin'         => $this->sanitize_limited_text( (string) $request->get_header( 'Origin' ), 255 ),
+			'sec_fetch_site' => $this->sanitize_limited_text( (string) $request->get_header( 'Sec-Fetch-Site' ), 32 ),
+			'cf_ray'         => $this->sanitize_limited_text( (string) $request->get_header( 'CF-Ray' ), 128 ),
+			'cf_ipcountry'   => $this->sanitize_limited_text( (string) $request->get_header( 'CF-IPCountry' ), 8 ),
+		);
+
+		$raw_keys = is_array( $raw_data ) ? array_slice( array_keys( $raw_data ), 0, 80 ) : array();
+
+		return array(
+			'type'                 => sanitize_key( $type ),
+			'received_at'          => gmdate( 'c' ),
+			'raw_keys'             => array_map( 'sanitize_key', $raw_keys ),
+			'headers'              => array_filter( $headers ),
+			'event_id'             => isset( $clean['event_id'] ) ? $clean['event_id'] : '',
+			'event_name'           => isset( $clean['event_name'] ) ? $clean['event_name'] : '',
+			'lead_id'              => isset( $clean['lead_id'] ) ? $clean['lead_id'] : '',
+			'external_id_present'  => ! empty( $clean['external_id'] ),
+			'attribution_present'  => ! empty( $clean['attribution'] ),
+			'click_ids_present'    => ! empty( $clean['click_ids'] ) ? array_keys( $clean['click_ids'] ) : array(),
+			'edge_context_present' => ! empty( $clean['edge_context'] ),
+		);
+	}
+
+	/**
 	 * Extract browser-side IP candidate from payload.
 	 *
 	 * @param array $data Tracking payload.
@@ -533,31 +574,35 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	private function sanitize_public_event_payload( $data ) {
 		$clean = array(
-			'event_id'               => $this->sanitize_limited_text( isset( $data['event_id'] ) ? $data['event_id'] : '', 128 ),
-			'event_name'             => $this->sanitize_limited_text( isset( $data['event_name'] ) ? $data['event_name'] : '', 64 ),
-			'event_url'              => $this->sanitize_limited_text( isset( $data['event_url'] ) ? $data['event_url'] : '', 2048 ),
-			'page_url'               => $this->sanitize_limited_text( isset( $data['page_url'] ) ? $data['page_url'] : '', 2048 ),
-			'page_title'             => $this->sanitize_limited_text( isset( $data['page_title'] ) ? $data['page_title'] : '', 200 ),
-			'page_id'                => isset( $data['page_id'] ) ? absint( $data['page_id'] ) : 0,
-			'referrer'               => $this->sanitize_limited_text( isset( $data['referrer'] ) ? $data['referrer'] : '', 2048 ),
-			'lead_id'                => $this->sanitize_limited_text( isset( $data['lead_id'] ) ? $data['lead_id'] : '', 128 ),
-			'fbp'                    => $this->sanitize_limited_text( isset( $data['fbp'] ) ? $data['fbp'] : '', 128 ),
-			'fbc'                    => $this->sanitize_limited_text( isset( $data['fbc'] ) ? $data['fbc'] : '', 128 ),
-			'ip'                     => $this->sanitize_limited_text( isset( $data['ip'] ) ? $data['ip'] : '', 128 ),
-			'browser_ip'             => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
-			'pixel_ids'              => $this->sanitize_target_ids_csv( isset( $data['pixel_ids'] ) ? $data['pixel_ids'] : '' ),
-			'gclid'                  => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
-			'gbraid'                 => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
-			'wbraid'                 => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
-			'dclid'                  => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
-			'ga_client_id'           => $this->sanitize_limited_text( isset( $data['ga_client_id'] ) ? $data['ga_client_id'] : '', 128 ),
-			'gads_conversion_label'  => $this->sanitize_limited_text( isset( $data['gads_conversion_label'] ) ? $data['gads_conversion_label'] : '', 64 ),
-			'gads_labels_map'        => $this->sanitize_limited_map( isset( $data['gads_labels_map'] ) ? $data['gads_labels_map'] : array(), 12, 24, 128 ),
-			'gads_conversion_value'  => $this->sanitize_limited_text( isset( $data['gads_conversion_value'] ) ? $data['gads_conversion_value'] : '', 32 ),
-			'custom_data'            => $this->sanitize_limited_map( isset( $data['custom_data'] ) ? $data['custom_data'] : array(), 20, 48, 255 ),
-			'utms'                   => $this->sanitize_limited_map( isset( $data['utms'] ) ? $data['utms'] : array(), 8, 24, 120 ),
-			'geo'                    => $this->sanitize_geo_payload( isset( $data['geo'] ) ? $data['geo'] : array() ),
-			'user_data_hashed'       => $this->sanitize_user_hashes( isset( $data['user_data_hashed'] ) ? $data['user_data_hashed'] : array() ),
+			'event_id'              => $this->sanitize_limited_text( isset( $data['event_id'] ) ? $data['event_id'] : '', 128 ),
+			'event_name'            => $this->sanitize_limited_text( isset( $data['event_name'] ) ? $data['event_name'] : '', 64 ),
+			'event_url'             => $this->sanitize_limited_text( isset( $data['event_url'] ) ? $data['event_url'] : '', 2048 ),
+			'page_url'              => $this->sanitize_limited_text( isset( $data['page_url'] ) ? $data['page_url'] : '', 2048 ),
+			'page_title'            => $this->sanitize_limited_text( isset( $data['page_title'] ) ? $data['page_title'] : '', 200 ),
+			'page_id'               => isset( $data['page_id'] ) ? absint( $data['page_id'] ) : 0,
+			'referrer'              => $this->sanitize_limited_text( isset( $data['referrer'] ) ? $data['referrer'] : '', 2048 ),
+			'external_id'           => $this->sanitize_limited_text( isset( $data['external_id'] ) ? $data['external_id'] : '', 128 ),
+			'lead_id'               => $this->sanitize_limited_text( isset( $data['lead_id'] ) ? $data['lead_id'] : '', 128 ),
+			'fbp'                   => $this->sanitize_limited_text( isset( $data['fbp'] ) ? $data['fbp'] : '', 128 ),
+			'fbc'                   => $this->sanitize_limited_text( isset( $data['fbc'] ) ? $data['fbc'] : '', 128 ),
+			'ip'                    => $this->sanitize_limited_text( isset( $data['ip'] ) ? $data['ip'] : '', 128 ),
+			'browser_ip'            => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
+			'pixel_ids'             => $this->sanitize_target_ids_csv( isset( $data['pixel_ids'] ) ? $data['pixel_ids'] : '' ),
+			'gclid'                 => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
+			'gbraid'                => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
+			'wbraid'                => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
+			'dclid'                 => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
+			'ga_client_id'          => $this->sanitize_limited_text( isset( $data['ga_client_id'] ) ? $data['ga_client_id'] : '', 128 ),
+			'gads_conversion_label' => $this->sanitize_limited_text( isset( $data['gads_conversion_label'] ) ? $data['gads_conversion_label'] : '', 64 ),
+			'gads_labels_map'       => $this->sanitize_limited_map( isset( $data['gads_labels_map'] ) ? $data['gads_labels_map'] : array(), 12, 24, 128 ),
+			'gads_conversion_value' => $this->sanitize_limited_text( isset( $data['gads_conversion_value'] ) ? $data['gads_conversion_value'] : '', 32 ),
+			'custom_data'           => $this->sanitize_limited_map( isset( $data['custom_data'] ) ? $data['custom_data'] : array(), 20, 48, 255 ),
+			'utms'                  => $this->sanitize_limited_map( isset( $data['utms'] ) ? $data['utms'] : array(), 8, 24, 120 ),
+			'click_ids'             => AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( isset( $data['click_ids'] ) ? $data['click_ids'] : array() ),
+			'attribution'           => AlvoBotPro_PixelTracking_Attribution::sanitize_attribution_payload( isset( $data['attribution'] ) ? $data['attribution'] : array() ),
+			'edge_context'          => AlvoBotPro_PixelTracking_Attribution::sanitize_edge_context( isset( $data['edge_context'] ) ? $data['edge_context'] : array() ),
+			'geo'                   => $this->sanitize_geo_payload( isset( $data['geo'] ) ? $data['geo'] : array() ),
+			'user_data_hashed'      => $this->sanitize_user_hashes( isset( $data['user_data_hashed'] ) ? $data['user_data_hashed'] : array() ),
 		);
 
 		return array_filter(
@@ -576,24 +621,28 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	private function sanitize_public_lead_payload( $data ) {
 		$clean = array(
-			'name'       => $this->sanitize_limited_text( isset( $data['name'] ) ? $data['name'] : '', 120 ),
-			'first_name' => $this->sanitize_limited_text( isset( $data['first_name'] ) ? $data['first_name'] : '', 80 ),
-			'last_name'  => $this->sanitize_limited_text( isset( $data['last_name'] ) ? $data['last_name'] : '', 80 ),
-			'email'      => sanitize_email( $this->sanitize_limited_text( isset( $data['email'] ) ? $data['email'] : '', 254 ) ),
-			'phone'      => $this->sanitize_limited_text( isset( $data['phone'] ) ? $data['phone'] : '', 32 ),
-			'fbp'        => $this->sanitize_limited_text( isset( $data['fbp'] ) ? $data['fbp'] : '', 128 ),
-			'fbc'        => $this->sanitize_limited_text( isset( $data['fbc'] ) ? $data['fbc'] : '', 128 ),
-			'gclid'      => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
-			'gbraid'     => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
-			'wbraid'     => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
-			'dclid'      => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
+			'name'         => $this->sanitize_limited_text( isset( $data['name'] ) ? $data['name'] : '', 120 ),
+			'first_name'   => $this->sanitize_limited_text( isset( $data['first_name'] ) ? $data['first_name'] : '', 80 ),
+			'last_name'    => $this->sanitize_limited_text( isset( $data['last_name'] ) ? $data['last_name'] : '', 80 ),
+			'email'        => sanitize_email( $this->sanitize_limited_text( isset( $data['email'] ) ? $data['email'] : '', 254 ) ),
+			'phone'        => $this->sanitize_limited_text( isset( $data['phone'] ) ? $data['phone'] : '', 32 ),
+			'external_id'  => $this->sanitize_limited_text( isset( $data['external_id'] ) ? $data['external_id'] : '', 128 ),
+			'fbp'          => $this->sanitize_limited_text( isset( $data['fbp'] ) ? $data['fbp'] : '', 128 ),
+			'fbc'          => $this->sanitize_limited_text( isset( $data['fbc'] ) ? $data['fbc'] : '', 128 ),
+			'gclid'        => $this->sanitize_limited_text( isset( $data['gclid'] ) ? $data['gclid'] : '', 128 ),
+			'gbraid'       => $this->sanitize_limited_text( isset( $data['gbraid'] ) ? $data['gbraid'] : '', 128 ),
+			'wbraid'       => $this->sanitize_limited_text( isset( $data['wbraid'] ) ? $data['wbraid'] : '', 128 ),
+			'dclid'        => $this->sanitize_limited_text( isset( $data['dclid'] ) ? $data['dclid'] : '', 128 ),
 			'ga_client_id' => $this->sanitize_limited_text( isset( $data['ga_client_id'] ) ? $data['ga_client_id'] : '', 128 ),
-			'ip'         => $this->sanitize_limited_text( isset( $data['ip'] ) ? $data['ip'] : '', 128 ),
-			'browser_ip' => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
-			'geo'        => $this->sanitize_geo_payload( isset( $data['geo'] ) ? $data['geo'] : array() ),
-			'utms'       => $this->sanitize_limited_map( isset( $data['utms'] ) ? $data['utms'] : array(), 8, 24, 120 ),
-			'src'        => $this->sanitize_limited_text( isset( $data['src'] ) ? $data['src'] : '', 120 ),
-			'sck'        => $this->sanitize_limited_text( isset( $data['sck'] ) ? $data['sck'] : '', 120 ),
+			'ip'           => $this->sanitize_limited_text( isset( $data['ip'] ) ? $data['ip'] : '', 128 ),
+			'browser_ip'   => $this->sanitize_limited_text( isset( $data['browser_ip'] ) ? $data['browser_ip'] : '', 128 ),
+			'geo'          => $this->sanitize_geo_payload( isset( $data['geo'] ) ? $data['geo'] : array() ),
+			'utms'         => $this->sanitize_limited_map( isset( $data['utms'] ) ? $data['utms'] : array(), 8, 24, 120 ),
+			'click_ids'    => AlvoBotPro_PixelTracking_Attribution::sanitize_click_ids( isset( $data['click_ids'] ) ? $data['click_ids'] : array() ),
+			'attribution'  => AlvoBotPro_PixelTracking_Attribution::sanitize_attribution_payload( isset( $data['attribution'] ) ? $data['attribution'] : array() ),
+			'edge_context' => AlvoBotPro_PixelTracking_Attribution::sanitize_edge_context( isset( $data['edge_context'] ) ? $data['edge_context'] : array() ),
+			'src'          => $this->sanitize_limited_text( isset( $data['src'] ) ? $data['src'] : '', 120 ),
+			'sck'          => $this->sanitize_limited_text( isset( $data['sck'] ) ? $data['sck'] : '', 120 ),
 		);
 
 		return array_filter(
@@ -642,7 +691,7 @@ class AlvoBotPro_PixelTracking_REST {
 	 * @return true|WP_REST_Response
 	 */
 	private function validate_lead_payload_minimums( $data ) {
-		$has_identity = ! empty( $data['email'] ) || ! empty( $data['phone'] ) || ! empty( $data['fbp'] ) || ! empty( $data['fbc'] );
+		$has_identity = ! empty( $data['email'] ) || ! empty( $data['phone'] ) || ! empty( $data['external_id'] ) || ! empty( $data['fbp'] ) || ! empty( $data['fbc'] );
 		if ( $has_identity ) {
 			return true;
 		}
@@ -668,12 +717,17 @@ class AlvoBotPro_PixelTracking_REST {
 	private function apply_public_rate_limit( $bucket, $ip, $per_ip_limit, $global_limit ) {
 		$bucket       = sanitize_key( (string) $bucket );
 		$ip           = $ip ? (string) $ip : '0.0.0.0';
-		$per_ip_key   = 'alvobot_pt_rate_' . $bucket . '_ip_' . md5( $ip );
+		$user_agent   = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		$fingerprint  = hash( 'sha256', $ip . '|' . $user_agent );
+		$per_ip_key   = 'alvobot_pt_rate_' . $bucket . '_fp_' . $fingerprint;
+		$ip_only_key  = 'alvobot_pt_rate_' . $bucket . '_ip_' . hash( 'sha256', $ip );
 		$global_key   = 'alvobot_pt_rate_' . $bucket . '_global';
 		$per_ip_count = (int) get_transient( $per_ip_key );
+		$ip_count     = (int) get_transient( $ip_only_key );
 		$global_count = (int) get_transient( $global_key );
+		$ip_hard_cap  = absint( $per_ip_limit ) * 3;
 
-		if ( $per_ip_count >= absint( $per_ip_limit ) || $global_count >= absint( $global_limit ) ) {
+		if ( $per_ip_count >= absint( $per_ip_limit ) || $ip_count >= $ip_hard_cap || $global_count >= absint( $global_limit ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -684,6 +738,7 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		set_transient( $per_ip_key, $per_ip_count + 1, MINUTE_IN_SECONDS );
+		set_transient( $ip_only_key, $ip_count + 1, MINUTE_IN_SECONDS );
 		set_transient( $global_key, $global_count + 1, MINUTE_IN_SECONDS );
 
 		return true;
@@ -778,6 +833,16 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		set_transient( $cache_key, absint( $cached ) + 1, MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Clear short-lived storage count caches after deletes/cleanup.
+	 *
+	 * @return void
+	 */
+	private function clear_storage_count_cache() {
+		delete_transient( 'alvobot_pt_storage_count_event' );
+		delete_transient( 'alvobot_pt_storage_count_lead' );
 	}
 
 	/**
@@ -985,7 +1050,8 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-		$rest_route  = isset( $_GET['rest_route'] ) ? (string) sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route inspection before controller dispatch.
+		$rest_route = isset( $_GET['rest_route'] ) ? (string) sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ) : '';
 
 		$is_public_pixel_track = false !== strpos( $request_uri, '/wp-json/alvobot-pro/v1/pixel-tracking/events/track' ) ||
 			false !== strpos( $request_uri, '/wp-json/alvobot-pro/v1/pixel-tracking/leads/track' ) ||
@@ -1006,11 +1072,7 @@ class AlvoBotPro_PixelTracking_REST {
 		$settings = $this->module->get_settings();
 		// Remove sensitive tokens from response
 		if ( isset( $settings['pixels'] ) ) {
-			foreach ( $settings['pixels'] as &$pixel ) {
-				if ( isset( $pixel['api_token'] ) ) {
-					$pixel['api_token'] = '***' . substr( $pixel['api_token'], -4 );
-				}
-			}
+			$settings['pixels'] = $this->strip_pixel_tokens_for_admin_response( $settings['pixels'] );
 		}
 		return rest_ensure_response(
 			array(
@@ -1043,17 +1105,37 @@ class AlvoBotPro_PixelTracking_REST {
 	public function get_pixels() {
 		$settings = $this->module->get_settings();
 		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
-		foreach ( $pixels as &$pixel ) {
-			if ( isset( $pixel['api_token'] ) ) {
-				$pixel['api_token'] = '***' . substr( $pixel['api_token'], -4 );
-			}
-		}
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $pixels,
+				'data'    => $this->strip_pixel_tokens_for_admin_response( $pixels ),
 			)
 		);
+	}
+
+	/**
+	 * Strip token fields before returning pixel data through REST.
+	 *
+	 * @param array $pixels Raw pixel rows.
+	 * @return array Admin-safe pixel rows.
+	 */
+	private function strip_pixel_tokens_for_admin_response( $pixels ) {
+		if ( ! is_array( $pixels ) ) {
+			return array();
+		}
+
+		$prepared = array();
+		foreach ( $pixels as $pixel ) {
+			if ( ! is_array( $pixel ) ) {
+				continue;
+			}
+			$has_token = ! empty( $pixel['api_token'] ) || ! empty( $pixel['access_token'] ) || ! empty( $pixel['token_ref'] );
+			unset( $pixel['api_token'], $pixel['access_token'] );
+			$pixel['has_api_token'] = $has_token;
+			$prepared[]             = $pixel;
+		}
+
+		return $prepared;
 	}
 
 	/**
@@ -1246,9 +1328,9 @@ class AlvoBotPro_PixelTracking_REST {
 		$query  = new WP_Query( $args );
 		$events = array();
 		foreach ( $query->posts as $post ) {
-			$server_ip          = get_post_meta( $post->ID, '_ip', true );
-			$browser_ip         = get_post_meta( $post->ID, '_browser_ip', true );
-			$display_ip         = $this->select_preferred_display_ip( $server_ip, $browser_ip );
+			$server_ip           = get_post_meta( $post->ID, '_ip', true );
+			$browser_ip          = get_post_meta( $post->ID, '_browser_ip', true );
+			$display_ip          = $this->select_preferred_display_ip( $server_ip, $browser_ip );
 			$target_pixel_ids    = get_post_meta( $post->ID, '_pixel_ids', true );
 			$delivered_pixel_ids = get_post_meta( $post->ID, '_fb_pixel_ids', true );
 			$labels_map_raw      = get_post_meta( $post->ID, '_gads_labels_map', true );
@@ -1347,8 +1429,8 @@ class AlvoBotPro_PixelTracking_REST {
 			);
 		}
 
-		$post = $query->posts[0];
-		$pid  = $post->ID;
+		$post           = $query->posts[0];
+		$pid            = $post->ID;
 		$server_ip      = get_post_meta( $pid, '_ip', true );
 		$browser_ip     = get_post_meta( $pid, '_browser_ip', true );
 		$display_ip     = $this->select_preferred_display_ip( $server_ip, $browser_ip );
@@ -1359,56 +1441,56 @@ class AlvoBotPro_PixelTracking_REST {
 			array(
 				'success' => true,
 				'data'    => array(
-					'id'               => $pid,
-					'event_id'         => get_post_meta( $pid, '_event_id', true ),
-					'event_name'       => get_post_meta( $pid, '_event_name', true ),
-					'event_time'       => get_post_meta( $pid, '_event_time', true ),
-					'status'           => $post->post_status,
-					'event_url'        => get_post_meta( $pid, '_event_url', true ),
-					'page_url'         => get_post_meta( $pid, '_page_url', true ),
-					'page_title'       => get_post_meta( $pid, '_page_title', true ),
-					'page_id'          => get_post_meta( $pid, '_page_id', true ),
-					'referrer'         => get_post_meta( $pid, '_referrer', true ),
-					'request_referer'  => get_post_meta( $pid, '_request_referer', true ),
-					'ip'               => $display_ip,
-					'browser_ip'       => $browser_ip,
-					'user_agent'       => get_post_meta( $pid, '_user_agent', true ),
-					'fbp'              => get_post_meta( $pid, '_fbp', true ),
-					'fbc'              => get_post_meta( $pid, '_fbc', true ),
-					'gclid'            => get_post_meta( $pid, '_gclid', true ),
-					'gbraid'           => get_post_meta( $pid, '_gbraid', true ),
-					'wbraid'           => get_post_meta( $pid, '_wbraid', true ),
-					'dclid'            => get_post_meta( $pid, '_dclid', true ),
-					'ga_client_id'     => get_post_meta( $pid, '_ga_client_id', true ),
-					'lead_id'          => get_post_meta( $pid, '_lead_id', true ),
-					'pixel_ids'        => get_post_meta( $pid, '_pixel_ids', true ),
+					'id'                    => $pid,
+					'event_id'              => get_post_meta( $pid, '_event_id', true ),
+					'event_name'            => get_post_meta( $pid, '_event_name', true ),
+					'event_time'            => get_post_meta( $pid, '_event_time', true ),
+					'status'                => $post->post_status,
+					'event_url'             => get_post_meta( $pid, '_event_url', true ),
+					'page_url'              => get_post_meta( $pid, '_page_url', true ),
+					'page_title'            => get_post_meta( $pid, '_page_title', true ),
+					'page_id'               => get_post_meta( $pid, '_page_id', true ),
+					'referrer'              => get_post_meta( $pid, '_referrer', true ),
+					'request_referer'       => get_post_meta( $pid, '_request_referer', true ),
+					'ip'                    => $display_ip,
+					'browser_ip'            => $browser_ip,
+					'user_agent'            => get_post_meta( $pid, '_user_agent', true ),
+					'fbp'                   => get_post_meta( $pid, '_fbp', true ),
+					'fbc'                   => get_post_meta( $pid, '_fbc', true ),
+					'gclid'                 => get_post_meta( $pid, '_gclid', true ),
+					'gbraid'                => get_post_meta( $pid, '_gbraid', true ),
+					'wbraid'                => get_post_meta( $pid, '_wbraid', true ),
+					'dclid'                 => get_post_meta( $pid, '_dclid', true ),
+					'ga_client_id'          => get_post_meta( $pid, '_ga_client_id', true ),
+					'lead_id'               => get_post_meta( $pid, '_lead_id', true ),
+					'pixel_ids'             => get_post_meta( $pid, '_pixel_ids', true ),
 					'gads_conversion_label' => get_post_meta( $pid, '_gads_conversion_label', true ),
 					'gads_conversion_value' => get_post_meta( $pid, '_gads_conversion_value', true ),
 					'gads_labels_map'       => is_array( $labels_map ) ? $labels_map : array(),
-					'geo_city'         => get_post_meta( $pid, '_geo_city', true ),
-					'geo_state'        => get_post_meta( $pid, '_geo_state', true ),
-					'geo_country'      => get_post_meta( $pid, '_geo_country', true ),
-					'geo_country_code' => get_post_meta( $pid, '_geo_country_code', true ),
-					'geo_zipcode'      => get_post_meta( $pid, '_geo_zipcode', true ),
-					'geo_timezone'     => get_post_meta( $pid, '_geo_timezone', true ),
-					'utm_source'       => get_post_meta( $pid, '_utm_source', true ),
-					'utm_medium'       => get_post_meta( $pid, '_utm_medium', true ),
-					'utm_campaign'     => get_post_meta( $pid, '_utm_campaign', true ),
-					'utm_content'      => get_post_meta( $pid, '_utm_content', true ),
-					'utm_term'         => get_post_meta( $pid, '_utm_term', true ),
-					'custom_data'      => get_post_meta( $pid, '_custom_data', true ),
-					'wp_em'            => get_post_meta( $pid, '_wp_em', true ) ? '(hashed)' : '',
-					'wp_fn'            => get_post_meta( $pid, '_wp_fn', true ) ? '(hashed)' : '',
-					'wp_ln'            => get_post_meta( $pid, '_wp_ln', true ) ? '(hashed)' : '',
-						'wp_external_id'   => get_post_meta( $pid, '_wp_external_id', true ) ? '(hashed)' : '',
-						'retry_count'      => (int) get_post_meta( $pid, '_fb_retry_count', true ),
-						'fb_pixel_ids'     => get_post_meta( $pid, '_fb_pixel_ids', true ),
-						'dispatch_channel' => get_post_meta( $pid, '_dispatch_channel', true ),
-						'sent_at'          => get_post_meta( $pid, '_fb_sent_at', true ),
-						'error'            => get_post_meta( $pid, '_fb_error_message', true ),
-						'request_payload'  => get_post_meta( $pid, '_fb_request_payload', true ),
-					'response_payload' => get_post_meta( $pid, '_fb_response_payload', true ),
-					'created_at'       => $post->post_date,
+					'geo_city'              => get_post_meta( $pid, '_geo_city', true ),
+					'geo_state'             => get_post_meta( $pid, '_geo_state', true ),
+					'geo_country'           => get_post_meta( $pid, '_geo_country', true ),
+					'geo_country_code'      => get_post_meta( $pid, '_geo_country_code', true ),
+					'geo_zipcode'           => get_post_meta( $pid, '_geo_zipcode', true ),
+					'geo_timezone'          => get_post_meta( $pid, '_geo_timezone', true ),
+					'utm_source'            => get_post_meta( $pid, '_utm_source', true ),
+					'utm_medium'            => get_post_meta( $pid, '_utm_medium', true ),
+					'utm_campaign'          => get_post_meta( $pid, '_utm_campaign', true ),
+					'utm_content'           => get_post_meta( $pid, '_utm_content', true ),
+					'utm_term'              => get_post_meta( $pid, '_utm_term', true ),
+					'custom_data'           => get_post_meta( $pid, '_custom_data', true ),
+					'wp_em'                 => get_post_meta( $pid, '_wp_em', true ) ? '(hashed)' : '',
+					'wp_fn'                 => get_post_meta( $pid, '_wp_fn', true ) ? '(hashed)' : '',
+					'wp_ln'                 => get_post_meta( $pid, '_wp_ln', true ) ? '(hashed)' : '',
+					'wp_external_id'        => get_post_meta( $pid, '_wp_external_id', true ) ? '(hashed)' : '',
+					'retry_count'           => (int) get_post_meta( $pid, '_fb_retry_count', true ),
+					'fb_pixel_ids'          => get_post_meta( $pid, '_fb_pixel_ids', true ),
+					'dispatch_channel'      => get_post_meta( $pid, '_dispatch_channel', true ),
+					'sent_at'               => get_post_meta( $pid, '_fb_sent_at', true ),
+					'error'                 => get_post_meta( $pid, '_fb_error_message', true ),
+					'request_payload'       => get_post_meta( $pid, '_fb_request_payload', true ),
+					'response_payload'      => get_post_meta( $pid, '_fb_response_payload', true ),
+					'created_at'            => $post->post_date,
 				),
 			)
 		);
@@ -1640,9 +1722,22 @@ class AlvoBotPro_PixelTracking_REST {
 	 * Authenticated: Force cleanup.
 	 */
 	public function action_cleanup() {
-		// Trigger cleanup scheduler hook directly.
-		do_action( 'alvobot_pixel_cleanup' );
-		return rest_ensure_response( array( 'success' => true ) );
+		$result = is_callable( array( $this->module, 'run_cleanup_now' ) )
+			? $this->module->run_cleanup_now()
+			: array(
+				'message'       => __( 'Limpeza executada, mas o resumo nao esta disponivel.', 'alvobot-pro' ),
+				'deleted_total' => 0,
+			);
+		if ( ! empty( $result['deleted_total'] ) ) {
+			$this->clear_storage_count_cache();
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => $result,
+			)
+		);
 	}
 
 	/**
@@ -1660,10 +1755,21 @@ class AlvoBotPro_PixelTracking_REST {
 				500
 			);
 		}
+		$prepared = is_callable( array( $this->module, 'prepare_alvobot_pixels_for_admin' ) )
+			? $this->module->prepare_alvobot_pixels_for_admin( $pixels )
+			: $this->strip_pixel_tokens_for_admin_response( $pixels );
+
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $pixels,
+				'data'    => array(
+					'message' => sprintf(
+						/* translators: %d: pixel count */
+						__( 'Pixels atualizados: %d encontrado(s).', 'alvobot-pro' ),
+						count( $prepared )
+					),
+					'pixels'  => $prepared,
+				),
 			)
 		);
 	}
@@ -1748,6 +1854,13 @@ class AlvoBotPro_PixelTracking_REST {
 			}
 
 			if ( 'resend' === $action ) {
+				if ( ! $this->is_event_within_resend_window( $post ) ) {
+					$failed[] = array(
+						'event_id' => $event_id,
+						'error'    => 'Event is older than Meta CAPI resend window',
+					);
+					continue;
+				}
 				$this->reset_event_for_resend( $post->ID );
 				++$processed;
 				continue;
@@ -1767,15 +1880,18 @@ class AlvoBotPro_PixelTracking_REST {
 		if ( 'resend' === $action && $processed > 0 ) {
 			$this->module->capi->schedule_immediate_dispatch();
 		}
+		if ( 'delete' === $action && $processed > 0 ) {
+			$this->clear_storage_count_cache();
+		}
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
 				'data'    => array(
-					'action'      => $action,
-					'requested'   => count( $event_ids ),
-					'processed'   => $processed,
-					'failed'      => $failed,
+					'action'       => $action,
+					'requested'    => count( $event_ids ),
+					'processed'    => $processed,
+					'failed'       => $failed,
 					'failed_count' => count( $failed ),
 				),
 			)
@@ -1809,6 +1925,16 @@ class AlvoBotPro_PixelTracking_REST {
 					'error'   => 'Event not found',
 				),
 				404
+			);
+		}
+
+		if ( ! $this->is_event_within_resend_window( $post ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'error'   => 'Este evento e antigo demais para reenvio pela Meta CAPI.',
+				),
+				400
 			);
 		}
 
@@ -1864,6 +1990,7 @@ class AlvoBotPro_PixelTracking_REST {
 		}
 
 		wp_delete_post( $post->ID, true );
+		$this->clear_storage_count_cache();
 
 		return rest_ensure_response( array( 'success' => true ) );
 	}
@@ -1915,23 +2042,46 @@ class AlvoBotPro_PixelTracking_REST {
 	}
 
 	/**
+	 * Meta CAPI accepts resend only inside the 7-day event window.
+	 *
+	 * @param WP_Post $post Event post.
+	 * @return bool Whether the event can be resent.
+	 */
+	private function is_event_within_resend_window( $post ) {
+		$event_time = (int) get_post_meta( $post->ID, '_event_time', true );
+		if ( $event_time <= 0 && ! empty( $post->post_date_gmt ) ) {
+			$event_time = (int) strtotime( $post->post_date_gmt . ' GMT' );
+		}
+		if ( $event_time <= 0 ) {
+			return false;
+		}
+
+		return $event_time >= ( time() - ( 7 * DAY_IN_SECONDS ) );
+	}
+
+	/**
 	 * Format a conversion post for API response.
 	 */
 	private function format_conversion( $post ) {
 		return array(
-			'id'                => $post->ID,
-			'name'              => $post->post_title,
-			'status'            => $post->post_status,
-			'event_type'        => get_post_meta( $post->ID, '_event_type', true ),
-			'event_custom_name' => get_post_meta( $post->ID, '_event_custom_name', true ),
-			'trigger_type'      => get_post_meta( $post->ID, '_trigger_type', true ),
-			'trigger_value'     => get_post_meta( $post->ID, '_trigger_value', true ),
-			'display_on'        => get_post_meta( $post->ID, '_display_on', true ),
-			'page_ids'          => get_post_meta( $post->ID, '_page_ids', true ),
-			'page_paths'        => get_post_meta( $post->ID, '_page_paths', true ),
-			'css_selector'      => get_post_meta( $post->ID, '_css_selector', true ),
-			'content_name'      => get_post_meta( $post->ID, '_content_name', true ),
-			'pixel_ids'         => get_post_meta( $post->ID, '_pixel_ids', true ),
+			'id'                    => $post->ID,
+			'name'                  => $post->post_title,
+			'status'                => $post->post_status,
+			'event_type'            => get_post_meta( $post->ID, '_event_type', true ),
+			'event_custom_name'     => get_post_meta( $post->ID, '_event_custom_name', true ),
+			'trigger_type'          => get_post_meta( $post->ID, '_trigger_type', true ),
+			'trigger_value'         => get_post_meta( $post->ID, '_trigger_value', true ),
+			'display_on'            => get_post_meta( $post->ID, '_display_on', true ),
+			'page_ids'              => get_post_meta( $post->ID, '_page_ids', true ),
+			'page_paths'            => get_post_meta( $post->ID, '_page_paths', true ),
+			'css_selector'          => get_post_meta( $post->ID, '_css_selector', true ),
+			'content_name'          => get_post_meta( $post->ID, '_content_name', true ),
+			'pixel_ids'             => get_post_meta( $post->ID, '_pixel_ids', true ),
+			'platforms'             => get_post_meta( $post->ID, '_platforms', true ),
+			'gads_conversion_label' => get_post_meta( $post->ID, '_gads_conversion_label', true ),
+			'gads_labels_map'       => get_post_meta( $post->ID, '_gads_labels_map', true ),
+			'gads_conversion_value' => get_post_meta( $post->ID, '_gads_conversion_value', true ),
+			'is_system'             => get_post_meta( $post->ID, '_is_system', true ),
 		);
 	}
 
@@ -2192,9 +2342,9 @@ class AlvoBotPro_PixelTracking_REST {
 	 */
 	private function get_client_ip( $browser_ip = '' ) {
 		// Use $_SERVER directly — filter_input(INPUT_SERVER, ...) is unreliable in PHP-FPM.
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-		$remote_addr = $this->sanitize_ip_value( $remote_addr );
-		$remote_ip   = $this->first_valid_ip_from_list( $remote_addr, true );
+		$remote_addr         = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$remote_addr         = $this->sanitize_ip_value( $remote_addr );
+		$remote_ip           = $this->first_valid_ip_from_list( $remote_addr, true );
 		$private_fallback_ip = $remote_ip;
 
 		// Direct public client IP.
@@ -2247,7 +2397,7 @@ class AlvoBotPro_PixelTracking_REST {
 			return '';
 		}
 
-		$parts = array_map( 'trim', explode( ',', $value ) );
+		$parts       = array_map( 'trim', explode( ',', $value ) );
 		$fallback_ip = '';
 		foreach ( $parts as $part ) {
 			$candidate = $this->normalize_ip_candidate( $part );
@@ -2282,12 +2432,12 @@ class AlvoBotPro_PixelTracking_REST {
 			$candidate = trim( $candidate, "\"'" );
 		}
 
-		// [IPv6]:port.
+		// IPv6 address with optional port.
 		if ( preg_match( '/^\[([0-9a-fA-F:]+)\](?::\d+)?$/', $candidate, $matches ) ) {
 			return $matches[1];
 		}
 
-		// IPv4:port.
+		// IPv4 address with optional port.
 		if ( preg_match( '/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $candidate, $matches ) ) {
 			return $matches[1];
 		}

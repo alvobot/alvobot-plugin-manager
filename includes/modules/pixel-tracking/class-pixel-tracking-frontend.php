@@ -11,6 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! class_exists( 'AlvoBotPro_PixelTracking_Attribution' ) ) {
+	require_once __DIR__ . '/class-pixel-tracking-attribution.php';
+}
+
 /**
  * Frontend injector for tracking config and conversion triggers.
  */
@@ -52,6 +56,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 
 		// Only inject on frontend (non-admin) pages
 		if ( ! is_admin() ) {
+			add_action( 'template_redirect', array( $this, 'capture_first_party_attribution' ), 0 );
 			add_action( 'wp_head', array( $this, 'inject_tracking' ), 10 );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_script' ) );
 			// Fallback: inject scripts directly in footer if wp_enqueue_scripts is blocked by cache plugins.
@@ -63,6 +68,10 @@ class AlvoBotPro_PixelTracking_Frontend {
 	 * Check if the current request is from a bot.
 	 */
 	public function is_bot() {
+		if ( AlvoBotPro_PixelTracking_Attribution::is_low_quality_edge_bot() ) {
+			return true;
+		}
+
 		if ( ! isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
 			return true;
 		}
@@ -75,6 +84,17 @@ class AlvoBotPro_PixelTracking_Frontend {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Capture first-party attribution cookies before frontend scripts run.
+	 */
+	public function capture_first_party_attribution() {
+		if ( ! $this->should_track() ) {
+			return;
+		}
+
+		AlvoBotPro_PixelTracking_Attribution::maybe_capture_request();
 	}
 
 	/**
@@ -110,8 +130,8 @@ class AlvoBotPro_PixelTracking_Frontend {
 		$module_url = plugin_dir_url( __FILE__ );
 
 		if ( file_exists( $module_dir . 'assets/js/tracking.js' ) ) {
-			$script_path    = $module_dir . 'assets/js/tracking.js';
-			$asset_version  = (string) filemtime( $script_path );
+			$script_path   = $module_dir . 'assets/js/tracking.js';
+			$asset_version = (string) filemtime( $script_path );
 			if ( empty( $asset_version ) ) {
 				$asset_version = ALVOBOT_PRO_VERSION;
 			}
@@ -156,14 +176,14 @@ class AlvoBotPro_PixelTracking_Frontend {
 			return;
 		}
 
-		$settings = $this->module->get_settings();
-		$pixels   = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
+		$settings      = $this->module->get_settings();
+		$pixels        = isset( $settings['pixels'] ) ? $settings['pixels'] : array();
 		$debug_enabled = class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'is_debug_enabled' )
 			? (bool) AlvoBotPro::is_debug_enabled( 'pixel-tracking' )
 			: false;
 		// URL param ?alvobot_debug=1 or cookie override — admin only.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! $debug_enabled && current_user_can( 'manage_options' ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only debug flag for admins.
 			if ( isset( $_GET['alvobot_debug'] ) && '1' === $_GET['alvobot_debug'] ) {
 				$debug_enabled = true;
 			}
@@ -172,13 +192,14 @@ class AlvoBotPro_PixelTracking_Frontend {
 			}
 		}
 
-		$has_meta_pixels = ! empty( $pixels );
-		$pixel_ids_list  = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
-		$pixel_ids        = implode( ',', $pixel_ids_list );
+		$has_meta_pixels        = ! empty( $pixels );
+		$pixel_ids_list         = $has_meta_pixels ? array_filter( array_column( $pixels, 'pixel_id' ) ) : array();
+		$pixel_ids              = implode( ',', $pixel_ids_list );
 			$meta_base_injected = $has_meta_pixels;
-			$tracking_nonce   = wp_create_nonce( 'alvobot_pixel_tracking' );
-			$cf_trace_enabled = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
-			$site_currency    = $this->get_site_currency_code();
+			$tracking_nonce     = wp_create_nonce( 'alvobot_pixel_tracking' );
+			$cf_trace_enabled   = isset( $_SERVER['HTTP_CF_RAY'] ) || isset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
+			$site_currency      = $this->get_site_currency_code();
+			$attribution        = AlvoBotPro_PixelTracking_Attribution::get_current_context();
 
 		$page_id    = get_queried_object_id();
 		$page_title = wp_get_document_title();
@@ -212,11 +233,16 @@ class AlvoBotPro_PixelTracking_Frontend {
 		}
 
 		// For all visitors (including anonymous): use _fbp cookie as external_id fallback.
-		// _fbp is set by the Meta Pixel JS on first visit; available in $_COOKIE on return visits.
+		// Prefer the durable first-party anonymous ID; fall back to _fbp on older visits.
 		if ( empty( $user_data_hashed['external_id'] ) ) {
-			$fbp_raw = isset( $_COOKIE['_fbp'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['_fbp'] ) ) : '';
-			if ( $fbp_raw ) {
-				$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( $fbp_raw );
+			$external_id_raw = ! empty( $attribution['external_id'] ) ? sanitize_text_field( (string) $attribution['external_id'] ) : '';
+			if ( '' !== $external_id_raw ) {
+				$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( $external_id_raw );
+			} else {
+				$fbp_raw = isset( $_COOKIE['_fbp'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['_fbp'] ) ) : '';
+				if ( $fbp_raw ) {
+					$user_data_hashed['external_id'] = AlvoBotPro_PixelTracking_CPT::hash_pii( $fbp_raw );
+				}
 			}
 		}
 
@@ -226,11 +252,14 @@ class AlvoBotPro_PixelTracking_Frontend {
 			? wp_generate_uuid4()
 			: sprintf(
 				'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-				wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0xffff ),
 				wp_rand( 0, 0xffff ),
 				wp_rand( 0, 0x0fff ) | 0x4000,
 				wp_rand( 0, 0x3fff ) | 0x8000,
-				wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff ), wp_rand( 0, 0xffff )
+				wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0xffff ),
+				wp_rand( 0, 0xffff )
 			);
 
 		// ── Standard Facebook Pixel base code ────────────────────────────────
@@ -241,7 +270,7 @@ class AlvoBotPro_PixelTracking_Frontend {
 		// PageView is queued here with a server-generated event_id; tracking.js sends
 		// the matching CAPI event for server-side deduplication without double-firing.
 		if ( $meta_base_injected ) :
-		?>
+			?>
 <!-- Facebook Pixel Code (AlvoBot) -->
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -251,15 +280,19 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-<?php foreach ( $pixel_ids_list as $pid ) : ?>
-fbq('init',<?php echo wp_json_encode( (string) $pid ); ?><?php if ( ! empty( $user_data_hashed ) ) : ?>,<?php echo wp_json_encode( $user_data_hashed ); ?><?php endif; ?>);
-<?php endforeach; ?>
+			<?php foreach ( $pixel_ids_list as $pid ) : ?>
+fbq('init',<?php echo wp_json_encode( (string) $pid ); ?>
+				<?php
+				if ( ! empty( $user_data_hashed ) ) :
+					?>
+	,<?php echo wp_json_encode( $user_data_hashed ); ?><?php endif; ?>);
+			<?php endforeach; ?>
 fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id ); ?>});
 </script>
-<?php foreach ( $pixel_ids_list as $pid ) : ?>
+			<?php foreach ( $pixel_ids_list as $pid ) : ?>
 <noscript><img height="1" width="1" style="display:none"
- src="https://www.facebook.com/tr?id=<?php echo esc_attr( $pid ); ?>&ev=PageView&noscript=1"/></noscript>
-<?php endforeach; ?>
+src="https://www.facebook.com/tr?id=<?php echo esc_attr( $pid ); ?>&ev=PageView&noscript=1"/></noscript>
+			<?php endforeach; ?>
 <!-- End Facebook Pixel Code -->
 		<?php endif; ?>
 
@@ -284,18 +317,19 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 			);
 
 			// Only inject gtag.js for real (non-external) trackers.
-			if ( ! empty( $real_trackers ) ) :
-				$primary_id = isset( $real_trackers[0]['type'] ) && 'google_ads' === $real_trackers[0]['type']
-					? $this->get_google_tracker_tag_id( $real_trackers[0] )
-					: $real_trackers[0]['tracker_id'];
+		if ( ! empty( $real_trackers ) ) :
+			$primary_id = isset( $real_trackers[0]['type'] ) && 'google_ads' === $real_trackers[0]['type']
+				? $this->get_google_tracker_tag_id( $real_trackers[0] )
+				: $real_trackers[0]['tracker_id'];
 			?>
+<?php // phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Tracking bootstrap must be emitted inline with dynamic tracker IDs. ?>
 <!-- Google Tag (AlvoBot) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr( $primary_id ); ?>"></script>
 <script>
 	window.dataLayer = window.dataLayer || [];
 	function gtag(){dataLayer.push(arguments);}
 	gtag('js', new Date());
-				<?php foreach ( $real_trackers as $gt ) : ?>
+			<?php foreach ( $real_trackers as $gt ) : ?>
 				<?php if ( isset( $gt['type'] ) && 'ga4' === $gt['type'] ) : ?>
 	gtag('config', <?php echo wp_json_encode( $gt['tracker_id'] ); ?>, { send_page_view: false });
 				<?php else : ?>
@@ -304,16 +338,40 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 			<?php endforeach; ?>
 </script>
 <!-- End Google Tag -->
+<?php // phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript ?>
 		<?php endif; ?>
 
 		<?php
 		// ── Config object for tracking.js ────────────────────────────────────
 		?>
 		<script>
+			window.alvobotPixelReady = window.alvobotPixelReady || function(callback) {
+				var attempts = 0;
+				var maxAttempts = 120;
+				function run() {
+					var tracker = window.alvobot_pixel;
+					if (tracker && typeof tracker.ready === 'function') {
+						tracker.ready().then(function() { callback(tracker); }).catch(function(error) {
+							if (window.console && window.console.warn) {
+								window.console.warn('[AlvoBot Pixel] tracker ready callback failed', error);
+							}
+						});
+						return;
+					}
+					if (attempts++ < maxAttempts) {
+						window.setTimeout(run, 100);
+						return;
+					}
+					if (window.console && window.console.warn) {
+						window.console.warn('[AlvoBot Pixel] tracker was not available after waiting for deferred scripts');
+					}
+				}
+				run();
+			};
 			var alvobot_pixel_config = {
 				pixel_ids: <?php echo wp_json_encode( $pixel_ids ); ?>,
-				api_event: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/events/track' ) ) ); ?>,
-				api_lead: <?php echo wp_json_encode( esc_url_raw( rest_url( 'alvobot-pro/v1/pixel-tracking/leads/track' ) ) ); ?>,
+				api_event: <?php echo wp_json_encode( $this->get_tracking_rest_url( 'events/track' ) ); ?>,
+				api_lead: <?php echo wp_json_encode( $this->get_tracking_rest_url( 'leads/track' ) ); ?>,
 				nonce: <?php echo wp_json_encode( $tracking_nonce ); ?>,
 				page_id: <?php echo wp_json_encode( (string) $page_id ); ?>,
 				page_title: <?php echo wp_json_encode( $page_title ); ?>,
@@ -321,10 +379,13 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 				content_category: <?php echo wp_json_encode( $content_category ); ?>,
 				debug_enabled: <?php echo $debug_enabled ? 'true' : 'false'; ?>,
 				cf_trace_enabled: <?php echo $cf_trace_enabled ? 'true' : 'false'; ?>,
+				external_id: <?php echo wp_json_encode( ! empty( $attribution['external_id'] ) ? (string) $attribution['external_id'] : '' ); ?>,
+				attribution: <?php echo wp_json_encode( empty( $attribution ) ? new stdClass() : $attribution ); ?>,
 				user_data_hashed: <?php echo wp_json_encode( empty( $user_data_hashed ) ? new stdClass() : $user_data_hashed ); ?>,
 				meta_pixel_base_injected: <?php echo $meta_base_injected ? 'true' : 'false'; ?>,
 				pageview_event_id: <?php echo wp_json_encode( $meta_base_injected ? $pageview_event_id : '' ); ?>,
-				google_trackers: <?php
+					google_trackers:
+				<?php
 				// Strip 'label' from frontend output — only tracker_id, type, and conversion_label are needed.
 				echo wp_json_encode(
 					array_map(
@@ -337,11 +398,12 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 									'customer_id'      => isset( $t['customer_id'] ) ? sanitize_text_field( (string) $t['customer_id'] ) : '',
 									'connection_id'    => isset( $t['connection_id'] ) ? sanitize_text_field( (string) $t['connection_id'] ) : '',
 								);
-							},
+						},
 						$google_trackers
 					)
 				);
-				?>,
+				?>
+				,
 				google_analytics_id: <?php echo wp_json_encode( isset( $settings['google_analytics_id'] ) ? $settings['google_analytics_id'] : '' ); ?>,
 				google_ads_id: <?php echo wp_json_encode( isset( $settings['google_ads_id'] ) ? $settings['google_ads_id'] : '' ); ?>,
 					google_ads_conversion_label: <?php echo wp_json_encode( isset( $settings['google_ads_conversion_label'] ) ? $settings['google_ads_conversion_label'] : '' ); ?>,
@@ -350,9 +412,14 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 					ad_conversion_triggers: <?php echo wp_json_encode( array_keys( $this->get_active_ad_conversion_triggers() ) ); ?>,
 					plugin_version: <?php echo wp_json_encode( defined( 'ALVOBOT_PRO_VERSION' ) ? ALVOBOT_PRO_VERSION : '' ); ?>,
 					test_mode: <?php echo ! empty( $settings['test_mode'] ) ? 'true' : 'false'; ?>,
-					test_event_code: <?php echo wp_json_encode( ! empty( $settings['test_event_code'] ) ? $settings['test_event_code'] : '' ); ?><?php if ( $debug_enabled ) : ?>,
+					test_event_code: <?php echo wp_json_encode( ! empty( $settings['test_event_code'] ) ? $settings['test_event_code'] : '' ); ?>
+					<?php
+					if ( $debug_enabled ) :
+						?>
+						,
 					debug_conversion_rules: <?php echo wp_json_encode( $this->get_debug_conversion_rules( $page_id ) ); ?>,
-					cf_headers: <?php
+						cf_headers:
+						<?php
 						$cf_headers = array();
 						if ( isset( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
 							$cf_headers['cf_ipcountry'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_IPCOUNTRY'] ) );
@@ -367,7 +434,8 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 							$cf_headers['cdn_loop'] = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CDN_LOOP'] ) );
 						}
 						echo wp_json_encode( empty( $cf_headers ) ? new stdClass() : $cf_headers );
-					?><?php endif; ?>
+						?>
+					<?php endif; ?>
 			};
 		</script>
 		<?php
@@ -396,12 +464,12 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 				continue;
 			}
 
-			$event_type   = get_post_meta( $conv->ID, '_event_type', true );
-			$event_name   = 'CustomEvent' === $event_type
+			$event_type = get_post_meta( $conv->ID, '_event_type', true );
+			$event_name = 'CustomEvent' === $event_type
 				? get_post_meta( $conv->ID, '_event_custom_name', true )
 				: $event_type;
-			$is_custom    = 'CustomEvent' === $event_type;
-			$trigger      = get_post_meta( $conv->ID, '_trigger_type', true );
+			$is_custom  = 'CustomEvent' === $event_type;
+			$trigger    = get_post_meta( $conv->ID, '_trigger_type', true );
 
 			// Ad-event triggers always use custom event names for Meta Pixel.
 			// This ensures they appear as AdImpression, AdClick, etc. in Events Manager
@@ -460,7 +528,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 		}
 
 		// Separate ad-event listeners (must register immediately) from other triggers.
-		$ad_scripts   = array();
+		$ad_scripts    = array();
 		$other_scripts = array();
 		foreach ( $scripts as $s ) {
 			if ( strpos( $s, "'alvobot:ad_event'" ) !== false ) {
@@ -535,38 +603,49 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 		// Other triggers (page_load, click, scroll, etc.): keep original DOMContentLoaded + ready() flow.
 		if ( ! empty( $other_scripts ) ) {
 			echo "\n<script>\n";
-			echo "document.addEventListener('DOMContentLoaded', function() {\n";
-			echo "  if (!window.alvobot_pixel || !window.alvobot_pixel.ready) return;\n";
-			echo "  window.alvobot_pixel.ready().then(function() {\n";
+			echo "(function() {\n";
+			echo "function alvobotRunConversionRules() {\n";
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $other_scripts contains generated JS snippets for inline execution.
 			echo implode( "\n", $other_scripts );
-			echo "\n  });\n";
-			echo "});\n";
+			echo "}\n";
+			echo "if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', alvobotRunConversionRules); } else { alvobotRunConversionRules(); }\n";
+			echo "})();\n";
 			echo "</script>\n";
 		}
+	}
+
+	/**
+	 * Build JS that waits for the tracker before dispatching a conversion event.
+	 *
+	 * @param string $event_config JSON event config.
+	 * @return string
+	 */
+	private function build_ready_send_event_js( $event_config ) {
+		return "window.alvobotPixelReady(function(tracker) { tracker.send_event({$event_config}); });";
 	}
 
 	/**
 	 * Generate JS for a specific trigger type.
 	 */
 	private function generate_trigger_js( $trigger, $trigger_val, $selector, $event_config, $conv_id ) {
-		$safe_id = 'alvobot_conv_' . $conv_id;
+		$safe_id       = 'alvobot_conv_' . $conv_id;
+		$send_event_js = $this->build_ready_send_event_js( $event_config );
 
 		switch ( $trigger ) {
 			case 'page_load':
-				return "  window.alvobot_pixel.send_event({$event_config});";
+				return '  ' . $send_event_js;
 
 			case 'page_time':
 				$seconds = max( 1, absint( $trigger_val ) );
-				return "  setTimeout(function() { window.alvobot_pixel.send_event({$event_config}); }, " . ( $seconds * 1000 ) . ');';
+				return '  setTimeout(function() { ' . $send_event_js . ' }, ' . ( $seconds * 1000 ) . ');';
 
-				case 'form_submit':
-					$selector = trim( (string) $selector );
-					if ( '' === $selector ) {
-						return '';
-					}
-					$selector_literal = wp_json_encode( $selector );
-					return "  (function() {
+			case 'form_submit':
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
+				return "  (function() {
     var tracked_{$safe_id} = false;
     try { document.querySelectorAll({$selector_literal}); } catch (e) { return; }
     document.addEventListener('submit', function(ev) {
@@ -577,17 +656,17 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
         if (!target.matches({$selector_literal}) && !target.closest({$selector_literal})) return;
       } catch (err) { return; }
       tracked_{$safe_id} = true;
-      window.alvobot_pixel.send_event({$event_config});
+      {$send_event_js}
     }, true);
   })();";
 
-				case 'click':
-					$selector = trim( (string) $selector );
-					if ( '' === $selector ) {
-						return '';
-					}
-					$selector_literal = wp_json_encode( $selector );
-					return "  (function() {
+			case 'click':
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
+				return "  (function() {
     try { document.querySelectorAll({$selector_literal}); } catch (e) { return; }
     document.addEventListener('click', function(ev) {
       var target = ev.target;
@@ -596,7 +675,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
         target = target.closest({$selector_literal});
       } catch (err) { return; }
       if (!target) return;
-      window.alvobot_pixel.send_event({$event_config});
+      {$send_event_js}
     }, true);
   })();";
 
@@ -607,17 +686,17 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
     window.addEventListener('scroll', function() {
       if (fired_{$safe_id}) return;
       var scrollPct = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight * 100;
-      if (scrollPct >= {$pct}) { fired_{$safe_id} = true; window.alvobot_pixel.send_event({$event_config}); }
+      if (scrollPct >= {$pct}) { fired_{$safe_id} = true; {$send_event_js} }
     });
   })();";
 
-				case 'view_element':
-					$selector = trim( (string) $selector );
-					if ( '' === $selector ) {
-						return '';
-					}
-					$selector_literal = wp_json_encode( $selector );
-					return "  (function() {
+			case 'view_element':
+				$selector = trim( (string) $selector );
+				if ( '' === $selector ) {
+					return '';
+				}
+				$selector_literal = wp_json_encode( $selector );
+				return "  (function() {
     function bind_{$safe_id}() {
       var elements = [];
       try { elements = document.querySelectorAll({$selector_literal}); } catch (e) { return; }
@@ -631,7 +710,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
       entries.forEach(function(entry) {
         if (entry.isIntersecting && !entry.target.classList.contains('alvobot_tracked_{$safe_id}')) {
           entry.target.classList.add('alvobot_tracked_{$safe_id}');
-          window.alvobot_pixel.send_event({$event_config});
+          {$send_event_js}
         }
       });
     }, { threshold: 0.5 });
@@ -750,10 +829,12 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 
 		if ( file_exists( $module_dir . 'assets/js/tracking.js' ) ) {
 			$ver = (string) filemtime( $module_dir . 'assets/js/tracking.js' );
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Fallback loader runs after enqueue phase when optimizers drop the normal script.
 			echo '<script defer src="' . esc_url( $module_url . 'assets/js/tracking.js?ver=' . $ver ) . '" data-no-optimize="1" data-no-minify="1"></script>' . "\n";
 		}
 		if ( file_exists( $module_dir . 'assets/js/ad-tracker.js' ) ) {
 			$ver = (string) filemtime( $module_dir . 'assets/js/ad-tracker.js' );
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Fallback loader runs after enqueue phase when optimizers drop the normal script.
 			echo '<script defer src="' . esc_url( $module_url . 'assets/js/ad-tracker.js?ver=' . $ver ) . '" data-no-optimize="1" data-no-minify="1"></script>' . "\n";
 		}
 	}
@@ -775,33 +856,33 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 			if ( ! $this->conversion_applies_to_page( $conv, $current_page_id, $current_path ) ) {
 				continue;
 			}
-			$trigger              = get_post_meta( $conv->ID, '_trigger_type', true );
-			$trigger_val          = get_post_meta( $conv->ID, '_trigger_value', true );
-			$event_type           = get_post_meta( $conv->ID, '_event_type', true );
-			$event_name           = 'CustomEvent' === $event_type
+			$trigger               = get_post_meta( $conv->ID, '_trigger_type', true );
+			$trigger_val           = get_post_meta( $conv->ID, '_trigger_value', true );
+			$event_type            = get_post_meta( $conv->ID, '_event_type', true );
+			$event_name            = 'CustomEvent' === $event_type
 				? get_post_meta( $conv->ID, '_event_custom_name', true )
 				: $event_type;
-			$content_name         = get_post_meta( $conv->ID, '_content_name', true );
-			$platforms            = get_post_meta( $conv->ID, '_platforms', true );
+			$content_name          = get_post_meta( $conv->ID, '_content_name', true );
+			$platforms             = get_post_meta( $conv->ID, '_platforms', true );
 			$gads_conversion_label = get_post_meta( $conv->ID, '_gads_conversion_label', true );
-			$gads_labels_map_raw  = get_post_meta( $conv->ID, '_gads_labels_map', true );
-			$gads_labels_map      = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
+			$gads_labels_map_raw   = get_post_meta( $conv->ID, '_gads_labels_map', true );
+			$gads_labels_map       = $gads_labels_map_raw ? json_decode( $gads_labels_map_raw, true ) : array();
 			$gads_conversion_value = get_post_meta( $conv->ID, '_gads_conversion_value', true );
-			$pixel_ids            = get_post_meta( $conv->ID, '_pixel_ids', true );
+			$pixel_ids             = get_post_meta( $conv->ID, '_pixel_ids', true );
 
 			$rules[] = array(
-				'id'                     => $conv->ID,
-				'title'                  => $conv->post_title,
-				'event_type'             => $event_type,
-				'event_name'             => $event_name,
-				'trigger'                => $trigger,
-				'trigger_value'          => $trigger_val,
-				'content_name'           => $content_name,
-				'platforms'              => $platforms,
-				'pixel_ids'              => $pixel_ids,
-				'gads_conversion_label'  => $gads_conversion_label,
-				'gads_labels_map'        => $gads_labels_map,
-				'gads_conversion_value'  => $gads_conversion_value,
+				'id'                    => $conv->ID,
+				'title'                 => $conv->post_title,
+				'event_type'            => $event_type,
+				'event_name'            => $event_name,
+				'trigger'               => $trigger,
+				'trigger_value'         => $trigger_val,
+				'content_name'          => $content_name,
+				'platforms'             => $platforms,
+				'pixel_ids'             => $pixel_ids,
+				'gads_conversion_label' => $gads_conversion_label,
+				'gads_labels_map'       => $gads_labels_map,
+				'gads_conversion_value' => $gads_conversion_value,
 			);
 		}
 
@@ -841,7 +922,7 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 	 * @return string[]
 	 */
 	private function filter_active_conversion_target_ids( $raw_targets ) {
-		$settings = $this->module->get_settings();
+		$settings   = $this->module->get_settings();
 		$active_ids = array();
 
 		$pixels = isset( $settings['pixels'] ) && is_array( $settings['pixels'] ) ? $settings['pixels'] : array();
@@ -969,17 +1050,17 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 				);
 			}
 
-				if ( $legacy_ads && preg_match( '/^AW-\d{6,15}$/', $legacy_ads ) ) {
-					$google_trackers[] = array(
-						'tracker_id'       => $legacy_ads,
-						'type'             => 'google_ads',
-						'label'            => 'Google Ads',
-						'conversion_label' => isset( $settings['google_ads_conversion_label'] ) ? sanitize_text_field( (string) $settings['google_ads_conversion_label'] ) : '',
-						'tag_id'           => $legacy_ads,
-						'customer_id'      => '',
-					);
-				}
+			if ( $legacy_ads && preg_match( '/^AW-\d{6,15}$/', $legacy_ads ) ) {
+				$google_trackers[] = array(
+					'tracker_id'       => $legacy_ads,
+					'type'             => 'google_ads',
+					'label'            => 'Google Ads',
+					'conversion_label' => isset( $settings['google_ads_conversion_label'] ) ? sanitize_text_field( (string) $settings['google_ads_conversion_label'] ) : '',
+					'tag_id'           => $legacy_ads,
+					'customer_id'      => '',
+				);
 			}
+		}
 
 		return array_values(
 			array_filter(
@@ -988,8 +1069,8 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 					return ! empty( $gt['tracker_id'] );
 				}
 			)
-			);
-		}
+		);
+	}
 
 	/**
 	 * Resolve the Google tag ID used by gtag.js for a Google Ads tracker.
@@ -1020,18 +1101,34 @@ fbq('track','PageView',{},{eventID:<?php echo wp_json_encode( $pageview_event_id
 		}
 
 		$tracker_id = isset( $tracker['tracker_id'] ) ? sanitize_text_field( (string) $tracker['tracker_id'] ) : '';
-		if ( empty( $tracker['connection_id'] ) && preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
+		if ( preg_match( '/^AW-\d{6,15}$/', $tracker_id ) ) {
 			return $tracker_id;
 		}
 
 		return '';
 	}
 
-		/**
-		 * Resolve the best-available site currency code for browser-side Google events.
+	/**
+	 * Build a same-origin REST URL for browser tracking requests.
 	 *
+	 * Local and proxied WordPress installs can report a different scheme in
+	 * rest_url() than the current page, which makes fetch() fail on invalid local
+	 * HTTPS certificates. A relative URL keeps the request on the page origin.
+	 *
+	 * @param string $endpoint Pixel tracking endpoint suffix.
 	 * @return string
 	 */
+	private function get_tracking_rest_url( $endpoint ) {
+		$endpoint = ltrim( sanitize_text_field( (string) $endpoint ), '/' );
+
+		return wp_make_link_relative( rest_url( 'alvobot-pro/v1/pixel-tracking/' . $endpoint ) );
+	}
+
+		/**
+		 * Resolve the best-available site currency code for browser-side Google events.
+		 *
+		 * @return string
+		 */
 	private function get_site_currency_code() {
 		if ( function_exists( 'get_woocommerce_currency' ) ) {
 			$currency = strtoupper( trim( (string) get_woocommerce_currency() ) );

@@ -3,8 +3,6 @@
  * Handles meta box generation, bulk generation, settings, and link editing.
  */
 (function ($) {
-	'use strict';
-
 	var positionLabels = {
 		after_first: 'Após 1° parágrafo',
 		middle: 'No meio do artigo',
@@ -40,8 +38,8 @@
 					$message
 						.html(
 							'<p style="color:var(--alvobot-success, #46b450);margin:4px 0;">' +
-								response.data.message +
-								' <a href="javascript:location.reload()">Atualizar</a></p>'
+								escHtml(response.data.message || '') +
+								' <a href="javascript:location.reload()">Atualizar</a></p>',
 						)
 						.show();
 				} else {
@@ -54,7 +52,7 @@
 			error: function () {
 				$message
 					.html(
-						'<p style="color:var(--alvobot-error, #dc3232);margin:4px 0;">Erro de conexão. Tente novamente.</p>'
+						'<p style="color:var(--alvobot-error, #dc3232);margin:4px 0;">Erro de conexão. Tente novamente.</p>',
 					)
 					.show();
 			},
@@ -88,20 +86,16 @@
 
 		// Validação: pelo menos 1 posição e 1 post type
 		if (positions.length === 0) {
-			$msg
-				.html(
-					'<div class="alvobot-notice alvobot-notice-error"><p>Selecione pelo menos uma posição.</p></div>'
-				)
-				.show();
+			$msg.html(
+				'<div class="alvobot-notice alvobot-notice-error"><p>Selecione pelo menos uma posição.</p></div>',
+			).show();
 			return;
 		}
 
 		if (postTypes.length === 0) {
-			$msg
-				.html(
-					'<div class="alvobot-notice alvobot-notice-error"><p>Selecione pelo menos um post type.</p></div>'
-				)
-				.show();
+			$msg.html(
+				'<div class="alvobot-notice alvobot-notice-error"><p>Selecione pelo menos um post type.</p></div>',
+			).show();
 			return;
 		}
 
@@ -124,29 +118,21 @@
 			},
 			success: function (response) {
 				if (response.success) {
-					$msg
-						.html(
-							'<div class="alvobot-notice alvobot-notice-success"><p>' +
-								response.data.message +
-								'</p></div>'
-						)
-						.show();
+					$msg.html(
+						'<div class="alvobot-notice alvobot-notice-success"><p>' +
+							escHtml(response.data?.message || 'Configuracoes salvas.') +
+							'</p></div>',
+					).show();
 				} else {
-					$msg
-						.html(
-							'<div class="alvobot-notice alvobot-notice-error"><p>' +
-								escHtml(response.data?.message || 'Erro') +
-								'</p></div>'
-						)
-						.show();
+					$msg.html(
+						'<div class="alvobot-notice alvobot-notice-error"><p>' +
+							escHtml(response.data?.message || 'Erro') +
+							'</p></div>',
+					).show();
 				}
 			},
 			error: function () {
-				$msg
-					.html(
-						'<div class="alvobot-notice alvobot-notice-error"><p>Erro de conexão.</p></div>'
-					)
-					.show();
+				$msg.html('<div class="alvobot-notice alvobot-notice-error"><p>Erro de conexão.</p></div>').show();
 			},
 			complete: function () {
 				$btn.prop('disabled', false).text('Salvar Configurações');
@@ -188,7 +174,16 @@
 			bulkState.page = page;
 		}
 
-		console.log('[SmartLinks] loadBulkPosts: category=' + category + ' status=' + status + ' sort=' + sort + ' page=' + bulkState.page);
+		console.log(
+			'[SmartLinks] loadBulkPosts: category=' +
+				category +
+				' status=' +
+				status +
+				' sort=' +
+				sort +
+				' page=' +
+				bulkState.page,
+		);
 
 		$btn.prop('disabled', true).text('Carregando...');
 		$list.html('<p>Carregando posts...</p>');
@@ -206,7 +201,12 @@
 				page: bulkState.page,
 			},
 			success: function (response) {
-				console.log('[SmartLinks] response: total=' + (response.data ? response.data.total : 'N/A') + ' posts=' + (response.data && response.data.posts ? response.data.posts.length : 0));
+				console.log(
+					'[SmartLinks] response: total=' +
+						(response.data ? response.data.total : 'N/A') +
+						' posts=' +
+						(response.data?.posts ? response.data.posts.length : 0),
+				);
 				if (response.success && response.data.posts.length > 0) {
 					bulkState.totalPages = response.data.total_pages || 1;
 					bulkState.total = response.data.total || 0;
@@ -228,20 +228,19 @@
 								')</span>'
 							: '<span style="color:var(--alvobot-gray-400);">Não gerado</span>';
 
+						html += '<tr><td><input type="checkbox" class="sil-post-check" value="' + post.id + '"></td>';
+						html += '<td>' + escHtml(post.title) + '</td>';
 						html +=
-							'<tr><td><input type="checkbox" class="sil-post-check" value="' +
-							post.id +
-							'"></td>';
-						html +=
-							'<td>' +
-							escHtml(post.title) +
+							'<td style="white-space:nowrap;color:var(--alvobot-gray-500);font-size:var(--alvobot-font-size-sm,13px);">' +
+							escHtml(post.post_date || '') +
 							'</td>';
-						html += '<td style="white-space:nowrap;color:var(--alvobot-gray-500);font-size:var(--alvobot-font-size-sm,13px);">' + escHtml(post.post_date || '') + '</td>';
 						html += '<td>' + status + '</td>';
 						html += '<td style="text-align:center;display:flex;gap:4px;justify-content:center;">';
 						if (post.has_links) {
 							html +=
-								'<button type="button" class="sil-edit-links-btn" data-post-id="' + post.id + '" title="Editar links" style="background:none;border:none;cursor:pointer;color:var(--alvobot-gray-600);padding:4px;display:inline-flex;">' +
+								'<button type="button" class="sil-edit-links-btn" data-post-id="' +
+								post.id +
+								'" title="Editar links" style="background:none;border:none;cursor:pointer;color:var(--alvobot-gray-600);padding:4px;display:inline-flex;">' +
 								'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
 								'</button>';
 						}
@@ -258,7 +257,8 @@
 					html += '</tbody></table>';
 
 					// Banner: selecionar todos de todas as páginas
-					html += '<div id="sil-select-all-banner" style="display:none;margin-top:var(--alvobot-space-sm);padding:var(--alvobot-space-sm) var(--alvobot-space-md);background:var(--alvobot-primary-50,#eff6ff);border:1px solid var(--alvobot-primary-200,#bfdbfe);border-radius:var(--alvobot-radius-md);font-size:var(--alvobot-font-size-sm);align-items:center;gap:var(--alvobot-space-sm);">' +
+					html +=
+						'<div id="sil-select-all-banner" style="display:none;margin-top:var(--alvobot-space-sm);padding:var(--alvobot-space-sm) var(--alvobot-space-md);background:var(--alvobot-primary-50,#eff6ff);border:1px solid var(--alvobot-primary-200,#bfdbfe);border-radius:var(--alvobot-radius-md);font-size:var(--alvobot-font-size-sm);align-items:center;gap:var(--alvobot-space-sm);">' +
 						'<span id="sil-banner-text"></span>' +
 						' <button type="button" id="sil-select-all-pages" class="alvobot-btn alvobot-btn-sm"></button>' +
 						'</div>';
@@ -268,15 +268,24 @@
 
 					// Paginação
 					if (bulkState.totalPages > 1) {
-						html += '<div style="margin-top:var(--alvobot-space-md);display:flex;align-items:center;gap:var(--alvobot-space-sm);justify-content:space-between;">';
-						html += '<span style="font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);">' +
-							bulkState.total + ' posts encontrados (página ' + bulkState.page + ' de ' + bulkState.totalPages + ')</span>';
+						html +=
+							'<div style="margin-top:var(--alvobot-space-md);display:flex;align-items:center;gap:var(--alvobot-space-sm);justify-content:space-between;">';
+						html +=
+							'<span style="font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);">' +
+							bulkState.total +
+							' posts encontrados (página ' +
+							bulkState.page +
+							' de ' +
+							bulkState.totalPages +
+							')</span>';
 						html += '<div style="display:flex;gap:var(--alvobot-space-xs);">';
 						if (bulkState.page > 1) {
-							html += '<button type="button" class="alvobot-btn alvobot-btn-secondary alvobot-btn-sm" id="sil-page-prev">← Anterior</button>';
+							html +=
+								'<button type="button" class="alvobot-btn alvobot-btn-secondary alvobot-btn-sm" id="sil-page-prev">← Anterior</button>';
 						}
 						if (bulkState.page < bulkState.totalPages) {
-							html += '<button type="button" class="alvobot-btn alvobot-btn-secondary alvobot-btn-sm" id="sil-page-next">Próxima →</button>';
+							html +=
+								'<button type="button" class="alvobot-btn alvobot-btn-secondary alvobot-btn-sm" id="sil-page-next">Próxima →</button>';
 						}
 						html += '</div></div>';
 					}
@@ -288,13 +297,11 @@
 						'</p>';
 					html +=
 						'<div style="display:flex;gap:var(--alvobot-space-sm);flex-wrap:wrap;">' +
-					'<button type="button" class="alvobot-btn alvobot-btn-primary" id="alvobot-sil-bulk-generate" disabled>Gerar para Selecionados</button>' +
-					'</div>';
+						'<button type="button" class="alvobot-btn alvobot-btn-primary" id="alvobot-sil-bulk-generate" disabled>Gerar para Selecionados</button>' +
+						'</div>';
 					$list.html(html);
 				} else {
-					$list.html(
-						'<p>Nenhum post encontrado com esses filtros.</p>'
-					);
+					$list.html('<p>Nenhum post encontrado com esses filtros.</p>');
 				}
 			},
 			error: function () {
@@ -331,9 +338,7 @@
 		// Show "select all pages" banner only when checking all and there are multiple pages
 		if (checked && bulkState.totalPages > 1 && !bulkState.allSelectedIds) {
 			var pageCount = $('.sil-post-check').length;
-			$('#sil-banner-text').text(
-				'Todos os ' + pageCount + ' posts desta página estão selecionados.'
-			);
+			$('#sil-banner-text').text('Todos os ' + pageCount + ' posts desta página estão selecionados.');
 			$('#sil-select-all-pages')
 				.text('Selecionar todos os ' + bulkState.total + ' posts desta busca')
 				.show();
@@ -417,7 +422,7 @@
 		} else {
 			postIds = [];
 			$('.sil-post-check:checked').each(function () {
-				postIds.push(parseInt($(this).val()));
+				postIds.push(parseInt($(this).val(), 10));
 			});
 		}
 
@@ -441,18 +446,20 @@
 				'<div id="sil-progress-bar" style="background:var(--alvobot-primary);height:100%;width:0;transition:width 0.3s;display:flex;align-items:center;justify-content:center;color:var(--alvobot-white);font-size:var(--alvobot-font-size-xs);font-weight:600;">0%</div>' +
 				'</div>' +
 				'<p id="sil-progress-text" style="margin:var(--alvobot-space-sm) 0;font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);">Gerando...</p>' +
-				'</div>'
+				'</div>',
 		);
 		$btn.after($progress);
 
 		function processNext() {
 			if (current >= total) {
 				// Se tem falhas, oferecer retry
-				var resultHtml = '<strong>Concluído!</strong> ' +
-					success + ' sucesso, ' + failed + ' falha(s)';
+				var resultHtml = '<strong>Concluído!</strong> ' + success + ' sucesso, ' + failed + ' falha(s)';
 
 				if (retryQueue.length > 0) {
-					resultHtml += ' — <button type="button" class="alvobot-btn alvobot-btn-sm" id="sil-retry-failed">Tentar novamente (' + retryQueue.length + ')</button>';
+					resultHtml +=
+						' — <button type="button" class="alvobot-btn alvobot-btn-sm" id="sil-retry-failed">Tentar novamente (' +
+						retryQueue.length +
+						')</button>';
 				}
 
 				$('#sil-progress-text').html(resultHtml);
@@ -461,9 +468,7 @@
 			}
 
 			var postId = postIds[current];
-			$('#sil-progress-text').text(
-				'Gerando ' + (current + 1) + ' de ' + total + '...'
-			);
+			$('#sil-progress-text').text('Gerando ' + (current + 1) + ' de ' + total + '...');
 
 			$.ajax({
 				url: alvobotSmartLinks.ajax_url,
@@ -480,9 +485,7 @@
 						$('.sil-post-check[value="' + postId + '"]')
 							.closest('tr')
 							.find('td:nth-child(3)')
-							.html(
-								'<span style="color:var(--alvobot-success);">Gerado agora</span>'
-							);
+							.html('<span style="color:var(--alvobot-success);">Gerado agora</span>');
 					} else {
 						failed++;
 						retryQueue.push(postId);
@@ -492,7 +495,7 @@
 							.html(
 								'<span style="color:var(--alvobot-error);">Erro: ' +
 									escHtml(response.data?.message || '?') +
-									'</span>'
+									'</span>',
 							);
 					}
 				},
@@ -502,9 +505,7 @@
 					$('.sil-post-check[value="' + postId + '"]')
 						.closest('tr')
 						.find('td:nth-child(3)')
-						.html(
-							'<span style="color:var(--alvobot-error);">Erro de conexão</span>'
-						);
+						.html('<span style="color:var(--alvobot-error);">Erro de conexão</span>');
 				},
 				complete: function () {
 					current++;
@@ -522,9 +523,7 @@
 
 	// Gerar Faltantes / Gerar Tudo Novamente
 	function bulkGenerateByFilter(statusFilter) {
-		var $btn = statusFilter === 'missing'
-			? $('#alvobot-sil-generate-missing')
-			: $('#alvobot-sil-generate-all');
+		var $btn = statusFilter === 'missing' ? $('#alvobot-sil-generate-missing') : $('#alvobot-sil-generate-all');
 		var originalHtml = $btn.html();
 
 		$btn.prop('disabled', true).text('Buscando posts...');
@@ -542,7 +541,15 @@
 			success: function (response) {
 				if (response.success && response.data.ids.length > 0) {
 					if (response.data.truncated) {
-						alert('Atenção: Existem ' + response.data.total_available + ' posts, mas o limite é de ' + response.data.ids.length + '. Os primeiros ' + response.data.ids.length + ' serão processados.');
+						alert(
+							'Atenção: Existem ' +
+								response.data.total_available +
+								' posts, mas o limite é de ' +
+								response.data.ids.length +
+								'. Os primeiros ' +
+								response.data.ids.length +
+								' serão processados.',
+						);
 					}
 					var label = statusFilter === 'missing' ? 'Gerar Faltantes' : 'Gerar Tudo Novamente';
 					runBulkGeneration(response.data.ids, $btn, label, originalHtml);
@@ -572,12 +579,16 @@
 		$('#sil-bulk-progress-ext').remove();
 		var $progress = $(
 			'<div id="sil-bulk-progress-ext" style="margin-top:var(--alvobot-space-md);">' +
-				'<p style="font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);margin-bottom:var(--alvobot-space-xs);">' + label + ': 0 / ' + total + ' posts</p>' +
+				'<p style="font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);margin-bottom:var(--alvobot-space-xs);">' +
+				label +
+				': 0 / ' +
+				total +
+				' posts</p>' +
 				'<div style="background:var(--alvobot-gray-100);border-radius:var(--alvobot-radius-md);overflow:hidden;height:24px;">' +
 				'<div id="sil-progress-bar-ext" style="background:var(--alvobot-primary);height:100%;width:0;transition:width 0.3s;display:flex;align-items:center;justify-content:center;color:var(--alvobot-white);font-size:var(--alvobot-font-size-xs);font-weight:600;">0%</div>' +
 				'</div>' +
 				'<p id="sil-progress-text-ext" style="margin:var(--alvobot-space-sm) 0;font-size:var(--alvobot-font-size-sm);color:var(--alvobot-gray-600);">Iniciando...</p>' +
-				'</div>'
+				'</div>',
 		);
 
 		if ($list.children().length > 0) {
@@ -590,19 +601,24 @@
 			if (current >= total) {
 				var resultHtml = '<strong>Concluído!</strong> ' + success + ' sucesso, ' + failed + ' falha(s)';
 				if (retryQueue.length > 0) {
-					resultHtml += ' <button id="sil-retry-bulk-ext" class="button button-small" style="margin-left:var(--alvobot-space-sm);">Tentar novamente (' + retryQueue.length + ')</button>';
+					resultHtml +=
+						' <button id="sil-retry-bulk-ext" class="button button-small" style="margin-left:var(--alvobot-space-sm);">Tentar novamente (' +
+						retryQueue.length +
+						')</button>';
 				}
 				$('#sil-progress-text-ext').html(resultHtml);
 				$triggerBtn.prop('disabled', false).html(restoreHtml);
 
 				// Bind retry for failed posts from this run
-				$('#sil-retry-bulk-ext').off('click').on('click', function (e) {
-					e.preventDefault();
-					var idsToRetry = retryQueue.slice();
-					retryQueue = [];
-					$(this).remove();
-					runBulkGeneration(idsToRetry, $triggerBtn, label, restoreHtml);
-				});
+				$('#sil-retry-bulk-ext')
+					.off('click')
+					.on('click', function (e) {
+						e.preventDefault();
+						var idsToRetry = retryQueue.slice();
+						retryQueue = [];
+						$(this).remove();
+						runBulkGeneration(idsToRetry, $triggerBtn, label, restoreHtml);
+					});
 				return;
 			}
 
@@ -633,10 +649,10 @@
 				complete: function () {
 					current++;
 					var pct = Math.round((current / total) * 100);
-					$('#sil-progress-bar-ext').css('width', pct + '%').text(pct + '%');
-					$('#sil-progress-text-ext').text(
-						label + ': ' + current + ' / ' + total + ' posts'
-					);
+					$('#sil-progress-bar-ext')
+						.css('width', pct + '%')
+						.text(pct + '%');
+					$('#sil-progress-text-ext').text(label + ': ' + current + ' / ' + total + ' posts');
 					processNextExt();
 				},
 			});
@@ -653,11 +669,16 @@
 
 	$(document).on('click', '#alvobot-sil-generate-all', function (e) {
 		e.preventDefault();
-		if (!confirm('Gerar/regenerar links para TODOS os posts (com os filtros atuais)? Isso irá sobrescrever links já existentes.')) return;
+		if (
+			!confirm(
+				'Gerar/regenerar links para TODOS os posts (com os filtros atuais)? Isso irá sobrescrever links já existentes.',
+			)
+		)
+			return;
 		bulkGenerateByFilter('all');
 	});
 
-		// Retry failed posts
+	// Retry failed posts
 	$(document).on('click', '#sil-retry-failed', function (e) {
 		e.preventDefault();
 		// Re-check only the failed posts
@@ -665,10 +686,12 @@
 		var retryIds = [];
 		$('.sil-post-check').each(function () {
 			var $row = $(this).closest('tr');
-			if ($row.find('td:nth-child(3) .alvobot-error, td:nth-child(3) span[style*="error"]').length > 0 ||
-				$row.find('td:nth-child(3)').text().indexOf('Erro') >= 0) {
+			if (
+				$row.find('td:nth-child(3) .alvobot-error, td:nth-child(3) span[style*="error"]').length > 0 ||
+				$row.find('td:nth-child(3)').text().indexOf('Erro') >= 0
+			) {
 				$(this).prop('checked', true);
-				retryIds.push(parseInt($(this).val()));
+				retryIds.push(parseInt($(this).val(), 10));
 			}
 		});
 		if (retryIds.length > 0) {
@@ -708,7 +731,9 @@
 		var $body = $modal.find('.sil-modal-body');
 
 		$modal.show();
-		$body.html('<div style="text-align:center;padding:40px;color:var(--alvobot-gray-500, #6B7280);">Carregando links...</div>');
+		$body.html(
+			'<div style="text-align:center;padding:40px;color:var(--alvobot-gray-500, #6B7280);">Carregando links...</div>',
+		);
 		$modal.find('.sil-modal-title').text('Editar Smart Links');
 		$modal.find('#sil-modal-save').prop('disabled', true);
 
@@ -728,41 +753,50 @@
 					renderEditForm($body);
 					$modal.find('#sil-modal-save').prop('disabled', false);
 				} else {
-					$body.html('<div style="text-align:center;padding:40px;color:var(--alvobot-error, #F63D68);">' + escHtml(response.data?.message || 'Erro ao carregar links') + '</div>');
+					$body.html(
+						'<div style="text-align:center;padding:40px;color:var(--alvobot-error, #F63D68);">' +
+							escHtml(response.data?.message || 'Erro ao carregar links') +
+							'</div>',
+					);
 				}
 			},
 			error: function () {
-				$body.html('<div style="text-align:center;padding:40px;color:var(--alvobot-error, #F63D68);">Erro de conexão.</div>');
+				$body.html(
+					'<div style="text-align:center;padding:40px;color:var(--alvobot-error, #F63D68);">Erro de conexão.</div>',
+				);
 			},
 		});
 	}
 
 	function buildModalHtml() {
-		return '<div id="sil-edit-modal" class="sil-edit-modal" style="display:none;">' +
+		return (
+			'<div id="sil-edit-modal" class="sil-edit-modal" style="display:none;">' +
 			'<div class="sil-modal-overlay"></div>' +
 			'<div class="sil-modal-container">' +
-				'<div class="sil-modal-header">' +
-					'<h2 class="sil-modal-title">Editar Smart Links</h2>' +
-					'<button type="button" class="sil-modal-close-btn" title="Fechar">&times;</button>' +
-				'</div>' +
-				'<div class="sil-modal-body"></div>' +
-				'<div class="sil-modal-footer">' +
-					'<div id="sil-modal-message" style="flex:1;"></div>' +
-					'<button type="button" class="alvobot-btn alvobot-btn-secondary sil-modal-cancel-btn">Cancelar</button>' +
-					'<button type="button" class="alvobot-btn alvobot-btn-primary" id="sil-modal-save">Salvar Alterações</button>' +
-				'</div>' +
+			'<div class="sil-modal-header">' +
+			'<h2 class="sil-modal-title">Editar Smart Links</h2>' +
+			'<button type="button" class="sil-modal-close-btn" title="Fechar">&times;</button>' +
 			'</div>' +
-		'</div>';
+			'<div class="sil-modal-body"></div>' +
+			'<div class="sil-modal-footer">' +
+			'<div id="sil-modal-message" style="flex:1;"></div>' +
+			'<button type="button" class="alvobot-btn alvobot-btn-secondary sil-modal-cancel-btn">Cancelar</button>' +
+			'<button type="button" class="alvobot-btn alvobot-btn-primary" id="sil-modal-save">Salvar Alterações</button>' +
+			'</div>' +
+			'</div>' +
+			'</div>'
+		);
 	}
 
 	function renderEditForm($body) {
 		var meta = editState.meta;
-		if (!meta || !meta.blocks) return;
+		if (!meta?.blocks) return;
 
 		var html = '';
 
 		// Enabled toggle
-		html += '<div class="sil-edit-field" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--alvobot-gray-200, #E5E7EB);">';
+		html +=
+			'<div class="sil-edit-field" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--alvobot-gray-200, #E5E7EB);">';
 		html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">';
 		html += '<input type="checkbox" id="sil-edit-enabled" ' + (meta.enabled ? 'checked' : '') + '>';
 		html += '<strong>Links ativos</strong>';
@@ -774,11 +808,21 @@
 			var posLabel = positionLabels[block.position] || block.position;
 			html += '<div class="sil-edit-block" data-block-idx="' + blockIdx + '">';
 			html += '<div class="sil-edit-block-header">';
-			html += '<span class="sil-edit-block-title">Bloco ' + (blockIdx + 1) + ' — ' + escHtml(posLabel) + '</span>';
-			html += '<select class="sil-edit-position" data-block-idx="' + blockIdx + '" style="font-size:12px;padding:2px 6px;">';
-			html += '<option value="after_first"' + (block.position === 'after_first' ? ' selected' : '') + '>Após 1° parágrafo</option>';
+			html +=
+				'<span class="sil-edit-block-title">Bloco ' + (blockIdx + 1) + ' — ' + escHtml(posLabel) + '</span>';
+			html +=
+				'<select class="sil-edit-position" data-block-idx="' +
+				blockIdx +
+				'" style="font-size:12px;padding:2px 6px;">';
+			html +=
+				'<option value="after_first"' +
+				(block.position === 'after_first' ? ' selected' : '') +
+				'>Após 1° parágrafo</option>';
 			html += '<option value="middle"' + (block.position === 'middle' ? ' selected' : '') + '>No meio</option>';
-			html += '<option value="before_last"' + (block.position === 'before_last' ? ' selected' : '') + '>Antes do último</option>';
+			html +=
+				'<option value="before_last"' +
+				(block.position === 'before_last' ? ' selected' : '') +
+				'>Antes do último</option>';
 			html += '</select>';
 			html += '</div>';
 			html += '<div class="sil-edit-links" data-block-idx="' + blockIdx + '">';
@@ -789,16 +833,22 @@
 
 			html += '</div>';
 			html += '<button type="button" class="sil-add-link-btn" data-block-idx="' + blockIdx + '">';
-			html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+			html +=
+				'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 			html += ' Adicionar link';
 			html += '</button>';
 			html += '</div>';
 		});
 
 		// Disclaimer
-		html += '<div class="sil-edit-field" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--alvobot-gray-200, #E5E7EB);">';
-		html += '<label style="font-size:13px;font-weight:600;color:var(--alvobot-gray-700, #52525B);display:block;margin-bottom:4px;">Disclaimer</label>';
-		html += '<input type="text" id="sil-edit-disclaimer" value="' + escAttr(meta.disclaimer || '') + '" placeholder="Ex: *Você permanecerá neste site." style="width:100%;padding:6px 10px;border:1px solid var(--alvobot-gray-300, #D4D4D8);border-radius:6px;font-size:13px;">';
+		html +=
+			'<div class="sil-edit-field" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--alvobot-gray-200, #E5E7EB);">';
+		html +=
+			'<label style="font-size:13px;font-weight:600;color:var(--alvobot-gray-700, #52525B);display:block;margin-bottom:4px;">Disclaimer</label>';
+		html +=
+			'<input type="text" id="sil-edit-disclaimer" value="' +
+			escAttr(meta.disclaimer || '') +
+			'" placeholder="Ex: *Você permanecerá neste site." style="width:100%;padding:6px 10px;border:1px solid var(--alvobot-gray-300, #D4D4D8);border-radius:6px;font-size:13px;">';
 		html += '</div>';
 
 		$body.html(html);
@@ -806,21 +856,42 @@
 
 	function buildLinkRow(blockIdx, linkIdx, link) {
 		var targetTitle = link.target_title || '(Post #' + link.post_id + ')';
-		var html = '<div class="sil-edit-link-row" data-block-idx="' + blockIdx + '" data-link-idx="' + linkIdx + '" data-post-id="' + link.post_id + '">';
+		var html =
+			'<div class="sil-edit-link-row" data-block-idx="' +
+			blockIdx +
+			'" data-link-idx="' +
+			linkIdx +
+			'" data-post-id="' +
+			link.post_id +
+			'">';
 
 		html += '<div class="sil-edit-link-target">';
 		html += '<span class="sil-link-post-label" title="' + escAttr(targetTitle) + '">';
-		html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.5;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> ';
+		html +=
+			'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.5;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> ';
 		html += escHtml(targetTitle);
 		html += '</span>';
 		html += '</div>';
 
 		html += '<div class="sil-edit-link-text">';
-		html += '<input type="text" class="sil-link-text-input" value="' + escAttr(link.text) + '" placeholder="Texto do link" data-block-idx="' + blockIdx + '" data-link-idx="' + linkIdx + '">';
+		html +=
+			'<input type="text" class="sil-link-text-input" value="' +
+			escAttr(link.text) +
+			'" placeholder="Texto do link" data-block-idx="' +
+			blockIdx +
+			'" data-link-idx="' +
+			linkIdx +
+			'">';
 		html += '</div>';
 
-		html += '<button type="button" class="sil-remove-link-btn" data-block-idx="' + blockIdx + '" data-link-idx="' + linkIdx + '" title="Remover link">';
-		html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+		html +=
+			'<button type="button" class="sil-remove-link-btn" data-block-idx="' +
+			blockIdx +
+			'" data-link-idx="' +
+			linkIdx +
+			'" title="Remover link">';
+		html +=
+			'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 		html += '</button>';
 
 		html += '</div>';
@@ -845,27 +916,27 @@
 
 	// Update position in state
 	$(document).on('change', '.sil-edit-position', function () {
-		var blockIdx = parseInt($(this).data('block-idx'));
-		if (editState.meta && editState.meta.blocks[blockIdx]) {
+		var blockIdx = parseInt($(this).data('block-idx'), 10);
+		if (editState.meta?.blocks[blockIdx]) {
 			editState.meta.blocks[blockIdx].position = $(this).val();
 		}
 	});
 
 	// Update link text in state
 	$(document).on('input', '.sil-link-text-input', function () {
-		var blockIdx = parseInt($(this).data('block-idx'));
-		var linkIdx = parseInt($(this).data('link-idx'));
-		if (editState.meta && editState.meta.blocks[blockIdx] && editState.meta.blocks[blockIdx].links[linkIdx]) {
+		var blockIdx = parseInt($(this).data('block-idx'), 10);
+		var linkIdx = parseInt($(this).data('link-idx'), 10);
+		if (editState.meta?.blocks[blockIdx]?.links[linkIdx]) {
 			editState.meta.blocks[blockIdx].links[linkIdx].text = $(this).val();
 		}
 	});
 
 	// Remove link
 	$(document).on('click', '.sil-remove-link-btn', function () {
-		var blockIdx = parseInt($(this).data('block-idx'));
-		var linkIdx = parseInt($(this).data('link-idx'));
+		var blockIdx = parseInt($(this).data('block-idx'), 10);
+		var linkIdx = parseInt($(this).data('link-idx'), 10);
 
-		if (editState.meta && editState.meta.blocks[blockIdx]) {
+		if (editState.meta?.blocks[blockIdx]) {
 			editState.meta.blocks[blockIdx].links.splice(linkIdx, 1);
 
 			// If block is now empty, remove it
@@ -880,14 +951,15 @@
 
 	// Add link - show search
 	$(document).on('click', '.sil-add-link-btn', function () {
-		var blockIdx = parseInt($(this).data('block-idx'));
+		var blockIdx = parseInt($(this).data('block-idx'), 10);
 		var $btn = $(this);
 
 		// Remove any existing search box
 		$('.sil-post-search-wrap').remove();
 
 		var searchHtml = '<div class="sil-post-search-wrap" data-block-idx="' + blockIdx + '" style="margin-top:8px;">';
-		searchHtml += '<input type="text" class="sil-post-search-input" placeholder="Buscar post por título..." style="width:100%;padding:8px 12px;border:1px solid var(--alvobot-gray-300, #D4D4D8);border-radius:6px;font-size:13px;" autofocus>';
+		searchHtml +=
+			'<input type="text" class="sil-post-search-input" placeholder="Buscar post por título..." style="width:100%;padding:8px 12px;border:1px solid var(--alvobot-gray-300, #D4D4D8);border-radius:6px;font-size:13px;" autofocus>';
 		searchHtml += '<div class="sil-post-search-results" style="display:none;"></div>';
 		searchHtml += '</div>';
 
@@ -910,7 +982,7 @@
 
 		// Collect existing post IDs to exclude
 		var excludeIds = [editState.postId];
-		if (editState.meta && editState.meta.blocks) {
+		if (editState.meta?.blocks) {
 			editState.meta.blocks.forEach(function (block) {
 				block.links.forEach(function (link) {
 					excludeIds.push(link.post_id);
@@ -932,14 +1004,25 @@
 					if (response.success && response.data.posts.length > 0) {
 						var html = '';
 						response.data.posts.forEach(function (post) {
-							html += '<div class="sil-search-result" data-post-id="' + post.id + '" data-post-title="' + escAttr(post.title) + '" data-post-url="' + escAttr(post.url) + '">';
+							html +=
+								'<div class="sil-search-result" data-post-id="' +
+								post.id +
+								'" data-post-title="' +
+								escAttr(post.title) +
+								'" data-post-url="' +
+								escAttr(post.url) +
+								'">';
 							html += '<span class="sil-search-result-title">' + escHtml(post.title) + '</span>';
 							html += '<span class="sil-search-result-type">' + escHtml(post.type) + '</span>';
 							html += '</div>';
 						});
 						$results.html(html).show();
 					} else {
-						$results.html('<div style="padding:8px 12px;color:var(--alvobot-gray-500, #6B7280);font-size:12px;">Nenhum post encontrado</div>').show();
+						$results
+							.html(
+								'<div style="padding:8px 12px;color:var(--alvobot-gray-500, #6B7280);font-size:12px;">Nenhum post encontrado</div>',
+							)
+							.show();
 					}
 				},
 			});
@@ -948,12 +1031,12 @@
 
 	// Select post from search results
 	$(document).on('click', '.sil-search-result[data-post-id]', function () {
-		var postId = parseInt($(this).data('post-id'));
+		var postId = parseInt($(this).data('post-id'), 10);
 		var postTitle = $(this).data('post-title');
 		var postUrl = $(this).data('post-url');
-		var blockIdx = parseInt($(this).closest('.sil-post-search-wrap').data('block-idx'));
+		var blockIdx = parseInt($(this).closest('.sil-post-search-wrap').data('block-idx'), 10);
 
-		if (!postId || !editState.meta || !editState.meta.blocks[blockIdx]) return;
+		if (!postId || !editState.meta?.blocks[blockIdx]) return;
 
 		// Add link to block
 		editState.meta.blocks[blockIdx].links.push({
@@ -988,16 +1071,16 @@
 
 		// Read link texts from inputs (in case state wasn't updated)
 		$('.sil-link-text-input').each(function () {
-			var bIdx = parseInt($(this).data('block-idx'));
-			var lIdx = parseInt($(this).data('link-idx'));
-			if (editState.meta.blocks[bIdx] && editState.meta.blocks[bIdx].links[lIdx]) {
+			var bIdx = parseInt($(this).data('block-idx'), 10);
+			var lIdx = parseInt($(this).data('link-idx'), 10);
+			if (editState.meta.blocks[bIdx]?.links[lIdx]) {
 				editState.meta.blocks[bIdx].links[lIdx].text = $(this).val();
 			}
 		});
 
 		// Read positions
 		$('.sil-edit-position').each(function () {
-			var bIdx = parseInt($(this).data('block-idx'));
+			var bIdx = parseInt($(this).data('block-idx'), 10);
 			if (editState.meta.blocks[bIdx]) {
 				editState.meta.blocks[bIdx].position = $(this).val();
 			}
@@ -1007,12 +1090,14 @@
 		var hasLinks = false;
 		editState.meta.blocks.forEach(function (block) {
 			block.links.forEach(function (link) {
-				if (link.text && link.text.trim()) hasLinks = true;
+				if (link.text?.trim()) hasLinks = true;
 			});
 		});
 
 		if (!hasLinks) {
-			$msg.html('<span style="color:var(--alvobot-error, #F63D68);font-size:13px;">Adicione pelo menos um link com texto.</span>');
+			$msg.html(
+				'<span style="color:var(--alvobot-error, #F63D68);font-size:13px;">Adicione pelo menos um link com texto.</span>',
+			);
 			return;
 		}
 
@@ -1032,7 +1117,11 @@
 			},
 			success: function (response) {
 				if (response.success) {
-					$msg.html('<span style="color:var(--alvobot-success, #12B76A);font-size:13px;">' + escHtml(response.data.message) + '</span>');
+					$msg.html(
+						'<span style="color:var(--alvobot-success, #12B76A);font-size:13px;">' +
+							escHtml(response.data.message) +
+							'</span>',
+					);
 					setTimeout(function () {
 						$('#sil-edit-modal').hide();
 						editState.postId = null;
@@ -1043,7 +1132,11 @@
 						}
 					}, 800);
 				} else {
-					$msg.html('<span style="color:var(--alvobot-error, #F63D68);font-size:13px;">' + escHtml(response.data?.message || 'Erro ao salvar') + '</span>');
+					$msg.html(
+						'<span style="color:var(--alvobot-error, #F63D68);font-size:13px;">' +
+							escHtml(response.data?.message || 'Erro ao salvar') +
+							'</span>',
+					);
 				}
 			},
 			error: function () {
@@ -1072,7 +1165,11 @@
 		if (str === null || str === undefined) return '';
 		str = String(str);
 		if (!str) return '';
-		return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
 	}
-
 })(jQuery);

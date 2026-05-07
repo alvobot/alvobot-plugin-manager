@@ -539,7 +539,7 @@ if ( have_posts() ) :
 							?>
 						</div>
 						<p class="copyright">
-							&copy; <?php echo esc_html( date( 'Y' ) ); ?> <?php echo esc_html( get_bloginfo( 'name' ) ); ?>. 
+								&copy; <?php echo esc_html( gmdate( 'Y' ) ); ?> <?php echo esc_html( get_bloginfo( 'name' ) ); ?>.
 							<?php esc_html_e( 'Todos os direitos reservados.', 'alvobot-pro' ); ?>
 						</p>
 					</div>

@@ -231,19 +231,29 @@ jQuery(document).ready(function ($) {
 		if (typeof alvobotAuthorBox === 'undefined') return;
 
 		$('.ab-bio-textarea').prop('disabled', true);
-		$.post(alvobotAuthorBox.ajaxurl, {
-			action: 'ab_load_user_bios',
-			nonce: alvobotAuthorBox.nonce,
-			user_id: userId,
-		}, function (response) {
+		$.post(
+			alvobotAuthorBox.ajaxurl,
+			{
+				action: 'ab_load_user_bios',
+				nonce: alvobotAuthorBox.nonce,
+				user_id: userId,
+			},
+			function (response) {
+				$('.ab-bio-textarea').prop('disabled', false);
+				if (response.success) {
+					var bios = response.data.bios;
+					$('.ab-bio-textarea').each(function () {
+						var lang = $(this).data('lang');
+						$(this).val(bios[lang] || '');
+					});
+				}
+			},
+		).fail(function () {
 			$('.ab-bio-textarea').prop('disabled', false);
-			if (response.success) {
-				var bios = response.data.bios;
-				$('.ab-bio-textarea').each(function () {
-					var lang = $(this).data('lang');
-					$(this).val(bios[lang] || '');
-				});
+			if (window.console && window.console.error) {
+				window.console.error('Erro de conexão ao carregar biografias.');
 			}
+			$('#ab-bio-save-status').text('Erro ao carregar biografias. Tente novamente.').fadeIn(200);
 		});
 	});
 
@@ -260,34 +270,47 @@ jQuery(document).ready(function ($) {
 			bios[$(this).data('lang')] = $(this).val();
 		});
 
-		$.post(alvobotAuthorBox.ajaxurl, {
-			action: 'ab_save_bios',
-			nonce: alvobotAuthorBox.nonce,
-			user_id: $('#bio-lang-user').val(),
-			bios: bios,
-		}, function (response) {
-			$btn.prop('disabled', false);
-			if (response.success) {
-				$status.text(response.data.message).fadeIn(200);
-				setTimeout(function () { $status.fadeOut(200); }, 3000);
+		$.post(
+			alvobotAuthorBox.ajaxurl,
+			{
+				action: 'ab_save_bios',
+				nonce: alvobotAuthorBox.nonce,
+				user_id: $('#bio-lang-user').val(),
+				bios: bios,
+			},
+			function (response) {
+				$btn.prop('disabled', false);
+				if (response.success) {
+					$status.text(response.data.message).fadeIn(200);
+					setTimeout(function () {
+						$status.fadeOut(200);
+					}, 3000);
 
-				// Atualiza o preview com a bio da aba ativa
-				var activeLang = $('.ab-bio-lang-tab-btn.active').data('lang');
-				var previewBio = bios[activeLang] || '';
-				if (!previewBio) {
-					Object.keys(bios).forEach(function (lang) {
-						if (!previewBio && bios[lang]) { previewBio = bios[lang]; }
-					});
-				}
-				var $desc = $('.alvobot-author-box .author-description');
-				if (previewBio) {
-					if ($desc.length) {
-						$desc.html(previewBio);
-					} else {
-						$('.alvobot-author-box .author-info').append('<div class="author-description">' + previewBio + '</div>');
+					// Atualiza o preview com a bio da aba ativa
+					var activeLang = $('.ab-bio-lang-tab-btn.active').data('lang');
+					var previewBio = bios[activeLang] || '';
+					if (!previewBio) {
+						Object.keys(bios).forEach(function (lang) {
+							if (!previewBio && bios[lang]) {
+								previewBio = bios[lang];
+							}
+						});
+					}
+					var $desc = $('.alvobot-author-box .author-description');
+					if (previewBio) {
+						if ($desc.length) {
+							$desc.text(previewBio);
+						} else {
+							$('<div class="author-description"></div>')
+								.text(previewBio)
+								.appendTo('.alvobot-author-box .author-info');
+						}
 					}
 				}
-			}
+			},
+		).fail(function () {
+			$btn.prop('disabled', false);
+			$status.text('Erro de conexão ao salvar biografias.').fadeIn(200);
 		});
 	});
 
@@ -363,7 +386,9 @@ jQuery(document).ready(function ($) {
 					var author = response.data || response;
 
 					$('#ai-preview-name').val(author.name || '');
-					$('#ai-preview-bio').val(author.description || '').show();
+					$('#ai-preview-bio')
+						.val(author.description || '')
+						.show();
 					$('#ai-preview-avatar-url').val(author.avatar_url || '');
 					$('#ai-preview-bio-multilingual').hide();
 
@@ -377,7 +402,11 @@ jQuery(document).ready(function ($) {
 				},
 				onError: function (error) {
 					showAiSection('form');
-					var msg = (error && error.message) ? error.message : (typeof error === 'string' ? error : 'Erro ao gerar autor. Tente novamente.');
+					var msg = error?.message
+						? error.message
+						: typeof error === 'string'
+							? error
+							: 'Erro ao gerar autor. Tente novamente.';
 					showAiError(msg);
 				},
 			});
@@ -408,9 +437,7 @@ jQuery(document).ready(function ($) {
 		var firstLangName = siteLanguages[firstLangCode];
 
 		// Step 1: Generate author in the first language
-		$('#alvobot-ai-author-loading p').text(
-			'Gerando autor em ' + firstLangName + ' (1/' + totalLangs + ')...'
-		);
+		$('#alvobot-ai-author-loading p').text('Gerando autor em ' + firstLangName + ' (1/' + totalLangs + ')...');
 
 		var params = {
 			niche: niche,
@@ -445,37 +472,45 @@ jQuery(document).ready(function ($) {
 					var step = translateIndex + 2; // +2 because first step was generation
 
 					$('#alvobot-ai-author-loading p').text(
-						'Traduzindo biografia para ' + targetName + ' (' + step + '/' + totalLangs + ')...'
+						'Traduzindo biografia para ' + targetName + ' (' + step + '/' + totalLangs + ')...',
 					);
 
-					window.AlvobotAI.generate('translate_bio', {
-						text: author.description,
-						target_language: targetName,
-					}, {
-						onSuccess: function (translateResponse) {
-							var data = translateResponse.data || translateResponse;
-							results[targetCode] = {
-								name: author.name,
-								description: data.translated_text || '',
-								sex: author.sex,
-								avatar_url: author.avatar_url,
-							};
-							translateIndex++;
-							translateNext();
+					window.AlvobotAI.generate(
+						'translate_bio',
+						{
+							text: author.description,
+							target_language: targetName,
 						},
-						onError: function (error) {
-							showAiSection('form');
-							var msg = (error && error.message) ? error.message : 'Erro ao traduzir para ' + targetName + '.';
-							showAiError(msg);
+						{
+							onSuccess: function (translateResponse) {
+								var data = translateResponse.data || translateResponse;
+								results[targetCode] = {
+									name: author.name,
+									description: data.translated_text || '',
+									sex: author.sex,
+									avatar_url: author.avatar_url,
+								};
+								translateIndex++;
+								translateNext();
+							},
+							onError: function (error) {
+								showAiSection('form');
+								var msg = error?.message ? error.message : 'Erro ao traduzir para ' + targetName + '.';
+								showAiError(msg);
+							},
 						},
-					});
+					);
 				}
 
 				translateNext();
 			},
 			onError: function (error) {
 				showAiSection('form');
-				var msg = (error && error.message) ? error.message : (typeof error === 'string' ? error : 'Erro ao gerar autor. Tente novamente.');
+				var msg = error?.message
+					? error.message
+					: typeof error === 'string'
+						? error
+						: 'Erro ao gerar autor. Tente novamente.';
 				showAiError(msg);
 			},
 		});
@@ -502,16 +537,37 @@ jQuery(document).ready(function ($) {
 
 		langCodes.forEach(function (code) {
 			var name = siteLanguages[code] || code.toUpperCase();
-			tabsHtml += '<button type="button" class="ab-bio-lang-tab-btn ai-bio-tab-btn' + (isFirst ? ' active' : '') + '" data-lang="' + code + '" aria-selected="' + (isFirst ? 'true' : 'false') + '">' + code.toUpperCase() + ' — ' + name + '</button>';
+			tabsHtml +=
+				'<button type="button" class="ab-bio-lang-tab-btn ai-bio-tab-btn' +
+				(isFirst ? ' active' : '') +
+				'" data-lang="' +
+				code +
+				'" aria-selected="' +
+				(isFirst ? 'true' : 'false') +
+				'">' +
+				code.toUpperCase() +
+				' — ' +
+				name +
+				'</button>';
 			isFirst = false;
 		});
 		tabsHtml += '</div>';
 
 		isFirst = true;
 		langCodes.forEach(function (code) {
-			var bio = (allResults[code] && allResults[code].description) ? allResults[code].description : '';
-			tabsHtml += '<div class="ab-bio-lang-tab-content ai-bio-tab-content' + (isFirst ? ' active' : '') + '" data-lang="' + code + '">';
-			tabsHtml += '<textarea class="large-text ai-preview-bio-lang" data-lang="' + code + '" rows="5">' + $('<div>').text(bio).html() + '</textarea>';
+			var bio = allResults[code]?.description ? allResults[code].description : '';
+			tabsHtml +=
+				'<div class="ab-bio-lang-tab-content ai-bio-tab-content' +
+				(isFirst ? ' active' : '') +
+				'" data-lang="' +
+				code +
+				'">';
+			tabsHtml +=
+				'<textarea class="large-text ai-preview-bio-lang" data-lang="' +
+				code +
+				'" rows="5">' +
+				$('<div>').text(bio).html() +
+				'</textarea>';
 			tabsHtml += '</div>';
 			isFirst = false;
 		});
@@ -553,8 +609,14 @@ jQuery(document).ready(function ($) {
 	});
 
 	function resetApplyBtn() {
-		$applyBtn.prop('disabled', false).html('<i data-lucide="circle-check" class="alvobot-icon" style="width: 18px; height: 18px;"></i> Aplicar ao Autor');
-		if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+		$applyBtn
+			.prop('disabled', false)
+			.html(
+				'<i data-lucide="circle-check" class="alvobot-icon" style="width: 18px; height: 18px;"></i> Aplicar ao Autor',
+			);
+		if (typeof lucide !== 'undefined') {
+			lucide.createIcons();
+		}
 	}
 
 	function applySuccess(msg, displayName, avatarUrl) {
@@ -622,36 +684,52 @@ jQuery(document).ready(function ($) {
 				{
 					onSuccess: function () {
 						// Step 2: Save all bios via ab_save_bios
-						$.post(alvobotAuthorBox.ajaxurl, {
-							action: 'ab_save_bios',
-							nonce: alvobotAuthorBox.nonce,
-							user_id: userId,
-							bios: bios,
-						}, function () {
-							var numLangs = Object.keys(bios).length;
-							applySuccess(
-								'Autor aplicado com sucesso! Biografias salvas em ' + numLangs + ' idiomas.',
-								displayName,
-								avatarUrl
-							);
+						$.post(
+							alvobotAuthorBox.ajaxurl,
+							{
+								action: 'ab_save_bios',
+								nonce: alvobotAuthorBox.nonce,
+								user_id: userId,
+								bios: bios,
+							},
+							function (response) {
+								if (!response || !response.success) {
+									showAiError('Autor aplicado, mas houve erro ao salvar as biografias.');
+									resetApplyBtn();
+									return;
+								}
+								var numLangs = Object.keys(bios).length;
+								applySuccess(
+									'Autor aplicado com sucesso! Biografias salvas em ' + numLangs + ' idiomas.',
+									displayName,
+									avatarUrl,
+								);
 
-							// Update multilingual bios textareas if same user selected
-							if ($('#bio-lang-user').val() === userId) {
-								Object.keys(bios).forEach(function (lang) {
-									var $textarea = $('.ab-bio-textarea[data-lang="' + lang + '"]');
-									if ($textarea.length) {
-										$textarea.val(bios[lang]);
-									}
-								});
-							}
+								// Update multilingual bios textareas if same user selected
+								if ($('#bio-lang-user').val() === userId) {
+									Object.keys(bios).forEach(function (lang) {
+										var $textarea = $('.ab-bio-textarea[data-lang="' + lang + '"]');
+										if ($textarea.length) {
+											$textarea.val(bios[lang]);
+										}
+									});
+								}
+							},
+						).fail(function () {
+							showAiError('Autor aplicado, mas houve erro de conexão ao salvar as biografias.');
+							resetApplyBtn();
 						});
 					},
 					onError: function (error) {
-						var msg = (error && error.message) ? error.message : (typeof error === 'string' ? error : 'Erro ao aplicar autor.');
+						var msg = error?.message
+							? error.message
+							: typeof error === 'string'
+								? error
+								: 'Erro ao aplicar autor.';
 						showAiError(msg);
 						resetApplyBtn();
 					},
-				}
+				},
 			);
 		} else {
 			// Single language apply
@@ -668,7 +746,7 @@ jQuery(document).ready(function ($) {
 				},
 				{
 					onSuccess: function (data) {
-						var msg = (data && data.message) ? data.message : 'Autor aplicado com sucesso!';
+						var msg = data?.message ? data.message : 'Autor aplicado com sucesso!';
 						applySuccess(msg, displayName, avatarUrl);
 
 						// Update author box preview description
@@ -686,11 +764,15 @@ jQuery(document).ready(function ($) {
 						}
 					},
 					onError: function (error) {
-						var msg = (error && error.message) ? error.message : (typeof error === 'string' ? error : 'Erro ao aplicar autor.');
+						var msg = error?.message
+							? error.message
+							: typeof error === 'string'
+								? error
+								: 'Erro ao aplicar autor.';
 						showAiError(msg);
 						resetApplyBtn();
 					},
-				}
+				},
 			);
 		}
 	});

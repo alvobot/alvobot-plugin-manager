@@ -384,8 +384,8 @@ class AlvoBotPro_Smart_Links_Injector {
 	 * Por isso, só verificamos se o bloco ANTES termina com heading (não se começa),
 	 * e só verificamos se o bloco DEPOIS começa com heading (não se termina).
 	 *
-	 * @param int    $index      Índice proposto para inserção.
-	 * @param array  $paragraphs Array de parágrafos já parseados.
+	 * @param int   $index      Índice proposto para inserção.
+	 * @param array $paragraphs Array de parágrafos já parseados.
 	 * @return bool
 	 */
 	private function is_adjacent_to_ad( $index, $paragraphs ) {
