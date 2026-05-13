@@ -155,6 +155,16 @@ class AlvoBotPro {
 				'menu_title' => 'Mini Preloader',
 			),
 		),
+		'articles-api'         => array(
+			'file'          => 'includes/modules/articles-api/class-articles-api.php',
+			'class'         => 'AlvoBotPro_ArticlesApi',
+			'name'          => 'Articles API',
+			'description'   => 'Endpoints REST de inspeção de artigos consumidos pelo backend AlvoBot.',
+			'default'       => true,
+			'settings_slug' => null,
+			'admin_menu'    => false,
+			'force_active'  => true,
+		),
 	);
 
 	public static function get_instance() {
