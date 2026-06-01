@@ -19,6 +19,8 @@ if ( ! class_exists( 'AlvoBotPro_PixelTracking_Attribution' ) ) {
  * Frontend injector for tracking config and conversion triggers.
  */
 class AlvoBotPro_PixelTracking_Frontend {
+	private const ALVOCAST_CLICK_PARAM         = 'ab_click';
+	private const ALVOCAST_CLICK_ENDPOINT_PATH = '/runs/plugin-click';
 
 	/**
 	 * Module instance.
@@ -54,11 +56,14 @@ class AlvoBotPro_PixelTracking_Frontend {
 	public function __construct( $module ) {
 		$this->module = $module;
 
+		add_action( 'rest_api_init', array( $this, 'register_alvocast_click_route' ) );
+
 		// Only inject on frontend (non-admin) pages
 		if ( ! is_admin() ) {
 			add_action( 'template_redirect', array( $this, 'capture_first_party_attribution' ), 0 );
 			add_action( 'wp_head', array( $this, 'inject_tracking' ), 10 );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_script' ) );
+			add_action( 'wp_footer', array( $this, 'inject_alvocast_click_runtime' ), 1 );
 			// Fallback: inject scripts directly in footer if wp_enqueue_scripts is blocked by cache plugins.
 			add_action( 'wp_footer', array( $this, 'inject_scripts_fallback' ), 99 );
 		}
@@ -95,6 +100,172 @@ class AlvoBotPro_PixelTracking_Frontend {
 		}
 
 		AlvoBotPro_PixelTracking_Attribution::maybe_capture_request();
+	}
+
+	/**
+	 * Register a same-origin endpoint used by cached pages to record clicks.
+	 */
+	public function register_alvocast_click_route() {
+		register_rest_route(
+			'alvobot-pro/v1',
+			'/alvocast-click',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'record_alvocast_click_from_rest' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+
+	/**
+	 * Record a click sent by the browser runtime.
+	 *
+	 * @param mixed $request WordPress REST request.
+	 * @return mixed
+	 */
+	public function record_alvocast_click_from_rest( $request ) {
+		$click_token = sanitize_text_field( (string) $request->get_param( 'token' ) );
+		if ( ! $this->is_valid_alvocast_click_token( $click_token ) ) {
+			return new WP_Error(
+				'invalid_alvocast_click_token',
+				'Invalid Alvo Cast click token.',
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		if ( $this->is_bot() || $this->is_user_excluded() ) {
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'skipped' => true,
+				)
+			);
+		}
+
+		$this->dispatch_alvocast_click(
+			$click_token,
+			array(
+				'pageUrl'  => esc_url_raw( (string) $request->get_param( 'pageUrl' ) ),
+				'referrer' => esc_url_raw( (string) $request->get_param( 'referrer' ) ),
+			)
+		);
+
+		return rest_ensure_response( array( 'success' => true ) );
+	}
+
+	/**
+	 * Capture and clean Alvo Cast click params from cached pages in the browser.
+	 */
+	public function inject_alvocast_click_runtime() {
+		$rest_endpoint = wp_make_link_relative( rest_url( 'alvobot-pro/v1/alvocast-click' ) );
+		$runtime_js    = '(function(){try{var param=' . wp_json_encode( self::ALVOCAST_CLICK_PARAM ) .
+			';var endpoint=' . wp_json_encode( $rest_endpoint ) .
+			';var url=new URL(window.location.href);var token=url.searchParams.get(param);if(!token){return;}var originalHref=window.location.href;url.searchParams.delete(param);window.history.replaceState({},document.title,url.toString());var body=JSON.stringify({token:token,pageUrl:originalHref,referrer:document.referrer||""});if(navigator.sendBeacon){try{var blob=new Blob([body],{type:"application/json"});if(navigator.sendBeacon(endpoint,blob)){return;}}catch(error){}}fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:body,credentials:"same-origin",keepalive:true}).catch(function(){});}catch(error){}}());';
+
+		wp_print_inline_script_tag( $runtime_js );
+	}
+
+	/**
+	 * Alvo Cast sender currently emits UUID tokens.
+	 *
+	 * @param string $click_token Candidate token.
+	 * @return bool
+	 */
+	private function is_valid_alvocast_click_token( $click_token ) {
+		return 1 === preg_match(
+			'/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+			(string) $click_token
+		);
+	}
+
+	/**
+	 * Send the click to AlvoBot without delaying the visitor navigation.
+	 *
+	 * @param string $click_token Valid Alvo Cast click token.
+	 * @param array  $context Optional browser context.
+	 */
+	private function dispatch_alvocast_click( $click_token, $context = array() ) {
+		$api_base_url = $this->get_alvocast_api_base_url();
+		if ( '' === $api_base_url ) {
+			return;
+		}
+
+		$page_url = ! empty( $context['pageUrl'] ) ? esc_url_raw( (string) $context['pageUrl'] ) : $this->get_current_request_url();
+		$referrer = ! empty( $context['referrer'] ) ? esc_url_raw( (string) $context['referrer'] ) : wp_get_referer();
+		$payload  = array(
+			'token'         => $click_token,
+			'siteUrl'       => home_url( '/' ),
+			'pageUrl'       => $page_url,
+			'referrer'      => $referrer ? $referrer : '',
+			'pluginVersion' => defined( 'ALVOBOT_PRO_VERSION' ) ? ALVOBOT_PRO_VERSION : '',
+			'siteToken'     => get_option( 'alvobot_site_token', '' ),
+		);
+
+		$response = wp_remote_post(
+			$api_base_url . self::ALVOCAST_CLICK_ENDPOINT_PATH,
+			array(
+				'headers'  => array(
+					'Content-Type' => 'application/json',
+				),
+				'body'     => wp_json_encode( $payload ),
+				'timeout'  => 0.5,
+				'blocking' => false,
+			)
+		);
+
+		if ( is_wp_error( $response ) && class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+			AlvoBotPro::debug_log( 'pixel-tracking', 'Failed to dispatch Alvo Cast click: ' . $response->get_error_message() );
+		}
+	}
+
+	/**
+	 * Resolve the AlvoBot API base URL used by Alvo Cast click capture.
+	 *
+	 * @return string
+	 */
+	private function get_alvocast_api_base_url() {
+		$api_base_url = defined( 'ALVOBOT_API_URL' ) ? ALVOBOT_API_URL : 'https://api.alvobot.com';
+		$api_base_url = apply_filters( 'alvobot_cast_api_base_url', $api_base_url );
+		$api_base_url = is_string( $api_base_url ) ? trim( $api_base_url ) : '';
+
+		if ( '' === $api_base_url ) {
+			if ( class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Alvo Cast API base URL is empty.' );
+			}
+
+			return '';
+		}
+
+		$api_base_url = esc_url_raw( $api_base_url );
+		if ( '' === $api_base_url ) {
+			if ( class_exists( 'AlvoBotPro' ) && method_exists( 'AlvoBotPro', 'debug_log' ) ) {
+				AlvoBotPro::debug_log( 'pixel-tracking', 'Alvo Cast API base URL is invalid.' );
+			}
+
+			return '';
+		}
+
+		return untrailingslashit( $api_base_url );
+	}
+
+	/**
+	 * Build the current public request URL for click context.
+	 *
+	 * @return string
+	 */
+	private function get_current_request_url() {
+		$host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+
+		if ( '' === $host ) {
+			return home_url( $path );
+		}
+
+		$scheme = is_ssl() ? 'https://' : 'http://';
+
+		return esc_url_raw( $scheme . $host . $path );
 	}
 
 	/**
